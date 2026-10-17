@@ -34,6 +34,8 @@ data class GameSettings(
     val titlesFolded: Boolean = false,
     /** Свойства уникальных и мифических лотов аукциона раскрыты сразу (A+C); на сервер не уходит. */
     val legendsOpen: Boolean = false,
+    /** Ключ строки, что окно загрузки показало последней ([com.sperance.exileforge.core.i18n.LaunchLines]): следующая будет другой. */
+    val lastLaunchLine: String = "",
 ) {
     companion object {
         val PAUSES = listOf(0, 30, 50)

@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.StallWatchdog
@@ -27,6 +29,7 @@ import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.BugSheet
@@ -111,6 +114,7 @@ import org.koin.compose.viewmodel.koinViewModel
             shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
         }.collectAsState(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
+        val settingsModel = koinViewModel<SettingsViewModel>()
         val warmup by shell.warmup.collectAsState()
         val heroId by remember(shell) { shell.game.map { it.heroId }.distinctUntilChanged() }.collectAsState("")
         val actions = remember(shell) { StartActions(shell.reach::retry, shell.reach::release, shell.reach::checkFit) }
@@ -122,6 +126,7 @@ import org.koin.compose.viewmodel.koinViewModel
             warmup = warmup?.takeIf { it.heroId == heroId },
             actions = actions,
             diagnostics = watchdog::diagnostics,
+            launchLine = { settingsModel.launchLine(LaunchLines.keys(uiLanguage)) },
         )
     }
 }

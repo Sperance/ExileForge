@@ -8,6 +8,7 @@ import com.sperance.exileforge.presentation.state.ItemShelf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -25,6 +26,13 @@ class PreferencesRepository(private val store: ServerStore, scope: CoroutineScop
     val logFilter: StateFlow<Set<LogKind>> = store.logFilter.map { LogKind.parse(it) }.stateIn(scope, SharingStarted.Eagerly, LogKind.DEFAULT)
 
     suspend fun saveSettings(value: GameSettings) = store.saveGameSettings(value)
+
+    /** Правка настроек от записанного на устройстве, а не от потока: на старте поток ещё может держать умолчания. */
+    suspend fun editStored(edit: GameSettings.() -> GameSettings) {
+        val stored = store.gameSettings.first()
+        val next = stored.edit()
+        if (next != stored) store.saveGameSettings(next)
+    }
 
     /** Правка настроек от их текущего значения; ничего не изменилось - на устройство не пишется. */
     suspend fun editSettings(edit: GameSettings.() -> GameSettings) {

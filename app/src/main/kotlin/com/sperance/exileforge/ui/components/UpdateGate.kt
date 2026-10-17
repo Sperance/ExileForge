@@ -14,11 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -55,9 +58,11 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
  * Окно запуска, обновления и прогрева - одно: заставка во весь экран,
  * внизу - что идёт сейчас и общая полоса, шаги - по «Подробнее». Что показать, решает [StartGate] по модели (связь, провод сервера,
  * проверка сборки, мир устройства, прогрев героя [warmup]); обязательное обновление и несовпавший провод сервера держат окно, пока
- * не разрешатся, - игра пишет, чего ждёт. Окно появляется не раньше [SHOW_DELAY_MS] (быстрый запуск его не мигает), а показавшись,
- * держится не меньше [MIN_SHOWN_MS] и уходит одним переходом: «отпущен» - флаг модели на весь процесс ([ServerReach.release]),
- * а не экрана. Ни назад, ни касание мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: найденное обновление ждёт
+ * не разрешатся, - игра пишет, чего ждёт. С первого кадра, пока [StartGate] держит окно, стек экранов под ним не виден: его накрывает
+ * фон окна ([SplashBackdrop]) в окне приложения, касания он не пропускает; текст шагов появляется не раньше [SHOW_DELAY_MS]
+ * (быстрый запуск его не мигает), а показавшись, окно держится не меньше [MIN_SHOWN_MS] и уходит одним переходом: «отпущен» - флаг модели на весь процесс ([ServerReach.release]),
+ * а не экрана. Над шагами - подсказка или строка лора ([launchLine] выбирает ключ словаря, не повторяя прошлый). Ни назад, ни касание
+ * мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: найденное обновление ждёт
  * его конца, а пока о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
  *
  * Окно не привязано к жизненному циклу: обязано видеть каждое изменение. Возврат в приложение - сборка спрашивается сразу (сверку ресурсов
@@ -72,6 +77,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     warmup: Warmup?,
     actions: StartActions,
     diagnostics: () -> String,
+    launchLine: suspend () -> String?,
 ) {
     val s by updates.state.collectAsState()
     val reach = window.reach
@@ -104,8 +110,10 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         delay(CONTINUE_AFTER_MS)
         waited = true
     }
+    if (verdict.shown || visible) SplashBackdrop(Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } } })
     when {
         visible -> Splash {
+            LaunchLine(launchLine)
             when (face) {
                 StartVerdict.UPDATE -> UpdateBody(s, updates)
 
@@ -132,6 +140,23 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         s.askSources && window.released -> Locked { SourcesBody() }
 
         busy -> s.update?.let { UpdateHint(it.info.versionName) }
+    }
+}
+
+/** Подсказка или лор окна загрузки: ключ выбирается один раз на показ окна ([pick]), пока не выбран - строки нет. */
+@Composable private fun LaunchLine(pick: suspend () -> String?) {
+    val choose by rememberUpdatedState(pick)
+    val key by produceState<String?>(null) { value = choose() }
+    key?.let {
+        Text(
+            ui(it),
+            color = Muted,
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = FontFamily.Serif,
+            fontStyle = FontStyle.Italic,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+        )
     }
 }
 
@@ -194,15 +219,22 @@ class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit:
     }
 }
 
-/** Заставка во весь экран: знак игры по центру, версия под ним, внизу - [content] окна; ни назад, ни касание мимо не закрывают. */
+/** Фон окна запуска: свечение, знак игры по центру и версия под ним; [content] - поверх, во весь экран под системными полосами. */
+@Composable private fun SplashBackdrop(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit = {}) {
+    Box(modifier.fillMaxSize().background(Brush.radialGradient(listOf(PanelRaised, Ink), radius = SPLASH_GLOW)).systemBarsPadding()) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(BRAND, color = GoldBright, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Serif, letterSpacing = 3.sp)
+            VersionLabel()
+        }
+        content()
+    }
+}
+
+/** Заставка во весь экран: фон окна ([SplashBackdrop]), внизу - [content] окна; ни назад, ни касание мимо не закрывают. */
 @Composable private fun Splash(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         ChordOverWindow()
-        Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(PanelRaised, Ink), radius = SPLASH_GLOW)).systemBarsPadding()) {
-            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(BRAND, color = GoldBright, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Serif, letterSpacing = 3.sp)
-                VersionLabel()
-            }
+        SplashBackdrop {
             Column(
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().widthIn(max = 480.dp).heightIn(max = SPLASH_PANEL).verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp, vertical = 24.dp),

@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.state.GameSettings
@@ -15,6 +16,20 @@ class SettingsViewModel(private val prefs: PreferencesRepository, private val wo
 
     /** Скорости боя на выбор - из правил (`fight.speeds`), не из клиента. */
     val speeds: List<Int> get() = fightSpeeds(world.state.value.content)
+
+    /**
+     * Строка окна загрузки на этот показ из [keys]: не та, что в прошлый ([GameSettings.lastLaunchLine], прочитано с устройства), выбор
+     * помнится; строк нет - null.
+     */
+    suspend fun launchLine(keys: List<String>): String? {
+        var picked: String? = null
+        prefs.editStored {
+            val next = LaunchLines.next(keys, lastLaunchLine)
+            picked = next
+            next?.let { copy(lastLaunchLine = it) } ?: this
+        }
+        return picked
+    }
 
     fun change(edit: GameSettings.() -> GameSettings) {
         viewModelScope.launch { prefs.saveSettings(settings.value.edit()) }

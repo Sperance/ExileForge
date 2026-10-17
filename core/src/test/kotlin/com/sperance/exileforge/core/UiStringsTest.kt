@@ -315,4 +315,12 @@ class UiStringsTest {
         assertTrue(compared > 0, "no stat name compared: the check proves nothing")
         assertEquals(emptyList(), drift, "client stat names differ from the server's")
     }
+
+    /** Окно загрузки: подсказок и лора хватает на выбор, и следующая строка никогда не повторяет прошлую. */
+    @Test
+    fun launch_lines_never_repeat() {
+        val keys = com.sperance.exileforge.core.i18n.LaunchLines.keys(Lang.RU)
+        assertTrue(keys.size >= 2, "launch lines: $keys")
+        keys.forEach { last -> repeat(10) { seed -> assertTrue(com.sperance.exileforge.core.i18n.LaunchLines.next(keys, last, kotlin.random.Random(seed)) != last) } }
+    }
 }

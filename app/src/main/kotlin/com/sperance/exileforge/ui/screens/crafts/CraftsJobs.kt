@@ -51,6 +51,7 @@ import com.sperance.exileforge.core.character.sellPrice
 import com.sperance.exileforge.core.character.unmetFor
 import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.crafts.Crafts
+import com.sperance.exileforge.core.crafts.JobBlock
 import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle

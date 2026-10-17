@@ -1,4 +1,4 @@
-package com.sperance.exileforge.data.settings
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.i18n.ui
 import kotlinx.coroutines.CoroutineScope
@@ -12,21 +12,16 @@ import java.io.IOException
 class SecretsUnavailable : IOException(ui("secrets.unavailable"))
 
 /**
- * [SecretBox] за ограниченным вызовом. Каждое запечатывание и вскрытие - binder-вызов в хранилище ключей
+ * Хранилище ключей устройства ([Box]) за ограниченным вызовом. Каждое запечатывание и вскрытие - binder-вызов в хранилище ключей
  * устройства; на части телефонов он виснет насовсем, а на главном потоке при запуске заморозил бы весь старт. Поэтому
  * вызов идёт в своём потоке и ждётся не дольше [LIMIT_MS]: зависший
  * остаётся позади (binder-вызов не отменить), а вместо ответа бросается [SecretsUnavailable].
  */
-class SecretVault(private val box: Box = Box.Keystore) {
+class SecretVault(private val box: Box) {
     /** Что запечатывает и вскрывает: хранилище ключей на устройстве, в тестах - подмена. */
     interface Box {
         fun seal(plain: String): String
         fun open(sealed: String): String?
-
-        object Keystore : Box {
-            override fun seal(plain: String) = SecretBox.seal(plain)
-            override fun open(sealed: String) = SecretBox.open(sealed)
-        }
     }
 
     private val calls = CoroutineScope(SupervisorJob() + Dispatchers.IO)

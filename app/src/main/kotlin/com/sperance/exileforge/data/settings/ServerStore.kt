@@ -10,6 +10,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.DeviceStore
 import com.sperance.exileforge.core.app.GameSettings
+import com.sperance.exileforge.core.app.SecretVault
+import com.sperance.exileforge.core.app.SecretsUnavailable
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.ItemFilters
 import com.sperance.exileforge.core.i18n.Lang
@@ -27,7 +29,7 @@ import java.util.UUID
 
 private val Context.settings by preferencesDataStore("server_settings")
 
-class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault()) : DeviceStore {
+class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault(SecretBox)) : DeviceStore {
     // A new key: an address typed before it is left behind, only an administrator's choice from the Server page counts.
     private val key = stringPreferencesKey("server_override")
     override val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }

@@ -1,4 +1,4 @@
-package com.sperance.exileforge.ui.components
+package com.sperance.exileforge.core.display
 
 /**
  * Ключи строк ленивого списка по содержимому: у строк без своего номера - их [key], повтор того же - с порядковым

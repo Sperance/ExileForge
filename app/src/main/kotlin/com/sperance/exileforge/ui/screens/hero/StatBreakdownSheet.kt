@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.character.reserve
 import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
+import com.sperance.exileforge.core.display.contentKeys
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
@@ -39,7 +40,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.components.contentKeys
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 

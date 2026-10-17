@@ -1,4 +1,4 @@
-package com.sperance.exileforge.ui.screens.crafts
+package com.sperance.exileforge.core.crafts
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
@@ -14,7 +14,7 @@ import com.sperance.exileforge.rules.content.JobKind
  * Почему работу нельзя начать: одна точная причина внизу листа вместо кнопки запуска. Выбор вариантов виден
  * всегда, даже у работы выше уровня профессии; причина считается по выбранному варианту, кнопка - только без неё.
  */
-internal sealed interface JobBlock {
+sealed interface JobBlock {
     val text: String
 
     /** Работе или варианту нужен уровень профессии [level]. */

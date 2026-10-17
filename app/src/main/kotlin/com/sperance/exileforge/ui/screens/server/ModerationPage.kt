@@ -73,7 +73,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.load(0) }
     if (state.dossierKey != null) {
-        DossierView(account, vm, state.dossier)
+        TrailLevel(ui("moderation.dossier"), onBack = vm::close) { DossierView(account, vm, state.dossier) }
         return
     }
     var creating by remember { mutableStateOf(false) }

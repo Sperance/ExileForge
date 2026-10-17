@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,16 +48,13 @@ import java.time.format.DateTimeFormatter
 /**
  * Досье: шапка в две строки, одна панель «ключ — значение» в две колонки,
  * свёрнутые строки Экономика, Связи, История и Предначертание с итогом справа, одна строка управления (роль, сервер, тестировщик) и
- * кнопки санкций внизу - досье помещается в экран. Своё досье администратора - «Сменить» в Предначертании: лист всех даров.
+ * кнопки санкций внизу - досье помещается в экран. Своё досье администратора - «Сменить» в Предначертании: лист всех даров. Досье -
+ * уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]): своей стрелки у него нет.
  */
 @Composable internal fun DossierView(account: AccountUi, vm: ModerationViewModel, dossier: Dossier?) {
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
     var deleting by remember { mutableStateOf<SanctionTarget?>(null) }
     var device by remember { mutableStateOf<DeviceView?>(null) }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = vm::close) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Parchment) }
-        Text(ui("moderation.dossier"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    }
     if (dossier == null) {
         CircularProgressIndicator(color = Gold, modifier = Modifier.size(28.dp))
         return

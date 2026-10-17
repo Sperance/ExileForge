@@ -65,61 +65,75 @@ internal enum class SettingsPage(val title: String) {
 
 /**
  * Настройки поверх забега: тот же экран во весь экран над походом, Разломом или испытанием - стек экранов под ними
- * не трогается; «Назад» и системный «назад» закрывают его.
+ * не трогается; корень цепочки «назад» - меню забега, «назад» с настроек закрывает их.
  */
 @Composable internal fun SettingsOverlay(onClose: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
         ChordOverWindow()
-        Box(Modifier.fillMaxSize().background(Ink).systemBarsPadding()) { SettingsScreen(onClose = onClose) }
+        Box(Modifier.fillMaxSize().background(Ink).systemBarsPadding()) { SettingsScreen(root = ui("run.menu"), onClose = onClose) }
     }
 }
 
 /**
  * «Настройки» (variant A of three mockups, «Список с группами»): every setting on one screen in groups — the general
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
- * tester or an administrator only. «Back» returns to the tab the settings were opened over.
+ * tester or an administrator only.
  *
- * Страница, открытая прямо с экрана «Аккаунт», закрывает настройки целиком по «Назад»; страница, что умеет перечитываться, объявляет это
- * сама.
+ * Путь назад - одна цепочка [BackTrailHost] от [root] (экран, над которым открыты настройки): «Настройки», страница, досье - её
+ * уровни, своих стрелок у страниц нет. Страница, открытая прямо с экрана «Аккаунт», - сама первый уровень и закрывает настройки
+ * целиком; страница, что умеет перечитываться, объявляет это сама.
  */
-@Composable internal fun SettingsScreen(direct: String? = null, onClose: (() -> Unit)? = null) {
+@Composable internal fun SettingsScreen(direct: String? = null, root: String = ui("account.title"), onClose: (() -> Unit)? = null) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
-    val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
     val opened = remember(direct) { SettingsPage.entries.firstOrNull { it.name == direct } }
     var page by rememberSaveable(direct) { mutableStateOf(opened) }
     val open = page
-    Column(Modifier.fillMaxSize()) {
-        BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) {
-            if (open == null || opened != null) onClose?.invoke() ?: shell.closeSettings() else page = null
-        }
-        RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-                when (open) {
-                    null -> SettingsList(account) { page = it }
-
-                    SettingsPage.LANGUAGE -> ForgePanel {
-                        LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
-                    }
-
-                    SettingsPage.SERVER -> ServerPage(account)
-
-                    SettingsPage.CLIENT -> ClientPage(account)
-
-                    SettingsPage.TESTING -> TestingPage(account)
-
-                    SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
-
-                    SettingsPage.MODERATION -> ModerationPage(account)
-
-                    SettingsPage.MAIL -> MailComposePage(account)
-
-                    SettingsPage.WHATS_NEW -> WhatsNewPage()
+    val close = { onClose?.invoke() ?: shell.closeSettings() }
+    BackTrailHost(root) {
+        if (opened != null) {
+            TrailLevel(ui(opened.title), onBack = close) { SettingsBody(account, opened) { page = it } }
+        } else {
+            TrailLevel(ui("settings.title"), onBack = close) {
+                if (open == null) {
+                    SettingsBody(account, null) { page = it }
+                } else {
+                    TrailLevel(ui(open.title), onBack = { page = null }) { SettingsBody(account, open) { page = it } }
                 }
+            }
+        }
+    }
+}
+
+/** Тело уровня настроек: список ([open] null) или страница; заголовок - имя уровня. */
+@Composable private fun SettingsBody(account: AccountUi, open: SettingsPage?, onPage: (SettingsPage) -> Unit) {
+    val sessionModel: SessionViewModel = koinViewModel()
+    RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            when (open) {
+                null -> SettingsList(account, onPage)
+
+                SettingsPage.LANGUAGE -> ForgePanel {
+                    LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
+                }
+
+                SettingsPage.SERVER -> ServerPage(account)
+
+                SettingsPage.CLIENT -> ClientPage(account)
+
+                SettingsPage.TESTING -> TestingPage(account)
+
+                SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
+
+                SettingsPage.MODERATION -> ModerationPage(account)
+
+                SettingsPage.MAIL -> MailComposePage(account)
+
+                SettingsPage.WHATS_NEW -> WhatsNewPage()
             }
         }
     }

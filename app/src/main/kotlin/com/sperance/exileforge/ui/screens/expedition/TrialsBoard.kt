@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
@@ -145,9 +146,9 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные
- * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - сила и награда
- * выбранной ступени и «Войти» с числом ключей. Тестировщику (`ProgressGate`) лента показывает все ступени.
+ * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней с подписью «Сложность» - все пройденные
+ * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - цифры
+ * выбранной ступени с подписями ([RushTierFacts]), её имя и «Войти» с числом ключей. Тестировщику (`ProgressGate`) лента показывает все ступени.
  *
  * Следующая ступень - первая непройденная, её и выбирают по умолчанию.
  */
@@ -183,12 +184,14 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         if (count > 1) {
             Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                MutedText(ui("trials.rush_tier_pick"), style = MaterialTheme.typography.labelSmall)
                 (0 until shown).forEach { t -> TierPlate(t, done = t < passed, selected = t == tier) { tier = t } }
                 if (passed == 0 && !free) MutedText(ui("trials.rush_tier_first"), style = MaterialTheme.typography.labelSmall)
             }
         }
+        RushTierFacts(rules.rush.tier(tier))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("trials.rush_tier_named", roman(tier + 1), rushTierText(rules.rush.tier(tier))), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            Text(ui("trials.rush_tier", roman(tier + 1)), color = Parchment, fontFamily = RelicSerif, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Text(ui("trials.rush_enter"))
                 Spacer(Modifier.width(6.dp))
@@ -238,11 +241,32 @@ private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modi
 
 private val TagShape = RoundedCornerShape(6.dp)
 
-/** Чем ступень раша тяжелее и щедрее, из её записи в контенте: «Боссы +X% здоровья и урона · Ярость на N с раньше · Сферы ×R». */
-private fun rushTierText(tier: RushTier): String = listOfNotNull(
-    ui("trials.rush_tier_power", number(tier.power)).takeIf { tier.power > 0 },
-    ui("trials.rush_tier_enrage", number(tier.enrage)).takeIf { tier.enrage > 0 },
-).ifEmpty { listOf(ui("trials.rush_tier_plain")) }.plus(ui("trials.rush_tier_reward", number(tier.reward))).joinToString(" · ")
+/**
+ * Цифры выбранной ступени раша из её записи в контенте - строками «подпись - значение»: здоровье и урон боссов со знаком
+ * (ниже обычного - зелёным, выше - красным, ноль - «как обычно»), насколько раньше ярость боссов и множитель сфер сундука.
+ */
+@Composable private fun RushTierFacts(tier: RushTier) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        val power = if (tier.power == 0.0) ui("trials.rush_power_usual") else ui("trials.rush_power_value", signedNumber(tier.power))
+        val tint = when {
+            tier.power < 0 -> Vital
+            tier.power > 0 -> LifeRed
+            else -> Parchment
+        }
+        TierFact(ui("trials.rush_power_label"), power, tint)
+        val enrage = if (tier.enrage > 0) ui("trials.rush_enrage_value", number(tier.enrage)) else ui("trials.rush_enrage_usual")
+        TierFact(ui("trials.rush_enrage_label"), enrage, if (tier.enrage > 0) Ember else Parchment)
+        TierFact(ui("trials.rush_reward_label"), ui("trials.rush_reward_value", number(tier.reward)), GoldBright)
+    }
+}
+
+/** Строка цифр ступени: подпись слева приглушённо, значение справа своим цветом [tint]. */
+@Composable private fun TierFact(label: String, value: String, tint: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        MutedText(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+        Text(value, color = tint, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelMedium)
+    }
+}
 
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
 @Composable private fun KeyGrid(stacks: List<Pair<String, Long>>) {

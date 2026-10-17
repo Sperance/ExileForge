@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.crafts
 
+import com.sperance.exileforge.core.crafts.Absence
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.crafts.Harvest
@@ -15,6 +16,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.presentation.app.Foreground
+import com.sperance.exileforge.rules.roll.ActiveWork
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -38,6 +40,16 @@ class CraftsActions(
 ) {
     private val api: GameApi get() = connection.api
     private val crafts: Crafts get() = repository.state.value
+
+    /**
+     * Игрок отсутствовал: запуск, вход в героя или уход игры с переднего плана; первый ответ после этого может стать листом «Пока вас не
+     * было» ([Absence]).
+     */
+    @Volatile private var absent = true
+
+    init {
+        scope.launch { foreground.inFront.collect { front -> if (!front) absent = true } }
+    }
 
     private fun crafts(transform: (Crafts) -> Crafts) = repository.update(transform)
 
@@ -98,8 +110,12 @@ class CraftsActions(
         cycle?.cancel()
         cycle = null
         armedAt = 0L
+        absent = true
         repository.clear()
     }
+
+    /** Лист «Пока вас не было» закрыт. */
+    fun seen() = repository.seen()
 
     /** Новая работа или та же с другим выбором. */
     fun start(job: String, choice: String = "", additives: List<String> = emptyList()) {
@@ -124,17 +140,22 @@ class CraftsActions(
 
     /**
      * Ответ сервера: работа как он её пересчитал; сбор с циклами - [Crafts.last] для
-     * всплывашки у полосы цикла. Сумка приходит снимком героя в том же ответе; не пришёл - герой
-     * перечитывается.
+     * всплывашки у полосы цикла. Первый ответ после отсутствия игрока, покрывший отлучку, копится в [Crafts.away] до показа листа.
+     * Сумка приходит снимком героя в том же ответе; не пришёл - герой перечитывается.
      */
     private fun land(id: String, answer: CraftsState) {
         if (!heroes.onScreen(id)) return
         val gains = answer.gains
+        val returned = absent
+        absent = false
         crafts { c ->
+            val before = c.state?.work?.let { ActiveWork(it.profession, it.job, it.startedAt, it.settledAt, choice = it.choice) } ?: heroes.state.value.hero?.crafts?.work
+            val away = Absence.of(answer, before)?.takeIf { returned }
             c.copy(
                 state = answer,
                 readAt = System.currentTimeMillis(),
                 last = if (gains.cycles > 0) Harvest(gains, (c.last?.seq ?: 0L) + 1) else c.last,
+                away = away?.let { c.away?.plus(it) ?: it } ?: c.away,
             )
         }
         events.heroChanged()

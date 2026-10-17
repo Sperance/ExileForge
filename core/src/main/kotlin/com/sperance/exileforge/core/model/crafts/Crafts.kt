@@ -15,10 +15,7 @@ import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import kotlinx.serialization.Serializable
 
-/**
- * The crafts part of the hero snapshot: each profession's progress, the work under way and the last catch-up of an
- * absence of five minutes or more, shown once as «Пока вас не было».
- */
+/** The crafts part of the hero snapshot: each profession's progress and the work under way. */
 @Serializable data class WorkState(val professions: Map<String, ProfessionProgress> = emptyMap(), val work: ActiveWork? = null)
 
 /** One work of a profession as the hero has it now: the rules' seconds, and the cycle and the «nothing» chance their gear makes of it. */
@@ -104,6 +101,8 @@ fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.first
     /** Which additive guarantees which handcrafted line, and how many a smelt takes. */
     val additives: Map<String, String> = emptyMap(),
     val maxAdditives: Int = 0,
+    /** До какого мига работа была досчитана прежде (часы сервера): [gains] покрывают время от него; ноль - досчёта не было. */
+    val from: Long = 0,
 )
 
 /** The work under way, as its profession lists it: the chosen variant when it has one. */

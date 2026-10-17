@@ -8,12 +8,14 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Ремёсла, как сервер ответил последним, и часы устройства в тот миг ([readAt]);
- * [last] - что принёс последний пересчёт с циклами (его показывает всплывашка у полосы цикла).
+ * [last] - что принёс последний пересчёт с циклами (его показывает всплывашка у полосы цикла), [away] - досчёт после отлучки, ещё не
+ * показанный листом «Пока вас не было» (пока он есть, вкладка ремёсел помечена).
  */
 data class Crafts(
     val state: CraftsState? = null,
     val readAt: Long = 0,
     val last: Harvest? = null,
+    val away: Absence? = null,
 ) {
     /** Сдвиг часов сервера против устройства на миг ответа. */
     val offset: Long get() = state?.let { it.now - readAt } ?: 0L
@@ -33,4 +35,7 @@ class CraftsRepository {
     fun update(transform: (Crafts) -> Crafts) = mutable.update(transform)
 
     fun clear() = update { Crafts() }
+
+    /** Лист «Пока вас не было» показан: отлучка забыта, метка вкладки гаснет. */
+    fun seen() = update { it.copy(away = null) }
 }

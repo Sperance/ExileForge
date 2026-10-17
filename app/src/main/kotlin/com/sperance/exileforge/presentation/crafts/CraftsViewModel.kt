@@ -44,6 +44,9 @@ class CraftsViewModel(
     fun stop() = actions.stop()
     fun equipTool(itemId: String) = actions.equipTool(itemId)
 
+    /** Лист «Пока вас не было» закрыт. */
+    fun seen() = actions.seen()
+
     /** Последний запущенный выбор кузнеца героя на этом устройстве: лист открывается в его режиме. */
     suspend fun smithChoice(heroId: String): SmithChoice? = SmithChoice.of(store.smithChoice(sessions.state.value.server, heroId).orEmpty())
 

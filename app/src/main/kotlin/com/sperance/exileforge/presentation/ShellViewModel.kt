@@ -39,7 +39,10 @@ import com.sperance.exileforge.presentation.state.TAB_TREE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -71,6 +74,7 @@ class ShellViewModel(
     private val foreground: Foreground,
     /** Последние падения: их стеки прикладываются к отчёту об ошибке. */
     private val crashes: com.sperance.exileforge.presentation.app.CrashKeeper,
+    crafts: com.sperance.exileforge.core.crafts.CraftsRepository,
 ) : ViewModel() {
     init {
         reach.start()
@@ -84,6 +88,9 @@ class ShellViewModel(
     val warmup: StateFlow<Warmup?> = warming.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
     val arena: StateFlow<TrialArena?> = trial.arena
+
+    /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка ремёсел помечена. */
+    val craftsAway: StateFlow<Boolean> = crafts.state.map { it.away != null }.stateIn(viewModelScope, SharingStarted.Eagerly, crafts.state.value.away != null)
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.presentation.expedition.RiftState> = rift.state

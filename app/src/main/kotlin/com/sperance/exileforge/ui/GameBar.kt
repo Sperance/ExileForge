@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.nav.Route
@@ -89,10 +90,12 @@ private const val CAPSULE_GROW = 2.4f
  * той же кривой, что и сдвиг экрана. Пять вкладок - игра, администратор получает ровно ещё одну. Вкладка, нажатая снова
  * изнутри, возвращает к своему корню.
  *
- * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие».
+ * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие»; досчёт ремёсел после отлучки, ещё не показанный
+ * листом, - точкой на «Ремёслах».
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
+    val craftsAway by shell.craftsAway.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
     val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { game.adminTools })
     Row(
@@ -112,13 +115,14 @@ private const val CAPSULE_GROW = 2.4f
                 selected = route.root?.tab == index,
                 locked = !game.unlocked(Feature.ofTab(index)),
                 free = free,
+                alert = index == TAB_CRAFTS && craftsAway,
             ) { shell.tab(index) }
         }
     }
 }
 
-/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; замок или число очков в углу. */
-@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, onClick: () -> Unit) {
+/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число очков или точка [alert]. */
+@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, onClick: () -> Unit) {
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
     val tint by animateColorAsState(if (selected) Gold else Muted, tween(TAB_SHIFT_MS, easing = TabShiftEasing), label = "capsuleTint")
@@ -137,6 +141,8 @@ private const val CAPSULE_GROW = 2.4f
                 Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
             } else if (free > 0) {
                 Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
+            } else if (alert) {
+                Badge(containerColor = GoldBright)
             }
         }) {
             val scale = 1f + .08f * grow

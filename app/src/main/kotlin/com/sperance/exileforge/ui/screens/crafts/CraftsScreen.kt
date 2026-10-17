@@ -95,7 +95,8 @@ import kotlin.math.ceil
  * server behind it, and runs the cycle's bar smoothly on the device's clock set by the server's.
  *
  * Экран с ремёслами спрашивает снова тихо; досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]) и только если прошлый ответ старше срока
- * свежести. Разделы плиток считаются раз на ответ. Вкладка нажата снова - окно профессии закрывается, плитки наверх.
+ * свежести. Разделы плиток считаются раз на ответ. Вкладка нажата снова - окно профессии закрывается, плитки наверх. Досчёт после
+ * отлучки, ещё не показанный, открывается листом «Пока вас не было» ([AwaySheet]) поверх плиток и окна профессии.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +126,7 @@ fun CraftsScreen() {
         vm.openProfession("")
         list.animateScrollToItem(0)
     }
+    held.away?.let { away -> AwaySheet(game, away, onSeen = vm::seen) }
     val open = crafts?.professions?.firstOrNull { it.code == openCode }
     if (open != null) {
         ProfessionWindow(game, vm, held, open, offset)

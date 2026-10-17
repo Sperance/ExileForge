@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -15,17 +16,26 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 
 /** Сколько строк описания видно свёрнутым. */
 private const val FOLDED_LINES = 2
 
 /**
- * Описание, что раскрывается нажатием: свёрнутое - [FOLDED_LINES] строки с многоточием, развёрнутое - целиком, без
- * обрезки. Нажимается, только если текст в свёрнутом виде не уместился; общее для знамений, катализаторов и строк верстака.
+ * Текст, что раскрывается нажатием на месте: свёрнутый - [folded] строк с многоточием (и строкой «Ещё…» под ним, если [more]),
+ * развёрнутый - целиком, без обрезки. Нажимается, только если текст в свёрнутом виде не уместился; общее для знамений,
+ * катализаторов, строк верстака и текста отчётов.
  */
 @Composable
-fun ExpandableText(text: String, modifier: Modifier = Modifier, color: Color = Muted, style: TextStyle = MaterialTheme.typography.bodySmall) {
+fun ExpandableText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Muted,
+    style: TextStyle = MaterialTheme.typography.bodySmall,
+    folded: Int = FOLDED_LINES,
+    more: Boolean = false,
+) {
     var open by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
     val toggle = if (open || clipped) {
@@ -33,13 +43,15 @@ fun ExpandableText(text: String, modifier: Modifier = Modifier, color: Color = M
     } else {
         Modifier
     }
-    Text(
-        text,
-        modifier.then(toggle).animateContentSize(),
-        color = color,
-        style = style,
-        maxLines = if (open) Int.MAX_VALUE else FOLDED_LINES,
-        overflow = if (open) TextOverflow.Clip else TextOverflow.Ellipsis,
-        onTextLayout = { if (!open) clipped = it.hasVisualOverflow },
-    )
+    Column(modifier.then(toggle).animateContentSize()) {
+        Text(
+            text,
+            color = color,
+            style = style,
+            maxLines = if (open) Int.MAX_VALUE else folded,
+            overflow = if (open) TextOverflow.Clip else TextOverflow.Ellipsis,
+            onTextLayout = { if (!open) clipped = it.hasVisualOverflow },
+        )
+        if (more && clipped && !open) Text(ui("common.read_more"), color = Gold, style = MaterialTheme.typography.labelSmall)
+    }
 }

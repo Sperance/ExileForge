@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -260,7 +259,7 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
             Spacer(Modifier.weight(1f))
             Text(shortDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
-        Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        ExpandableText(text, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = true)
         FateSteps(StepPath.of(fate, kind, issue), Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp))
         thread.forEach { (who, words) -> ThreadNote(who, words) }
         onAnswer?.let { send -> AnswerField(send) }
@@ -332,8 +331,8 @@ private data class StepPath(val labels: List<String>, val reached: Int, val tint
 private fun shortDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
 
 /**
- * Переписка карточки: слово модерации при решении ([reason]), затем вся переписка Issue по порядку - разработчик,
- * модерация из игры и автор.
+ * Переписка карточки: слово модерации ([reason] - сервер шлёт его, только пока у отчёта нет Issue), затем вся переписка Issue по
+ * порядку - разработчик, модерация из игры и автор; с Issue слово модерации - его комментарий, и дважды оно не встаёт.
  */
 private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
 
@@ -437,6 +436,9 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
 
 /** Длина ответа автора в Issue из игры: сервер всё равно режет по `inputs.report`. */
 private const val ANSWER_MAX = 1000
+
+/** Сколько строк текста отчёта видно свёрнутым: касание раскрывает его на месте. */
+private const val TEXT_LINES = 3
 
 /** Закрытые свои отчёты приглушены. */
 private const val DIM = .6f

@@ -14,7 +14,7 @@ import com.sperance.exileforge.rules.sheet.MightReading
  * лист под эффектами карты (`FightHud.heroBody`) с уроном умений из боевого листа. Не прогноз боя.
  */
 object Mights {
-    /** Мощь героя в бою: тело [body] под эффектами карты и что сверх листа [extras] (умения, питомец, резерв маны, фляги - `CombatSheet.mightExtras`). */
+    /** Мощь героя в бою: тело [body] под эффектами карты и что сверх листа [extras] (умения, резерв маны, фляги - `CombatSheet.mightExtras`). */
     fun hero(index: ContentIndex, body: Combatant, extras: MightExtras): MightReading = Might.hero(index, body.stats, body.level, extras)
 
     /**

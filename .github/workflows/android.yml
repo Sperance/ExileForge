@@ -33,9 +33,12 @@ jobs:
       core: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.core == 'true' }}
       app: ${{ steps.filter.outputs.app == 'true' }}
       release: ${{ steps.release.outputs.pending }}
+      balance: ${{ github.event_name == 'workflow_dispatch' || steps.balance.outputs.changed == 'true' }}
       shots: ${{ github.event_name == 'workflow_dispatch' && inputs.shots == true }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         if: ${{ github.event_name != 'workflow_dispatch' }}
@@ -63,6 +66,44 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = push ] && ! gh release view "v$version" >/dev/null 2>&1; then pending=true; else pending=false; fi
           echo "pending=$pending" >> "$GITHUB_OUTPUT"
           echo "v$version: release pending=$pending"
+      # Правка баланса - против прежнего пуша, перед релизом - против прошлого релиза: пути клиента и сервера из .github/balance-paths.txt
+      - uses: actions/checkout@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          repository: Sperance/ktor-bestgame
+          path: srv
+          fetch-depth: 0
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - id: balance
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          PENDING: ${{ steps.release.outputs.pending }}
+        run: |
+          base="$BEFORE"
+          if [ "$PENDING" = true ]; then
+            tag=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+            [ -n "$tag" ] && base=$(git rev-list -n 1 "$tag" 2>/dev/null || echo "")
+          fi
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then echo "changed=true" >> "$GITHUB_OUTPUT"; echo "no base: guards run"; exit 0; fi
+          git diff --name-only "$base" HEAD > client.txt
+          old=$(git ls-tree "$base" backend | awk '{print $3}'); new=$(git ls-tree HEAD backend | awk '{print $3}')
+          : > server.txt
+          if [ "$old" != "$new" ]; then git -C srv diff --name-only "$old" "$new" > server.txt || echo "*" > server.txt; fi
+          changed=$(python3 - <<'PY'
+          import fnmatch
+          pats=[l.strip() for l in open('.github/balance-paths.txt') if l.strip() and not l.startswith('#')]
+          client=[l.strip() for l in open('client.txt') if l.strip()]
+          server=[l.strip() for l in open('server.txt') if l.strip()]
+          hit=any(fnmatch.fnmatch(f,p) for f in client for p in pats if not p.startswith('backend:'))
+          hit=hit or any(f=='*' or fnmatch.fnmatch(f,p[8:]) for f in server for p in pats if p.startswith('backend:'))
+          print('true' if hit else 'false')
+          PY
+          )
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          echo "balance changed since ${base:0:7}: $changed"
 
   core:
     needs: changes
@@ -98,13 +139,24 @@ jobs:
 
   balance:
     needs: changes
-    # Сторожа баланса - бои эталонов против стражей, режимов и классов; рядом с core: при правке core, сервера, сборки или workflow, перед релизом - всегда
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.release == 'true' }}
+    # Сторожа баланса - бои эталонов, четыре части параллельно, у каждой свой кэш эталонов; только при правке баланса
+    if: ${{ needs.changes.outputs.balance == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: guardians
+            tests: --tests '*MobBalGuardTest.referenceHeroes*' --tests '*MobBalGuardTest.everyGuardian*'
+          - part: weak
+            tests: --tests '*MobBalGuardTest.weakBuilds*'
+          - part: modes
+            tests: --tests '*ModesBalanceGuardTest'
+          - part: classes
+            tests: --tests '*ClassBalanceGuardTest'
     runs-on: ubuntu-latest
-    # Холодный кэш эталонов (правка кода или контента постройки героя) - около 35 мин, тёплый - около 7
-    timeout-minutes: 45
+    timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-balance
+      group: ${{ github.workflow }}-${{ github.ref }}-balance-${{ matrix.part }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -132,10 +184,10 @@ jobs:
         id: heroes
         with:
           path: core/build/guard-heroes
-          key: guard-heroes-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
-          restore-keys: guard-heroes-
+          key: guard-heroes-${{ matrix.part }}-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
+          restore-keys: guard-heroes-${{ matrix.part }}-
       - run: mkdir -p core/build/guard-heroes && touch core/build/guard-heroes/.run
-      - run: bash gradlew :core:balanceGuard
+      - run: bash gradlew :core:balanceGuard ${{ matrix.tests }}
       # Эталоны в кэш и при красных сторожах; уходит только папка этого прогона (сторож её касается) - папки старых ключей не копятся
       - run: |
           cd core/build/guard-heroes
@@ -147,7 +199,7 @@ jobs:
         if: ${{ always() && steps.heroes.outputs.cache-hit != 'true' }}
         with:
           path: core/build/guard-heroes
-          key: guard-heroes-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
+          key: guard-heroes-${{ matrix.part }}-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
 
   app:
     needs: changes

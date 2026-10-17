@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rangedLine
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
+import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.forge.EngraveLine
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
@@ -57,7 +58,7 @@ import com.sperance.exileforge.ui.theme.*
         BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(code, owned, 1))
         val gives = remember(essence, view.item, index) {
             OrbApplier(index).essenceGuarantee(essence, view.item, view.template)?.let { roll ->
-                index.modifier(roll.code)?.let { def -> def.tier(roll.tier)?.let { tier -> ui("forge.essence_gives", roll.tier, def.tiers.size, rangedLine(index, def.code, tier.values)) } }
+                index.modifier(roll.code)?.let { def -> def.tier(roll.tier)?.let { tier -> ui("forge.essence_gives", tierOf(roll.tier, def.tiers.size), rangedLine(index, def.code, tier.values)) } }
             }
         }
         gives?.let { Text(it, color = Elder, style = MaterialTheme.typography.bodySmall) }

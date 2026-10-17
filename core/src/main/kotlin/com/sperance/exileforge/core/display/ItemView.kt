@@ -71,6 +71,12 @@ enum class AffixKind(val letter: Char) {
     }
 }
 
+/**
+ * Тир модификатора словами: «T3 из 8 (T1 - сильнейший)» - одна подпись везде, где печатается тир строки. T1 - лучший тир
+ * (высший уровень открытия), как цвет значка тира на карточке.
+ */
+fun tierOf(tier: Int, count: Int): String = ui("modinfo.tier_of", tier, count)
+
 /** What a rolled line is besides its sentence: its tier, and what placed it. */
 data class AffixMarks(
     val tier: Int,

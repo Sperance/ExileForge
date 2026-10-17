@@ -47,6 +47,9 @@ enum class Term(vararg val marks: String, val table: TermTable? = null) {
 
     // Правило знамений-катализаторов - одно на все: описание каждого называет лишь свой вид модификаторов
     CATALYST,
+
+    // Тир модификатора: T1 - сильнейший; у вещи с тирами строк
+    TIER,
     ;
 
     val title: String get() = ui("term.$name")
@@ -58,9 +61,9 @@ enum class Term(vararg val marks: String, val table: TermTable? = null) {
         /** The terms the stats name, in the order of this list. */
         fun ofStats(stats: Collection<String>): List<Term> = entries.filter { term -> stats.any { stat -> term.marks.any { it in stat } } }
 
-        /** Термины копии: что называют её строки, и катализатор, если её качество - катализатора. */
+        /** Термины копии: что называют её строки, катализатор, если её качество - катализатора, и тир, если у строк он есть. */
         fun ofItem(item: ItemView): List<Term> = ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) +
-            listOfNotNull(CATALYST.takeIf { item.item.catalyst != null })
+            listOfNotNull(CATALYST.takeIf { item.item.catalyst != null }, TIER.takeIf { item.lines.any { it.roll.tier > 0 && it.tierCount > 0 } })
 
         /** The terms the lines' effects name. */
         fun ofLines(index: ContentIndex, lines: Collection<Line>): List<Term> = ofStats(lines.flatMap { line -> index.modifier(line.code)?.effects.orEmpty().map { it.stat } })

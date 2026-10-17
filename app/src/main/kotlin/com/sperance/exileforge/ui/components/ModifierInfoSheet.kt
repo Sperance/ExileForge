@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
@@ -69,13 +70,13 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
 }
 
 /**
- * The tier among its modifier's tiers: «T3 из 3», then a segment per tier, T1 first, the
+ * The tier among its modifier's tiers: «T3 из 8 (T1 - сильнейший)», then a segment per tier, T1 first, the
  * line's own lit and those the item's level does not reach dimmed.
  */
 @Composable private fun TierScale(tier: Int, open: List<Boolean>) {
     val count = open.size
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Fact(ui("modinfo.tier"), ui("modinfo.tier_of", tier, count))
+        Fact(ui("modinfo.tier"), tierOf(tier, count))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             open.forEachIndexed { at, reached ->
                 val color = when {

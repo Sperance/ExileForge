@@ -156,7 +156,10 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
       # Отладочной сборки нет нигде (4.12.x): lint - по релизному варианту, APK - только R8-сборки ниже
-      - run: bash gradlew :app:ktlintCheck :app:lintRelease
+      - run: bash gradlew :app:ktlintCheck
+      # Android Lint - перед релизом и по ручному запуску: на обычном пуше хватает ktlint
+      - if: ${{ needs.changes.outputs.release == 'true' || github.event_name == 'workflow_dispatch' }}
+        run: bash gradlew :app:lintRelease
 
   # Сжатые R8 сборки с инструментальным APK (4.12.x - единственные тестовые, отладочной нет): `-PuiTests` - для всех UI-тестов
   # (код приложения не ужат), без флага - строгий смоук R8 (4.3.1: единственная проверка R8).

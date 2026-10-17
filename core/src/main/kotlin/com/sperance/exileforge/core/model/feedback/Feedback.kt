@@ -185,6 +185,18 @@ import kotlinx.serialization.Serializable
 /** Автор письма героя - снимок на момент письма; у рассылки - и гильдия. Ответ уходит лично ему, [heroId]. */
 @Serializable data class MailSender(val heroId: String, val name: String, val heroClass: String = "", val level: Int = 1, val guild: MailGuild? = null)
 
+/** Вид цели ссылки письма (как сервер): что открывает касание письма. */
+@Serializable enum class MailLinkKind {
+    /** Отчёт игрока: письмо о его судьбе открывает этот отчёт. */
+    REPORT,
+}
+
+/** Ссылка письма на то, о чём оно: вид цели строкой (вид, которого эта сборка не знает, не ломает ящик) и id цели. */
+@Serializable data class MailLink(val kind: String, val id: String) {
+    /** Вид цели, известный этой сборке; null - неизвестный: письмо открывается как обычно. */
+    val target: MailLinkKind? get() = MailLinkKind.entries.firstOrNull { it.name == kind }
+}
+
 /**
  * A letter of the account: a system one names a dictionary [key] with its [args], the administrator's one its
  * [subject] and [body] as written. [claimedBy] — the hero that took the attachment; [expiresAt] — epoch millis. Письмо героя: [from] - автор, [quote] - начало письма, на которое это ответ, [reported] - жалоба уже подана.
@@ -205,6 +217,8 @@ import kotlinx.serialization.Serializable
     val from: MailSender? = null,
     val quote: String = "",
     val reported: Boolean = false,
+    /** О чём письмо: касание письма открывает цель; null - ссылки нет (прежние письма). */
+    val link: MailLink? = null,
 ) {
     val claimable: Boolean get() = claimedBy == null && !attachment.empty
 

@@ -151,7 +151,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
     LaunchedEffect(shell) { shell.bugRequests.collect { sheets.bug = true } }
-    var reportsTab by remember { mutableStateOf<com.sperance.exileforge.ui.components.ReportsTab?>(null) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
     val campaign = game.index?.campaign
@@ -199,12 +198,12 @@ import org.koin.compose.viewmodel.koinViewModel
                 expedition,
                 drafts,
                 onDismiss = { sheets.bug = false },
-                onReports = { reportsTab = it },
+                onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
                 onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
             )
         }
-        reportsTab?.let { tab -> ReportsSheet(tab) { reportsTab = null } }
         if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+        sheets.reports?.let { view -> ReportsSheet(view) { sheets.reports = null } }
         if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
         if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
         if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()

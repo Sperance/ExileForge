@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -150,23 +151,27 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
 /** Вкладка листа отчётов: свои отчёты или известные проблемы. */
 enum class ReportsTab { MINE, KNOWN }
 
+/** Что показать в листе отчётов: вкладку [tab] и отчёт [focus], к которому лист прокручен и который подсвечен; null - без него. */
+data class ReportsView(val tab: ReportsTab, val focus: String? = null)
+
 /**
  * Отчёты (без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
  * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
  * по тексту и номеру). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
  * перечитываются потягиванием вниз и нажатием на уже открытую вкладку.
  *
- * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия.
+ * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём
+ * открыло лист) подсвечен, и лист прокручен к нему.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
+fun ReportsSheet(start: ReportsView, onDismiss: () -> Unit) {
     val model = koinViewModel<FeedbackViewModel>()
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     val seen by model.seen.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { model.loadReports() }
-    var tab by rememberSaveable { mutableStateOf(start) }
+    var tab by rememberSaveable { mutableStateOf(start.tab) }
     var deleting by remember { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     var searching by rememberSaveable { mutableStateOf(false) }
@@ -199,21 +204,27 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
                 )
             }
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
-                ReportsList(tab, feedback, query, shownFresh, !activity.busy, model) { deleting = it }
+                ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, model) { deleting = it }
             }
             deleting?.let { id -> ReportDeleteConfirm(activity.busy, onDismiss = { deleting = null }) { model.deleteReport(id) } }
         }
     }
 }
 
-/** Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. */
-@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, enabled: Boolean, model: FeedbackViewModel, onDelete: (String) -> Unit) {
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
+/**
+ * Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. Свой отчёт
+ * [focus] подсвечен, и «Мои» прокручены к нему, как только он пришёл.
+ */
+@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackViewModel, onDelete: (String) -> Unit) {
+    val list = rememberLazyListState()
+    val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
+    val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { tab == ReportsTab.MINE && it >= 0 }
+    LaunchedEffect(focusAt) { focusAt?.let { list.animateScrollToItem(it) } }
+    LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
         when (tab) {
             ReportsTab.MINE -> {
-                val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
                 if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
-                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
+                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
             }
 
             ReportsTab.KNOWN -> {
@@ -235,7 +246,8 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 /**
  * Карточка отчёта - тикет: вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
  * из четырёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса, ссылка на Issue, удаление. Закрытые
- * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале.
+ * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале. [focused] - отчёт, ради которого открыт
+ * лист: рамка `GoldBright`.
  */
 @Composable private fun ReportTicket(
     kind: FeedbackKind,
@@ -246,12 +258,13 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
     thread: List<Pair<NoteAuthor, String>>,
     dim: Boolean,
     fresh: Boolean = false,
+    focused: Boolean = false,
     onAnswer: ((String) -> Unit)? = null,
     footer: @Composable RowScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
     val uri = LocalUriHandler.current
-    Column(Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).clip(shape).background(Panel).border(1.dp, Bronze, shape)) {
+    Column(Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).clip(shape).background(Panel).border(if (focused) 2.dp else 1.dp, if (focused) GoldBright else Bronze, shape)) {
         Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KindMark(kind)
             issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
@@ -375,10 +388,10 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
 }
 
 /** Ответить в Issue можно, пока он открыт. */
-@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
+@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
     val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
-    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, thread(own.issue, own.reason), dim = fate.closed, fresh = fresh, onAnswer = answer) {
+    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, thread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer) {
         Score(own.likes, own.dislikes)
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }

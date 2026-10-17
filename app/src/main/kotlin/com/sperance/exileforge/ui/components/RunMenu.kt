@@ -54,13 +54,16 @@ import com.sperance.exileforge.ui.theme.Parchment
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Системные листы поверх всего: отчёт об ошибке и настройки. Их открывает и оболочка, и забег, накрывший её; пока
- * открыт любой, забег под ним держится ([RunMenu]). Новый лист - поле здесь и его хозяин в `ForgeApp`.
+ * Системные листы поверх всего: отчёт об ошибке, настройки и лист отчётов. Их открывает и оболочка, и забег, накрывший её; пока
+ * открыт отчёт об ошибке или настройки, забег под ним держится ([RunMenu]). Новый лист - поле здесь и его хозяин в `ForgeApp`.
  */
 @Stable
 class SystemSheets {
     var bug by mutableStateOf(false)
     var settings by mutableStateOf(false)
+
+    /** Лист отчётов: вкладка и отчёт, к которому он прокручен; null - закрыт. */
+    var reports by mutableStateOf<ReportsView?>(null)
 
     val open: Boolean get() = bug || settings
 }

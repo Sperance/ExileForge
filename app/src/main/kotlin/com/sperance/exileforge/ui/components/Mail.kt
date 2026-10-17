@@ -33,6 +33,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailKind
+import com.sperance.exileforge.core.model.feedback.MailLink
+import com.sperance.exileforge.core.model.feedback.MailLinkKind
 import com.sperance.exileforge.core.model.feedback.MailMute
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
@@ -143,7 +145,7 @@ internal fun burnText(mail: Mail): String = when {
 
 /**
  * Ящик («Свиток писем»): вкладки Все / Личные / Гильдия / Система со счётом непрочитанного, письмо строкой со
- * знаком отправителя, темой, первой строкой и сроком; касание открывает письмо листом поверх. «Прочитать все» и «Удалить
+ * знаком отправителя, темой, первой строкой и сроком; касание открывает письмо листом поверх, письмо со ссылкой - её цель ([MailLinks]). «Прочитать все» и «Удалить
  * прочитанные» - разом; список игнора - тут же.
  *
  * Почта: лист с вкладками, письмо - листом поверх, новое письмо - своим листом. Письма героев видны лишь адресату - ящик читается глазами
@@ -159,6 +161,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
         model.loadMail()
         model.letters.loadIgnored()
     }
+    val sheets = LocalSystemSheets.current
     var open by remember { mutableStateOf<String?>(null) }
     var box by remember { mutableStateOf(MailBox.ALL) }
     var ignoring by remember { mutableStateOf(false) }
@@ -182,14 +185,33 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
                 if (shown.isEmpty()) item { MutedText(ui("mail.empty"), Modifier.padding(vertical = 12.dp)) }
                 items(shown, key = { it.id }) { mail ->
                     MailRow(game, mail) {
-                        open = mail.id
                         if (!mail.read) model.readMail(mail.id)
+                        if (!MailLinks.open(mail.link, sheets)) open = mail.id
                     }
                 }
             }
         }
     }
     feedback.mail.firstOrNull { it.id == open }?.let { letter -> LetterSheet(game, model, feedback, activity.busy, letter) { open = null } }
+}
+
+/**
+ * Открытие ссылки письма ([Mail.link]): касание письма со ссылкой известного вида открывает цель вместо листа письма. Новый вид -
+ * запись [MailLinkKind] и его ветка здесь.
+ */
+object MailLinks {
+    /** Открывает цель [link] системными листами [sheets]; false - ссылки нет или вид незнаком сборке: письмо открывается как обычно. */
+    fun open(link: MailLink?, sheets: SystemSheets?): Boolean {
+        if (link == null || sheets == null) return false
+        return when (link.target) {
+            MailLinkKind.REPORT -> {
+                sheets.reports = ReportsView(ReportsTab.MINE, focus = link.id)
+                true
+            }
+
+            null -> false
+        }
+    }
 }
 
 /** «Прочитать все» и «Удалить прочитанные» - с вопросом, сколько уйдёт; письмо с вложением не удаляется. */

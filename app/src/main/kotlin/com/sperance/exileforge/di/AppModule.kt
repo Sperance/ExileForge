@@ -38,6 +38,7 @@ import com.sperance.exileforge.core.feedback.ReportTrail
 import com.sperance.exileforge.core.feedback.SeenReplies
 import com.sperance.exileforge.core.guild.GuildActions
 import com.sperance.exileforge.core.guild.GuildRepository
+import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hall.HallModel
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroPageModel
@@ -186,6 +187,7 @@ val appModule = module {
     factoryOf(::ShellModel)
     factoryOf(::ModerationModel)
     factoryOf(::SanctionModel)
+    singleOf(::HallFocus)
     factoryOf(::HallModel)
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)

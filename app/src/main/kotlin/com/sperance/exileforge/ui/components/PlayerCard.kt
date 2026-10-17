@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
@@ -153,7 +154,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 /**
  * «Свиток»: слева корешок - уровень, знак класса и класс; справа титул над именем и справочные строки.
  *
- * Номер героя: по нему зовут в гильдию, касание копирует.
+ * Номер героя: по нему зовут в гильдию, касание копирует. Первая справочная строка - «Место по Мощи · №37 из 1 284 ›» (касание - доска
+ * славы «Мощь», прокрученная к герою); героя нет на доске - строки нет.
  */
 @Composable private fun Scroll(game: GameUi, vm: PlayerCardModel, card: PlayerCard) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -165,6 +167,9 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
             Text(card.name, style = relicName(19).copy(color = GoldBright), maxLines = 2, overflow = TextOverflow.Ellipsis)
             ShortCodeChip(ui("hero.number"), card.number, Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(6.dp))
+            if (card.mightPlace > 0) {
+                ReferenceRow(ui("player.might_place"), ui("player.might_place_value", groupedNumber(card.mightPlace), groupedNumber(card.mightBoard)), Caution, onClick = { vm.openMightBoard(card) })
+            }
             card.guild?.let { guild ->
                 val opens = vm.guildOpens(card)
                 ReferenceRow(ui("player.guild"), ui("player.guild_value", guild.tag, ui("guild.role.${guild.role.name}")), Parchment, onClick = if (opens) ({ vm.openGuild(card) }) else null)

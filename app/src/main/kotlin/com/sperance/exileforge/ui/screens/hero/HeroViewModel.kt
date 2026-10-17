@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
+import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroPage
@@ -16,8 +17,10 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.model.auction.PriceHint
+import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.rules.content.HallBoard
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
@@ -39,6 +42,7 @@ class HeroViewModel(
     commands: CommandRunner,
     slice: GameSlice,
     private val pages: HeroPageModel,
+    private val hall: HallFocus,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
@@ -65,6 +69,12 @@ class HeroViewModel(
 
     /** Статистика героя, свежая полминуты; null - чтение не удалось. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = reads.stats(heroId)
+
+    /** Своя карточка игрока героя [heroId]: место на доске Мощи для сводки; null - чтение не удалось. */
+    suspend fun ownCard(heroId: String): PlayerCard? = reads.ownCard(heroId)
+
+    /** Доска славы «Мощь», прокрученная к своему герою [heroId]. */
+    fun openMightBoard(heroId: String) = hall.open(HallBoard.MIGHT, heroId)
 
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)

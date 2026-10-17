@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -42,7 +43,9 @@ private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 
 /**
  * Доска славы Города: вкладки - таблицы реестра [HallBoard], под ними выбор раздела (регион и ступень раша, профессия). Первые три места -
- * плиты редкостей, дальше список; строка героя (его гильдии) закреплена внизу.
+ * плиты редкостей, дальше список; строка героя (его гильдии) закреплена внизу. Просьба открыть доску на строке героя ([HallFocus]: место
+ * по Мощи карточки игрока и своей сводки) выбирает её таблицу и, как таблица пришла, прокручивает к герою, если он среди первых, и
+ * подсвечивает его строку.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,10 +54,26 @@ fun HallScreen() {
     val game by vm.game.collectAsStateWithLifecycle()
     val hall by vm.hall.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
+    val target by vm.target.collectAsStateWithLifecycle()
     val index = game.index
+    var marked by remember { mutableStateOf<String?>(null) }
+    val list = rememberLazyListState()
     LaunchedEffect(game.heroId, game.sessionEpoch, index != null) {
         if (game.heroId.isBlank() || index == null) return@LaunchedEffect
-        hall.pick?.let { vm.load() } ?: vm.pick(HallPick(HallBoard.entries.first(), HallBoard.entries.first().defaultScope(index)))
+        val first = target?.board ?: HallBoard.entries.first()
+        hall.pick?.let { vm.load() } ?: vm.pick(HallPick(first, first.defaultScope(index)))
+    }
+    LaunchedEffect(target?.board, index != null) {
+        val board = target?.board ?: return@LaunchedEffect
+        if (index != null && hall.pick != null && hall.pick?.board != board) vm.pick(HallPick(board, board.defaultScope(index)))
+    }
+    LaunchedEffect(target, hall.table) {
+        val aim = target ?: return@LaunchedEffect
+        val table = hall.table?.takeIf { it.board == aim.board } ?: return@LaunchedEffect
+        marked = aim.heroId
+        val at = table.top.indexOfFirst { it.id == aim.heroId }
+        if (at >= 0) list.animateScrollToItem(if (at < PODIUM.size) 0 else at - PODIUM.size + 1)
+        vm.focused()
     }
     val pick = hall.pick
     Column(Modifier.fillMaxSize()) {
@@ -67,7 +86,7 @@ fun HallScreen() {
         ScopePicker(index, pick, vm::pick)
         PullToRefreshBox(isRefreshing = Reads.HALL in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             val table = hall.table
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when {
                     table == null -> item { MutedText(ui("common.loading")) }
 
@@ -76,7 +95,7 @@ fun HallScreen() {
                     else -> {
                         item { Podium(table) }
                         items(table.top.drop(PODIUM.size).withIndex().toList(), key = { it.value.id }) { (i, entry) ->
-                            EntryRow(table, entry, PODIUM.size + i + 1L, own = entry.id == table.own?.id)
+                            EntryRow(table, entry, PODIUM.size + i + 1L, own = entry.id == table.own?.id || entry.id == marked)
                         }
                     }
                 }

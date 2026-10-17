@@ -105,7 +105,7 @@ fun HeroScreen() {
                                 )
                             }
                         }
-                        game.hero?.let { hero -> item(key = "number") { NumberAndMight(hero) } }
+                        game.hero?.let { hero -> item(key = "number") { NumberAndMight(hero, game.heroId) } }
                         item { HeroSummary(game) }
                     }
                 }

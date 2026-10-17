@@ -118,6 +118,7 @@ private val Landing.route: Route
         Landing.ATLAS -> Route.Atlas
         Landing.AUCTION -> Route.Auction
         Landing.GUILD -> Route.Guild
+        Landing.HALL -> Route.Hall
         Landing.MAIL -> Route.Settings(SettingsPage.MAIL.name)
         Landing.MODERATION -> Route.Settings(SettingsPage.MODERATION.name)
     }

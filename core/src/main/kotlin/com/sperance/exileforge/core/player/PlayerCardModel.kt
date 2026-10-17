@@ -9,12 +9,14 @@ import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.guild.GuildActions
 import com.sperance.exileforge.core.guild.GuildRepository
+import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.rules.content.HallBoard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,6 +41,7 @@ class PlayerCardModel(
     private val feedback: FeedbackRepository,
     private val letters: LetterActions,
     private val screens: Screens,
+    private val hall: HallFocus,
     slice: GameSlice,
 ) {
     val game: StateFlow<GameUi> = slice.ui
@@ -101,6 +104,9 @@ class PlayerCardModel(
         market.sellerLots(card.heroId, card.name)
         screens.tab(Landing.AUCTION)
     }
+
+    /** «Место по Мощи ›»: доска славы «Мощь», прокрученная к герою карточки. */
+    fun openMightBoard(card: PlayerCard) = leave { hall.open(HallBoard.MIGHT, card.heroId) }
 
     /** «В гильдию»: приглашение в свою гильдию по имени - право уже проверил сервер карточки. */
     fun invite(card: PlayerCard) {

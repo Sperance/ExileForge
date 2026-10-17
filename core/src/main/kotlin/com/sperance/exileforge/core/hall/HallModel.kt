@@ -34,10 +34,17 @@ class HallModel(
     private val connection: ServerConnection,
     private val heroes: HeroRepository,
     private val commands: CommandRunner,
+    private val focus: HallFocus,
     slice: GameSlice,
 ) {
     val game: StateFlow<GameUi> = slice.ui
     val activity: StateFlow<Activity> = commands.state
+
+    /** Строка героя, к которой доску просили прокрутить ([HallFocus]); null - просьбы нет. */
+    val target: StateFlow<HallTarget?> = focus.target
+
+    /** Строка показана: просьба погашена. */
+    fun focused() = focus.done()
 
     private val mutable = MutableStateFlow(HallUi())
     val hall: StateFlow<HallUi> = mutable.asStateFlow()

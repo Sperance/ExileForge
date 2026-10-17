@@ -43,8 +43,9 @@ data class CardRights(val mail: Boolean = false, val invite: Boolean = false, va
  * @property online последняя команда героя свежая; [lastSeenAt] - её время (мс эпохи, 0 - неизвестно)
  * @property lots сколько лотов героя на витрине аукциона
  * @property fate Предначертание аккаунта героя; null - аккаунт его ещё не выбрал
- * @property mightPlace место героя на доске Мощи своего игрового сервера; 0 - его нет на доске
- * @property mightBoard сколько героев на доске Мощи того же сервера - тем же правилом места
+ * @property mightPlace место героя на доске Мощи своего игрового сервера; 0 - его нет на доске. Своя карточка (цель - сам герой) -
+ *   то же место для своей сводки героя
+ * @property mightBoard сколько героев на доске Мощи того же сервера - тем же правилом места: скрытые и без Мощи не считаются
  */
 @Serializable
 data class PlayerCard(

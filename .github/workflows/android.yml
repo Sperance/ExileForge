@@ -101,7 +101,8 @@ jobs:
     # Сторожа баланса - бои эталонов против стражей, режимов и классов; рядом с core: при правке core, сервера, сборки или workflow, перед релизом - всегда
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Холодный кэш эталонов (правка кода или контента постройки героя) - около 35 мин, тёплый - около 7
+    timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-balance
       cancel-in-progress: true

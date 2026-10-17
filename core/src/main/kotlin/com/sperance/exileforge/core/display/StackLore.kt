@@ -84,16 +84,18 @@ data class ItemUse(val profession: String, val job: String, val level: Int, val 
 fun ItemUse.title(): String = ui("use.WORK", professionTitle(profession), jobTitle(job), level, amount)
 
 /**
- * Где тратится каждая стопка: входы всех работ профессий, у перегонки - каждой её пары; по уровню работы. Как и
- * [itemSourceIndex], считается раз на контент и вне главного потока.
+ * Где тратится каждая стопка: входы всех работ профессий, у работы с выбором - каждого её варианта (пары перегонки, ступени
+ * сгущения эссенций, выбор кузнеца, ритуалы и книги любого класса); по уровню работы. Как и [itemSourceIndex], считается раз на
+ * контент и вне главного потока.
  */
 fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized(useCache) {
     useCache.getOrPut(index) {
         val recipes = JobRecipes(index)
+        val classes = listOf("") + index.classes.classes.map { it.code }
         val uses = HashMap<String, MutableList<ItemUse>>()
         index.professions.professions.forEach { profession ->
             profession.jobs.forEach { job ->
-                val variants = if (job is Job.Refine || job is Job.Carve) recipes.options(job, heroClass = "").map { it.job } else listOf(job)
+                val variants = if (job.kind.chosen) classes.flatMap { recipes.options(job, it) }.map { it.job }.ifEmpty { listOf(job) } else listOf(job)
                 variants.forEach { variant ->
                     variant.inputs.forEach { input -> uses.getOrPut(input.item) { ArrayList() } += ItemUse(profession.code, variant.code, variant.level, input.amount) }
                 }

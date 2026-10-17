@@ -188,7 +188,7 @@ private fun AdminReport.matches(query: String): Boolean {
 
 /**
  * Раскрытый отчёт модерации - тикет игрока ([ReportTicket]) со слотами модерации: строка автора ([AuthorLine]), обстоятельства дела
- * (у апелляции и жалобы), «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса и действия
+ * (у апелляции и жалобы), «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса (если есть) и действия
  * очереди: у нового «Отклонить» (со словом - причиной автору) и «В GitHub» (апелляция и жалоба не уходят наружу - «Принять»), у
  * отправленного - «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
  */
@@ -231,8 +231,10 @@ private fun AdminReport.matches(query: String): Boolean {
             if (steering && issue?.state?.open == true) IssueSteer(account, vm, report.id)
         },
     ) {
-        Text(ui("feedback.admin.score", report.likes, report.dislikes), color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1, softWrap = false)
-        Row(Modifier.weight(1f).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+        if (report.likes + report.dislikes > 0) {
+            Text(ui("feedback.admin.score", report.likes, report.dislikes), color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1, softWrap = false)
+        }
+        Row(Modifier.weight(1f).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             when {
                 fresh -> {
                     if (ReportStatus.REJECTED in entry.moves) {
@@ -255,7 +257,7 @@ private fun AdminReport.matches(query: String): Boolean {
                 }
             }
             if (entry.deletable) {
-                IconButton(enabled = !account.busy, onClick = { deleting = true }, modifier = Modifier.size(36.dp)) {
+                IconButton(enabled = !account.busy, onClick = { deleting = true }, modifier = Modifier.size(32.dp)) {
                     Icon(Icons.Outlined.Delete, ui("feedback.delete"), tint = LifeRed, modifier = Modifier.size(18.dp))
                 }
             }

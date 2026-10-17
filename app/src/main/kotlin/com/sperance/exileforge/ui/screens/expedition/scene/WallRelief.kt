@@ -6,12 +6,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
+import com.sperance.exileforge.core.campaign.WallField
+import com.sperance.exileforge.core.campaign.WallGrain
+import com.sperance.exileforge.core.campaign.cellNoise
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /**
  * Скала карты контурами: каждый массив - одна изолиния сглаженного поля ([WallField]), выдавленная на высоту массива в
@@ -27,11 +29,11 @@ internal class WallRelief private constructor(
     private val style: MapStyle,
     private val palette: Palette,
     private val unit: Float,
+    private val field: WallField,
     texture: WallTexture,
 ) {
     /** Тона слоёв стены стиля в палитре биома. */
     val tones: WallTones = style.wallTones(palette)
-    private val field = WallField(map, texture.edge, saltOf(map))
     private val cells = arrayOfNulls<WallCell>(map.width * map.height)
 
     init {
@@ -56,7 +58,7 @@ internal class WallRelief private constructor(
     /** Высота массива у клетки [x], [y] в клетках сцены: дверь и рычаг встают в рост своей стены. */
     fun height(x: Int, y: Int): Float = style.wallHeight(riseNear(x, y))
 
-    private fun fits(map: ExpeditionMap, relief: MapRelief, style: MapStyle, palette: Palette, unit: Float) = this.map === map && this.relief === relief && this.style === style && this.palette === palette && this.unit == unit
+    private fun fits(map: ExpeditionMap, field: WallField, relief: MapRelief, style: MapStyle, palette: Palette, unit: Float) = this.map === map && this.field === field && this.relief === relief && this.style === style && this.palette === palette && this.unit == unit
 
     /** Высота массива клетки: своя у стены, у выступа на соседней клетке - ближайшей стены каймы (массивы 8-связны). */
     private fun riseNear(x: Int, y: Int): Float {
@@ -164,11 +166,11 @@ internal class WallRelief private constructor(
     }
 
     companion object {
-        /** Рельеф стен [map] стиля [style]: прежний [last], если всё то же, иначе новый. */
-        fun of(map: ExpeditionMap, relief: MapRelief, style: MapStyle, layout: Layout, palette: Palette, unit: Float, last: WallRelief?): WallRelief = last?.takeIf { it.fits(map, relief, style, palette, unit) } ?: WallRelief(map, relief, style, palette, unit, style.texture(layout))
-
-        /** Соль шума края - от карты: та же карта - тот же край. */
-        private fun saltOf(map: ExpeditionMap) = map.start.x * 73 + map.start.y * 151 + map.exit.x * 199 + map.exit.y * 263 + map.width
+        /**
+         * Рельеф стен [map] стиля [style] по полю скалы ядра [field] (то же, во что упираются тела) узором зерна [grain]: прежний
+         * [last], если всё то же, иначе новый.
+         */
+        fun of(map: ExpeditionMap, field: WallField, grain: WallGrain, relief: MapRelief, style: MapStyle, palette: Palette, unit: Float, last: WallRelief?): WallRelief = last?.takeIf { it.fits(map, field, relief, style, palette, unit) } ?: WallRelief(map, relief, style, palette, unit, field, grain.texture)
 
         private fun seal(value: Float, cell: Int) = when {
             abs(value - cell) < 1e-4f -> value - SEAL

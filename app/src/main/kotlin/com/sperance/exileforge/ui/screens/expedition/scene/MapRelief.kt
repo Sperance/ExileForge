@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.PathFillType
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Shoreline
 import com.sperance.exileforge.core.campaign.Tile
+import com.sperance.exileforge.core.campaign.cellNoise
 
 /**
  * Рельеф карты для сцены: что зависит только от клеток карты и потому считается раз на карту и её правку
@@ -89,10 +90,3 @@ private const val MASS_SALT = 61
 
 /** Восемь соседей клетки: массив скалы связен и по диагонали. */
 private val AROUND = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, -1 to -1, 1 to -1, -1 to 1)
-
-/** Стабильное значение в `[0, 1)` на клетку и [salt]. */
-internal fun cellNoise(x: Int, y: Int, salt: Int = 0): Float {
-    var h = x * 374761393 + y * 668265263 + salt * 1442695041
-    h = (h xor (h ushr 13)) * 1274126177
-    return ((h xor (h ushr 16)) ushr 8) / 16777216f
-}

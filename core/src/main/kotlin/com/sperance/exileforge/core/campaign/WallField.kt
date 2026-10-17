@@ -1,27 +1,30 @@
-package com.sperance.exileforge.ui.screens.expedition.scene
+package com.sperance.exileforge.core.campaign
 
-import com.sperance.exileforge.core.campaign.ExpeditionMap
-import com.sperance.exileforge.core.campaign.Tile
 import kotlin.math.exp
 import kotlin.math.floor
 
 /**
- * Шум края стены стиля: [amplitude] - насколько поле скалы гуляет вокруг порога, [scale] - сколько волн на клетку,
+ * Шум края стены: [amplitude] - насколько поле скалы гуляет вокруг порога, [scale] - сколько волн на клетку,
  * [rough] - доля второй, вдвое более частой октавы (рваный край у скалы, мягкие «кроны» у зарослей).
  */
-internal class EdgeNoise(val amplitude: Float, val scale: Float, val rough: Float)
+class EdgeNoise(val amplitude: Float, val scale: Float, val rough: Float)
 
 /**
- * Сглаженное поле скалы карты: сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), и
+ * Сглаженное поле скалы карты - один источник подножия массива и для сцены, и для тел ([com.sperance.exileforge.core.campaign.run.WallBody]),
+ * как [Shoreline] у глади: как нарисовано, так и упирается. Сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), и
  * по стенам за каймой на [DEEP] шага вглубь с затухающим весом - массив сплошной, а не лента в клетку, - плюс
  * детерминированный шум края стиля [edge]. Поле считается раз на карту в узлах сетки по [STEPS] на клетку, так что каждый
  * квадрат marching squares лежит внутри одной клетки карты: изолинии режутся по клеткам без пересчёта.
  *
  * Изолиния поля на уровне [ROCK] - подножие массива; ниже - подложка земли ([PLATE]) и тень у подножия ([AO_FAR], [AO_NEAR]).
  *
- * Гауссиана разделима: вес клетки - произведение весов по осям.
+ * Гауссиана разделима: вес клетки - произведение весов по осям. Строится раз на карту и её правку ([ExpeditionMap.revision]).
  */
-internal class WallField(private val map: ExpeditionMap, private val edge: EdgeNoise, private val salt: Int) {
+class WallField private constructor(private val map: ExpeditionMap, private val edge: EdgeNoise) {
+    private val revision = map.revision
+
+    /** Соль шума края - от карты: та же карта - тот же край. */
+    private val salt = map.start.x * 73 + map.start.y * 151 + map.exit.x * 199 + map.exit.y * 263 + map.width
     val width = map.width
     val height = map.height
     private val cols = width * STEPS + 1
@@ -78,6 +81,63 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
                 values[j * cols + i] = sum + edge.amplitude * (fractal(i.toFloat() / STEPS, j.toFloat() / STEPS) - .5f) * 2f
             }
         }
+    }
+
+    /** Поле всё ещё этой карты в этой правке и с тем же шумом края. */
+    fun fits(other: ExpeditionMap, edge: EdgeNoise) = other === map && other.revision == revision && edge === this.edge
+
+    /** Отрезки подножия ([ROCK]) по клеткам карты: (ax, ay, bx, by) подряд, в клетках; считаются раз, по первому запросу тел. */
+    private val feet: Array<FloatArray> by lazy {
+        val lists = Array(width * height) { ArrayList<Float>() }
+        trace(ROCK) { contour ->
+            val list = lists[contour.cellY * width + contour.cellX]
+            for (k in 0 until contour.size) {
+                val n = (k + 1) % contour.size
+                if (!contour.crossing[k] || !contour.crossing[n]) continue
+                list += contour.xs[k]
+                list += contour.ys[k]
+                list += contour.xs[n]
+                list += contour.ys[n]
+            }
+        }
+        Array(lists.size) { lists[it].toFloatArray() }
+    }
+
+    /** Точка ([x], [y]) в клетках - в нарисованной скале: поле выше подножия. */
+    fun inside(x: Double, y: Double): Boolean = value(x.toFloat(), y.toFloat()) > ROCK
+
+    /** Ближайшая к точке ([x], [y]) кромка подножия в пределах [reach] клеток: расстояние до неё и нормаль от неё к точке; null - нет. */
+    fun nearest(x: Double, y: Double, reach: Double): Shoreline.Edge? {
+        val span = kotlin.math.ceil(reach).toInt() + 1
+        val cx = floor(x).toInt()
+        val cy = floor(y).toInt()
+        var best: Shoreline.Edge? = null
+        for (j in cy - span..cy + span) {
+            if (j !in 0 until height) continue
+            for (i in cx - span..cx + span) {
+                if (i !in 0 until width) continue
+                val segments = feet[j * width + i]
+                var k = 0
+                while (k < segments.size) {
+                    val edge = edge(x, y, segments[k].toDouble(), segments[k + 1].toDouble(), segments[k + 2].toDouble(), segments[k + 3].toDouble())
+                    if (edge.distance <= reach && (best == null || edge.distance < best.distance)) best = edge
+                    k += 4
+                }
+            }
+        }
+        return best
+    }
+
+    /** Расстояние от ([x], [y]) до отрезка ([ax], [ay])-([bx], [by]) и нормаль от ближайшей его точки к точке. */
+    private fun edge(x: Double, y: Double, ax: Double, ay: Double, bx: Double, by: Double): Shoreline.Edge {
+        val ex = bx - ax
+        val ey = by - ay
+        val length = ex * ex + ey * ey
+        val t = if (length <= 0) 0.0 else (((x - ax) * ex + (y - ay) * ey) / length).coerceIn(0.0, 1.0)
+        val dx = x - (ax + ex * t)
+        val dy = y - (ay + ey * t)
+        val d = kotlin.math.hypot(dx, dy)
+        return if (d < 1e-9) Shoreline.Edge(0.0, 0.0, 0.0) else Shoreline.Edge(d, dx / d, dy / d)
     }
 
     /** Кайма ли клетка: из неё растёт стена. */
@@ -159,6 +219,9 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
     }
 
     companion object {
+        /** Поле [map] с шумом края [edge]: прежнее [last], если карта та же и не правилась, иначе новое. */
+        fun of(map: ExpeditionMap, edge: EdgeNoise, last: WallField?): WallField = last?.takeIf { it.fits(map, edge) } ?: WallField(map, edge)
+
         /** Узлов поля на клетку: квадрат сетки - четверть клетки. */
         const val STEPS = 4
 
@@ -231,3 +294,10 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
 
 /** Кайма скалы: стена, у которой среди 8 соседей есть пол, - только она и видна на карте. */
 internal fun ExpeditionMap.rimRock(x: Int, y: Int) = tile(x, y) == Tile.WALL && (-1..1).any { dy -> (-1..1).any { dx -> walkable(x + dx, y + dy) } }
+
+/** Стабильный шум клетки ([x], [y]) с солью [salt] в `[0, 1)`: один для поля скалы и узоров сцены. */
+fun cellNoise(x: Int, y: Int, salt: Int = 0): Float {
+    var h = x * 374761393 + y * 668265263 + salt * 1442695041
+    h = (h xor (h ushr 13)) * 1274126177
+    return ((h xor (h ushr 16)) ushr 8) / 16777216f
+}

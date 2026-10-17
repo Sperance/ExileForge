@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
-import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.run.AbyssSpot
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.AilmentView
@@ -135,7 +134,7 @@ internal class ScenePainter {
         val biome = run.zone.biome
         val style = MapStyles.of(biome)
         val shape = MapRelief.of(map, world.shoreline, relief).also { relief = it }
-        val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(run.index.campaign.expedition.shapeOf(biome).shape), palette, unit, walls).also { walls = it }
+        val rock = WallRelief.of(map, world.walls, world.grain, shape, style, palette, unit, walls).also { walls = it }
         frame.unit = unit
         frame.time = decor
         val width = scope.size.width

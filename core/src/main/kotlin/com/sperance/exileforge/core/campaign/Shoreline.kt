@@ -136,7 +136,7 @@ class Shoreline private constructor(private val map: ExpeditionMap, private val 
         return out
     }
 
-    /** Край глади: [distance] - до него, ([nx], [ny]) - нормаль от него к точке. */
+    /** Кромка глади или подножия скалы ([WallField.nearest]): [distance] - до неё, ([nx], [ny]) - нормаль от неё к точке. */
     class Edge(val distance: Double, val nx: Double, val ny: Double)
 
     /** Петля с рамкой. */

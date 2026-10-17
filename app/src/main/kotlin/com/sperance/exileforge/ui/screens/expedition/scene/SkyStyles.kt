@@ -5,9 +5,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import com.sperance.exileforge.core.campaign.cellNoise
 import kotlin.math.max
 import kotlin.math.sin
-import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** VI · Sky glass: ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя). */
 internal class SkyGlass : MapStyle() {
@@ -63,9 +63,6 @@ internal class Drowned : MapStyle() {
 
     override fun wallHeight(rise: Float) = 1.4f + rise * .9f
 
-    /** Колонны утонувшей империи - «Обточенный камень»; по кромке - коралл. */
-    override fun texture(layout: Layout): WallTexture = Ashlar
-
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(palette.decor, 1.1f * light), .5f)
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
@@ -106,9 +103,6 @@ internal class Divine : MapStyle() {
     }
 
     override fun wallHeight(rise: Float) = 1.9f + rise * .8f
-
-    /** Чертоги богов - «Обточенный камень»: мрамор с золотой кромкой. */
-    override fun texture(layout: Layout): WallTexture = Ashlar
 
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = gold.copy(alpha = .9f * max(.4f, light))
 

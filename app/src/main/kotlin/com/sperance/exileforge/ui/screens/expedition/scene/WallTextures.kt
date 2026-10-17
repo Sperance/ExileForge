@@ -1,16 +1,18 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import com.sperance.exileforge.core.campaign.WallGrain
+import com.sperance.exileforge.core.campaign.cellNoise
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * Узор контурной стены: шум края массива [edge] и метки куска - на гранях, на
+ * Узор контурной стены своего зерна скалы ([WallGrain], шум края - в поле стен ядра): метки куска - на гранях, на
  * крышке и у подножия. Узор лишь рисует в набросок ([WallSketch]); цвета даёт стиль карты ([WallTones]), так что один узор
  * в разных биомах - в своих красках. Всё детерминированно: от клетки, поля и соли карты.
  */
-internal abstract class WallTexture(val edge: EdgeNoise) {
+internal abstract class WallTexture {
     abstract fun WallSketch.face()
     abstract fun WallSketch.cap()
     abstract fun WallSketch.foot()
@@ -34,7 +36,7 @@ internal abstract class WallTexture(val edge: EdgeNoise) {
  * «Обточенный камень» - залы, крипты, руины, города: тёсаная кладка рядами вдоль грани со швами вразбежку, крышка - плиты со
  * швами, сколами и трещинами, светлая фаска по кромке, у подножия щебень. Край почти ровный.
  */
-internal object Ashlar : WallTexture(EdgeNoise(amplitude = .06f, scale = 1.6f, rough = .2f)) {
+internal object Ashlar : WallTexture() {
     private const val COURSES = 4
     private const val JOINT = .7f
     private const val SLAB = .5f
@@ -121,7 +123,7 @@ internal object Ashlar : WallTexture(EdgeNoise(amplitude = .06f, scale = 1.6f, r
  * «Живая скала» - пещеры, горы, пустоши: рваный край, грани - пласты породы с прожилками, крышка - неровный камень с пятнами
  * мха и лишайника, вокруг мелкие камни.
  */
-internal object LiveRock : WallTexture(EdgeNoise(amplitude = .2f, scale = 2.4f, rough = .45f)) {
+internal object LiveRock : WallTexture() {
     private const val STRATA = 5
 
     override fun WallSketch.face() {
@@ -188,7 +190,7 @@ internal object LiveRock : WallTexture(EdgeNoise(amplitude = .2f, scale = 2.4f, 
  * «Заросли» - лес, болото, джунгли: мягкий «кроновый» край, грани - переплетение корней в тени, крышка - листва слоями с
  * бликами, листва свисает с кромки, у подножия папоротник.
  */
-internal object Thicket : WallTexture(EdgeNoise(amplitude = .17f, scale = 1.7f, rough = .15f)) {
+internal object Thicket : WallTexture() {
     private const val ROOTS = .45f
 
     override fun WallSketch.face() {
@@ -259,3 +261,11 @@ private fun crack(sketch: WallSketch, salt: Int) = with(sketch) {
         angle += (hash(salt + 3 + k) - .5f) * 1.6f
     }
 }
+
+/** Узор зерна скалы: тёсаный камень, живая скала или заросли. */
+internal val WallGrain.texture: WallTexture
+    get() = when (this) {
+        WallGrain.ASHLAR -> Ashlar
+        WallGrain.LIVE_ROCK -> LiveRock
+        WallGrain.THICKET -> Thicket
+    }

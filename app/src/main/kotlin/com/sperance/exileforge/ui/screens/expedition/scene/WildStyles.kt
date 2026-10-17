@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
-import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** V · Moss and roots: a living floor with grass swaying, mossy banks with roots and ferns, soft shade by the rock, fireflies. */
 internal class Overgrown : MapStyle() {
@@ -35,9 +34,6 @@ internal class Overgrown : MapStyle() {
     }
 
     override fun wallHeight(rise: Float) = .9f + rise * .5f
-
-    /** Лес, болото, джунгли - «Заросли» при любой раскладке. */
-    override fun texture(layout: Layout): WallTexture = Thicket
 
     /** Земляной вал под листвой: бока - земля, крышка и фаска - листва цвета декора. */
     override fun wallTones(palette: Palette) = WallTones.of(palette).let {

@@ -13,8 +13,8 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import com.sperance.exileforge.core.campaign.Liquid
+import com.sperance.exileforge.core.campaign.cellNoise
 import kotlin.math.sin
-import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** One tile as a style sees it: its cell, its centre in the pen's upward measure, and how many of its four sides are rock. */
 internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int)
@@ -40,12 +40,6 @@ internal abstract class MapStyle {
      * Высота массива скалы в полуширинах клетки при его доле [rise] в `[0, 1)` - одна на массив.
      */
     abstract fun wallHeight(rise: Float): Float
-
-    /**
-     * Узор контурной стены по раскладке карты (утверждено владельцем): залы - «Обточенный камень»,
-     * пещеры и пустоши - «Живая скала»; стиль может выбрать свой.
-     */
-    open fun texture(layout: Layout): WallTexture = if (layout == Layout.HALLS) Ashlar else LiveRock
 
     /** Тона слоёв стены в палитре биома. */
     open fun wallTones(palette: Palette): WallTones = WallTones.of(palette)

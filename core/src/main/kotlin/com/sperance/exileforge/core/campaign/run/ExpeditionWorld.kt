@@ -5,6 +5,8 @@ import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.SceneSight
 import com.sperance.exileforge.core.campaign.Shoreline
+import com.sperance.exileforge.core.campaign.WallField
+import com.sperance.exileforge.core.campaign.WallGrain
 import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ExpeditionRules
@@ -41,6 +43,8 @@ class ExpeditionWorld(
     lightRadius: Double = rules.defaultLight,
     bossMonster: RolledMonster? = null,
     hasPortal: Boolean = false,
+    /** Зерно скалы карты: шум края её поля стен ([walls]). */
+    val grain: WallGrain = WallGrain.LIVE_ROCK,
 ) {
     /** The hero's pace and sight; both follow the gear when it is changed on the map. */
     internal var heroSpeed = heroSpeed
@@ -179,8 +183,12 @@ class ExpeditionWorld(
     val shoreline: Shoreline get() = Shoreline.of(map, rules.shore, shore).also { shore = it }
     private var shore: Shoreline? = null
 
-    /** Тела в скале: круг против клеток со скруглёнными углами и против контура глади, как их рисует сцена. */
-    internal val body = WallBody(map, rules.cornerRadius) { shoreline }
+    /** Поле скалы карты: подножие стен - одно для сцены и тел; пересобирается только с правкой карты. */
+    val walls: WallField get() = WallField.of(map, grain.edge, lastWalls).also { lastWalls = it }
+    private var lastWalls: WallField? = null
+
+    /** Тела в скале: круг против нарисованного подножия стен и против контура глади, как их рисует сцена. */
+    internal val body = WallBody(map, { walls }) { shoreline }
 
     /** Середины пропастей карты: по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
     private val chasmMarks: List<Cell> by lazy {
@@ -450,7 +458,8 @@ class ExpeditionWorld(
             hasPortal: Boolean,
         ): ExpeditionWorld {
             val layout = MapGenerator.generate(seed, zone.biome, packs.size, rules.terrain, zone.size, rules.minChasm, rules.minPool, rules.shapeOf(zone.biome).shape)
-            return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
+            val grain = WallGrain.of(zone.biome, MapGenerator.styleOf(rules.shapeOf(zone.biome).shape))
+            return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal, grain)
         }
 
         /**

@@ -27,14 +27,12 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The run's figures: three numbers at once — damage a second, damage taken, kills a minute — and, opened,
- * the split of the dealt damage by type and by skill and of the taken by type. The combat's own events, summed.
+ * The run's figures: three numbers at once — damage a second, damage taken, kills a minute. The combat's own events, summed.
  *
- * Разбор всего захода - тот же лист, что у итога боя; яд - своей долей, не хаосом.
+ * Разбор всего захода - кнопкой, тот же лист, что у итога боя («Весь заход»).
  */
 @Composable internal fun RunFigures(summary: RunSummary) {
     if (summary.seconds <= 0) return
-    var open by remember { mutableStateOf(false) }
     Caption(ui("run.figures"))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Figure(ui("run.dps"), number(summary.dps))
@@ -42,16 +40,8 @@ import com.sperance.exileforge.ui.theme.*
         Figure(ui("run.kpm"), number(summary.killsPerMinute))
     }
     var breakdown by remember { mutableStateOf(false) }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeTextButton(onClick = { open = !open }) { Text(ui(if (open) "run.less" else "run.more")) }
-        ForgeTextButton(onClick = { breakdown = true }) { Text(ui("breakdown.open")) }
-    }
+    ForgeTextButton(onClick = { breakdown = true }) { Text(ui("breakdown.open")) }
     if (breakdown) FightStatsSheet(null, summary.fights) { breakdown = false }
-    if (open) {
-        Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.dealt.poison), summary.totalDealt)
-        Split(ui("run.dealt_by_skill"), summary.bySkill.mapKeys { skillTitle(it.key) }, summary.totalDealt)
-        Split(ui("run.taken_by_type"), summary.taken.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.taken.poison), summary.totalTaken)
-    }
 }
 
 /**
@@ -85,20 +75,6 @@ import com.sperance.exileforge.ui.theme.*
     Column {
         Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium)
         MutedText(label, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-/** Доля яда в разбивке по типам: своей строкой, когда он был. */
-private fun poisonPart(amount: Double): Map<String, Double> = if (amount > 0) mapOf(ui("breakdown.poison") to amount) else emptyMap()
-
-@Composable private fun Split(title: String, parts: Map<String, Double>, total: Double) {
-    if (parts.isEmpty() || total <= 0) return
-    Text(title, color = Rune, style = MaterialTheme.typography.labelLarge)
-    parts.entries.sortedByDescending { it.value }.forEach { (name, amount) ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(name, color = Parchment, style = MaterialTheme.typography.bodySmall)
-            Text(ui("run.share", number(amount), Math.round(amount / total * 100).toInt()), color = Muted, style = MaterialTheme.typography.bodySmall)
-        }
     }
 }
 

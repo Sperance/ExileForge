@@ -96,16 +96,13 @@ object FightFigures {
 }
 
 /**
- * The run so far, as the report reads it: разбор всех боёв захода ([fights]) и убийства; урон по типам и умениям,
- * полученное и секунды боя - из него.
+ * The run so far, as the report reads it: разбор всех боёв захода ([fights]) и убийства; итоги нанесённого и полученного и секунды
+ * боя - из него.
  */
 data class RunSummary(
     val fights: FightStats = FightStats.NONE,
     val kills: Int = 0,
 ) {
-    val dealt: Map<DamageType, Double> get() = fights.dealt.byType
-    val bySkill: Map<String, Double> get() = fights.dealt.bySkill
-    val taken: Map<DamageType, Double> get() = fights.taken.byType
     val seconds: Double get() = fights.seconds
     val totalDealt: Double get() = fights.dealt.total
     val totalTaken: Double get() = fights.taken.total

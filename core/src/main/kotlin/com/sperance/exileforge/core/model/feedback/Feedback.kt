@@ -105,34 +105,34 @@ import kotlinx.serialization.Serializable
     val replyPrint: String? get() = reply.takeIf { it.isNotBlank() }?.hashCode()?.toString()
 }
 
-/** A report whole, as the administrator reads it. */
+/**
+ * Отчёт целиком глазами модерации - без системного (устройство, ошибки сети, действия, лист героя - только в теле Issue): [place] -
+ * где был игрок, [screen] - раздел; [context] - обстоятельства дела, только у апелляции и жалобы.
+ */
 @Serializable data class FullReport(
     @SerialName("_id") val id: String,
     val text: String,
     val screen: String = "",
+    val place: String = "",
     val context: Map<String, String> = emptyMap(),
     val userId: String? = null,
     /** Герой автора: свой герой его аккаунта и имя на момент отчёта; null - без героя. */
     val heroId: String? = null,
     val heroName: String = "",
+    /** Класс и уровень героя автора на момент отчёта. */
+    val heroClass: String = "",
+    val heroLevel: Int = 0,
     val status: ReportStatus = ReportStatus.CREATED,
     val kind: FeedbackKind = FeedbackKind.BUG,
-    val likes: List<String> = emptyList(),
-    val dislikes: List<String> = emptyList(),
+    /** Голоса «+» и «−» числом. */
+    val likes: Int = 0,
+    val dislikes: Int = 0,
     val reason: String = "",
     val createdAt: String = "",
     /** Issue отчёта; null - не выгружен. */
     val issue: IssueView? = null,
     /** Код последнего отказа GitHub: выгрузка не удалась; пусто - всё ушло. */
     val issueError: String = "",
-    /** Класс и уровень героя автора - то, что о герое есть в Issue. */
-    val heroClass: String = "",
-    val heroLevel: Int = 0,
-    /** Последние неудачные запросы автора, новые первыми. */
-    val failures: List<com.sperance.exileforge.core.model.command.RequestFailure> = emptyList(),
-    /** Последние действия автора и снимок героя - как их прислал клиент. */
-    val trail: List<String> = emptyList(),
-    val heroSheet: List<String> = emptyList(),
     /** Повторы падения и версии, где оно было; у прочих отчётов - 1 и пусто. */
     val occurrences: Int = 1,
     val versions: List<String> = emptyList(),

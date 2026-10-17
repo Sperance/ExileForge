@@ -164,21 +164,15 @@ private fun sourceTone(source: BoostSource): Color = when (source) {
 private fun amount(value: Double): String = number(value.roundToLong().toDouble())
 
 /**
- * Сданные разом после карты задания: имя задания на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за
+ * Сданные разом после карты задания двумя разделами: «За эту карту» - их продвинул заход, «Также сдано» - сдалось заодно, с меткой
+ * вида; раздел без заданий не пишется. Задание - имя на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за
  * задания» - только при двух и больше: у одного задания она повторяла бы его фишки.
  */
 @Composable internal fun TurnedInLines(turnedIn: List<QuestTurnIn>) {
+    val (run, also) = turnedIn.partition { it.run }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        turnedIn.forEachIndexed { i, quest ->
-            if (i > 0) HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("✓", color = Vital, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    Text(quest.title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                }
-                RewardChips(quest.rewards, Modifier.padding(start = 18.dp))
-            }
-        }
+        TurnInSection(ui("summary.quests_run"), run, tagged = false)
+        TurnInSection(ui("summary.quests_also"), also, tagged = true)
         if (turnedIn.size < 2) return@Column
         HorizontalDivider(thickness = 1.dp, color = PanelRaised)
         Text(ui("summary.quests_total"), color = Muted, style = MaterialTheme.typography.labelMedium)
@@ -191,6 +185,32 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
             ),
         )
     }
+}
+
+/** Раздел сданного: заголовок с чертой до края и задания; [tagged] - у каждого метка вида (`summary.quest_kind.<вид>`). */
+@Composable private fun TurnInSection(title: String, quests: List<QuestTurnIn>, tagged: Boolean) {
+    if (quests.isEmpty()) return
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        HorizontalDivider(Modifier.weight(1f), thickness = 1.dp, color = PanelRaised)
+    }
+    quests.forEachIndexed { i, quest ->
+        if (i > 0) HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("✓", color = Vital, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                Text(quest.title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                if (tagged) KindTag(ui("summary.quest_kind.${quest.kind.name}"))
+            }
+            RewardChips(quest.rewards, Modifier.padding(start = 18.dp))
+        }
+    }
+}
+
+/** Метка вида задания: мелко, в тонкой рамке, в одну строку. */
+@Composable private fun KindTag(text: String) {
+    val shape = RoundedCornerShape(6.dp)
+    Text(text, color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, modifier = Modifier.border(1.dp, PanelRaised, shape).padding(horizontal = 5.dp))
 }
 
 /** Награда задания фишками: золото, опыт, сферы - с начала строки, с переносом. */

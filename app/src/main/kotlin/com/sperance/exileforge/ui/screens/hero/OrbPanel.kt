@@ -66,7 +66,7 @@ import org.koin.compose.viewmodel.koinViewModel
         optionArt = orbArt(orbs),
         onChange = onSelect,
     )
-    orb?.let { itemDescription(it.code.value).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
+    orb?.let { itemDescription(it.code.value, game.index).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
     if (instance == null) {
         Text(ui("orb.choose_item"), color = Muted)
         return

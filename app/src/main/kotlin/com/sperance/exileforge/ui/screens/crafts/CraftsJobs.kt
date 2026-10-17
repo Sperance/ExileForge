@@ -381,7 +381,7 @@ private fun yieldLabel(profession: ProfessionView): String {
     val card = resultCard(game, job)
     val output = job.output
     val (meta, description) = when (card) {
-        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble())) to itemDescription(output)
+        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble())) to itemDescription(output, game.index)
         is Inspect.Showcase -> (game.index?.template(output)?.let { ui("row.level", it.level) } ?: "") to equipmentDescription(output)
         else -> "" to ""
     }

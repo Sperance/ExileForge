@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
@@ -39,7 +40,8 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * the arms, and the way in. The price and the level stand at the bottom; short of either, or with a name
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
  *
- * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат.
+ * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат. Порог вступления - не ниже
+ * открытия гильдий ([guildEntryLevel]): с него поле и начинается.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +53,8 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var emblem by remember { mutableStateOf(rules.emblems.firstOrNull().orEmpty()) }
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
-    var minLevel by remember { mutableStateOf("1") }
+    val floor = guildEntryLevel(game.index?.rules)
+    var minLevel by remember(floor) { mutableStateOf(floor.toString()) }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)
     val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
@@ -108,7 +111,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
                 enabled = !game.busy && refusal == null,
                 icon = ForgeGlyphs.Banner,
             ) {
-                onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1))
+                onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor))
             }
         }
     }

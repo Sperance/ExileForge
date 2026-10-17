@@ -52,6 +52,9 @@ object Reads {
     /** Карточка игрока. */
     const val PLAYER_CARD = "player_card"
 
+    /** Своя карточка героя - для его сводки: своё чтение, не гасит открытую карточку игрока. */
+    const val OWN_CARD = "own_card"
+
     /** Последствия самоудаления героя. */
     const val DELETION = "deletion"
 }

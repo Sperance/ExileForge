@@ -48,19 +48,17 @@ data class LootBreakdown(val total: Double, val parts: List<BoostPart>) {
         }
 
         /**
-         * Опыт [total] захода [run]: лист героя, карта-предмет, [vaal] - зона Ваал захода, атлас с гильдией и зельем, сделки - как
-         * их складывает опыт за монстра на сервере.
+         * Опыт [total] захода [run]: лист героя, [vaal] - зона Ваал захода, атлас с гильдией и зельем, сделки - как их складывает
+         * опыт за монстра на сервере; карта-предмет опыта не прибавляет.
          */
         fun experience(run: Run, pacts: Map<String, Double>, potion: Map<String, Double>, total: Double, vaal: Boolean): LootBreakdown {
             val context = run.context.copy(pacts = pacts)
             val hero = context.bonus(MonsterRarity.NORMAL).experience
-            val map = context.active?.experience ?: 0.0
             val zone = if (vaal) context.vaal?.experience ?: 0.0 else 0.0
             return of(
                 total,
-                hero + map + zone + context[AtlasStat.EXPERIENCE.code],
+                hero + zone + context[AtlasStat.EXPERIENCE.code],
                 BoostSource.HERO to hero,
-                BoostSource.MAP to map,
                 BoostSource.VAAL to zone,
                 BoostSource.PACT to (pacts[AtlasStat.EXPERIENCE.code] ?: 0.0),
                 BoostSource.POTION to (potion[AtlasStat.EXPERIENCE.code] ?: 0.0),

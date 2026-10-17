@@ -266,7 +266,7 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
             MutedText(ui("bag.owned", owned), style = MaterialTheme.typography.labelSmall)
         }
     }
-    itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+    itemDescription(code, game.index).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
     game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
     game.index?.skills?.byBook(code)?.let { skill ->
         val inspect = rememberSkillInspect()

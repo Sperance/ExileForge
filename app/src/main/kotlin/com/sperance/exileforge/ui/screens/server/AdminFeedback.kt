@@ -154,22 +154,19 @@ private fun rowMeta(entry: AdminReport): String {
         entry.login ?: ui("feedback.anonymous"),
         report.heroClass.takeIf { it.isNotBlank() }?.let { "$it ${report.heroLevel}" },
         report.issue?.let { "#${it.number} · ${fateTitle(ReportFate.of(report.status, it), report.kind, it, short = true)}" },
-        "▲${report.likes.size} ▼${report.dislikes.size}".takeIf { report.likes.size + report.dislikes.size > 0 },
+        "▲${report.likes} ▼${report.dislikes}".takeIf { report.likes + report.dislikes > 0 },
         "×${report.occurrences}".takeIf { report.occurrences > 1 },
         report.reason.takeIf { report.status == ReportStatus.REJECTED && it.isNotBlank() }?.let { "«$it»" },
     ).joinToString(" · ")
 }
 
-/** Раскрытый отчёт: контекст, ошибки сети, действия, герой, переписка - и что модерация может с ним сделать. */
+/** Раскрытый отчёт: место, обстоятельства дела, переписка - и что модерация может с ним сделать. */
 @Composable private fun ReportDetail(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onDelete: () -> Unit) {
     val report = entry.report
     report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
         Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
     }
-    Facts(ui("bug.context"), report.context.map { (key, value) -> "$key: $value" } + listOfNotNull(report.screen.takeIf { it.isNotBlank() }?.let { "screen: $it" }))
-    Facts(ui("bug.failures"), report.failures.map { f -> ui("bug.failure", f.at, f.method, f.path, f.status, f.code) })
-    Facts(ui("feedback.admin.trail"), report.trail)
-    Facts(ui("feedback.admin.hero_sheet"), report.heroSheet)
+    Facts(ui("bug.context"), listOfNotNull(report.place.ifBlank { report.screen }.takeIf { it.isNotBlank() }) + report.context.map { (key, value) -> "$key: $value" })
     report.issue?.notes?.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
     ModerationNote(account, vm, report)
     if (report.issueError.isNotBlank() && report.issue == null) {

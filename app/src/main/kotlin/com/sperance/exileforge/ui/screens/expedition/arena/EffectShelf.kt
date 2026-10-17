@@ -53,6 +53,7 @@ import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
@@ -384,7 +385,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             FlowSummary(now)
             FlowPart(ui("fight.flow.part.regen"), now.regen - now.rest)
-            FlowPart(ui("fight.flow.part.rest"), now.rest)
+            FlowPart(ui("fight.flow.part.rest"), now.rest, now.restIn.takeIf { it > 0 }?.let { ui("fight.flow.rest_in", ceil(it).toInt()) })
             if (now.degen > 0) FlowPart(ui("fight.flow.part.degen"), -now.degen)
             if (now.ailments >= .5) FlowPart(ui("fight.flow.part.ailments"), -now.ailments)
             if (now.shielded >= .5) FlowPart(ui("fight.flow.part.shielded"), now.shielded)
@@ -399,11 +400,15 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
     }
 }
 
-/** Строка разбора: имя части и её вклад в секунду со знаком. */
-@Composable private fun FlowPart(title: String, value: Double) {
+/** Строка разбора: имя части и её вклад в секунду со знаком; [waiting] - часть ещё не началась, вместо числа - когда начнётся. */
+@Composable private fun FlowPart(title: String, value: Double, waiting: String? = null) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        Text(flowRate(value), color = flowTint(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        if (waiting != null) {
+            Text(waiting, color = Muted, style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text(flowRate(value), color = flowTint(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 

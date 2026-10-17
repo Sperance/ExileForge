@@ -71,7 +71,7 @@ internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { i
 internal fun ExpeditionRun.roadFlow(): LifeFlow {
     val rates = hurtingRates()
     val total = rates.sumOf { it.second }
-    return RoadLife.flow(hero, pace, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
+    return RoadLife.flow(hero, pace, seconds - hitAt, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
         .copy(ailments = total, shielded = EnergyShield.absorbed(shield, rates.map { (active, rate) -> law.type(active) to rate }))
 }
 

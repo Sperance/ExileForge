@@ -247,12 +247,19 @@ private fun rewardTiles(tally: MapTally, gold: LootBreakdown?, experience: LootB
             coins.takeIf { it > 0 }?.let { "+" + compactNumber(it.toDouble()) },
             orbs.takeIf { it > 0 }?.let { ui("summary.counted", it, plural("summary.orb", it)) },
         ).ifEmpty { listOf("+" + compactNumber(rewards.sumOf { it.experience }.toDouble())) }
-        SummaryTile("quests", ForgeGlyphs.Scroll, ui("summary.counted", quests.size, plural("summary.quest", quests.size)), worth.joinToString(" · "), Vital, Vital) { TurnedInLines(quests) }
+        SummaryTile("quests", ForgeGlyphs.Scroll, questCount(quests), worth.joinToString(" · "), Vital, Vital) { TurnedInLines(quests) }
     },
     atlas.takeIf { it.isNotEmpty() }?.let { keys ->
         SummaryTile("atlas", ForgeGlyphs.Constellation, "+${keys.size}", plural("summary.atlas_point", keys.size), Rune, Rune) { AtlasLines(keys) }
     },
 )
+
+/** Число сданных заданий на плитке: всё продвинул заход - «N заданий», иначе «за карту + заодно» («2 + 3»). */
+private fun questCount(quests: List<QuestTurnIn>): String {
+    val run = quests.count { it.run }
+    val also = quests.size - run
+    return if (also == 0) ui("summary.counted", run, plural("summary.quest", run)) else ui("summary.quests_split", run, also)
+}
 
 /** Плитка золота или опыта: итог [breakdown] (без захода на экране - итог сервера [total]), множитель в углу и разбор по нажатию. */
 private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: String, tone: Color, breakdown: LootBreakdown?): SummaryTile {

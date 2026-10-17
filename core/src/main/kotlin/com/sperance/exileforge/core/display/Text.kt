@@ -47,7 +47,15 @@ fun equipmentDescription(code: String): String = locOr(LocaleKey.equipmentDescri
 
 /** The name of a stacking item — an orb, a material, a book, an essence. */
 fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code") { loc(LocaleKey.itemName(code)) })
-fun itemDescription(code: String): String = locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))
+
+/**
+ * Описание стопки [code] (сфера, материал, оттиск): числа правил `{r:…}` подставляет [index] ([com.sperance.exileforge.rules.text.TextNumbers.text]);
+ * без контента или без числа - текст как есть.
+ */
+fun itemDescription(code: String, index: ContentIndex?): String {
+    val text = locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))
+    return index?.textNumbers?.text(text) ?: text
+}
 
 /** The English trade name, one in every language, for a full card only; null when the dictionary has none or it is the shown name already. */
 fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }

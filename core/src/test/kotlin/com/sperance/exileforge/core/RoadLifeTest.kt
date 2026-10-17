@@ -61,15 +61,31 @@ class RoadLifeTest {
         val index = TestContent.index
         val hero = Combatant(mapOf(CoreStat.HEALTH.code to 1_000.0, CoreStat.HEALTH_REGEN.code to 50.0), 40, index.campaign.combat)
         val pace = index.campaign.expedition
-        val free = RoadLife.flow(hero, pace)
+        val calm = pace.restDelay
+        val free = RoadLife.flow(hero, pace, calm)
         assertTrue(free.regen > free.rest && free.rest > 0, "regeneration and rest flow without an ailment")
-        Ailment.entries.filterNot { it.hurts }.forEach { assertEquals(free, RoadLife.flow(hero, pace, stalledBy = it)) }
-        val bled = RoadLife.flow(hero, pace, stalledBy = Ailment.BLEEDING)
+        Ailment.entries.filterNot { it.hurts }.forEach { assertEquals(free, RoadLife.flow(hero, pace, calm, stalledBy = it)) }
+        val bled = RoadLife.flow(hero, pace, calm, stalledBy = Ailment.BLEEDING)
         assertEquals(0.0, bled.regen)
         assertEquals(0.0, bled.rest)
         assertEquals(free.regen, bled.stalled, 1e-9)
         assertEquals(free.degen, bled.degen, 1e-9)
-        assertTrue(RoadLife.of(hero, pace, stalledBy = Ailment.POISONED).net <= 0)
+        assertTrue(RoadLife.of(hero, pace, calm, stalledBy = Ailment.POISONED).net <= 0)
+    }
+
+    @Test
+    fun rest_waits_for_a_quiet_spell_after_a_hit_while_the_sheet_regenerates() {
+        val index = TestContent.index
+        val hero = Combatant(mapOf(CoreStat.HEALTH.code to 1_000.0, CoreStat.HEALTH_REGEN.code to 50.0), 40, index.campaign.combat)
+        val pace = index.campaign.expedition
+        assertTrue(pace.restDelay > 0, "the content gives rest a delay")
+        val hit = RoadLife.flow(hero, pace, 0.0)
+        val calm = RoadLife.flow(hero, pace, pace.restDelay)
+        assertEquals(0.0, hit.rest)
+        assertEquals(pace.restDelay, hit.restIn, 1e-9)
+        assertTrue(hit.regen > 0, "the sheet regenerates right after a hit")
+        assertTrue(calm.rest > 0 && calm.restIn == 0.0)
+        assertEquals(calm.regen - calm.rest, hit.regen, 1e-9)
     }
 
     @Test

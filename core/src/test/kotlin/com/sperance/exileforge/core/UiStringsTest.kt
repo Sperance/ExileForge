@@ -189,6 +189,7 @@ class UiStringsTest {
                 add("moderation.sort_short.${it.name}")
             }
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
+            com.sperance.exileforge.rules.content.QuestKind.entries.forEach { add("summary.quest_kind.${it.name}") }
             TestContent.index.professions.professions.flatMap { it.jobs }.forEach { add("crafts.group.${com.sperance.exileforge.core.crafts.JobGroups.key(it, TestContent.index)}") }
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }
             listOf(com.sperance.exileforge.rules.run.FeatureKind.SECRET, com.sperance.exileforge.rules.run.FeatureKind.VAULT).forEach { add("feature.room.${it.name}") }

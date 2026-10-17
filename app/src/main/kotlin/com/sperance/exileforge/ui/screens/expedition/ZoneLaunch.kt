@@ -114,7 +114,6 @@ import com.sperance.exileforge.ui.theme.*
     Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
         Figure(bonus.quantity, ui("expedition.launch_quantity"))
         Figure(bonus.rarity, ui("expedition.launch_rarity"))
-        Figure(bonus.experience, ui("expedition.launch_experience"))
     }
     lines(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
     MutedText(ui("expedition.launch_spent"))
@@ -222,7 +221,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
                     }
                 }
             }
-            launch.potion?.let { MutedText(itemDescription(it), style = MaterialTheme.typography.bodySmall) }
+            launch.potion?.let { MutedText(itemDescription(it, game.index), style = MaterialTheme.typography.bodySmall) }
         }
         if (scarabs.isNotEmpty()) {
             Engraved(ui("brew.scarabs", launch.scarabs.size, brews.scarabsPerMap))
@@ -246,7 +245,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
                     }
                 }
             }
-            launch.scarabs.distinct().forEach { MutedText(itemDescription(it), style = MaterialTheme.typography.bodySmall) }
+            launch.scarabs.distinct().forEach { MutedText(itemDescription(it, game.index), style = MaterialTheme.typography.bodySmall) }
         }
     }
 }

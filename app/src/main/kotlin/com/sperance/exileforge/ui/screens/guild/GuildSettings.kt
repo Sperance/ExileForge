@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
@@ -113,7 +114,8 @@ private enum class Exit(val label: String, val question: String) {
                 )
                 if (leader) {
                     ForgeButton(enabled = !game.busy, onClick = {
-                        vm.settings(mode, (minLevel.toIntOrNull() ?: 1).coerceAtLeast(1), emblem, color, announcement.trim())
+                        val floor = guildEntryLevel(game.index?.rules)
+                        vm.settings(mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor), emblem, color, announcement.trim())
                     }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
                 }
             }

@@ -99,7 +99,7 @@ private const val ONE_ROW = 6
         }
         if (chosen in codes) {
             val refused = refusal(chosen)
-            if (refused != null) Text(refused, color = LifeRed, style = MaterialTheme.typography.bodySmall) else TrayTip(itemTitle(chosen), itemDescription(chosen), note)
+            if (refused != null) Text(refused, color = LifeRed, style = MaterialTheme.typography.bodySmall) else TrayTip(itemTitle(chosen), itemDescription(chosen, game.index), note)
         }
     }
 }
@@ -296,7 +296,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    ExpandableText(itemDescription(omen.code), style = MaterialTheme.typography.labelSmall)
+                    ExpandableText(itemDescription(omen.code, game.index), style = MaterialTheme.typography.labelSmall)
                 }
                 Text("×${hero.count(omen.code)}", color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }

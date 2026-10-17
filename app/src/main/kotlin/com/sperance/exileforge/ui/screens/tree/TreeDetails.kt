@@ -200,8 +200,10 @@ import kotlin.math.sin
 
     if (allocated) {
         val refusal = remember(node.code, taken) { ruleRefusal { TreeAllocation.requireRefundable(index.tree, node, taken) } }
+        val jewels = game.hero?.jewels.orEmpty()
         HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && refusal == null, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
         if (refusal != null && node.type != SkillNodeType.START) Text(refusal, color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        if (refusal == null && node.code in jewels) MutedText(ui("tree.jewel_returns"))
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {
             val owned = game.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
@@ -209,6 +211,7 @@ import kotlin.math.sin
                 onRefundBranch(node.code)
             }
             MutedText(ui("tree.refund_branch_note", branch.size, owned))
+            branch.count { it in jewels }.takeIf { it > 0 }?.let { MutedText(ui("tree.refund_branch_jewels", it)) }
         }
     } else if (start == null) {
         MutedText(ui("tree.path_none"))
@@ -267,7 +270,7 @@ import kotlin.math.sin
  * server's call — the socket has to be taken and free — so the list offers and the refusal explains.
  *
  * Имя гнезда - тема, а не бонус. Взятое гнездо может держать бездействующий самоцвет (вторая копия уникального) - причина листа; уникальный
- * самоцвет, уже стоящий в другом гнезде, ждёт и говорит почему.
+ * самоцвет, уже стоящий в другом гнезде, ждёт и говорит почему. Самоцвет в занятое гнездо встаёт заменой: прежний уходит в тайник.
  */
 @Composable internal fun SocketContents(
     game: GameUi,
@@ -299,31 +302,32 @@ import kotlin.math.sin
         ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.jewel_out"))
         }
-        return
     }
 
     val free = hero.items.filter { instance ->
         !instance.equipped && !instance.socketed && index.template(instance.template)?.slot == Slot.JEWEL
     }
-    if (!allocated) {
-        MutedText(ui("tree.socket_first"))
-        return
-    }
-    if (free.isEmpty()) {
-        MutedText(ui("tree.no_jewels"))
-        return
-    }
-    Engraved(ui("tree.jewel_in"))
-    free.forEach { instance ->
-        val single = hero.jewelFree(index, instance)
-        game.view(instance)?.let { jewel ->
-            ItemRow(
-                jewel,
-                price = game.sellPrice(instance),
-                note = if (single) null else ui("tree.jewel_unique_taken"),
-                noteColor = LifeRed,
-            ) {
-                inspect(Inspect.Copy(instance, InspectAction(ui("tree.jewel_in"), enabled = enabled && single) { onSocket(instance.id, node.code) }))
+    when {
+        !allocated -> if (inside == null) MutedText(ui("tree.socket_first"))
+
+        free.isEmpty() -> if (inside == null) MutedText(ui("tree.no_jewels"))
+
+        else -> {
+            val action = ui(if (inside == null) "tree.jewel_in" else "tree.jewel_swap")
+            Engraved(action)
+            if (inside != null) MutedText(ui("tree.jewel_swap_note"))
+            free.forEach { instance ->
+                val single = hero.jewelFree(index, instance, node.code)
+                game.view(instance)?.let { jewel ->
+                    ItemRow(
+                        jewel,
+                        price = game.sellPrice(instance),
+                        note = if (single) null else ui("tree.jewel_unique_taken"),
+                        noteColor = LifeRed,
+                    ) {
+                        inspect(Inspect.Copy(instance, InspectAction(action, enabled = enabled && single) { onSocket(instance.id, node.code) }))
+                    }
+                }
             }
         }
     }

@@ -141,8 +141,9 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             Maps(game, vm, index, zone, launch)
             Brews(game, vm, launch)
             val wait = seedWait(seedReadyAt(game, zone.code, launch, forced))
+            val mapless = launch.picked == null && !continues(game, zone.code, launch, forced) && zone.needsMap(game.hero?.campaign?.cleared.orEmpty())
             ForgeButton(
-                enabled = game.hero != null && !game.busy && wait == 0L,
+                enabled = game.hero != null && !game.busy && wait == 0L && !mapless,
                 onClick = { launchGuarded { vm.startRun(zone.code.value) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
             ) {
@@ -150,6 +151,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Spacer(Modifier.width(10.dp))
                 Text(if (wait > 0) ui("expedition.launch_wait", wait) else ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
+            if (mapless) MutedText(ui("expedition.launch_needs_map"), style = MaterialTheme.typography.bodySmall)
             if (game.isTester) TesterMechanics(vm, forced)
             if (game.isTester) {
                 ForgeOutlinedButton(
@@ -169,9 +171,14 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
 private fun seedReadyAt(game: GameUi, zone: MapCode, launch: MapLaunch, forced: Set<MapMechanic>): Long {
     val campaign = game.hero?.campaign ?: return 0
     val rules = game.index?.rules?.run ?: return 0
-    val run = campaign.run
-    if (run != null && launch.picked == null && run.zone == zone.value && run.context.forced == forced) return 0
+    if (continues(game, zone, launch, forced)) return 0
     return rules.seedReadyAt(campaign.seededAt)
+}
+
+/** Вход без карты в зону [zone] открытого захода с теми же механиками [forced] продолжает его: ни семени, ни карты ему не нужно. */
+private fun continues(game: GameUi, zone: MapCode, launch: MapLaunch, forced: Set<MapMechanic>): Boolean {
+    val run = game.hero?.campaign?.run ?: return false
+    return launch.picked == null && run.zone == zone.value && run.context.forced == forced
 }
 
 /** Сколько целых секунд до [readyAt] по часам сервера, вживую раз в секунду; 0 - можно сейчас. */

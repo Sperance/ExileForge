@@ -180,12 +180,12 @@ class HeroActions(
         api.hero.redeem(id, code)
     }
 
-    /** Один уникальный самоцвет вида на героя - общее правило, спрошенное прежде отказа сервера. */
+    /** Один уникальный самоцвет вида на героя - общее правило, спрошенное прежде отказа сервера; самоцвет занятого гнезда уходит в тайник. */
     fun socketJewel(itemId: String, nodeCode: String) = heroCommand { id ->
         val hero = heroes.state.value.hero
         val item = hero?.item(itemId)
         val index = world.state.value.content
-        if (hero != null && item != null && index != null) check(hero.jewelFree(index, item)) { ui("tree.jewel_unique_taken") }
+        if (hero != null && item != null && index != null) check(hero.jewelFree(index, item, nodeCode)) { ui("tree.jewel_unique_taken") }
         api.hero.socket(id, itemId, nodeCode)
     }
     fun unsocketJewel(itemId: String) = heroCommand { id -> api.hero.unsocket(id, itemId) }

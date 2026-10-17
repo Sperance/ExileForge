@@ -43,6 +43,8 @@ data class CardRights(val mail: Boolean = false, val invite: Boolean = false, va
  * @property online последняя команда героя свежая; [lastSeenAt] - её время (мс эпохи, 0 - неизвестно)
  * @property lots сколько лотов героя на витрине аукциона
  * @property fate Предначертание аккаунта героя; null - аккаунт его ещё не выбрал
+ * @property mightPlace место героя на доске Мощи своего игрового сервера; 0 - его нет на доске
+ * @property mightBoard сколько героев на доске Мощи того же сервера - тем же правилом места
  */
 @Serializable
 data class PlayerCard(
@@ -61,6 +63,8 @@ data class PlayerCard(
     val number: String = "",
     /** Мощь героя: сервер считает её из листа при выдаче карточки; 0 - ещё не посчитана. Не прогноз боя. */
     val might: Double = 0.0,
+    val mightPlace: Long = 0,
+    val mightBoard: Long = 0,
 )
 
 /** Что станет с гильдией после ухода героя: он просто выходит, главенство переходит наследнику или гильдия распускается. */

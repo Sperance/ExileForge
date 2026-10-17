@@ -59,10 +59,9 @@ fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
 }
 
 /**
- * `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. The
- * auction's letters name the lot's item by its code and its amount.
- *
- * Судьба Issue (`mail.feedback_issue`): второй аргумент - судьба, пятый - версия исправления.
+ * Письма об отчёте ([FEEDBACK_MAIL]): аргументы - вид, судьба, первая строка отчёта, слово модерации или разработчика, версия
+ * исправления (у судьбы Issue), номер Issue (пусто - Issue нет) и дата отчёта ISO; тело называет отчёт номером и датой ([reportRef]).
+ * Письма аукциона называют предмет лота кодом и число.
  */
 private fun systemLine(mail: Mail, part: String): String {
     if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
@@ -70,9 +69,20 @@ private fun systemLine(mail: Mail, part: String): String {
     val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { if (mail.key == ISSUE_MAIL) issueStateTitle(it, mail.args.getOrNull(4).orEmpty()) else statusTitle(it) }.orEmpty()
     return when (part) {
         "subject" -> loc("${mail.key}.subject", listOf(kind, status))
-        else -> loc("${mail.key}.body", listOf(status, mail.args.getOrNull(2).orEmpty()))
+        else -> loc("${mail.key}.body", listOf(status, mail.args.getOrNull(2).orEmpty(), reportRef(mail)))
     }
 }
+
+/** Как письмо об отчёте называет его: «#N от даты», без Issue - «от даты»; не письмо об отчёте или без даты - пусто. */
+private fun reportRef(mail: Mail): String {
+    if (mail.key !in FEEDBACK_MAIL) return ""
+    val day = mail.args.getOrNull(6)?.let(::reportDay)?.takeIf { it.isNotBlank() } ?: return ""
+    val number = mail.args.getOrNull(5).orEmpty()
+    return if (number.isBlank()) loc("mail.feedback.ref_dated", listOf(day)) else loc("mail.feedback.ref", listOf(number, day))
+}
+
+/** День отчёта из даты ISO `гггг-мм-дд` - «дд.мм.гггг»; иная строка - пусто. */
+private fun reportDay(iso: String): String = iso.take(10).split('-').takeIf { it.size == 3 }?.let { (year, month, day) -> "$day.$month.$year" }.orEmpty()
 
 /** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает; у золота её нет. */
 fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
@@ -541,6 +551,9 @@ private const val TICK_MS = 1_000L
 
 /** Письмо о новой судьбе Issue отчёта. */
 private const val ISSUE_MAIL = "mail.feedback_issue"
+
+/** Письма автору о его отчёте: судьба, судьба Issue и ответ разработчика. */
+private val FEEDBACK_MAIL = setOf("mail.feedback_status", ISSUE_MAIL, "mail.feedback_reply")
 
 /** Судьба Issue по имени словами сервера; исправленный - «Исправлено в X», если версия известна. */
 private fun issueStateTitle(name: String, version: String): String {

@@ -109,7 +109,7 @@ class QuestActions(
             boards?.let { g -> quests { it.copy(guild = g) } }
             if (result.claimed.isEmpty()) return@launch
             val named = targets + Quests(guild = boards).targets()
-            if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards) })) notices.toast(claimedLine(result.claimed, named))
+            if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards, it.kind, it.run) })) notices.toast(claimedLine(result.claimed, named))
         }
     }
 

@@ -178,9 +178,9 @@ fun ExpeditionRun.reportContext(): Map<String, String> = mapOf(
     "run.seed" to seed.toString(),
 )
 
-/** Призыв стража для полосы захода: только у поверженного стража карты, не в зоне Ваал. */
+/** Призыв стража для полосы захода: только у поверженного стража карты, не в зоне Ваал; в финале региона - в заходе по карте ([Zone.summonable]). */
 private fun ExpeditionRun.summonView(): SummonView? {
-    if (vaal || !bossDown) return null
+    if (vaal || !bossDown || !zone.summonable(run.context.active != null)) return null
     val perRun = index.campaign.services.summonsPerRun
     return SummonView(summonPrice(), summoned >= perRun, perRun)
 }

@@ -136,12 +136,13 @@ data class HeroView(
 
     /**
      * Whether [item] may go into a socket: a unique jewel is one of its kind per hero - the
-     * server's rule, asked before the command so the tree can say why rather than send a refusal (`ST_022`).
+     * server's rule, asked before the command so the tree can say why rather than send a refusal (`ST_022`). Самоцвет гнезда
+     * [socket], куда идёт [item], уходит в тайник и не считается.
      */
-    fun jewelFree(index: ContentIndex, item: ItemInstance): Boolean {
+    fun jewelFree(index: ContentIndex, item: ItemInstance, socket: String? = null): Boolean {
         val template = index.template(item.template) ?: return true
         return try {
-            TreeAllocation.requireUniqueJewelFree(template, jewels.values.filter { it.id != item.id }.map { it.template })
+            TreeAllocation.requireUniqueJewelFree(template, jewels.filter { (place, jewel) -> place != socket && jewel.id != item.id }.values.map { it.template })
             true
         } catch (refused: RuleViolation) {
             false

@@ -32,7 +32,9 @@ import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.ObjectAction
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -44,12 +46,15 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
+import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
+import com.sperance.exileforge.rules.content.ModifierDef
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestCondition
 import com.sperance.exileforge.rules.content.QuestKind
@@ -57,19 +62,30 @@ import com.sperance.exileforge.rules.content.QuestReward
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.Source
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.MonsterRoller
+import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.sheet.FlaskKind
+import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.InspectAction
+import com.sperance.exileforge.ui.components.InspectActions
+import com.sperance.exileforge.ui.components.InspectChoice
+import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
+import com.sperance.exileforge.ui.screens.craft.TargetRail
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
@@ -96,7 +112,8 @@ import java.io.File
  * Снимки ключевых экранов: каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
  * Экраны: задания и контракты, гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
- * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка.
+ * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, карточка редкой вещи с плашками
+ * особых строк, карточка захваченной карты, полка кузницы с карточкой вещи и её действиями.
  */
 class KeyScreensShotTest {
     @get:Rule val compose = createComposeRule()
@@ -223,6 +240,63 @@ class KeyScreensShotTest {
         Box(Modifier.height(1400.dp)) { AdminPanels(game, vm) }
     }
 
+    /** Редкий амулет со строкой каждого особого источника: плашки особого блока, основные строки и счётчик сторон под ними. */
+    @Test fun itemSeals() = shot("item_seals") {
+        ItemCard(view(sealedAmulet()), enabled = false, detailed = true, action = false)
+    }
+
+    /** Захваченная карта с качеством и алхимией: плашки захвата, качества и алхимии над строками карты. */
+    @Test fun mapSeals() = shot("map_seals") {
+        val game = game(70)
+        val map = capturedMap()
+        ItemCard(view(map), enabled = false, detailed = true, action = false, seals = game.itemSeals(map))
+    }
+
+    /** Полка кузницы с отдельной кнопкой надетого и карточка вещи из выбора цели: «В кузницу» | «Надеть» и «⋯». */
+    @Test fun forgeCard() = shot("forge_card") {
+        val item = sealedAmulet()
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { TargetRail(rememberItemFilter(ItemShelf.FORGE)) {} }
+        ItemCard(view(item), enabled = false, detailed = true, action = false)
+        val menu = listOf(InspectAction(ui("item.sell_merchant"), figure = "1 340") {}, InspectAction(ui("item.list_auction")) {})
+        InspectActions(Inspect.Copy(item, InspectAction(ui("bag.to_forge")) {}, InspectAction(ui("hero.equip")) {}, menu), InspectChoice(null)) {}
+    }
+
+    /** Вид копии [item] над контентом закреплённого сервера. */
+    private fun view(item: ItemInstance): ItemView = ItemView(item, index.template(item.template)!!, index)
+
+    /** Описание модификатора, что катается, по условию [take]. */
+    private fun def(take: (ModifierDef) -> Boolean): ModifierDef = index.definitions.first { it.rolls && take(it) }
+
+    /** Ролл [def] его лучшим тиром серединой. */
+    private fun roll(def: ModifierDef, fractured: Boolean = false): Roll = Roll(def.code, tier = 1, share = .5, fractured = fractured)
+
+    /** Редкий порченый амулет: врождённая, порча, расколотая, эссенция, ручная работа, ремесло, влияние Зодчего, префикс и суффиксы. */
+    private fun sealedAmulet(): ItemInstance {
+        val template = index.templatesBySlot.getValue(Slot.AMULET).first { !it.unique }
+        val plain = { source: Source -> def { it.source == source && !it.crafted && it.influence == null && MAP_TAG !in it.tags } }
+        val rolls = listOf(
+            roll(plain(Source.IMPLICIT)),
+            roll(plain(Source.CORRUPTION)),
+            roll(plain(Source.PREFIX), fractured = true),
+            roll(plain(Source.ESSENCE)),
+            roll(plain(Source.HANDCRAFTED)),
+            roll(def { it.crafted && it.affix }),
+            roll(def { it.influence == Influence.SHAPER }),
+            roll(def { it.source == Source.PREFIX && !it.crafted && it.influence == null && MAP_TAG !in it.tags && it.family != plain(Source.PREFIX).family }),
+            roll(plain(Source.SUFFIX)),
+        )
+        return ItemInstance("shot-amulet", template.code, Rarity.RARE, rolls, corrupted = true, influence = Influence.SHAPER, quality = 20, itemLevel = 84)
+    }
+
+    /** Редкая карта тира 7, захваченная Зодчим, качество 12%: алхимия и строки карты. */
+    private fun capturedMap(): ItemInstance {
+        val template = index.templatesBySlot.getValue(Slot.MAP).first()
+        val mapLines = index.definitions.filter { it.rolls && it.affix && MAP_TAG in it.tags }.take(2)
+        val rolls = listOf(roll(def { it.source == Source.ALCHEMY })) + mapLines.map { roll(it) }
+        val zone = index.campaign.zones.last().code
+        return ItemInstance("shot-map", template.code, Rarity.RARE, rolls, influence = Influence.SHAPER, quality = 12, itemLevel = 80, mapTier = 7, mapZone = zone)
+    }
+
     /** Состояние слота умения на снимке панели боя. */
     private data class SlotState(val ready: Float, val affordable: Boolean, val seconds: Double = 0.0, val casting: Float = 0f)
 
@@ -273,6 +347,9 @@ class KeyScreensShotTest {
 
     private companion object {
         const val SHOT_QUALITY = 75
+
+        /** Тег строк карты: на снимке вещи их нет, на снимке карты - только они. */
+        const val MAP_TAG = "map"
 
         /** Активных слотов умений. */
         const val SLOTS = 4

@@ -127,8 +127,8 @@ fun ItemRow(
             if (compact) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                     LevelChip(item.level)
-                    item.lines.forEach { TierHex(it.marks, 16.dp) }
-                    if (item.lines.isNotEmpty()) Spacer(Modifier.width(3.dp))
+                    item.orderedLines.forEach { TierHex(it.marks, 16.dp) }
+                    if (item.orderedLines.isNotEmpty()) Spacer(Modifier.width(3.dp))
                     QualityBadge(item, compact = true)
                     item.summary.quality?.let { RollPill(it) }
                     RowStates(item)
@@ -144,7 +144,7 @@ fun ItemRow(
                     QualityBadge(item, compact = true)
                 }
                 if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                if (item.lines.isNotEmpty()) FoldedLines(item.lines, lines, look)
+                if (item.orderedLines.isNotEmpty()) FoldedLines(item.orderedLines, lines, look)
             }
             footer?.invoke(this)
         }

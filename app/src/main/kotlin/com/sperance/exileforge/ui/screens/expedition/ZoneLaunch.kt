@@ -39,6 +39,8 @@ import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.MapCapture
+import com.sperance.exileforge.core.display.influenceTitle
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapDescription
@@ -49,7 +51,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.signedNumber
-import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
@@ -57,8 +58,6 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasBonuses
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.Influence
-import com.sperance.exileforge.rules.content.MapInfluenceRule
 import com.sperance.exileforge.rules.content.Monster
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Zone
@@ -110,7 +109,7 @@ import com.sperance.exileforge.ui.theme.*
     val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
     val loot = LootRoller(index)
     val bonus = loot.activeMap(zone.code, loot.atlasPowers(loot.mapEffects(picked.item, atlas.mapEffect), atlas.effects), rarity, picked.item.mapTier, influence, atlas.effects)
-    influence?.let { Captured(it, index.campaign.maps.influence) { stat -> atlas.effects[stat] ?: 0.0 } }
+    MapCapture.of(index.campaign.maps.influence, influence) { stat -> atlas.effects[stat] ?: 0.0 }?.let { Captured(it) }
     Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
         Figure(bonus.quantity, ui("expedition.launch_quantity"))
         Figure(bonus.rarity, ui("expedition.launch_rarity"))
@@ -120,17 +119,15 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Захваченная карта строками, как строки карты: имя влияния его цветом, затем действующие числа правила с узлами атласа [atlas]
- * ([MapInfluenceRule.powerAt], [MapInfluenceRule.itemsAt]) - сила монстров, шанс вещи нести влияние, вещь влияния со стража, и у Бездны -
- * её расщелины сверх окна ([MapInfluenceRule.cracksOf]).
+ * Захваченная карта строками, как строки карты: имя влияния его цветом, затем действующие числа захвата ([MapCapture] - те же, что на
+ * плашке карточки карты) - сила монстров, шанс вещи нести влияние, вещь влияния со стража, и у Бездны - её расщелины сверх окна.
  */
-@Composable private fun Captured(influence: Influence, rule: MapInfluenceRule, atlas: (String) -> Double) {
-    val tint = stateColor(influence.name.lowercase())
-    Text(ui("expedition.capture.title", loc("enum.EnumInfluence.${influence.name}")), color = tint, style = MaterialTheme.typography.labelMedium)
-    LineRow(MapLine(ui("expedition.capture.power", number(rule.powerAt(atlas))), MapLineKind.HARM, 0.0))
-    LineRow(MapLine(ui("expedition.capture.items", number(rule.itemsAt(atlas))), MapLineKind.REWARD, 0.0))
+@Composable private fun Captured(capture: MapCapture) {
+    Text(ui("expedition.capture.title", influenceTitle(capture.influence)), color = influenceColor(capture.influence), style = MaterialTheme.typography.labelMedium)
+    LineRow(MapLine(ui("expedition.capture.power", number(capture.power)), MapLineKind.HARM, 0.0))
+    LineRow(MapLine(ui("expedition.capture.items", number(capture.items)), MapLineKind.REWARD, 0.0))
     LineRow(MapLine(ui("expedition.capture.boss"), MapLineKind.REWARD, 0.0))
-    rule.cracksOf(influence).takeIf { it > 0 }?.let { LineRow(MapLine(ui("expedition.capture.cracks", it), MapLineKind.CONTENT, 0.0)) }
+    capture.cracks.takeIf { it > 0 }?.let { LineRow(MapLine(ui("expedition.capture.cracks", it), MapLineKind.CONTENT, 0.0)) }
 }
 
 /**
@@ -209,7 +206,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     val scarabs = brews.scarabs.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
     if (potions.isEmpty() && scarabs.isEmpty()) return
     val inspect = rememberInspect()
-    fun brew(code: String, taken: Boolean, run: () -> Unit) = inspect(Inspect.Stack(code, InspectAction(ui(if (taken) "brew.put_back" else "brew.take"), enabled = !game.busy, run = run)))
+    fun brew(code: String, taken: Boolean, run: () -> Unit) = inspect(Inspect.Stack(code, InspectAction(ui(if (taken) "brew.put_back" else "brew.take"), enabled = !game.busy) { run.invoke() }))
     ForgePanel {
         if (potions.isNotEmpty()) {
             Engraved(ui("brew.potion"))

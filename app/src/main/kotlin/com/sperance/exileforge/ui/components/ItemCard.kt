@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
+import com.sperance.exileforge.core.display.CardSeal
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemNeed
@@ -42,10 +43,10 @@ import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
+import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.display.stateHint
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -138,9 +139,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * Цена торговца копии заменяет голую цену шаблона. Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить. Плашки состояний и замок - в углу (у легенды ниже и от края, мимо завитков
- * рамки), у полной карточки касание значка открывает подсказку, что он значит; кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе. Врождённые
- * строки - над чертой; судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение. [notes] - общий блок
- * над модификаторами (`GameUi.itemNotes`: качество карты с Атласом героя).
+ * рамки), у полной карточки касание значка открывает подсказку, что он значит; кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе.
+ * Строки - в порядке [ItemView.lineGroups]: врождённые над чертой, у полной - особые источники и [seals] (`GameUi.itemSeals`: захват
+ * и качество карты с Атласом героя) плашками особого блока, основные - списком, под ними стороны аффиксов; у короткой - тот же порядок
+ * без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -156,15 +158,14 @@ fun ItemCard(
     waiting: Boolean = false,
     totals: (@Composable (RelicLook) -> Unit)? = null,
     unmet: Set<NeedKind>? = null,
-    notes: List<String> = emptyList(),
+    seals: List<CardSeal> = emptyList(),
     onClick: () -> Unit = {},
 ) {
     val look = relicLook(item.rarity)
     val legend = look.legend != null
     val serial = item.item.serial
     val shape = RoundedCornerShape(22.dp)
-    val rolled = item.lines
-    val shown = if (detailed) rolled else rolled.take(3)
+    val rolled = item.orderedLines
     var opened by remember { mutableStateOf<ItemLine?>(null) }
     Column(
         Modifier.fillMaxWidth().relicGround(look, shape, selected, sky = detailed)
@@ -179,7 +180,7 @@ fun ItemCard(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             item.states.forEach { state ->
-                Tipped(if (detailed) ({ Tip(stateTitle(state), stateHint(state), tint = stateColor(state)) }) else null) {
+                Tipped(if (detailed) ({ Tip(stateTitle(state), item.stateHint(state), tint = stateColor(state)) }) else null) {
                     Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(15.dp))
                 }
             }
@@ -229,19 +230,12 @@ fun ItemCard(
         }
         RelicDivider(look, Modifier.padding(horizontal = 4.dp))
         BaseFigures(item, look)
-        CardNotes(notes)
-        if (shown.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                shown.forEachIndexed { i, line ->
-                    RelicModLine(line, if (detailed) ({ opened = line }) else null)
-                    val next = shown.getOrNull(i + 1)
-                    if (line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT) {
-                        HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
-                    }
-                }
-            }
+        if (detailed) {
+            RelicLines(item, look, seals) { opened = it }
+        } else {
+            ShortLines(rolled.take(SHORT_LINES))
+            if (rolled.size > SHORT_LINES) MutedText(ui("card.more_properties", rolled.size - SHORT_LINES), style = MaterialTheme.typography.labelMedium)
         }
-        if (!detailed && rolled.size > shown.size) MutedText(ui("card.more_properties", rolled.size - shown.size), style = MaterialTheme.typography.labelMedium)
         FatedSlot(item.item)
         if (detailed && item.slot.isFlask) FlaskYours(look)
         if (detailed) {
@@ -288,12 +282,47 @@ internal val RelicChipHeight = 24.dp
     )
 }
 
-/** Общий блок над модификаторами: строка на заметку ядра, значком сведений, как фраза базы. */
-@Composable private fun CardNotes(notes: List<String>) {
-    notes.forEach { note ->
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Icon(Glyph.INFO.vector, null, tint = Rune, modifier = Modifier.size(16.dp))
-            Text(note, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+/** Строк у короткой карточки. */
+private const val SHORT_LINES = 3
+
+/** Строки короткой карточки: порядок [ItemView.lineGroups] без плашек, врождённые над чертой. */
+@Composable private fun ShortLines(lines: List<ItemLine>) {
+    if (lines.isEmpty()) return
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        lines.forEachIndexed { i, line ->
+            RelicModLine(line, null)
+            if (implicitEnds(line, lines.getOrNull(i + 1))) HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
+        }
+    }
+}
+
+/** Черта под врождёнными: [line] - последняя врождённая, а за ней есть [next]. */
+internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT
+
+/**
+ * Строки полной карточки по группам [ItemView.lineGroups]: врождённые и черта под ними, особый блок - сначала плашки [seals], затем
+ * строки особых источников плашками, - основные списком и стороны аффиксов под ними. Касание строки - [onOpen] (тир и место ролла).
+ */
+@Composable private fun RelicLines(item: ItemView, look: RelicLook, seals: List<CardSeal>, onOpen: (ItemLine) -> Unit) {
+    val groups = item.lineGroups
+    val implicit = groups.firstOrNull { it.kind == AffixKind.IMPLICIT }?.lines.orEmpty()
+    val special = groups.filter { it.special }.flatMap { it.lines }
+    val main = groups.filter { it.kind != AffixKind.IMPLICIT && !it.special }.flatMap { it.lines }
+    if (implicit.isEmpty() && special.isEmpty() && main.isEmpty() && seals.isEmpty()) return
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        implicit.forEach { RelicModLine(it, { onOpen(it) }) }
+        if (implicit.isNotEmpty() && (special.isNotEmpty() || main.isNotEmpty() || seals.isNotEmpty())) {
+            HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
+        }
+        if (seals.isNotEmpty() || special.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                seals.forEach { CardSealPlaque(it) }
+                special.forEach { LinePlaque(it) { onOpen(it) } }
+            }
+        }
+        main.forEach { RelicModLine(it, { onOpen(it) }) }
+        item.sides?.let {
+            Text(sidesText(it), color = look.faint, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.fillMaxWidth())
         }
     }
 }

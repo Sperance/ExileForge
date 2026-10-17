@@ -61,6 +61,7 @@ internal const val UNCRAFT = "-"
     val target = remember(hero, index, game.holding.selectedEquipment) { game.forgeTarget() }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     var picking by remember { mutableStateOf(false) }
+    val cards = rememberForgeCards(game)
     val pickFilter = rememberItemFilter(ItemShelf.FORGE)
     var benchLine by remember(target?.id) { mutableStateOf("") }
     var engraving by remember(target?.id) { mutableStateOf(false) }
@@ -91,7 +92,6 @@ internal const val UNCRAFT = "-"
     val chosen = choices.firstOrNull { it.code == smithy.orb }
     val sealChosen = seals.firstOrNull { it.code == smithy.seal }
     Column(Modifier.fillMaxSize()) {
-        Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil) } }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (hero == null || index == null) {
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
@@ -102,6 +102,7 @@ internal const val UNCRAFT = "-"
                 TargetRail(pickFilter) { picking = true }
                 Anvil(
                     game,
+                    cards,
                     target,
                     toolSocket(game, smithy, section, index, benchLine, if (section == ForgeSection.SEALS) sealChosen else chosen, essenceRefusals),
                     omenSocket(game, smithy, section, vm::selectOmen),
@@ -146,7 +147,7 @@ internal const val UNCRAFT = "-"
         }
     }
     if (picking) {
-        TargetPicker(game, pickFilter, target?.id, onDismiss = { picking = false }) {
+        TargetPicker(game, cards, pickFilter, target, onDismiss = { picking = false }) {
             vm.select(it)
             picking = false
         }

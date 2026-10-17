@@ -206,6 +206,7 @@ class UiStringsTest {
             Ailment.entries.filter { it.hurts }.forEach { add("fight.flow.stalled.${it.name}") }
             DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
+            AffixKind.entries.filter { it.special }.forEach { add("mod.seal.${it.name}") }
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
             TestContent.index.stats.stats.filter { TestContent.index.stats.section(it.code) != null }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
@@ -230,6 +231,7 @@ class UiStringsTest {
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("level", "strength", "dexterity", "intelligence").forEach { add("req.need.$it") }
             (listOf("corrupted", "mirrored", "fractured", "crafted", "equipped", "socketed") + com.sperance.exileforge.rules.content.Influence.entries.map { it.name.lowercase() }).forEach { add("state.$it") }
+            com.sperance.exileforge.rules.content.Influence.entries.forEach { add("state.${it.name.lowercase()}_hint.map") }
             com.sperance.exileforge.core.display.UniqueAlbum(TestContent.index).pools.forEach { add("history.pool.${it.tag}") }
             TestContent.index.campaign.zones.map { it.biome }.filter { it.isNotBlank() }.forEach { add("expedition.biome.$it") }
             com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->

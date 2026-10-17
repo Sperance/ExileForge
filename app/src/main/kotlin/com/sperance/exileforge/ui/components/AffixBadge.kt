@@ -45,6 +45,7 @@ fun affixTint(kind: AffixKind?): Color = when (kind) {
     AffixKind.ALCHEMY -> Vital
     AffixKind.UNIQUE -> Color(0xFFAF6025)
     AffixKind.ESSENCE -> Color(0xFFB07FE0)
+    AffixKind.INFLUENCE -> Shaper
 }
 
 /**
@@ -60,7 +61,7 @@ fun affixTint(kind: AffixKind?): Color = when (kind) {
         return
     }
     val badge = marks.badge.orEmpty()
-    val tint = affixTint(kind)
+    val tint = marks.influence?.let(::influenceColor) ?: affixTint(kind)
     val title = ui("mod.kind.${kind.name}")
     var explained by remember { mutableStateOf(false) }
     Row(

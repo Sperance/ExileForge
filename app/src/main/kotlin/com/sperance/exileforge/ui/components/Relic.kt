@@ -185,6 +185,8 @@ fun tierColor(marks: AffixMarks): Color = when (marks.kind) {
 
     AffixKind.ESSENCE -> Color(0xFFC8A0FF)
 
+    AffixKind.INFLUENCE -> marks.influence?.let(::influenceColor) ?: TierAsh
+
     AffixKind.PREFIX, AffixKind.SUFFIX, null -> when (marks.tier) {
         1 -> TierAmber
         2 -> TierMint
@@ -193,11 +195,12 @@ fun tierColor(marks: AffixMarks): Color = when (marks.kind) {
     }
 }
 
-/** Цвет текста строки: тёплый у уникальной, сиреневый у ремесла, серый у врождённой, голубой у прочих. */
+/** Цвет текста строки: тёплый у уникальной, сиреневый у ремесла, серый у врождённой, розовый у порчи, голубой у прочих. */
 fun modColor(marks: AffixMarks): Color = when (marks.kind) {
     AffixKind.UNIQUE -> Color(0xFFFFDDB0)
     AffixKind.CRAFTED -> Color(0xFFC9C6FF)
     AffixKind.IMPLICIT -> TierAsh
+    AffixKind.CORRUPTION -> Color(0xFFE98C86)
     else -> Color(0xFFA9CFFF)
 }
 
@@ -227,7 +230,7 @@ private fun DrawScope.hexPath(): Path {
         AffixKind.UNIQUE -> "✦"
         AffixKind.CRAFTED, AffixKind.IMPLICIT -> ""
         AffixKind.PREFIX, AffixKind.SUFFIX, null -> marks.tier.takeIf { it > 0 }?.toString().orEmpty()
-        else -> if (marks.tier > 0) "${kind.letter}${marks.tier}" else "${kind.letter}"
+        else -> if (marks.tier > 0) "${marks.letter}${marks.tier}" else marks.letter
     }
     val content: @Composable () -> Unit = {
         Box(

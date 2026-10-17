@@ -18,7 +18,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ChestOpening
-import com.sperance.exileforge.core.sheet.itemNotes
+import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -38,7 +38,7 @@ import com.sperance.exileforge.ui.theme.Parchment
             Engraved(ui("chest.inside"))
             if (opening.gold > 0) Line(game, null, ui("chest.gold", opening.gold))
             opening.items.forEach { (code, amount) -> Line(game, code, "${itemTitle(code)} ×$amount") }
-            opening.equipment.forEach { item -> game.view(item)?.let { ItemCard(it, enabled = false, detailed = true, notes = game.itemNotes(item)) } }
+            opening.equipment.forEach { item -> game.view(item)?.let { ItemCard(it, enabled = false, detailed = true, seals = game.itemSeals(item)) } }
             if (opening.gold <= 0 && opening.items.isEmpty() && opening.equipment.isEmpty()) MutedText(ui("chest.empty"))
             ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("chest.take")) }
         }

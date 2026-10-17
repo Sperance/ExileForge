@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.itemNotes
+import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.*
@@ -34,7 +34,7 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
     val instance = worn?.let { id -> game.hero?.item(id) } ?: return
     ForgeSheet(onDismissRequest = { worn = null }) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-            game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = game.sellPrice(instance), notes = game.itemNotes(instance)) }
+            game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = game.sellPrice(instance), seals = game.itemSeals(instance)) }
         }
     }
 }

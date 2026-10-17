@@ -38,8 +38,6 @@ import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.HoldHint
 import com.sperance.exileforge.ui.components.HoldSubject
-import com.sperance.exileforge.ui.components.Inspect
-import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -56,28 +54,35 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
     ItemSection.GEAR -> ForgeGlyphs.Swords
     ItemSection.MAPS -> ForgeGlyphs.Atlas
     ItemSection.TOOLS -> Icons.Outlined.Build
-    ItemSection.WORN -> Icons.Outlined.CheckCircle
+    ItemSection.WORN -> ForgeGlyphs.Helm
 }
 
 /**
  * Полка у наковальни (быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
- * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор цели на вещах - выбор на
- * полке и «Тип» в шторке одно и то же состояние.
+ * «Все» и разделы списка рисунками; выбранный - в золоте. Раздел по месту вещи ([ItemSection.apart], надетое) - под чертой отдельной
+ * кнопкой в золотой рамке с подписью. Нажатие ставит тип фильтра и открывает выбор цели на вещах - выбор на полке и «Тип» в шторке одно
+ * и то же состояние.
  */
 @Composable internal fun TargetRail(state: ItemFilterState, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    val entries = listOf<ItemType?>(null) + state.shelf.sections.map(ItemType::Section)
+    val (apart, kinds) = state.shelf.sections.partition { it.apart }
+    val pick = { type: ItemType? ->
+        state.update(state.filter.copy(type = type))
+        onOpen()
+    }
     Column(
         Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        entries.forEach { type ->
+        (listOf<ItemType?>(null) + kinds.map(ItemType::Section)).forEach { type ->
             val title = type?.let { typeTitle(it, uiLanguage) } ?: ui("common.all")
-            RailButton((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, on = type == state.filter.type) {
-                state.update(state.filter.copy(type = type))
-                onOpen()
-            }
+            RailButton((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, on = type == state.filter.type) { pick(type) }
+        }
+        if (apart.isNotEmpty()) Box(Modifier.width(34.dp).height(1.dp).background(PanelRaised))
+        apart.forEach { section ->
+            val type = ItemType.Section(section)
+            ApartButton(section.glyph, typeTitle(type, uiLanguage), on = type == state.filter.type) { pick(type) }
         }
     }
 }
@@ -93,17 +98,32 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
     }
 }
 
+/** Отдельная кнопка полки под чертой: рисунок [glyph] и подпись [title] в золотой рамке, выбранная - ярче. */
+@Composable private fun ApartButton(glyph: ImageVector, title: String, on: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Column(
+        Modifier.size(46.dp).clip(shape).background(Gold.copy(alpha = if (on) .22f else .10f), shape).border(1.dp, Gold.copy(alpha = if (on) .9f else .55f), shape)
+            .clickable(role = Role.Tab, onClickLabel = title, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(glyph, null, tint = GoldBright, modifier = Modifier.size(16.dp))
+        Text(title, color = Gold, fontSize = 8.5.sp, lineHeight = 10.sp, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
+    }
+}
+
 /**
  * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen] — then the target itself as it
- * stands and the server's last word about it. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её карточку, выбор другой - кнопкой карточки; пустая открывает выбор.
+ * stands and the server's last word about it. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её
+ * карточку ([ForgeCards]): выбор другой - «Сменить», рядом - надеть или снять, в «⋯» - продажа и аукцион; пустая открывает выбор.
  */
-@Composable internal fun Anvil(game: GameUi, target: ForgeTarget?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
+@Composable internal fun Anvil(game: GameUi, cards: ForgeCards, target: ForgeTarget?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     val inspect = rememberInspect()
     val open = {
         when (target) {
             null -> onPick()
-            is ForgeTarget.Gear -> inspect(Inspect.Copy(target.view.item, InspectAction(ui(target.changeKey), run = onPick)))
+            is ForgeTarget.Gear -> inspect(cards.of(target.view.item, ui(target.changeKey), onPick))
         }
     }
     Column(
@@ -168,7 +188,7 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
                 base.forEach { BaseChip(it) }
             }
         }
-        item.lines.forEach { line ->
+        item.orderedLines.forEach { line ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 AffixBadge(line.marks)
                 Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)

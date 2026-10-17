@@ -42,14 +42,15 @@ value class SlotGroup(val tag: String) {
 
 /**
  * Раздел списка шире места: вся экипировка, карты, инструменты, надетое - быстрые варианты «Типа» на полке у наковальни.
- * Новый раздел - запись здесь и в [ItemShelf.sections].
+ * Новый раздел - запись здесь и в [ItemShelf.sections]. [apart] - раздел по тому, где вещь, а не что она: полка ставит его
+ * отдельной кнопкой под чертой.
  */
 @Serializable
-enum class ItemSection {
-    GEAR,
-    MAPS,
-    TOOLS,
-    WORN,
+enum class ItemSection(val apart: Boolean) {
+    GEAR(false),
+    MAPS(false),
+    TOOLS(false),
+    WORN(true),
     ;
 
     fun admits(piece: ItemView): Boolean = when (this) {

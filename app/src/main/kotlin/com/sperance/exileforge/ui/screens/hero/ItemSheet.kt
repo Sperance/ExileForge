@@ -30,9 +30,8 @@ import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.itemNotes
+import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.sellPrice
-import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
@@ -40,14 +39,9 @@ import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.ItemIcon
-import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-
-/** What the action row opened on top of the sheet, if anything. */
-private enum class ItemAction { AUCTION, SELL, WORN }
 
 /**
  * One item of the stash: its card, and what can be done with it.
@@ -76,14 +70,12 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
         LaunchedEffect(itemId) { onDismiss() }
         return
     }
-    val name = view.title
     val can = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     val loose = !instance.equipped && !instance.socketed
     val price = game.sellPrice(instance)
-    val reachable = game.unmetFor(instance.template).isEmpty()
     val locked = instance.locked
     val waiting = instance.id in game.link.waitingItems
-    var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
+    val deals = rememberItemDeals()
     var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
     val wear = rememberWearChoice(game, instance)
     val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
@@ -99,7 +91,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         price = price,
                         waiting = waiting,
                         totals = wearTotals(game, instance, wear),
-                        notes = game.itemNotes(instance),
+                        seals = game.itemSeals(instance),
                         unmet = game.unmetNeeds(instance.template),
                     )
                 }
@@ -143,33 +135,10 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
                 when {
-                    instance.socketed -> PrimaryPill(ui("hero.unequip"), can, look) {
-                        onDismiss()
-                        model.unsocketJewel(instance.id)
-                    }
-
                     instance.equipped && wornPlace != null -> PrimaryPill(ui("hero.replace"), can, look) { replacing = wornPlace }
-
-                    instance.equipped -> PrimaryPill(ui("hero.unequip"), can, look) {
-                        onDismiss()
-                        model.unequip(instance.id)
-                    }
-
-                    view.slot == Slot.MAP -> Unit
-
-                    view.slot == Slot.JEWEL -> {
-                        val socket = remember(game.hero, game.index) { game.index?.let { game.hero?.freeSocket(it) } }
-                        PrimaryPill(ui("hero.to_tree"), can && socket != null, look) {
-                            onDismiss()
-                            socket?.let(shell::openTree)
-                        }
-                    }
-
-                    else -> PrimaryPill(ui("hero.equip"), can && reachable && !twin, look) {
-                        onDismiss()
-                        model.equip(instance.id, wear.target)
-                    }
+                    offer != null -> PrimaryPill(offer.label, offer.enabled, look) { offer.run(wear.target) }
                 }
                 QuietPill(can, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, onClick = {
                     onDismiss()
@@ -194,65 +163,18 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         }
                         MenuLine(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) {
                             more = false
-                            open = if (loose) ItemAction.AUCTION else ItemAction.WORN
+                            deals.auction(instance)
                         }
                         MenuLine(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) {
                             more = false
-                            open = if (loose) ItemAction.SELL else ItemAction.WORN
+                            deals.sell(instance)
                         }
                     }
                 }
             }
         }
     }
-    when (open) {
-        ItemAction.AUCTION -> ListingSheet(game, name, onDismiss = { open = null }, hint = {
-            model.priceHint(instance.template, instance.rarity, game.index?.template(instance.template)?.let(instance::level) ?: 0)
-        }) { orb, price, _ ->
-            open = null
-            onDismiss()
-            model.sellEquipment(instance.id, orb, price)
-        }
-
-        ItemAction.SELL -> ConfirmSheet(
-            title = ui("hero.sell_q"),
-            subtitle = name,
-            danger = true,
-            icon = { ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(44.dp)) },
-            ledger = listOfNotNull(
-                LedgerLine(ui("confirm.give"), name, Tone.SPEND),
-                LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),
-                game.shardsFor(listOf(view.rarity))?.let { LedgerLine(ui("confirm.gain"), it, Tone.GAIN) },
-            ),
-            note = ui("hero.sell_confirm"),
-            confirm = ui("hero.sell_do"),
-            onDismiss = { open = null },
-        ) {
-            onDismiss()
-            model.sellForGold(instance.id)
-        }
-
-        ItemAction.WORN -> AlertDialog(
-            onDismissRequest = { open = null },
-            containerColor = PanelRaised,
-            shape = DialogShape,
-            tonalElevation = 0.dp,
-            title = {
-                ChordOverWindow()
-                Text(ui("hero.worn_title"), color = Gold)
-            },
-            text = { Text(ui("hero.worn_note"), color = Parchment) },
-            confirmButton = {
-                ForgeTextButton(enabled = can, onClick = {
-                    open = null
-                    if (instance.socketed) model.unsocketJewel(instance.id) else model.unequip(instance.id)
-                }) { Text(ui("hero.unequip")) }
-            },
-            dismissButton = { ForgeTextButton(onClick = { open = null }) { Text(ui("common.close")) } },
-        )
-
-        null -> Unit
-    }
+    ItemDealSheets(game, model, deals, onDismiss)
     replacing?.let { place ->
         SlotPicker(game, place, onDismiss = { replacing = null }, onEquip = { id ->
             onDismiss()

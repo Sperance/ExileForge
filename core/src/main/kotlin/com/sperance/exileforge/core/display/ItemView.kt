@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
@@ -32,29 +33,38 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
 import kotlin.math.round
 
 /**
- * What put a line on an item, lettered as Path of Exile's trade site letters it: P prefix, S suffix,
- * I implicit, C the bench, F fractured, U unique — and this game's own H for the smith's
- * handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line.
+ * Что поставило строку на вещь - буквой, как её пишет торговая площадка Path of Exile: P префикс, S суффикс, I врождённая,
+ * C верстак, F расколотая, U уникальная, и свои буквы игры: H ручная работа кузнеца, V порча, A алхимия карты, X строка особой
+ * эссенции, N строка пула влияния.
+ *
+ * Порядок записей - порядок строк на карточке, в плитке и строках списков ([ItemView.lineGroups]). [special] - особый источник:
+ * полная карточка кладёт его строки плашками особого блока над основными.
  */
-enum class AffixKind(val letter: Char) {
-    PREFIX('P'),
-    SUFFIX('S'),
-    IMPLICIT('I'),
-    CRAFTED('C'),
-    HANDCRAFTED('H'),
-    FRACTURED('F'),
-    CORRUPTION('V'),
-    ALCHEMY('A'),
-    UNIQUE('U'),
-    ESSENCE('X'),
+enum class AffixKind(val letter: Char, val special: Boolean) {
+    IMPLICIT('I', false),
+    CORRUPTION('V', true),
+    FRACTURED('F', true),
+    ESSENCE('X', true),
+    HANDCRAFTED('H', true),
+    ALCHEMY('A', true),
+    CRAFTED('C', true),
+    INFLUENCE('N', true),
+    UNIQUE('U', false),
+    PREFIX('P', false),
+    SUFFIX('S', false),
     ;
 
     companion object {
-        /** A fracture or the bench outranks the place a line holds: that is what decides what an orb may do to it. */
-        fun of(source: Source?, crafted: Boolean, fractured: Boolean): AffixKind? = when {
+        /**
+         * Расколотость и верстак сильнее места строки: они решают, что сфера может с ней сделать; строка пула влияния [influenced] -
+         * своего вида, место аффикса она всё равно занимает.
+         */
+        fun of(source: Source?, crafted: Boolean, fractured: Boolean, influenced: Boolean = false): AffixKind? = when {
             fractured -> FRACTURED
 
             crafted -> CRAFTED
+
+            influenced -> INFLUENCE
 
             else -> when (source) {
                 Source.PREFIX -> PREFIX
@@ -71,6 +81,9 @@ enum class AffixKind(val letter: Char) {
     }
 }
 
+/** Имя влияния по словарю сервера: «Зодчий», «Пустота», «Бездна». */
+fun influenceTitle(influence: Influence): String = loc("enum.EnumInfluence.${influence.name}")
+
 /**
  * Тир модификатора словами: «T3 из 8 (T1 - сильнейший)» - одна подпись везде, где печатается тир строки. T1 - лучший тир
  * (высший уровень открытия), как цвет значка тира на карточке.
@@ -85,20 +98,38 @@ data class AffixMarks(
     val handcrafted: Boolean = false,
     val alchemy: Boolean = false,
     val kind: AffixKind? = null,
+    /** Влияние строки вида [AffixKind.INFLUENCE]: его цвет и буква; у прочих - null. */
+    val influence: Influence? = null,
 ) {
+    /** Буква значка: у строки влияния - первая буква имени влияния, у прочих - буква вида; строка без вида - пусто. */
+    val letter: String get() = influence?.let { influenceTitle(it).take(1).uppercase() } ?: kind?.letter?.toString().orEmpty()
+
     /** The badge as it is printed: the letter and, for a rolled line, its tier — "P1", "S3", "I". */
-    val badge: String? get() = kind?.let { if (tier > 0) "${it.letter}$tier" else "${it.letter}" }
+    val badge: String? get() = kind?.let { if (tier > 0) "$letter$tier" else letter }
+
+    /** Имя источника на плашке особой строки: у строки влияния - имя влияния, у прочих - слово вида (`mod.seal.<вид>`). */
+    val sealName: String get() = influence?.let(::influenceTitle) ?: kind?.let { ui("mod.seal.${it.name}") }.orEmpty()
 
     companion object {
-        fun of(def: ModifierDef?, roll: Roll) = AffixMarks(
-            tier = roll.tier,
-            crafted = def?.crafted == true,
-            fractured = roll.fractured,
-            handcrafted = def?.source == Source.HANDCRAFTED,
-            alchemy = def?.source == Source.ALCHEMY,
-            kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured),
-        )
+        fun of(def: ModifierDef?, roll: Roll): AffixMarks {
+            val kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured, def?.influence != null)
+            return AffixMarks(
+                tier = roll.tier,
+                crafted = def?.crafted == true,
+                fractured = roll.fractured,
+                handcrafted = def?.source == Source.HANDCRAFTED,
+                alchemy = def?.source == Source.ALCHEMY,
+                kind = kind,
+                influence = def?.influence?.takeIf { kind == AffixKind.INFLUENCE },
+            )
+        }
     }
+}
+
+/** Строки вещи одного вида [kind] (null - строки без вида): группа карточки в порядке записей [AffixKind]. */
+data class LineGroup(val kind: AffixKind?, val lines: List<ItemLine>) {
+    /** Группа особого источника: полная карточка кладёт её строки плашками. */
+    val special: Boolean get() = kind?.special == true
 }
 
 /**
@@ -226,6 +257,18 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         }
     }
 
+    /**
+     * Строки для показа, сложенные по видам в порядке записей [AffixKind] (врождённые, особые источники, уникальные, префиксы,
+     * суффиксы), внутри вида - как лежат на копии; строки без вида - последними. Один порядок для полной и короткой карточки,
+     * плитки и строк списков; [lines] держит порядок копии - по нему адресуют строку команды.
+     */
+    val lineGroups: List<LineGroup> by lazy {
+        lines.groupBy { it.marks.kind }.entries.sortedBy { it.key?.ordinal ?: Int.MAX_VALUE }.map { LineGroup(it.key, it.value) }
+    }
+
+    /** Строки в порядке показа ([lineGroups]) одним списком. */
+    val orderedLines: List<ItemLine> by lazy { lineGroups.flatMap { it.lines } }
+
     /** The lines that hold affix places (prefixes and suffixes, the bench's among them). */
     val affixes: List<ItemLine> get() = lines.filter { it.affix }
 
@@ -284,6 +327,12 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         )
     }
 
+    /**
+     * Что значит состояние [state] на этой вещи: подсказка её слота (`state.<состояние>_hint.<слот>` - у карты влияние значит
+     * захват), а без неё - общая ([stateHint]).
+     */
+    fun stateHint(state: String): String = uiOr(uiLanguage, "state.${state}_hint.${slot.name.lowercase()}", com.sperance.exileforge.core.display.stateHint(state))
+
     /** What the merchant pays, by the rules' price: base, rarity and a share per line; the hero's sheet does not change it. */
     fun sellPrice(): Long = SellPrice.of(index, template, item)
 
@@ -301,7 +350,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     override fun hashCode(): Int = item.hashCode()
 
     companion object {
-        private val RANKED = setOf(AffixKind.PREFIX, AffixKind.SUFFIX, AffixKind.FRACTURED, AffixKind.CRAFTED)
+        private val RANKED = setOf(AffixKind.PREFIX, AffixKind.SUFFIX, AffixKind.FRACTURED, AffixKind.CRAFTED, AffixKind.INFLUENCE)
 
         /** The view of [item], or null for a copy whose template the content does not hold. */
         fun of(item: ItemInstance, index: ContentIndex): ItemView? = index.template(item.template)?.let { ItemView(item, it, index) }

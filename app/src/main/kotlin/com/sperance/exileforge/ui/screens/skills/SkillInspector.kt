@@ -64,7 +64,7 @@ private val NO_PEEK: (SkillPeek) -> Unit = {}
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             SkillCard(game, index, peek.code, peek.level, peek.condition)
-            peek.action?.let { InspectButton(it, close) }
+            peek.action?.let { InspectButton(it, onDone = close) }
         }
     }
 }

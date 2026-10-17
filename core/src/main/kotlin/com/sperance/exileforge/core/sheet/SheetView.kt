@@ -9,11 +9,11 @@ import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.character.WearOutcome
 import com.sperance.exileforge.core.character.WearPlace
+import com.sperance.exileforge.core.display.CardSeal
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.MapCapture
 import com.sperance.exileforge.core.display.NeedKind
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.unmetNeeds
-import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.atlas.AtlasState
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -104,21 +104,27 @@ internal object HeroLens {
     /** The hero's atlas as the rules count it: points earned and free. */
     fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = atlasMemo.of(index, hero)
 
-    /** Строки общего блока над модификаторами карточки копии [item]: пока - качество карты-предмета ([mapQuality]). */
-    fun itemNotes(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<String> {
+    /**
+     * Плашки особого блока карточки копии [item], что не строки вещи: у карты-предмета - захват влиянием ([MapCapture]) и качество
+     * ([mapQuantity]) с Атласом героя; у прочих вещей - пусто.
+     */
+    fun itemSeals(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<CardSeal> {
         val i = index ?: return emptyList()
-        return listOfNotNull(mapQuality(i, hero, item))
+        if (i.template(item.template)?.slot != Slot.MAP) return emptyList()
+        val atlas = AtlasBonuses.of(i.atlasGraph, hero?.info?.atlas.orEmpty(), i::modifier)
+        return listOfNotNull(
+            MapCapture.of(i.campaign.maps.influence, item.influence) { atlas.effects[it] ?: 0.0 }?.let(CardSeal::Capture),
+            mapQuantity(i, atlas, item)?.let { CardSeal.MapQuality(item.quality, it) },
+        )
     }
 
     /**
-     * Качество карты-предмета словами: «Качество: +N% к количеству добычи» - с «эффектом модификаторов карт» Атласа героя, тем же
-     * расчётом правил, что окно входа в карту ([LootRoller.mapEffects] над одним качеством копии); не карта или без качества - null.
+     * Что качество карты-предмета прибавляет к количеству добычи, проценты: с «эффектом модификаторов карт» Атласа [atlas], тем же
+     * расчётом правил, что окно входа в карту ([LootRoller.mapEffects] над одним качеством копии); без качества - null.
      */
-    private fun mapQuality(index: ContentIndex, hero: HeroView?, item: ItemInstance): String? {
-        if (item.quality <= 0 || index.template(item.template)?.slot != Slot.MAP) return null
-        val atlas = AtlasBonuses.of(index.atlasGraph, hero?.info?.atlas.orEmpty(), index::modifier)
-        val quantity = LootRoller(index).mapEffects(item.copy(rolls = emptyList(), mapTier = 0), atlas.mapEffect)[MapStat.QUANTITY.code] ?: return null
-        return ui("card.map_quality", number(quantity))
+    private fun mapQuantity(index: ContentIndex, atlas: AtlasBonuses, item: ItemInstance): Double? {
+        if (item.quality <= 0) return null
+        return LootRoller(index).mapEffects(item.copy(rolls = emptyList(), mapTier = 0), atlas.mapEffect)[MapStat.QUANTITY.code]
     }
     private val atlasMemo = LastPair { i, h ->
         AtlasState(
@@ -147,8 +153,8 @@ internal object HeroLens {
 
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 
-/** Строки общего блока над модификаторами карточки копии [item] ([HeroLens.itemNotes]). */
-fun GameUi.itemNotes(item: ItemInstance): List<String> = HeroLens.itemNotes(index, hero, item)
+/** Плашки особого блока карточки копии [item], что не строки вещи ([HeroLens.itemSeals]). */
+fun GameUi.itemSeals(item: ItemInstance): List<CardSeal> = HeroLens.itemSeals(index, hero, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)

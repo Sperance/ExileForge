@@ -270,7 +270,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         bill?.affordable == false -> bill.shortText()
         else -> null
     }
-    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = number(price.toDouble()).takeIf { price > 0 }, run = onTake)
+    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = number(price.toDouble()).takeIf { price > 0 }) { onTake() }
     val open = { inspect(entry.item?.let { Inspect.Copy(it, action) } ?: Inspect.Stack(entry.code, action)) }
     val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { bill?.takeIf { price > 0 }?.let { GoldCost(it) } ?: GoldPrice(price) }
     val by = listOf(ui("guild.stash_by", entry.by))

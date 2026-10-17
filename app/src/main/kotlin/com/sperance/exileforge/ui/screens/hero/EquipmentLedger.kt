@@ -140,7 +140,7 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
         }
         if (worn != null) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                worn.lines.forEach { mod ->
+                worn.orderedLines.forEach { mod ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         TierHex(mod.marks, 12.dp)
                         Text(mod.text, color = modColor(mod.marks), fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

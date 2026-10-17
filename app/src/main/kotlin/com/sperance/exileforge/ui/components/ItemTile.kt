@@ -20,7 +20,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
@@ -80,15 +79,13 @@ fun ItemTile(
                 style = MaterialTheme.typography.labelMedium,
             )
         }
-        if (item.lines.isNotEmpty()) {
+        val lines = item.orderedLines
+        if (lines.isNotEmpty()) {
             RelicDivider(look)
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                item.lines.forEachIndexed { i, line ->
+                lines.forEachIndexed { i, line ->
                     Text(line.text, color = modColor(line.marks), style = MaterialTheme.typography.labelSmall)
-                    val next = item.lines.getOrNull(i + 1)
-                    if (line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT) {
-                        HorizontalDivider(Modifier.padding(vertical = 2.dp), thickness = .5.dp, color = Color.White.copy(alpha = .08f))
-                    }
+                    if (implicitEnds(line, lines.getOrNull(i + 1))) HorizontalDivider(Modifier.padding(vertical = 2.dp), thickness = .5.dp, color = Color.White.copy(alpha = .08f))
                 }
             }
         }

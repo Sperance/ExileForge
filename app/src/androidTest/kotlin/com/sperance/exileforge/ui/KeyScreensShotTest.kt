@@ -11,8 +11,10 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -20,6 +22,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
@@ -118,6 +121,7 @@ import com.sperance.exileforge.ui.screens.expedition.ObjectActionPanel
 import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
+import com.sperance.exileforge.ui.screens.hero.StatSheet
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
@@ -288,6 +292,14 @@ class KeyScreensShotTest {
         InspectActions(Inspect.Copy(item, InspectAction(ui("bag.to_forge")) {}, InspectAction(ui("hero.equip")) {}, menu), InspectChoice(null)) {}
     }
 
+    /** Сводка героя: раздел «Заряды» с действующим максимумом и раскрытое стрелкой ▾ описание под первой строкой. */
+    @Test fun heroSummary() = shot("hero_summary", open = ui("stat.fold.toggle")) {
+        val level = 70
+        val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
+        val combat = CombatSheet.of(index, sheet, level, heroClass.code, HeroSkills(), null, emptyList())
+        combat?.let { StatSheet(game(level), it.figures) }
+    }
+
     /** Вид копии [item] над контентом закреплённого сервера. */
     private fun view(item: ItemInstance): ItemView = ItemView(item, index.template(item.template)!!, index)
 
@@ -384,7 +396,7 @@ class KeyScreensShotTest {
     }
 
     /**
-     * Экран [content] шириной 360 dp без анимаций; [open] - текст, по которому нажать перед снимком (свёрнутое раскрыть); [frozen] -
+     * Экран [content] шириной 360 dp без анимаций; [open] - текст или описание касания, по которому нажать перед снимком (свёрнутое раскрыть); [frozen] -
      * тестовые часы Compose стоят: снимок не ждёт покоя того, что движется кадрами.
      */
     private fun shot(name: String, scroll: Boolean = true, open: String? = null, frozen: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
@@ -400,7 +412,7 @@ class KeyScreensShotTest {
                 }
             }
         }
-        open?.let { compose.onNodeWithText(it).performClick() }
+        open?.let { compose.onAllNodes(hasText(it) or hasContentDescription(it)).onFirst().performClick() }
         if (frozen) compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()

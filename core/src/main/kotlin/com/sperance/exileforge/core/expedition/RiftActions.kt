@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.campaign.RiftReport
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -139,7 +140,7 @@ class RiftActions(
                     throw e
                 } catch (e: ApiFailure) {
                     if (!CommandQueue.transient(e.status)) {
-                        mutable.update { it.copy(delivery = RiftDelivery.Refused(e.message.orEmpty())) }
+                        mutable.update { it.copy(delivery = RiftDelivery.Refused(refusalLine(e))) }
                         return@launch
                     }
                 } catch (_: Exception) {

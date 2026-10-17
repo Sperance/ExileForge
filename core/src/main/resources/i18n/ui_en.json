@@ -1183,7 +1183,7 @@
   "term.shield.passes": "around the shield, to life",
   "term.shield.skills": "• Skill damage over time - by the skill's damage type",
   "term.CHAOS": "Chaos damage",
-  "term.CHAOS.text": "Goes around energy shield straight to life; only chaos resistance reduces it. Poison is chaos too.",
+  "term.CHAOS.text": "Goes around energy shield straight to life; only chaos resistance reduces it. Poison deals chaos damage: it also goes around the shield, and chaos resistance reduces it.",
   "term.CATALYST": "Catalyst",
   "term.CATALYST.text": "An omen for the Orb of Quality: does nothing alone. An Orb of Quality used with it raises equipment quality (not flasks, maps or tools) by its rarity step, up to 20%, and the quality boosts the catalyst's kind of modifiers. Other quality is reset.",
   "term.POISON": "Poison",

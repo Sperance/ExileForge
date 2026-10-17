@@ -423,16 +423,17 @@ data class Row(val values: List<Any>) {
 
 /**
  * Готовые эталоны баланса: постройка героя (поиск вещей, дерево, набор умений боем) - самая дорогая часть прогона, поэтому герой
- * строится один раз на ключ «класс, уровень, архетип, штраф». [cache] - папка готовых героев (null - строить, ничего не писать);
+ * строится один раз на ключ «класс, уровень, архетип, штраф» (параллельные запросы одного героя ждут одну постройку). [cache] -
+ * папка готовых героев (null - строить, ничего не писать; файл ложится целиком - через временный);
  * сторожа тестов делят один пул на прогон (эталон уровня зоны кампании - тот же на карте, в Бездне, Скверне и Разломе).
  */
 class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
     private val heroes = ConcurrentHashMap<String, Hero>()
 
     /** `-Pretune=1` подбирает набор умений заново боем на тех же вещах. */
-    fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero = heroes.getOrPut("${heroClass.code}/$level/${archetype.name}/$penalty") {
+    fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero = heroes.computeIfAbsent("${heroClass.code}/$level/${archetype.name}/$penalty") {
         val key = "${heroClass.code}_${level}_${archetype.name.replace('/', '-')}_${penalty.toInt()}" + System.getProperty("force").orEmpty().let { if (it.isBlank()) "" else "_F$it" }
-        val file = cache?.let { File(it, "$key.json") } ?: return@getOrPut kit.hero(heroClass, level, archetype, penalty)
+        val file = cache?.let { File(it, "$key.json") } ?: return@computeIfAbsent kit.hero(heroClass, level, archetype, penalty)
         if (file.exists()) {
             val saved = CACHE_JSON.decodeFromString(SavedHero.serializer(), file.readText())
             val hero = Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, archetype.band.flasks)), saved.note)
@@ -440,7 +441,9 @@ class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
         } else {
             kit.hero(heroClass, level, archetype, penalty).also { hero ->
                 file.parentFile.mkdirs()
-                file.writeText(CACHE_JSON.encodeToString(SavedHero.serializer(), SavedHero(hero.build.items, hero.build.tree, hero.build.skills, hero.note)))
+                val part = File(file.parentFile, "${file.name}.${Thread.currentThread().id}.part")
+                part.writeText(CACHE_JSON.encodeToString(SavedHero.serializer(), SavedHero(hero.build.items, hero.build.tree, hero.build.skills, hero.note)))
+                part.renameTo(file)
             }
         }
     }
@@ -844,7 +847,7 @@ fun main(args: Array<String>) {
     val zonesOnly = System.getProperty("zones").orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     val out = File(args.firstOrNull() ?: "build/reports/mobbal.tsv")
     val index = ContentLoader.load { File(content, it).readText() }
-    val sim = MobBal(index, fights, rolls, samples)
+    val sim = MobBal(index, fights, rolls, samples, HeroPool(MobKit(index), HeroCacheKey.dir(CACHE, System.getProperty("guardCode").orEmpty(), content, index)))
     val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null && (zonesOnly.isEmpty() || it.code.value in zonesOnly) }.sortedWith(compareBy({ it.level }, { it.code.value }))
     val classes = sim.classesOf(only)
     val started = System.nanoTime()

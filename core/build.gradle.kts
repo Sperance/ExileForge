@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     kotlin("jvm")
     `java-library`
@@ -34,6 +36,25 @@ sourceSets.test {
     runtimeClasspath += sim.output
 }
 
+/**
+ * Отпечаток кода для ключа кэша эталонов (`HeroCacheKey`): содержимое классов ядра, симуляций и правил и библиотек - системным
+ * свойством `guardCode`. Считается при запуске задачи из её входов: правка кода меняет ключ, и старые эталоны не берутся.
+ */
+abstract class CodePrint : CommandLineArgumentProvider {
+    @get:Classpath
+    abstract val files: ConfigurableFileCollection
+
+    override fun asArguments(): List<String> {
+        val digest = MessageDigest.getInstance("SHA-256")
+        files.files.flatMap { root -> if (root.isDirectory) root.walkTopDown().filter { it.isFile }.sortedBy { it.path }.toList() else listOfNotNull(root.takeIf { it.isFile }) }
+            .forEach { file ->
+                digest.update(file.name.toByteArray())
+                digest.update(file.readBytes())
+            }
+        return listOf("-DguardCode=" + digest.digest().joinToString("") { "%02x".format(it) })
+    }
+}
+
 tasks.register<JavaExec>("mobBal") {
     group = "reporting"
     description = "Monster and boss balance against reference heroes: build/reports/mobbal.tsv"
@@ -43,6 +64,7 @@ tasks.register<JavaExec>("mobBal") {
     val content = providers.gradleProperty("content").orElse(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
     systemProperty("content", content.get())
     systemProperty("heroCache", providers.gradleProperty("heroCache").getOrElse(layout.buildDirectory.dir("mobbal-heroes").get().asFile.path))
+    jvmArgumentProviders += objects.newInstance<CodePrint>().apply { files.from(sim.runtimeClasspath) }
     listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales", "retune", "source", "gearSeeds", "k").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
     args(providers.gradleProperty("out").getOrElse(layout.buildDirectory.file("reports/mobbal.tsv").get().asFile.path))
     outputs.upToDateWhen { false }
@@ -105,7 +127,8 @@ tasks.test {
 
 /**
  * Сторожа баланса (`MobBalGuardTest`, `ModesBalanceGuardTest`, `ClassBalanceGuardTest`) - своя задача и свой job CI рядом с `core`:
- * одна JVM, эталоны общим пулом на прогон (`GuardHeroes`). `./gradlew :core:balanceGuard [--tests <класс>]`.
+ * одна JVM, эталоны общим пулом на прогон (`GuardHeroes`) и дисковым кэшем `build/guard-heroes` (ключ - отпечаток кода `CodePrint` и
+ * контента). Контент сервера - вход задачи: его правка перезапускает сторожей. `./gradlew :core:balanceGuard [--tests <класс>]`.
  */
 val balanceGuard by tasks.registering(Test::class) {
     group = "verification"
@@ -114,6 +137,9 @@ val balanceGuard by tasks.registering(Test::class) {
     classpath = sourceSets.test.get().runtimeClasspath
     filter { includeTestsMatching(balanceGuards) }
     maxHeapSize = "4g"
+    inputs.dir(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content")).withPropertyName("content").withPathSensitivity(PathSensitivity.RELATIVE)
+    systemProperty("guardHeroes", layout.buildDirectory.dir("guard-heroes").get().asFile.path)
+    jvmArgumentProviders += objects.newInstance<CodePrint>().apply { files.from(sim.runtimeClasspath) }
 }
 
 /**

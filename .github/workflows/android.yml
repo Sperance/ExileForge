@@ -126,7 +126,27 @@ jobs:
           cache-read-only: false
           # Неиспользуемые файлы кэша удаляются перед сохранением: кэш не копится до лимита GitHub
           cache-cleanup: on-success
+      # Готовые эталоны сторожей: папка на ключ кода и контента постройки героя (HeroCacheKey); подгонка стражей и режимов их не сбрасывает
+      - uses: actions/cache/restore@v4
+        id: heroes
+        with:
+          path: core/build/guard-heroes
+          key: guard-heroes-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
+          restore-keys: guard-heroes-
+      - run: mkdir -p core/build/guard-heroes && touch core/build/guard-heroes/.run
       - run: bash gradlew :core:balanceGuard
+      # Эталоны в кэш и при красных сторожах; уходит только папка этого прогона (сторож её касается) - папки старых ключей не копятся
+      - run: |
+          cd core/build/guard-heroes
+          if [ -n "$(find . -mindepth 1 -maxdepth 1 -type d -newer .run)" ]; then
+            find . -mindepth 1 -maxdepth 1 -type d ! -newer .run -exec rm -rf {} +
+          fi
+        if: ${{ always() && steps.heroes.outputs.cache-hit != 'true' }}
+      - uses: actions/cache/save@v4
+        if: ${{ always() && steps.heroes.outputs.cache-hit != 'true' }}
+        with:
+          path: core/build/guard-heroes
+          key: guard-heroes-${{ hashFiles('core/src/main/**', 'core/src/sim/**', 'backend/rules/src/main/**', 'backend/src/main/resources/content/**') }}
 
   app:
     needs: changes

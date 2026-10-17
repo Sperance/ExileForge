@@ -13,6 +13,9 @@ object TestContent {
     private val root = listOf(File("../backend/src/main/resources"), File("backend/src/main/resources")).first { it.isDirectory }
     val index: ContentIndex by lazy { ContentLoader.load { File(root, "content/$it").readText() } }
 
+    /** Папка файлов контента. */
+    val contentDir: File get() = File(root, "content")
+
     /** Сырой файл контента [name]: носители строк, как их пишет контент. */
     fun json(name: String): JsonElement = Json.parseToJsonElement(File(root, "content/$name").readText())
 

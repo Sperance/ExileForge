@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,10 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -29,10 +31,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.BoostSource
 import com.sperance.exileforge.core.campaign.LootBreakdown
@@ -43,12 +48,13 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.rules.content.QuestReward
-import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
 import com.sperance.exileforge.ui.theme.Ember
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
@@ -57,39 +63,63 @@ import com.sperance.exileforge.ui.theme.rarityColor
 import kotlin.math.roundToLong
 
 /**
- * Строка награды итогов карты: значок, сумма, подпись и множитель «×1,35 ▾»; нажатие
- * раскрывает разбор [breakdown] - полоса долей, сток, каждый источник с процентом и его долей, итог. Без разбора - просто строка.
+ * Плитка наград итогов: значок [icon] (цвета [mark]), итог [value] цветом [tone], подпись [label] и пометка в углу [corner]
+ * (множитель разбора); [panel] - разбор, что плитка раскрывает под сеткой, null - плитка не нажимается.
  */
-@Composable internal fun RewardRow(icon: ImageVector, label: String, tone: Color, breakdown: LootBreakdown) {
-    var open by rememberSaveable(label) { mutableStateOf(false) }
-    val shape = RoundedCornerShape(6.dp)
-    val parts = breakdown.parts
-    Column(
-        Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, PanelRaised, shape)
-            .clickable(enabled = parts.isNotEmpty(), role = Role.Button) { open = !open }.padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(icon, null, tint = Muted, modifier = Modifier.size(18.dp))
-            Column(Modifier.weight(1f)) {
-                Text(amount(breakdown.total), color = tone, style = MaterialTheme.typography.titleSmall)
-                Text(label, color = Muted, style = MaterialTheme.typography.labelSmall)
-            }
-            if (parts.isNotEmpty()) {
-                Text(ui("summary.multiplier", number(breakdown.multiplier)), color = Muted, style = MaterialTheme.typography.labelSmall)
-                Text(if (open) "▴" else "▾", color = Muted, style = MaterialTheme.typography.labelMedium)
+internal class SummaryTile(
+    val id: String,
+    val icon: ImageVector,
+    val value: String,
+    val label: String,
+    val tone: Color,
+    val mark: Color = Muted,
+    val corner: String? = null,
+    val panel: (@Composable () -> Unit)? = null,
+)
+
+/**
+ * Плитки наград по две в ряд: итог каждой виден сразу; нажатая раскрывает свой разбор под сеткой - один за раз, повторное нажатие
+ * сворачивает. Открыт разбор первой плитки, что его несёт. Плиток столько, сколько наград пришло: нечётная встаёт на полряда.
+ */
+@Composable internal fun RewardTiles(tiles: List<SummaryTile>) {
+    if (tiles.isEmpty()) return
+    var open by rememberSaveable { mutableStateOf(tiles.firstOrNull { it.panel != null }?.id) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        tiles.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { tile -> Tile(tile, open == tile.id, Modifier.weight(1f).fillMaxHeight()) { open = if (open == tile.id) null else tile.id } }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-        if (LocalMotion.current) {
-            AnimatedVisibility(open) { Parts(breakdown, tone) }
-        } else if (open) {
-            Parts(breakdown, tone)
+        val panel = tiles.firstOrNull { it.id == open }?.panel
+        if (panel != null) {
+            val shape = RoundedCornerShape(10.dp)
+            Box(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(10.dp)) { panel() }
         }
     }
 }
 
+/** Одна плитка: значок, итог, подпись и пометка в углу; выбранная - в золотой рамке с отсветом. */
+@Composable private fun Tile(tile: SummaryTile, chosen: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    val fill = if (chosen) Brush.verticalGradient(listOf(Gold.copy(alpha = .12f), Abyss)) else SolidColor(Abyss)
+    Box(
+        modifier.heightIn(min = 54.dp).clip(shape).background(fill, shape).border(1.dp, if (chosen) Gold else PanelRaised, shape)
+            .clickable(enabled = tile.panel != null, role = Role.Button, onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Row(Modifier.align(Alignment.CenterStart), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(tile.icon, null, tint = tile.mark, modifier = Modifier.size(18.dp))
+            Column {
+                Text(tile.value, color = tile.tone, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(tile.label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        tile.corner?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.TopEnd)) }
+    }
+}
+
 /** Разбор: полоса долей (сток и источники), строки «Сток», «Источник +N%» с долей и «Итого». */
-@Composable private fun Parts(breakdown: LootBreakdown, tone: Color) {
+@Composable internal fun BreakdownParts(breakdown: LootBreakdown, tone: Color) {
     val positive = breakdown.parts.filter { it.percent > 0 }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val whole = breakdown.stock + positive.sumOf { breakdown.share(it) }
@@ -134,13 +164,11 @@ private fun sourceTone(source: BoostSource): Color = when (source) {
 private fun amount(value: Double): String = number(value.roundToLong().toDouble())
 
 /**
- * «Сданы задания»: задания, что сдались разом после
- * карты, - имя задания на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за задания» - только при двух
- * и больше: у одного задания она повторяла бы его фишки.
+ * Сданные разом после карты задания: имя задания на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за
+ * задания» - только при двух и больше: у одного задания она повторяла бы его фишки.
  */
-@Composable internal fun TurnedInBlock(turnedIn: List<QuestTurnIn>) {
-    if (turnedIn.isEmpty()) return
-    SummaryCard(ui("summary.quests"), turnedIn.size.toString(), Vital) {
+@Composable internal fun TurnedInLines(turnedIn: List<QuestTurnIn>) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         turnedIn.forEachIndexed { i, quest ->
             if (i > 0) HorizontalDivider(thickness = 1.dp, color = PanelRaised)
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -151,16 +179,17 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
                 RewardChips(quest.rewards, Modifier.padding(start = 18.dp))
             }
         }
-        if (turnedIn.size < 2) return@SummaryCard
-        val all = turnedIn.map { it.rewards }
-        val total = QuestReward(
-            gold = all.sumOf { it.gold },
-            experience = all.sumOf { it.experience },
-            orbs = all.flatMap { it.orbs.entries }.groupBy({ it.key }, { it.value }).mapValues { it.value.sum() },
-        )
+        if (turnedIn.size < 2) return@Column
         HorizontalDivider(thickness = 1.dp, color = PanelRaised)
         Text(ui("summary.quests_total"), color = Muted, style = MaterialTheme.typography.labelMedium)
-        RewardChips(total)
+        val all = turnedIn.map { it.rewards }
+        RewardChips(
+            QuestReward(
+                gold = all.sumOf { it.gold },
+                experience = all.sumOf { it.experience },
+                orbs = all.flatMap { it.orbs.entries }.groupBy({ it.key }, { it.value }).mapValues { it.value.sum() },
+            ),
+        )
     }
 }
 
@@ -192,7 +221,12 @@ private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
  */
 @Composable internal fun AtlasBlock(keys: List<String>) {
     if (keys.isEmpty()) return
-    SummaryCard(ui("summary.atlas"), "+${keys.size}", Rune) {
+    SummaryCard(ui("summary.atlas"), "+${keys.size}", Rune) { AtlasLines(keys) }
+}
+
+/** Очки атласа строками: «+1» и откуда очко. */
+@Composable internal fun AtlasLines(keys: List<String>) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         keys.forEach { key ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("+1", Rune)

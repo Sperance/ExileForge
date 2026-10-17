@@ -6,10 +6,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,22 +22,30 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.LootBreakdown
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
+import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.LootPresence
@@ -84,11 +92,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 }
 
 /**
- * The map is over — by a fall, the exit or the portal out — and before the camp, what it came to: the ending, the
- * figures (foes and guardians slain, the time on the map, deaths, damage dealt and taken), the gold and experience,
- * and every stack and piece the server granted for it, compact, each with its icon. The loot is the server's roll:
- * while some of it is on its way the screen says so, asks for it at once and fills in as the answers arrive.
- * A piece opens its comparison with what is worn, a stack its description.
+ * The map is over — by a fall, the exit or the portal out — and before the camp, what it came to, compact: the ending and
+ * the map's name, the figures in one line (foes and guardians slain, deaths, the time on the map), the rewards as tiles two
+ * to a row — gold, experience, quests turned in and Atlas points, a tap opening one's breakdown under them — and every stack
+ * and piece the server granted for it, folded under its count. The run in numbers is one line with the way into the whole
+ * run's sheet. The loot is the server's roll: while some of it is on its way the screen says so, asks for it at once and
+ * fills in as the answers arrive. A piece opens its comparison with what is worn, a stack its description.
  * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
  *
  * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе уже отмечено, продаётся «Продать и вернуться» после захода. Из
@@ -130,14 +139,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SummaryBanner(head, mapTitle(hud.mapCode))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            MutedText(head.hint, style = MaterialTheme.typography.bodySmall)
-            Tallies(tally, gold, experience)
-            TurnedInBlock(state.turnedIn)
-            AtlasBlock(state.atlasPoints)
+            MapFigures(tally)
+            RewardTiles(rewardTiles(tally, gold, experience, state.turnedIn, state.atlasPoints))
             if (tally.end == MapEnd.FELL) {
                 val lost = hud.fall?.takeIf { it > 0 }
                 if (lost != null) {
@@ -159,7 +166,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                 },
             )
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
-            RunFigures(tally.figures)
+            RunLine(tally.figures)
         }
         if (docked) {
             SellDock(
@@ -186,65 +193,96 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }, markable = false) }
 }
 
-/** The ending over the map's name: its glyph in a ring of its colour, on a glow of it. */
+/** The ending over the map's name and why: its glyph and title in its colour, on a glow of it. */
 @Composable private fun SummaryBanner(head: SummaryHead, map: String) {
-    Box(
-        Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(8.dp))
-            .background(Brush.radialGradient(listOf(head.accent.copy(alpha = .22f), Ink))),
-        contentAlignment = Alignment.Center,
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.fillMaxWidth().heightIn(min = 84.dp).clip(shape)
+            .background(Brush.radialGradient(listOf(head.accent.copy(alpha = .3f), Ink)), shape)
+            .border(1.dp, head.accent.copy(alpha = .25f), shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(52.dp).clip(CircleShape).background(Ink).border(2.dp, head.accent, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(head.glyph, null, tint = head.accent, modifier = Modifier.size(26.dp))
-            }
-            Text(head.title, color = head.accent, style = MaterialTheme.typography.titleLarge)
-            MutedText(map, style = MaterialTheme.typography.labelMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(head.glyph, null, tint = head.accent, modifier = Modifier.size(18.dp))
+            Text(head.title, color = head.accent, style = MaterialTheme.typography.titleMedium)
         }
+        Text(listOf(map, head.hint).joinToString(" · "), color = Muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
     }
+}
+
+/** The map's figures in one line: foes and guardians slain, deaths (red once there is one) and the time on the map. */
+@Composable private fun MapFigures(tally: MapTally) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Figure(tally.kills.toString(), ui("summary.kills"))
+        Figure(tally.bosses.toString(), ui("summary.bosses"))
+        Figure(tally.deaths.toString(), ui("summary.deaths"), if (tally.deaths > 0) LifeRed else Parchment)
+        Figure(clock(tally.seconds), null)
+    }
+}
+
+@Composable private fun Figure(value: String, label: String?, tone: Color = Parchment) {
+    Text(
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = tone, fontWeight = FontWeight.SemiBold)) { append(value) }
+            label?.let { append(" $it") }
+        },
+        color = Muted,
+        style = MaterialTheme.typography.labelMedium,
+    )
 }
 
 /**
- * The map's figures, three to a row: the slaughter, the time and the damage, then what it paid - золото и опыт строками с разбором
- * ([gold], [experience]); без захода на экране - плитками.
+ * The map's reward tiles: gold and experience — their breakdowns while the run is still on screen ([gold], [experience]),
+ * the quests turned in at once ([turnedIn]) and the Atlas points earned ([atlas]) when there are any.
  */
-@Composable private fun Tallies(tally: MapTally, gold: LootBreakdown?, experience: LootBreakdown?) {
-    Caption(ui("summary.figures"))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Tile(ForgeGlyphs.Swords, tally.kills.toString(), ui("summary.kills"))
-        Tile(ForgeGlyphs.Banner, tally.bosses.toString(), ui("summary.bosses"))
-        Tile(ForgeGlyphs.Skull, tally.deaths.toString(), ui("summary.deaths"), if (tally.deaths > 0) LifeRed else Parchment)
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Tile(ForgeGlyphs.Portal, clock(tally.seconds), ui("summary.time"))
-        Tile(ForgeGlyphs.Target, number(tally.figures.totalDealt), ui("summary.dealt"))
-        Tile(ForgeGlyphs.Helm, number(tally.figures.totalTaken), ui("summary.taken"))
-    }
-    if (gold != null && experience != null) {
-        Caption(ui("summary.reward_hint", ui("expedition.report_reward")))
-        RewardRow(ForgeGlyphs.Coins, ui("summary.gold"), GoldBright, gold)
-        RewardRow(ForgeGlyphs.Tome, ui("summary.experience"), Rune, experience)
-        return
-    }
-    Caption(ui("expedition.report_reward"))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Tile(ForgeGlyphs.Coins, number(tally.gold.toDouble()), ui("summary.gold"), GoldBright)
-        Tile(ForgeGlyphs.Tome, number(tally.experience), ui("summary.experience"), Rune)
-    }
+private fun rewardTiles(tally: MapTally, gold: LootBreakdown?, experience: LootBreakdown?, turnedIn: List<QuestTurnIn>, atlas: List<String>): List<SummaryTile> = listOfNotNull(
+    breakdownTile("gold", ForgeGlyphs.Coins, tally.gold.toDouble(), ui("summary.gold"), GoldBright, gold),
+    breakdownTile("experience", ForgeGlyphs.Tome, tally.experience, ui("summary.experience"), Rune, experience),
+    turnedIn.takeIf { it.isNotEmpty() }?.let { quests ->
+        val rewards = quests.map { it.rewards }
+        val coins = rewards.sumOf { it.gold }
+        val orbs = rewards.sumOf { it.orbs.values.sum() }.toInt()
+        val worth = listOfNotNull(
+            coins.takeIf { it > 0 }?.let { "+" + compactNumber(it.toDouble()) },
+            orbs.takeIf { it > 0 }?.let { ui("summary.counted", it, plural("summary.orb", it)) },
+        ).ifEmpty { listOf("+" + compactNumber(rewards.sumOf { it.experience }.toDouble())) }
+        SummaryTile("quests", ForgeGlyphs.Scroll, ui("summary.counted", quests.size, plural("summary.quest", quests.size)), worth.joinToString(" · "), Vital, Vital) { TurnedInLines(quests) }
+    },
+    atlas.takeIf { it.isNotEmpty() }?.let { keys ->
+        SummaryTile("atlas", ForgeGlyphs.Constellation, "+${keys.size}", plural("summary.atlas_point", keys.size), Rune, Rune) { AtlasLines(keys) }
+    },
+)
+
+/** Плитка золота или опыта: итог [breakdown] (без захода на экране - итог сервера [total]), множитель в углу и разбор по нажатию. */
+private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: String, tone: Color, breakdown: LootBreakdown?): SummaryTile {
+    val parts = breakdown?.takeIf { it.parts.isNotEmpty() }
+    return SummaryTile(
+        id,
+        icon,
+        compactNumber(breakdown?.total ?: total),
+        label,
+        tone,
+        corner = parts?.let { ui("summary.multiplier", number(it.multiplier)) },
+        panel = if (parts != null) ({ BreakdownParts(parts, tone) }) else null,
+    )
 }
 
-@Composable private fun RowScope.Tile(icon: ImageVector, value: String, label: String, tone: Color = Parchment) {
-    val shape = RoundedCornerShape(6.dp)
-    Row(
-        Modifier.weight(1f).background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 8.dp, vertical = 7.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Icon(icon, null, tint = Muted, modifier = Modifier.size(16.dp))
-        Column {
-            Text(value, color = tone, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+/** The run in numbers as one line — damage a second and damage taken — and the way into the whole run's sheet. */
+@Composable private fun RunLine(summary: RunSummary) {
+    if (summary.seconds <= 0) return
+    var sheet by remember { mutableStateOf(false) }
+    HorizontalDivider(thickness = 1.dp, color = Bronze)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        MutedText(ui("summary.run_line", compactNumber(summary.dps), compactNumber(summary.totalTaken)), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        Text(
+            ui("summary.whole_run"),
+            color = Gold,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button) { sheet = true }.padding(horizontal = 4.dp, vertical = 10.dp),
+        )
     }
+    if (sheet) FightStatsSheet(null, summary.fights) { sheet = false }
 }
 
 /**
@@ -256,7 +294,9 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 @Composable
 private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit, onSelect: (String) -> Unit) {
     val loot = tally.loot
-    Caption(ui("summary.loot"))
+    var open by rememberSaveable { mutableStateOf(true) }
+    LootHeader(loot.equipment.size, pick?.picked?.size ?: 0, open) { open = !open }
+    if (!open) return
     loot.recipe?.let { code ->
         val text = game.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
@@ -286,6 +326,34 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
         Receiving()
     } else if (tally.empty) {
         MutedText(ui("summary.loot_none"))
+    }
+}
+
+/** «Добыча · N» с меткой «M к продаже» и стрелкой: нажатие сворачивает и разворачивает добычу. */
+@Composable private fun LootHeader(pieces: Int, marked: Int, open: Boolean, onToggle: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onToggle).padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            (if (pieces > 0) ui("summary.loot_count", pieces) else ui("summary.loot")).uppercase(),
+            color = Gold,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        if (marked > 0) {
+            val shape = RoundedCornerShape(6.dp)
+            Text(
+                ui("summary.to_sell", marked),
+                color = Caution,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.background(Caution.copy(alpha = .12f), shape).border(1.dp, Caution.copy(alpha = .35f), shape).padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+        Text(if (open) "▴" else "▾", color = Muted, style = MaterialTheme.typography.labelMedium)
     }
 }
 

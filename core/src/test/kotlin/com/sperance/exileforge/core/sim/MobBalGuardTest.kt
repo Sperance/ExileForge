@@ -94,7 +94,6 @@ class MobBalGuardTest {
         /** Столбец восстановления стража в строке [MobBal.boss]; за ним - урон эталона по стражу. */
         const val RESTORED = 21
 
-
         /** Наборов костей стража в стороже побед. */
         const val GUARD_ROLLS = 4
         const val SAMPLES = 3

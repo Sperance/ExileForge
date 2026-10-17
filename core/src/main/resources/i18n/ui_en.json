@@ -4397,7 +4397,6 @@
   "feedback.admin.reject": "Reject",
   "feedback.search_open": "Search",
   "feedback.step.accepted": "Received",
-  "feedback.github": "On GitHub",
   "feedback.fate.moderation": "In moderation",
   "feedback.fate.rejected": "Rejected by moderation",
   "feedback.fate.rejected_short": "Rejected",

@@ -37,7 +37,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -245,7 +244,7 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 
 /**
  * Карточка отчёта - тикет: вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
- * из четырёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса, ссылка на Issue, удаление. Закрытые
+ * из трёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса и удаление, ссылки на GitHub у игрока нет. Закрытые
  * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале. [focused] - отчёт, ради которого открыт
  * лист: рамка `GoldBright`.
  */
@@ -263,7 +262,6 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
     footer: @Composable RowScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
-    val uri = LocalUriHandler.current
     Column(Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).clip(shape).background(Panel).border(if (focused) 2.dp else 1.dp, if (focused) GoldBright else Bronze, shape)) {
         Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KindMark(kind)
@@ -282,10 +280,6 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             footer()
-            Spacer(Modifier.weight(1f))
-            issue?.url?.takeIf { it.isNotBlank() }?.let { link ->
-                ForgeTextButton(onClick = { runCatching { uri.openUri(link) } }) { Text(ui("feedback.github"), color = Gold, style = MaterialTheme.typography.labelMedium) }
-            }
         }
     }
 }

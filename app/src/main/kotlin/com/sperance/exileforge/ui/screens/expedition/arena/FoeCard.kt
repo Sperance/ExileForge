@@ -78,10 +78,10 @@ import kotlin.math.sin
     }
 }
 
-/** Мощь врага [monster] мелко: печать и число цвета его стойки против героя; вне оверлея боя - ничего. Не прогноз боя. */
+/** Мощь врага [monster] мелко: печать и число цвета его стойки против героя; вне оверлея боя и у босса - ничего. Не прогноз боя. */
 @Composable internal fun FoeMightMark(monster: RolledMonster, modifier: Modifier = Modifier) {
     val might = LocalFightMight.current ?: return
-    val reading = might.of(monster)
+    val reading = might.of(monster) ?: return
     FoeMight(reading, might.standing(reading), modifier)
 }
 

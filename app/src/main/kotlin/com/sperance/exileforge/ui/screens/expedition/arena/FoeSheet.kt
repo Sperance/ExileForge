@@ -101,10 +101,10 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     }
 }
 
-/** Мощь врага в его листе: печать, число и как он стоит против героя словами - «сильнее на 27%». Не прогноз боя. */
+/** Мощь врага в его листе: печать, число и как он стоит против героя словами - «сильнее на 27%»; у босса - ничего. Не прогноз боя. */
 @Composable private fun FoeSheetMight(foe: FoeView) {
     val might = LocalFightMight.current ?: return
-    val reading = might.of(foe.monster)
+    val reading = might.of(foe.monster) ?: return
     val tint = might.standing(reading).tint()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         MightSeal(reading, size = 16.dp)

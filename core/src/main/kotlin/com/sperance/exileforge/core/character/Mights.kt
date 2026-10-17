@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.character
 
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.sheet.Might
 import com.sperance.exileforge.rules.sheet.MightExtras
@@ -16,9 +17,18 @@ object Mights {
     /** Мощь героя в бою: тело [body] под эффектами карты и что сверх листа [extras] (умения, питомец, резерв маны, фляги - `CombatSheet.mightExtras`). */
     fun hero(index: ContentIndex, body: Combatant, extras: MightExtras): MightReading = Might.hero(index, body.stats, body.level, extras)
 
-    /** Мощь монстра [monster] по его листу; уровень 0 у монстра - уровень зоны [level]. */
-    fun of(index: ContentIndex, monster: RolledMonster, level: Int): MightReading = Might.of(index, monster.stats, monster.level.takeIf { it > 0 } ?: level)
+    /**
+     * Мощь монстра [monster] по его листу; уровень 0 у монстра - уровень зоны [level]. У босса ([boss]) - null: его силу
+     * меряет доля побед эталонов, а не Мощь, и клиент её нигде не показывает.
+     */
+    fun of(index: ContentIndex, monster: RolledMonster, level: Int): MightReading? = if (monster.boss) null else Might.of(index, monster.stats, monster.level.takeIf { it > 0 } ?: level)
 }
+
+/**
+ * Босс - всякий враг, кого ставит `MonsterRoller.boss` правил (стражи зон и карт, финалы, стражи Ваал, вожди, страж Разлома,
+ * Матерь Скверны): у всех редкость босса. Одна точка признака для клиента.
+ */
+val RolledMonster.boss: Boolean get() = rarity == MonsterRarity.UNIQUE
 
 /** Мощь героя до и после смены вещи: «было → стало» в итоге героя карточки вещи. */
 data class MightShift(val before: Double, val after: Double) {

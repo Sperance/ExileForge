@@ -210,11 +210,11 @@ class FightMight internal constructor(
     private val index: ContentIndex,
     private val level: Int,
     val hero: MightReading?,
-    private val known: MutableMap<RolledMonster, MightReading> = HashMap(),
+    private val known: MutableMap<RolledMonster, MightReading?> = HashMap(),
 ) {
 
-    /** Мощь врага [monster]. */
-    fun of(monster: RolledMonster): MightReading = known.getOrPut(monster) { Mights.of(index, monster, level) }
+    /** Мощь врага [monster]; у босса - null, её не показывают ([Mights.of]). */
+    fun of(monster: RolledMonster): MightReading? = known.getOrPut(monster) { Mights.of(index, monster, level) }
 
     /** Стойка врага с Мощью [foe] против героя. */
     fun standing(foe: MightReading): MightStanding = MightStanding.of(foe.value, hero?.value ?: 0.0)

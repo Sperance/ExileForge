@@ -203,7 +203,7 @@ class UiStringsTest {
             DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
-            TestContent.index.stats.stats.filter { it.section != null && it.section != StatSection.NONE }.forEach { add("stat.desc.${it.code}") }
+            TestContent.index.stats.stats.filter { TestContent.index.stats.section(it.code) != null }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
             com.sperance.exileforge.core.campaign.run.MapSection.entries.forEach { section ->
                 add(section.title)
@@ -295,7 +295,8 @@ class UiStringsTest {
 
     /**
      * Имя характеристики у клиента - то же, что у сервера: своя подпись `enum.stat.*` - лишь
-     * копия серверной с меткой «%» единицы, а не второе имя той же характеристики.
+     * копия серверной с одной меткой «%» единицы (у сервера она уже может быть - тогда вторая не ставится), а не второе имя той же
+     * характеристики.
      */
     @Test
     fun the_client_names_a_stat_as_the_server_does() {
@@ -308,7 +309,7 @@ class UiStringsTest {
                 val label = table["enum.EnumStatStock.${key.removePrefix("enum.stat.")}"] ?: return@mapNotNull null
                 compared++
                 val own = ui(lang, key).replace(mark, "")
-                "${lang.code} $key: «$own», у сервера «$label»".takeIf { own != label }
+                "${lang.code} $key: «$own», у сервера «$label»".takeIf { own != label.replace(mark, "") }
             }
         }
         assertTrue(compared > 0, "no stat name compared: the check proves nothing")

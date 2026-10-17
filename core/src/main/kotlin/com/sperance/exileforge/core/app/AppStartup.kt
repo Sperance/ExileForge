@@ -1,9 +1,5 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.core.app.Buzz
-import com.sperance.exileforge.core.app.DEFAULT_SERVER
-import com.sperance.exileforge.core.app.Phrase
-import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.deviceLanguage
 import com.sperance.exileforge.core.network.refusalLine
@@ -13,10 +9,7 @@ import com.sperance.exileforge.core.session.ConnectionEventsHub
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.ContentLoader
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.world.WorldLoader
+import com.sperance.exileforge.core.world.WorldLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +27,7 @@ class AppStartup(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
     private val connectionHub: ConnectionEventsHub,
     private val buzzer: Buzzes,
@@ -45,8 +38,10 @@ class AppStartup(
     private val sessionActions: SessionActions,
     private val connectionActions: ConnectionActions,
     private val trace: StartupTrace,
-    private val watchdog: StallWatchdog,
-    private val crashes: CrashKeeper,
+    /** Зависания прошлых запусков, что записал сторож главного потока. */
+    private val stalls: LeftReports,
+    /** Падения прошлых запусков. */
+    private val crashes: LeftReports,
     private val reach: ServerReach,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     /**
@@ -76,8 +71,8 @@ class AppStartup(
                 store.forgetWorldUnless(RULES_VERSION)
                 api = sessionActions.newApi(server)
                 sessionActions.apiReady.complete(Unit)
-                reportStall()
-                reportCrashes()
+                reportLeft(stalls)
+                reportLeft(crashes)
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 sessions.update { it.copy(server = server) }
                 world.update { it.copy(languages = known.ifEmpty { it.languages }) }
@@ -116,34 +111,18 @@ class AppStartup(
     }
 
     /**
-     * Прошлый запуск завис: отчёт сторожа уходит баг-репортом в фоне, отправленный стирается. Ждёт входа -
-     * тогда он подписан аккаунтом и героем; вход не случился за [STALL_REPORT_WAIT_MS] - уходит без них, с устройством и версией.
+     * Прошлые запуски зависали или падали ([left]): каждый неотправленный отчёт уходит баг-репортом в фоне, отправленный стирается. Ждёт
+     * входа - тогда он подписан аккаунтом и героем; вход не случился за [STALL_REPORT_WAIT_MS] - уходит без них, с устройством и
+     * версией. Не ушёл - останется до следующего запуска.
      */
-    private fun reportStall() {
+    private fun reportLeft(left: LeftReports) {
         scope.launch {
             try {
-                val report = watchdog.pending() ?: return@launch
+                val pending = left.pending().ifEmpty { return@launch }
                 withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
-                api.reportBug(report)
-                watchdog.sent()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) { }
-        }
-    }
-
-    /**
-     * Прошлые запуски падали: каждое неотправленное падение уходит отчётом-падением в фоне, как зависание - после входа
-     * или без него через [STALL_REPORT_WAIT_MS]. Не ушло - останется до следующего запуска.
-     */
-    private fun reportCrashes() {
-        scope.launch {
-            try {
-                val pending = crashes.pending().ifEmpty { return@launch }
-                withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
-                pending.forEach { (file, report) ->
-                    api.reportBug(report)
-                    crashes.sent(file)
+                pending.forEach { report ->
+                    api.reportBug(report.report)
+                    report.sent()
                 }
             } catch (e: CancellationException) {
                 throw e

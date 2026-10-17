@@ -1,11 +1,15 @@
-package com.sperance.exileforge.presentation.world
+package com.sperance.exileforge.core.world
 
+import com.sperance.exileforge.core.app.DeviceStore
+import com.sperance.exileforge.core.app.StartStage
+import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.IconBundle
 import com.sperance.exileforge.core.display.PortraitBundle
 import com.sperance.exileforge.core.display.PortraitSvg
 import com.sperance.exileforge.core.display.serverIcons
 import com.sperance.exileforge.core.display.serverPortraits
+import com.sperance.exileforge.core.feedback.ReportTrail
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.i18n.LocaleBundle
@@ -18,12 +22,6 @@ import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
-import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.app.ReportEvidence
-import com.sperance.exileforge.presentation.app.StartStage
-import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
@@ -48,20 +46,20 @@ import kotlinx.coroutines.withTimeoutOrNull
  * словарь, иконки и портреты - фоновая работа, их отказ не красная полоса.
  */
 class WorldLoader(
-    private val store: ServerStore,
+    private val store: DeviceStore,
     private val connection: ServerConnection,
     private val sessions: SessionRepository,
     private val world: WorldRepository,
     private val languages: LanguageRepository,
     private val scope: CoroutineScope,
     private val trace: StartupTrace,
-    evidence: ReportEvidence,
+    trail: ReportTrail,
 ) : GameResources {
     private val api: GameApi get() = connection.api
 
     init {
         LocaleHoles.listener = { key, refetch ->
-            evidence.trail.hole(key)
+            trail.hole(key)
             if (refetch) refreshLocale()
         }
     }

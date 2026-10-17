@@ -6,6 +6,8 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
+import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.ClientDevice
 import com.sperance.exileforge.core.feedback.ReportTrail
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.presentation.nav.Navigator
@@ -15,19 +17,22 @@ import kotlinx.coroutines.launch
 
 /**
  * Что о приложении и устройстве уходит в отчёт: среда ([environment] - ключи контекста, что сервер выносит в публичный
- * Issue: модель, система, экран, язык, сеть, память, время с запуска, энергосбережение) и переходы экранов ([trail], с журналом
- * запросов - последние действия). Ничего личного: ни аккаунта, ни имён, ни адресов.
+ * Issue: модель, система, экран, язык, сеть, память, время с запуска, энергосбережение), версия сборки и переходы экранов - в
+ * след отчёта ([ReportTrail], с журналом запросов - последние действия). Ничего личного: ни аккаунта, ни имён, ни адресов.
  */
-class ReportEvidence(context: Context, navigator: Navigator, scope: CoroutineScope) {
+class ReportEvidence(context: Context, navigator: Navigator, trail: ReportTrail, scope: CoroutineScope) : ClientDevice {
     private val app = context.applicationContext
-    val trail = ReportTrail()
+
+    override val version: String = BuildConfig.VERSION_NAME
+
+    override val model: String = Build.MODEL.orEmpty()
 
     init {
         scope.launch { navigator.current.collect { trail.screen(reportPlace(it).name) } }
     }
 
     /** Среда устройства сейчас; не прочиталось - ключа нет. */
-    fun environment(): Map<String, String> = buildMap {
+    override fun environment(): Map<String, String> = buildMap {
         put("model", "${Build.MANUFACTURER} ${Build.MODEL}".trim())
         put("android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
         runCatching {

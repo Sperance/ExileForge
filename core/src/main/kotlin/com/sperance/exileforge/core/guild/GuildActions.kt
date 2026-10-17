@@ -1,8 +1,5 @@
-package com.sperance.exileforge.presentation.guild
+package com.sperance.exileforge.core.guild
 
-import com.sperance.exileforge.core.guild.GuildRepository
-import com.sperance.exileforge.core.guild.GuildTab
-import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui

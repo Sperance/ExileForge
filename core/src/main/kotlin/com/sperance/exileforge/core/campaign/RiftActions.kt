@@ -1,14 +1,13 @@
-package com.sperance.exileforge.presentation.expedition
+package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.speedPresses
-import com.sperance.exileforge.core.campaign.RiftArena
-import com.sperance.exileforge.core.campaign.RiftStyles
 import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.model.campaign.RiftReport
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
@@ -18,7 +17,6 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard

@@ -1,18 +1,10 @@
-package com.sperance.exileforge.presentation.expedition
+package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.app.DeviceStore
+import com.sperance.exileforge.core.app.Landing
 import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.Screens
 import com.sperance.exileforge.core.app.speedPresses
-import com.sperance.exileforge.core.campaign.AtlasWindow
-import com.sperance.exileforge.core.campaign.BeltFlask
-import com.sperance.exileforge.core.campaign.Expedition
-import com.sperance.exileforge.core.campaign.ExpeditionRepository
-import com.sperance.exileforge.core.campaign.FateKit
-import com.sperance.exileforge.core.campaign.HeroGear
-import com.sperance.exileforge.core.campaign.Loadout
-import com.sperance.exileforge.core.campaign.LootEntry
-import com.sperance.exileforge.core.campaign.MapLaunch
-import com.sperance.exileforge.core.campaign.RunJournal
-import com.sperance.exileforge.core.campaign.UnfinishedRun
 import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -20,6 +12,7 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.RunReport
@@ -27,16 +20,12 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.quests.QuestActions
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.hero.HeroSync
-import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Orb
@@ -81,8 +70,8 @@ class ExpeditionActions(
     private val notices: Notices,
     private val quests: QuestActions,
     private val prefs: PreferencesRepository,
-    private val store: ServerStore,
-    private val navigator: Navigator,
+    private val store: DeviceStore,
+    private val screens: Screens,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -555,14 +544,11 @@ class ExpeditionActions(
         mutableRun.value = inner
     }
 
-    /** Страница «Похода»: карта, испытания или Атлас - экраном под вкладкой; Атлас прежде готовит своё окно. */
-    fun openPage(route: Route) {
-        if (route == Route.Atlas) prepareAtlas()
-        navigator.tab(route)
+    /** Атлас (страница «Похода»): прежде готовит своё окно с последним взятым узлом. */
+    fun openAtlas() {
+        prepareAtlas()
+        screens.tab(Landing.ATLAS)
     }
-
-    /** Атлас (страница «Похода»): окно с последним взятым узлом. */
-    fun openAtlas() = openPage(Route.Atlas)
 
     private fun prepareAtlas() {
         val last = index?.let { i -> hero?.let { h -> (listOf(i.atlasGraph.start) + h.info.atlas).lastOrNull() } }.orEmpty()

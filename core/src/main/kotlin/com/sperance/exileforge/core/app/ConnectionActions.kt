@@ -1,10 +1,5 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.core.app.AppPhase
-import com.sperance.exileforge.core.app.Building
-import com.sperance.exileforge.core.app.NoticeKind
-import com.sperance.exileforge.core.app.TAB_CITY
-import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FlushOutcome
@@ -15,10 +10,6 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.nav.Navigator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -38,9 +29,9 @@ class ConnectionActions(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
-    private val navigator: Navigator,
+    private val screens: Screens,
     private val notices: Notices,
     private val lazySession: Lazy<SessionActions>,
     private val lazyCharacters: Lazy<CharacterActions>,
@@ -199,7 +190,7 @@ class ConnectionActions(
      */
     fun refreshScreen(hero: Boolean = true) {
         run {
-            val now = navigator.current.value
+            val now = screens.spot
             when (now.phase) {
                 AppPhase.AUTH -> Unit
 

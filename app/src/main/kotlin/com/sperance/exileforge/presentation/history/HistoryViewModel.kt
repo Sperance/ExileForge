@@ -3,8 +3,8 @@ package com.sperance.exileforge.presentation.history
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.model.hero.UniqueFind
-import com.sperance.exileforge.presentation.hero.HeroReads
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import kotlinx.coroutines.flow.StateFlow

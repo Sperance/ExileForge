@@ -1,14 +1,12 @@
-package com.sperance.exileforge.presentation.expedition
+package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.speedPresses
-import com.sperance.exileforge.core.campaign.RunJournal
-import com.sperance.exileforge.core.campaign.TrialArena
-import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.TrialStart
 import com.sperance.exileforge.core.network.ApiFailure
@@ -19,7 +17,6 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.rules.content.TrialEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope

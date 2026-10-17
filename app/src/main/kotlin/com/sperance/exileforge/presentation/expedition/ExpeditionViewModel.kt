@@ -7,13 +7,19 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.WorldView
 import com.sperance.exileforge.core.campaign.Expedition
+import com.sperance.exileforge.core.campaign.ExpeditionActions
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
+import com.sperance.exileforge.core.campaign.RiftActions
+import com.sperance.exileforge.core.campaign.RiftState
+import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.presentation.hero.HeroActions
+import com.sperance.exileforge.presentation.nav.Navigator
+import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +35,7 @@ class ExpeditionViewModel(
     commands: CommandRunner,
     slice: GameSlice,
     private val prefs: PreferencesRepository,
+    private val navigator: Navigator,
 ) : ViewModel() {
     /** Где стояла камера карты у героя [heroId]; не стояла - null, карта откроется на фронтире. */
     fun worldView(heroId: String): WorldView? = prefs.settings.value.worldViews[heroId]
@@ -81,7 +88,9 @@ class ExpeditionViewModel(
     /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
     fun closeRunSelling(itemIds: Collection<String>) = expedition.close { id -> hero.sellBatch(id, itemIds) }
     fun openAtlas() = expedition.openAtlas()
-    fun openPage(route: com.sperance.exileforge.presentation.nav.Route) = expedition.openPage(route)
+
+    /** Страница «Похода» экраном под вкладкой; Атлас открывает поход - он прежде готовит своё окно. */
+    fun openPage(route: Route) = if (route == Route.Atlas) openAtlas() else navigator.tab(route)
     fun selectAtlasNode(code: String) = expedition.selectAtlasNode(code)
     fun allocateAtlas(code: String) = expedition.allocateAtlas(code)
     fun refundAtlas(code: String, regret: Boolean = false) = expedition.refundAtlas(code, regret)

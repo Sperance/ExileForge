@@ -1,7 +1,5 @@
-package com.sperance.exileforge.presentation.feedback
+package com.sperance.exileforge.core.feedback
 
-import com.sperance.exileforge.core.feedback.FeedbackRepository
-import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.Mail

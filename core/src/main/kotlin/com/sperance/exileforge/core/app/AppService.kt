@@ -1,11 +1,8 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -18,7 +15,7 @@ abstract class AppService(
     protected val actions: Actions,
     protected val commands: CommandRunner,
     protected val connection: ServerConnection,
-    protected val store: ServerStore,
+    protected val store: DeviceStore,
     protected val scope: CoroutineScope,
 ) {
     protected val sessions get() = repositories.sessions

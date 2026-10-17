@@ -26,12 +26,12 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rangedLine
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
+import com.sperance.exileforge.core.forge.EngraveLine
+import com.sperance.exileforge.core.forge.ForgeTarget
+import com.sperance.exileforge.core.forge.OrbChoice
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.GoldBill
-import com.sperance.exileforge.presentation.forge.EngraveLine
-import com.sperance.exileforge.presentation.forge.ForgeTarget
-import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.rules.content.Orb

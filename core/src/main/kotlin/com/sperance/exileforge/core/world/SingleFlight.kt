@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.world
+package com.sperance.exileforge.core.world
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred

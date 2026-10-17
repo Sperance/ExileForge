@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.forge
+package com.sperance.exileforge.core.forge
 
 import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi

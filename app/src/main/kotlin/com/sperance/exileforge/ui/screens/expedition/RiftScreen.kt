@@ -35,6 +35,8 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.RiftArena
+import com.sperance.exileforge.core.campaign.RiftDelivery
+import com.sperance.exileforge.core.campaign.RiftState
 import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.SkillText
@@ -43,8 +45,6 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.expedition.RiftDelivery
-import com.sperance.exileforge.presentation.expedition.RiftState
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity

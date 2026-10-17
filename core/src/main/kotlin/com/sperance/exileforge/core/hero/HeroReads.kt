@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.hero
+package com.sperance.exileforge.core.hero
 
 import com.sperance.exileforge.core.model.hero.UniqueFind
 import com.sperance.exileforge.core.session.Remembered

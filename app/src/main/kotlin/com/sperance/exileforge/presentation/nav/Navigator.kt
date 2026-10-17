@@ -4,6 +4,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.sperance.exileforge.core.app.BAR_TABS
 import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.Landing
+import com.sperance.exileforge.core.app.Screens
+import com.sperance.exileforge.core.app.Spot
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
@@ -23,7 +26,7 @@ class Navigator(
     private val sessions: SessionRepository,
     private val notices: Notices,
     private val world: com.sperance.exileforge.core.world.WorldRepository,
-) {
+) : Screens {
     val stack: SnapshotStateList<Route> = mutableStateListOf(Route.Auth)
 
     private val mutable = MutableStateFlow<Route>(Route.Auth)
@@ -38,8 +41,14 @@ class Navigator(
     var tabStep: Int = 0
         private set
 
+    override val spot: Spot get() = current.value.let { Spot(it.phase, it.tab, it.building) }
+
     /** Смена фазы: стек из одного экрана. */
     fun reset(route: Route) = replace(listOf(route))
+
+    override fun reset(landing: Landing) = reset(landing.route)
+
+    override fun tab(landing: Landing) = tab(landing.route)
 
     /** Вкладка или экран под ней: корень и, если это не он сам, экран над корнем; без корня - поверх открытого. */
     fun tab(route: Route) {
@@ -91,6 +100,17 @@ class Navigator(
         return new.compareTo(old)
     }
 }
+
+/** Экран, к которому ведёт сервис ядра. */
+private val Landing.route: Route
+    get() = when (this) {
+        Landing.AUTH -> Route.Auth
+        Landing.CHARACTERS -> Route.Characters
+        Landing.FATE -> Route.Fate
+        Landing.HERO -> Route.Hero
+        Landing.ADMIN -> Route.Admin
+        Landing.ATLAS -> Route.Atlas
+    }
 
 /** Место экрана в нижней панели слева направо ([BAR_TABS]): по его корню; экран без панели или не вкладка панели - null. */
 val Route.barSlot: Int? get() = takeIf { it.bars }?.root?.let { BAR_TABS.indexOf(it.tab) }?.takeIf { it >= 0 }

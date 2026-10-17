@@ -1,11 +1,8 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.world.WorldLoader
+import com.sperance.exileforge.core.world.WorldLoader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -36,7 +33,7 @@ class WarmupActions(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
     private val loader: WorldLoader,
 ) : AppService(repositories, actions, commands, connection, store, scope) {

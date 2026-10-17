@@ -2,6 +2,8 @@ package com.sperance.exileforge.presentation.app
 
 import android.content.Context
 import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.LeftReport
+import com.sperance.exileforge.core.app.LeftReports
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +17,7 @@ import java.util.UUID
  * [sent]) - сервер сам заведёт Issue или посчитает повтор. Последние [KEEP] стеков остаются и после отправки: их прикладывает
  * отчёт об ошибке игрока ([recent]).
  */
-class CrashKeeper(context: Context) {
+class CrashKeeper(context: Context) : LeftReports {
     private val dir = File(context.filesDir, CRASH_DIR)
 
     /** Встаёт перед прежним обработчиком; повторный вызов ничего не меняет. */
@@ -47,14 +49,14 @@ class CrashKeeper(context: Context) {
     /** Стеки новыми первыми. */
     private fun files(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.name.substringBefore('-').toLongOrNull() ?: 0 }.orEmpty()
 
-    /** Неотправленные падения: файл и готовый отчёт, старые первыми. */
-    suspend fun pending(): List<Pair<File, BugReportRequest>> = withContext(Dispatchers.IO) {
+    /** Неотправленные падения: готовый отчёт и стирание его записи, старые первыми. */
+    override suspend fun pending(): List<LeftReport> = withContext(Dispatchers.IO) {
         files().filter { it.name.endsWith(PENDING) }.reversed().mapNotNull { file ->
             val text = runCatching { file.readText() }.getOrNull() ?: return@mapNotNull null
             val head = text.substringBefore(SPLIT).lines()
             val stack = text.substringAfter(SPLIT, "")
             if (stack.isBlank()) return@mapNotNull null
-            file to BugReportRequest(
+            val report = BugReportRequest(
                 text = stack.lineSequence().first().take(TITLE),
                 screen = SCREEN,
                 context = mapOf("crashThread" to head.getOrNull(1).orEmpty(), "auto" to "true"),
@@ -63,11 +65,12 @@ class CrashKeeper(context: Context) {
                 traces = listOf(stack),
                 key = "crash-${file.name.substringAfter('-').substringBefore('.')}",
             )
+            LeftReport(report) { sent(file) }
         }
     }
 
     /** Падение [file] ушло: стек остаётся среди последних, но больше не шлётся. */
-    suspend fun sent(file: File) = withContext(Dispatchers.IO) {
+    private suspend fun sent(file: File) = withContext(Dispatchers.IO) {
         file.renameTo(File(dir, file.name.removeSuffix(PENDING) + SENT))
     }
 

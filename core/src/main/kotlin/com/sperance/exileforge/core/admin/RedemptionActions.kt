@@ -1,13 +1,14 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.admin
 
+import com.sperance.exileforge.core.app.Actions
+import com.sperance.exileforge.core.app.AppService
+import com.sperance.exileforge.core.app.DeviceStore
+import com.sperance.exileforge.core.app.Repositories
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
 
@@ -24,7 +25,7 @@ class RedemptionActions(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
 

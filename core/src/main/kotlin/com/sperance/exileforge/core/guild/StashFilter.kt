@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.guild
+package com.sperance.exileforge.core.guild
 
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle

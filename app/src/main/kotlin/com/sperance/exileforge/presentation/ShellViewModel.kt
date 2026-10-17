@@ -5,14 +5,23 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.ADMIN_TABS
 import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.AppModes
+import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.Building
 import com.sperance.exileforge.core.app.Buzz
+import com.sperance.exileforge.core.app.ConnectionActions
+import com.sperance.exileforge.core.app.Foreground
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.ServerReach
+import com.sperance.exileforge.core.app.SessionActions
 import com.sperance.exileforge.core.app.TAB_REDEMPTION
 import com.sperance.exileforge.core.app.TAB_TREE
+import com.sperance.exileforge.core.app.Warmup
+import com.sperance.exileforge.core.app.WarmupActions
+import com.sperance.exileforge.core.campaign.ExpeditionActions
 import com.sperance.exileforge.core.campaign.LogKind
+import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.feedback.reportSheet
@@ -24,16 +33,7 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
-import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.BugDelivery
-import com.sperance.exileforge.presentation.app.ConnectionActions
-import com.sperance.exileforge.presentation.app.Foreground
-import com.sperance.exileforge.presentation.app.ServerReach
-import com.sperance.exileforge.presentation.app.SessionActions
-import com.sperance.exileforge.presentation.app.Warmup
-import com.sperance.exileforge.presentation.app.WarmupActions
-import com.sperance.exileforge.presentation.expedition.ExpeditionActions
-import com.sperance.exileforge.presentation.expedition.TrialActions
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import kotlinx.coroutines.flow.Flow
@@ -68,7 +68,7 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
-    rift: com.sperance.exileforge.presentation.expedition.RiftActions,
+    rift: com.sperance.exileforge.core.campaign.RiftActions,
     /** Связь с сервером на старте: окно запуска уходит по её ответу. */
     val reach: ServerReach,
     private val foreground: Foreground,
@@ -93,7 +93,7 @@ class ShellViewModel(
     val craftsAway: StateFlow<Boolean> = crafts.state.map { it.away != null }.stateIn(viewModelScope, SharingStarted.Eagerly, crafts.state.value.away != null)
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
-    val rift: StateFlow<com.sperance.exileforge.presentation.expedition.RiftState> = rift.state
+    val rift: StateFlow<com.sperance.exileforge.core.campaign.RiftState> = rift.state
 
     /** Что телефон отзывает вибрацией, уже по настройкам. */
     val buzzes: SharedFlow<Buzz> get() = buzzer.flow

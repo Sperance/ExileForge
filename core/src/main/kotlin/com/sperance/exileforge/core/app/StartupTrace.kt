@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow

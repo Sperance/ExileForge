@@ -1,9 +1,6 @@
-package com.sperance.exileforge.presentation.crafts
+package com.sperance.exileforge.core.crafts
 
-import com.sperance.exileforge.core.crafts.Absence
-import com.sperance.exileforge.core.crafts.Crafts
-import com.sperance.exileforge.core.crafts.CraftsRepository
-import com.sperance.exileforge.core.crafts.Harvest
+import com.sperance.exileforge.core.app.Foreground
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.network.GameApi
@@ -15,7 +12,6 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
-import com.sperance.exileforge.presentation.app.Foreground
 import com.sperance.exileforge.rules.roll.ActiveWork
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

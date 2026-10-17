@@ -1,10 +1,9 @@
-package com.sperance.exileforge.presentation.hero
+package com.sperance.exileforge.core.hero
 
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.display.shardsText
 import com.sperance.exileforge.core.display.withShards
-import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.Buzz

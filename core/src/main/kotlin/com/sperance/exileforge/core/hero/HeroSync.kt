@@ -1,11 +1,11 @@
-package com.sperance.exileforge.presentation.hero
+package com.sperance.exileforge.core.hero
 
+import com.sperance.exileforge.core.app.DeviceStore
 import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.atlasPointToast
 import com.sperance.exileforge.core.feedback.FeedbackRepository
-import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -21,7 +21,6 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.ServerStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -43,7 +42,7 @@ class HeroSync(
     private val commands: CommandRunner,
     private val content: ContentLoader,
     private val notices: Notices,
-    private val store: ServerStore,
+    private val store: DeviceStore,
     private val feedback: FeedbackRepository,
     private val scope: CoroutineScope,
 ) {

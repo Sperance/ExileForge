@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.session.Activity

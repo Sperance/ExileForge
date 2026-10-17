@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.ServerConnection

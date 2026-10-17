@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.market
+package com.sperance.exileforge.core.market
 
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -6,8 +6,6 @@ import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.market.Market
-import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage

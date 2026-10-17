@@ -15,8 +15,8 @@ import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.display.isWorn
 import com.sperance.exileforge.core.display.itemShelf
 import com.sperance.exileforge.core.display.railGroups
+import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.HoldHint

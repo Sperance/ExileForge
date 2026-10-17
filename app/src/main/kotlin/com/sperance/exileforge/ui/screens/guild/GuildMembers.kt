@@ -14,12 +14,12 @@ import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.network.MemberCommand
-import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy

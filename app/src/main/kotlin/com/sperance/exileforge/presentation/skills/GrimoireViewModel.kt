@@ -3,10 +3,10 @@ package com.sperance.exileforge.presentation.skills
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.presentation.hero.HeroActions
-import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import kotlinx.coroutines.flow.StateFlow

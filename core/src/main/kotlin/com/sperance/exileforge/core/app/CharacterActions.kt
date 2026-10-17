@@ -1,8 +1,5 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.core.app.AppPhase
-import com.sperance.exileforge.core.app.MAX_CHARACTERS
-import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.DeletionPreview
@@ -12,11 +9,7 @@ import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.world.WorldLoader
+import com.sperance.exileforge.core.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -28,9 +21,9 @@ class CharacterActions(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
-    private val navigator: Navigator,
+    private val screens: Screens,
     private val loader: WorldLoader,
     private val lazyWarmup: Lazy<WarmupActions>,
     private val trace: StartupTrace,
@@ -66,7 +59,7 @@ class CharacterActions(
         val chosen = view.chosen
         sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = chosen?.code ?: p.fate) }) }
         if (chosen != null) return true
-        navigator.reset(com.sperance.exileforge.presentation.nav.Route.Fate)
+        screens.reset(Landing.FATE)
         return false
     }
 
@@ -96,7 +89,7 @@ class CharacterActions(
     fun fateAccepted() {
         run {
             if (sessions.state.value.profile?.fate == null) return
-            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
+            screens.reset(Landing.CHARACTERS)
             read(Reads.CHARACTERS) { readCharacters() }
         }
     }
@@ -111,7 +104,7 @@ class CharacterActions(
             heroes.select(id)
             boards.clear()
             expeditions.clear()
-            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
+            screens.reset(Landing.HERO)
             warmupActions.clear()
             heroSync.forget()
             heroSync.seed(id)
@@ -134,7 +127,7 @@ class CharacterActions(
             boards.clear()
             markets.clear()
             guilds.clear()
-            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
+            screens.reset(Landing.CHARACTERS)
             warmupActions.clear()
             read(Reads.CHARACTERS) { readCharacters() }
             scope.launch { store.saveLastHero(sessions.state.value.server, null) }

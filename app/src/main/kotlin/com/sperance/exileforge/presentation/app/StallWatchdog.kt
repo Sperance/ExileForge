@@ -8,6 +8,9 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.LeftReport
+import com.sperance.exileforge.core.app.LeftReports
+import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.session.CommandRunner
@@ -25,7 +28,7 @@ import kotlin.concurrent.withLock
  * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
  * Свёрнутое приложение сторож не будит: он ходит с запуска до первой паузы окна, дальше - только пока окно на экране ([awake]).
  */
-class StallWatchdog(context: Context, private val trace: StartupTrace, private val commands: CommandRunner) {
+class StallWatchdog(context: Context, private val trace: StartupTrace, private val commands: CommandRunner) : LeftReports {
     private val file = File(context.filesDir, FILE)
     private val last = File(context.filesDir, LAST_FILE)
     private val main = Handler(Looper.getMainLooper())
@@ -101,7 +104,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
      *
      * Краткая причина - верх стека главного потока - прямо в тексте отчёта.
      */
-    suspend fun pending(): BugReportRequest? = withContext(Dispatchers.IO) {
+    private suspend fun report(): BugReportRequest? = withContext(Dispatchers.IO) {
         val text = file.takeIf { it.isFile }?.readText() ?: return@withContext null
         val head = text.substringBefore("\n---\n").lines()
         val reason = text.substringAfter("\n---\n", "").lines().filter { it.isNotBlank() }.take(REASON_LINES)
@@ -112,7 +115,10 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         )
     }
 
-    suspend fun sent() = withContext(Dispatchers.IO) {
+    /** Отчёт о прошлом зависании, ещё не отправленный: ноль или один; ушедший стирается. */
+    override suspend fun pending(): List<LeftReport> = listOfNotNull(report()?.let { LeftReport(it, ::sent) })
+
+    private suspend fun sent() = withContext(Dispatchers.IO) {
         last.delete()
         if (!file.renameTo(last)) file.delete()
     }

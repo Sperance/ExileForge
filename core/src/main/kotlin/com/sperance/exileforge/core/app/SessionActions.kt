@@ -1,11 +1,8 @@
-package com.sperance.exileforge.presentation.app
+package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.BuildConfig
-import com.sperance.exileforge.core.app.AppMode
-import com.sperance.exileforge.core.app.AppPhase
-import com.sperance.exileforge.core.app.DEFAULT_SERVER
-import com.sperance.exileforge.core.app.phrase
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.feedback.ReportTrail
+import com.sperance.exileforge.core.hero.HeroCopy
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ClientIdentity
 import com.sperance.exileforge.core.model.command.UserProfile
@@ -23,12 +20,7 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.Actions
-import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.hero.HeroCopy
-import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.world.WorldLoader
+import com.sperance.exileforge.core.world.WorldLoader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -46,9 +38,9 @@ class SessionActions(
     actions: Actions,
     commands: CommandRunner,
     connection: ServerConnection,
-    store: ServerStore,
+    store: DeviceStore,
     scope: CoroutineScope,
-    private val navigator: Navigator,
+    private val screens: Screens,
     private val notices: Notices,
     private val loader: WorldLoader,
     private val journal: RequestJournal,
@@ -58,8 +50,10 @@ class SessionActions(
     /** HTTP-клиент процесса (из Koin): все серверы делят его пул и TLS-сессии. */
     private val http: HttpLink,
     private val trace: StartupTrace,
-    /** Среда устройства и переходы экранов для отчётов. */
-    private val evidence: ReportEvidence,
+    /** Сборка и среда устройства для отчётов. */
+    private val device: ClientDevice,
+    /** Переходы экранов и последние действия для отчётов. */
+    private val trail: ReportTrail,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
     private val characterActions: CharacterActions get() = lazyCharacters.value
@@ -69,7 +63,7 @@ class SessionActions(
         run {
             if (commands.state.value.held || mode == AppMode.ADMIN && !sessions.state.value.isModerator) return
             modes.set(mode)
-            navigator.tab(if (mode == AppMode.ADMIN) com.sperance.exileforge.presentation.nav.Route.Admin else com.sperance.exileforge.presentation.nav.Route.Hero)
+            screens.tab(if (mode == AppMode.ADMIN) Landing.ADMIN else Landing.HERO)
         }
     }
 
@@ -179,7 +173,7 @@ class SessionActions(
             sessions.update { it.copy(signedIn = true, resumable = false, profile = copy.account) }
             heroes.select(heroId)
             expeditions.clear()
-            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
+            screens.reset(Landing.HERO)
             modes.set(AppMode.PLAYER)
             warmupActions.clear()
             heroSync.restore(heroId, copy.snapshot)
@@ -308,7 +302,7 @@ class SessionActions(
                 withContext(Dispatchers.IO) { http.dropIdleConnections() }
                 val session = sessions.state.value
                 val link = links.state.value
-                val reread = session.signedIn && navigator.current.value.phase != AppPhase.AUTH &&
+                val reread = session.signedIn && screens.spot.phase != AppPhase.AUTH &&
                     (commands.state.value.failure is FailureState.Offline || link.offline || stale)
                 if (session.signedIn) connectionActions.wake(now = true, verify = !reread)
                 when {
@@ -316,7 +310,7 @@ class SessionActions(
 
                     reread -> {
                         commands.clearOffline()
-                        when (navigator.current.value.phase) {
+                        when (screens.spot.phase) {
                             AppPhase.GAME -> read(Reads.HERO, restart = true, silent = true) { heroSync.readHero() }
                             AppPhase.CHARACTERS -> read(Reads.CHARACTERS, restart = true, silent = true) { characterActions.readCharacters() }
                             AppPhase.AUTH -> Unit
@@ -347,7 +341,7 @@ class SessionActions(
         run {
             api.requireRoutes()
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
-            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
+            screens.reset(Landing.CHARACTERS)
             modes.set(AppMode.PLAYER)
             store.saveDeviceSession(byDevice)
             store.saveToken(sessions.state.value.server, api.sessionToken())
@@ -463,8 +457,8 @@ class SessionActions(
                 ServerAlarm.FAILED, ServerAlarm.UNREACHED -> serverFailed.tryEmit(Unit)
             }
         }
-        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty(), evidence::environment)
-        created.trail = evidence.trail
+        created.identity = ClientIdentity(device.version, store::deviceFingerprint, { heroes.heroId }, device.model, device::environment)
+        created.trail = trail
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }
         created.onSanctioned = { sanctionId, token -> if (api === created) sanctioned(server, sanctionId, token) }
         created.manifestCache = object : ManifestCache {
@@ -496,7 +490,7 @@ class SessionActions(
 
     fun clearSession() {
         api.logout()
-        navigator.reset(com.sperance.exileforge.presentation.nav.Route.Auth)
+        screens.reset(Landing.AUTH)
         journal.clear()
         cancelReads()
         expedition.drop()

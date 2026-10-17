@@ -31,9 +31,9 @@ import com.sperance.exileforge.core.display.ItemType
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.HoldHint

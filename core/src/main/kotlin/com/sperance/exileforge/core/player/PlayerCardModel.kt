@@ -49,32 +49,6 @@ class PlayerCardModel(
     private val mutable = MutableStateFlow(PlayerCardUi())
     val state: StateFlow<PlayerCardUi> = mutable.asStateFlow()
 
-    private val ownCard = MutableStateFlow<PlayerCard?>(null)
-
-    /** Своя карточка героя на экране (место на доске Мощи для его сводки); null - ещё не прочитана или герой другой. */
-    val own: StateFlow<PlayerCard?> = ownCard.asStateFlow()
-
-    /** Версия героя ([com.sperance.exileforge.core.model.hero.HeroInfo.version]), для которой прочитана [own]: `id:версия`. */
-    private var ownFor = ""
-
-    /**
-     * Своя карточка для сводки героя: читается один раз на героя и его версию на сервере - повтор без новой версии берётся из
-     * памяти сессии. Чтение тихое: сводка без места не мешает игре.
-     */
-    fun ensureOwn() {
-        val hero = heroes.state.value.hero?.info ?: return
-        val key = "${hero.id}:${hero.version}"
-        if (key == ownFor) return
-        if (ownCard.value?.heroId != hero.id) ownCard.value = null
-        commands.read(Reads.OWN_CARD, silent = true) {
-            val card = connection.api.hero.card(hero.id, hero.id)
-            if (heroes.onScreen(card.heroId)) {
-                ownCard.value = card
-                ownFor = key
-            }
-        }
-    }
-
     /**
      * Карточка героя [target] глазами своего героя; без своего героя (меню героев) смотреть не от кого.
      *

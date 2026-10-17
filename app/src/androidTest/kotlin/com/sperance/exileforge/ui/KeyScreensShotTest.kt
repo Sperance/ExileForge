@@ -33,11 +33,11 @@ import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.ObjectAction
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
+import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.filter.ItemShelf
-import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -96,18 +96,18 @@ import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.sheet.FlaskKind
+import com.sperance.exileforge.ui.components.FeedbackViewModel
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.InspectActions
 import com.sperance.exileforge.ui.components.InspectChoice
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.UpdateDialog
 import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.craft.TargetRail
-import com.sperance.exileforge.ui.components.FeedbackViewModel
-import com.sperance.exileforge.ui.components.UpdateDialog
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
 import com.sperance.exileforge.ui.screens.crafts.WorkPlaque
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
@@ -139,8 +139,7 @@ import java.io.File
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
  * Экраны: задания и контракты, гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
  * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, карточка редкой вещи с плашками
- * особых строк, карточка захваченной карты, полка кузницы с карточкой вещи и её действиями.
- * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, окно обновления, модерация отчётов,
+ * особых строк, карточка захваченной карты, полка кузницы с карточкой вещи и её действиями, окно обновления, модерация отчётов,
  * плашка идущей работы.
  */
 class KeyScreensShotTest {
@@ -323,6 +322,8 @@ class KeyScreensShotTest {
         val rolls = listOf(roll(def { it.source == Source.ALCHEMY })) + mapLines.map { roll(it) }
         val zone = index.campaign.zones.last().code
         return ItemInstance("shot-map", template.code, Rarity.RARE, rolls, influence = Influence.SHAPER, quality = 12, itemLevel = 80, mapTier = 7, mapZone = zone)
+    }
+
     /** Окно обязательного обновления: найдено (версии чипами, заметки с прокруткой, «Обновить», размер) и загрузка (тонкая полоса и «64% · 24 из 38 МБ»). */
     @Test fun update() = shot("update") {
         val notes = (1..9).joinToString("\n") { "• Строки предмета сгруппированы по источникам, пункт $it" }

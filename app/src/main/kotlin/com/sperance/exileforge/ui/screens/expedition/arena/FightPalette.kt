@@ -21,8 +21,8 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
 }
 
 /**
- * Цвет урона тика недуга [ailment]: яд - цветом своей плитки (зелёным), а не хаосом, как удар; прочие - цветом
- * вида урона [type].
+ * Цвет урона тика недуга [ailment]: яд - цветом своей плитки (кислотным), а не хаосом, как удар; прочие - цветом
+ * вида урона [type]. Тот же цвет у тика в бою и у тика ловушки на карте.
  */
 internal fun tickTint(ailment: Ailment?, type: DamageType?, onHero: Boolean = false): Color = if (ailment == Ailment.POISONED) ailmentTint(ailment) else damageTint(type, onHero)
 
@@ -50,7 +50,7 @@ internal fun ailmentTint(ailment: Ailment): Color = when (ailment) {
     Ailment.CHILLED -> ShieldCyan
     Ailment.FROZEN -> Shaper
     Ailment.SHOCKED -> Color(0xFFFFD34A)
-    Ailment.POISONED -> Vital
+    Ailment.POISONED -> Acid
     Ailment.BLEEDING -> LifeRed
     Ailment.WOUNDED -> Color(0xFF8A3324)
     Ailment.PARCHED -> Color(0xFFC9A05A)

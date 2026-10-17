@@ -57,9 +57,9 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.OfferSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
-import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
+import com.sperance.exileforge.ui.screens.expedition.arena.tickTint
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
 
@@ -295,8 +295,8 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
         Modifier.align(Alignment.TopCenter).offset(x = side, y = feet - SCENE_UNIT * rise.value).alpha(1f - rise.value * .8f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val tint = damageTint(hazard.type, onHero = true)
         val ticked = hazard.of
+        val tint = tickTint(ticked, hazard.type, onHero = true)
         if (ticked != null) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(ui("trap.float", hazard.total), color = tint, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, style = MaterialTheme.typography.labelMedium)

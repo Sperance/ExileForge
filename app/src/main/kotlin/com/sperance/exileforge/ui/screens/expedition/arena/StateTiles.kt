@@ -2,15 +2,12 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -61,13 +58,11 @@ import com.sperance.exileforge.ui.theme.*
  * Действующий рычаг дара: ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
  * в углу - стаки; подсказка - имя дара и что он делает сейчас (`fight.fate_state.<рычаг>`).
  */
-@Composable internal fun FateTile(view: FateGlow, side: Dp = 30.dp, tip: () -> Tip) {
-    val shape = RoundedCornerShape(4.dp)
+@Composable internal fun FateTile(view: FateGlow, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
     val title = locOr("fate.${view.fate}.name", view.fate)
     Tipped(
         tip,
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(FateInk.Gold.copy(alpha = .16f)).border(1.dp, FateInk.Gold, shape)
-            .semantics { contentDescription = title },
+        Modifier.shelfTile(FateInk.Gold, bearing, side).semantics { contentDescription = title },
     ) {
         Text(FATE_GLYPH, color = FateInk.GoldLight, fontSize = 15.sp, modifier = Modifier.align(Alignment.Center))
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
@@ -87,13 +82,11 @@ import com.sperance.exileforge.ui.theme.*
 private const val FATE_GLYPH = "✦"
 
 /** A kind of the hero's charges: the drawing of its maximum and the count held. */
-@Composable internal fun ChargeTile(view: ChargeView, side: Dp = 30.dp, tip: () -> Tip) {
-    val shape = RoundedCornerShape(4.dp)
+@Composable internal fun ChargeTile(view: ChargeView, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
     val title = ui("fight.charge.${view.kind.name}")
     Tipped(
         tip,
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Gold.copy(alpha = .16f)).border(1.dp, Gold, shape)
-            .semantics { contentDescription = "$title ${view.count}" },
+        Modifier.shelfTile(Gold, bearing, side).semantics { contentDescription = "$title ${view.count}" },
     ) {
         com.sperance.exileforge.ui.icons.StatIcon(view.stat, Gold, Modifier.fillMaxSize().padding(side / 6))
         Text(
@@ -112,15 +105,14 @@ private const val FATE_GLYPH = "✦"
  * Бафф правил (Натиск, Укрепление) назван и нарисован по виду, умения - по умению, глоток - бутылью; бафф Предначертания называется даром.
  * Проклятие открывает лист.
  */
-@Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp, tip: () -> Tip) {
+@Composable internal fun EffectTile(view: EffectView, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
     val tint = effectTint(view)
-    val shape = RoundedCornerShape(4.dp)
     val buff = view.buff
     val title = effectTitle(view)
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
         tip.takeIf { lore == null },
-        Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
+        Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).shelfTile(tint, bearing, side)
             .semantics { contentDescription = title },
     ) {
         val flask = view.flask
@@ -137,12 +129,10 @@ private const val FATE_GLYPH = "✦"
     }
 }
 
-@Composable internal fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, side: Dp = 30.dp, tip: () -> Tip) {
-    val shape = RoundedCornerShape(4.dp)
+@Composable internal fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
     Tipped(
         tip,
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
-            .semantics { contentDescription = label },
+        Modifier.shelfTile(tint, bearing, side).semantics { contentDescription = label },
     ) {
         Canvas(Modifier.fillMaxSize().padding(side / 5)) { stateGlyph(ailment, tint) }
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))

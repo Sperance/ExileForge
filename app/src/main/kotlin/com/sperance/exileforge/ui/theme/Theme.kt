@@ -64,6 +64,12 @@ val Caution = Color(0xFFF2C94C)
 /** Regeneration and success. */
 val Vital = Color(0xFF7BE0A6)
 
+/** Яд: кислотный жёлто-зелёный - свой цвет, не цвет лечения и не хаос удара; плитка, тик в бою и тик ловушки на карте. */
+val Acid = Color(0xFFB6E41E)
+
+/** Польза на бойце: золотая рамка и уголок плитки эффекта; вред - кровью ([LifeRed]). */
+val Boon = Color(0xFFE8C15A)
+
 /** Fire and other burning damage on the arena stage. */
 val Ember = Color(0xFFD9642E)
 

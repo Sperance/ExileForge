@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
@@ -49,27 +50,55 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
 
 /**
- * Плитка полки эффектов: что лежит на бойце - плиткой на полке и строкой листа эффектов.
+ * Знак плитки: вред тому, на ком лежит, - кровавая рамка и уголок, польза - золотые. Одна классификация на все плитки - из данных
+ * плитки ([Shelved.bearing]), цвет самого эффекта остаётся заливкой и значком.
+ */
+internal enum class Bearing(val tint: Color) {
+    HARM(LifeRed),
+    BENEFIT(Boon),
+    ;
+
+    companion object {
+        fun of(harm: Boolean): Bearing = if (harm) HARM else BENEFIT
+    }
+}
+
+/**
+ * Плитка полки эффектов: что лежит на бойце - плиткой на полке и строкой листа эффектов, со знаком вреда или пользы ([bearing]).
  * Новый вид состояния - новая реализация здесь, полка и лист берут его сами.
  */
 internal sealed interface Shelved {
+    val bearing: Bearing
+
     /** Оглушение (не заморозка): золотая звезда. */
-    data object Stun : Shelved
+    data object Stun : Shelved {
+        override val bearing: Bearing get() = Bearing.HARM
+    }
 
-    /** Недуг со стаками. */
-    data class Sick(val view: AilmentView) : Shelved
+    /** Недуг со стаками: всегда во вред тому, на ком лежит. */
+    data class Sick(val view: AilmentView) : Shelved {
+        override val bearing: Bearing get() = Bearing.HARM
+    }
 
-    /** Бафф, проклятие, помеха, глоток флакона, пассивное умение. */
-    data class Effect(val view: EffectView) : Shelved
+    /** Бафф, проклятие, помеха, глоток флакона, пассивное умение: вред - по виду эффекта ([EffectKind.harmful]). */
+    data class Effect(val view: EffectView) : Shelved {
+        override val bearing: Bearing get() = Bearing.of(view.kind.harmful)
+    }
 
     /** Заряды героя одного вида. */
-    data class Charge(val view: ChargeView) : Shelved
+    data class Charge(val view: ChargeView) : Shelved {
+        override val bearing: Bearing get() = Bearing.BENEFIT
+    }
 
     /** Действующий рычаг Предначертания ✦. */
-    data class Fate(val view: FateGlow) : Shelved
+    data class Fate(val view: FateGlow) : Shelved {
+        override val bearing: Bearing get() = Bearing.BENEFIT
+    }
 
-    /** Строка карты, что меняет героя. */
-    data class Mod(val mod: HeroMapMod) : Shelved
+    /** Строка карты, что меняет героя: вред - по её знаку ([HeroMapMod.harm]). */
+    data class Mod(val mod: HeroMapMod) : Shelved {
+        override val bearing: Bearing get() = Bearing.of(mod.harm)
+    }
 }
 
 /** Строка листа эффектов: имя цветом эффекта, откуда он, что делает и сколько ему осталось ([seconds] null - весь бой). */
@@ -97,12 +126,12 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
 @Composable internal fun ShelfTile(item: Shelved, side: Dp) {
     val tip = { item.tip() }
     when (item) {
-        Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), side, tip)
-        is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), side, tip)
-        is Shelved.Effect -> EffectTile(item.view, side, tip)
-        is Shelved.Charge -> ChargeTile(item.view, side, tip)
-        is Shelved.Fate -> FateTile(item.view, side, tip)
-        is Shelved.Mod -> MapModTile(item.mod, side, tip)
+        Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), item.bearing, side, tip)
+        is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), item.bearing, side, tip)
+        is Shelved.Effect -> EffectTile(item.view, item.bearing, side, tip)
+        is Shelved.Charge -> ChargeTile(item.view, item.bearing, side, tip)
+        is Shelved.Fate -> FateTile(item.view, item.bearing, side, tip)
+        is Shelved.Mod -> MapModTile(item.mod, item.bearing, side, tip)
     }
 }
 
@@ -187,7 +216,7 @@ internal fun effectTint(view: EffectView): Color = when {
     else -> Gold
 }
 
-private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) else Gold
+private fun modTint(mod: HeroMapMod): Color = Bearing.of(mod.harm).tint
 
 /** Имя плитки строки на герое: строка карты - своим кодом, доля гильдии и зелья - своим источником. */
 private fun modTitle(mod: HeroMapMod): String = when (mod.source.kind) {
@@ -203,14 +232,14 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
     else -> "fight.src.map"
 }
 
-/** Строка карты на герое: пунктирная плитка - значок первого сдвинутого стата, цвет вреда или блага. */
-@Composable private fun MapModTile(mod: HeroMapMod, side: Dp, tip: () -> Tip) {
-    val tint = modTint(mod)
+/** Строка карты на герое: пунктирная плитка - значок первого сдвинутого стата цветом вреда или пользы ([bearing]). */
+@Composable private fun MapModTile(mod: HeroMapMod, bearing: Bearing, side: Dp, tip: () -> Tip) {
+    val tint = bearing.tint
     val shape = RoundedCornerShape(4.dp)
     val title = modTitle(mod)
     Tipped(
         tip,
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .1f)).dashedBorder(tint, shape)
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .1f)).dashedBorder(tint, shape).bearingCorner(bearing, side)
             .semantics { contentDescription = title },
     ) {
         mod.shifts.firstOrNull()?.let { (stat, _) -> StatIcon(stat, tint, Modifier.fillMaxSize().padding(side / 6)) }
@@ -421,6 +450,31 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
     }
     HorizontalDivider(color = Bronze.copy(alpha = .5f))
 }
+
+/**
+ * Рамка плитки эффекта: тёмная подложка, заливка цветом эффекта [tint], рамка 1dp и уголок знака [bearing] - кровью у вреда,
+ * золотом у пользы.
+ */
+internal fun Modifier.shelfTile(tint: Color, bearing: Bearing, side: Dp, shape: Shape = RoundedCornerShape(4.dp)): Modifier =
+    size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, bearing.tint, shape).bearingCorner(bearing, side)
+
+/** Уголок знака плитки стороной [side]: треугольник цвета [bearing] в левом верхнем углу, поверх затемнения срока. */
+internal fun Modifier.bearingCorner(bearing: Bearing, side: Dp): Modifier = drawWithCache {
+    val leg = side.toPx() * CORNER_SHARE
+    val corner = Path().apply {
+        moveTo(0f, 0f)
+        lineTo(leg, 0f)
+        lineTo(0f, leg)
+        close()
+    }
+    onDrawWithContent {
+        drawContent()
+        drawPath(corner, bearing.tint)
+    }
+}
+
+/** Катет уголка знака долей стороны плитки. */
+private const val CORNER_SHARE = .32f
 
 /** Пунктирная рамка 1dp: строка карты - не эффект боя, а условие захода. */
 private fun Modifier.dashedBorder(tint: Color, shape: Shape): Modifier = drawWithCache {

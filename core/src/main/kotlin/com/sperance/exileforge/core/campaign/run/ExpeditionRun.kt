@@ -542,7 +542,7 @@ class ExpeditionRun(
          * алтарей действующими (и в Ваал-зоне); призывы стража - счётом сервера. Автопробег - вместо стика. Штраф сопротивлений акта едет с
          * «меньше сопротивлений» карты. Порядок расстановки: объекты карты - после прочих (их места не сдвигают сундуков и кристаллов);
          * сделки алтарей, стражи сокровищ, стаи Следопыта и монстры стоявших объектов - до павших. Принесённое из основной карты в
-         * Ваал-зону - на листе героя сразу.
+         * Ваал-зону - на листе героя сразу. [bossSlain] - страж карты уже пал в этом заходе (счёт сервера): ускорение [swift] держится.
          */
         fun start(
             index: ContentIndex,
@@ -565,6 +565,7 @@ class ExpeditionRun(
             features: Collection<FeatureUse> = emptyList(),
             inherited: Map<String, Double> = emptyMap(),
             summoned: Int = 0,
+            bossSlain: Boolean = false,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
@@ -599,6 +600,7 @@ class ExpeditionRun(
             ).also {
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()
+                if (bossSlain) it.bossSlain()
                 it.atlas = context.atlas.filterValues { value -> value != 0.0 }
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))
                 if (!vaal) it.guard()

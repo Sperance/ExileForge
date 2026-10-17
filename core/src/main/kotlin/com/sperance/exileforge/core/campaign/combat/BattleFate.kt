@@ -29,10 +29,10 @@ import kotlin.math.roundToInt
  * счёт - правилом сервера [Run.fightsWon] ([recount]); в испытаниях и Разломе - выигранные бои захода ([victory]). Что
  * судьбоносные строки несут из боя в бой - [stored], [barrier], [warded].
  */
-class FateRun(killed: Collection<Int> = emptyList(), vaalKilled: Collection<Int> = emptyList()) {
+class FateRun(killed: Collection<Int> = emptyList(), vaalKilled: Collection<Int> = emptyList(), bosses: Int = 0) {
     private val killed = killed.toMutableSet()
     private val vaalKilled = vaalKilled.toMutableSet()
-    private var bosses = 0
+    private var bosses = bosses
 
     /** Перелив маны сверх максимума, в единицах маны. */
     var overflow: Double = 0.0

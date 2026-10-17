@@ -300,7 +300,8 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
-            fateRun = FateRun(started.killed, started.vaalKilled),
+            bossSlain = started.tally.bosses > 0,
+            fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
         ).also { r ->
             repeat(speedSteps) { r.send(RunCommand.Speed) }
             if (toBoss) r.send(RunCommand.ToBoss)

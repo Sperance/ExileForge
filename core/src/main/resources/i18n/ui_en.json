@@ -3100,6 +3100,8 @@
   "enum.stat.STOCK_VEILED": "Veiled",
   "enum.stat.STOCK_VEILED_LOOT": "Veiled Loot",
   "forge.tray_orbs": "Orb tray",
+  "forge.hidden_orbs": "Orbs hidden: {0}",
+  "forge.hidden_title": "Will not go on this item",
   "forge.tray_seals": "Atlas imprint tray",
   "forge.tray_essences": "Essence tray",
   "forge.no_orbs_fit": "No orb in the bag fits this item",

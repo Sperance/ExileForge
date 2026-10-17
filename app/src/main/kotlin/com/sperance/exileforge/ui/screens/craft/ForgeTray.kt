@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +34,7 @@ import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.forge.HiddenOrb
 import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.state.GameUi
@@ -38,6 +43,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.ExpandableText
+import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.TermsBlock
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -139,17 +145,21 @@ private const val ONE_ROW = 6
 /**
  * The orbs of the tray: только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки,
  * в порядке полки; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком, а выбранная говорит, что его нужно.
+ * Под лотком - строка «Скрыто сфер: N» ([hidden]): касание открывает список спрятанных с точной причиной каждой.
  */
 @Composable internal fun OrbTray(
     game: GameUi,
     smithy: Smithy,
     choices: List<OrbChoice>,
+    hidden: List<HiddenOrb>,
     empty: String,
     quality: QualityForecast?,
     onSelect: (String) -> Unit,
 ) {
     val waiting = remember(choices) { choices.filter { it.needsOmen }.map { it.code }.toSet() }
     val chosen = smithy.orb
+    var showing by remember { mutableStateOf(false) }
+    if (showing) HiddenOrbsSheet(hidden) { showing = false }
     ForgeTray(
         game,
         ui("forge.tray_orbs"),
@@ -162,6 +172,35 @@ private const val ONE_ROW = 6
         marked = { it in waiting },
     ) { code ->
         BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
+    }
+    if (hidden.isNotEmpty()) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable(role = Role.Button) { showing = true }.padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(Icons.Outlined.VisibilityOff, null, tint = Muted, modifier = Modifier.size(16.dp))
+            Text(ui("forge.hidden_orbs", hidden.size), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+            Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** Лист спрятанных сфер: значок, имя и точная причина отказа правил над вещью под каждой. */
+@Composable private fun HiddenOrbsSheet(hidden: List<HiddenOrb>, onDismiss: () -> Unit) {
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(ui("forge.hidden_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            hidden.forEach { orb ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                    BagIcon(orb.code, Modifier.size(28.dp), kind = ItemVisualKind.CURRENCY)
+                    Column(Modifier.weight(1f)) {
+                        Text(itemTitle(orb.code), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                        if (orb.reason.isNotBlank()) Text(orb.reason, color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        }
     }
 }
 

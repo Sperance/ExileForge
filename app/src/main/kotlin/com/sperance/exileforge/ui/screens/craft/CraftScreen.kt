@@ -18,6 +18,7 @@ import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.forge.forgeTarget
+import com.sperance.exileforge.presentation.forge.hiddenOrbs
 import com.sperance.exileforge.presentation.forge.orbChoices
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
@@ -67,6 +68,9 @@ internal const val UNCRAFT = "-"
     val choices = remember(target, index, omens, hero?.bag) {
         if (index == null || hero == null || target == null) emptyList() else target.orbChoices(index, game.orbs.map { it.code.value }, omens, hero::count)
     }
+    val hidden = remember(target, index, omens, hero?.bag) {
+        if (index == null || hero == null || target == null) emptyList() else target.hiddenOrbs(index, game.orbs.map { it.code.value }, omens, hero::count)
+    }
     LaunchedEffect(target?.id, choices, smithy.orb) {
         if (target != null && smithy.orb.isNotBlank() && choices.none { it.code == smithy.orb }) vm.selectOrb("")
     }
@@ -109,7 +113,7 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ORBS -> target?.let {
                     LineChoices(game, it, enabled, vm)
                     OmenLedger(game, smithy.orb, smithy.omen, it.orbTarget, omens, vm::selectOmen)
-                    OrbTray(game, smithy, choices, ui(it.noOrbsKey), quality) { code ->
+                    OrbTray(game, smithy, choices, hidden, ui(it.noOrbsKey), quality) { code ->
                         vm.selectOrb(code)
                         engraving = code == Orb.ENGRAVERS_ORB.name
                     }

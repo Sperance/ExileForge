@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.Refusal
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
@@ -66,6 +67,9 @@ sealed interface ForgeTarget {
     /** Пойдёт ли сфера [orb] на цель (со знамением [omen]): сфера одной строки - если хоть одну строку правила примут. */
     fun accepts(applier: OrbApplier, orb: Orb, omen: Omen? = null): Boolean = applier.accepts(orb, orbTarget, omen)
 
+    /** Почему сфера [orb] не пойдёт на цель: отказ правил ([OrbApplier.refusal]); null - пойдёт. */
+    fun refusal(applier: OrbApplier, orb: Orb): Refusal? = applier.refusal(orb, orbTarget)
+
     /** Строки цели для Сферы гравёра, каждая со своим отказом правил; у цели без строк - пусто. */
     fun engraving(index: ContentIndex): List<EngraveLine> = emptyList()
 
@@ -115,6 +119,12 @@ sealed interface ForgeTarget {
             super.accepts(applier, orb, omen)
         }
 
+        override fun refusal(applier: OrbApplier, orb: Orb): Refusal? = if (orb == Orb.ENGRAVERS_ORB && view.item.rolls.isNotEmpty()) {
+            view.item.rolls.indices.firstNotNullOfOrNull { applier.refusal(orb, OrbTarget.Gear(view.item, view.template, it)) }
+        } else {
+            super.refusal(applier, orb)
+        }
+
         override fun engraving(index: ContentIndex): List<EngraveLine> {
             val applier = OrbApplier(index)
             return view.lines.mapIndexed { i, line -> EngraveLine(i, line.text, line.range, applier.engraveRefusal(view.item, view.template, i)?.let { refusalText(it) }) }
@@ -147,4 +157,19 @@ fun ForgeTarget.orbChoices(index: ContentIndex, shelf: List<String>, omens: List
             else -> null
         }
     }
+}
+
+/** Сфера сумки, что в лоток не легла: код [code] и точная причина [reason] - отказ правил словами сервера. */
+data class HiddenOrb(val code: String, val reason: String)
+
+/**
+ * Сферы сумки, что цель не примет ни сама, ни со знамением сумки, - строка «Скрыто сфер: N» под лотком: каждая с отказом правил
+ * над целью ([ForgeTarget.refusal]) словами сервера, своих причин клиент не пишет. Тот же отбор, что [orbChoices], - лоток и
+ * скрытые вместе дают все сферы сумки, кроме сожаления.
+ */
+fun ForgeTarget.hiddenOrbs(index: ContentIndex, shelf: List<String>, omens: List<Omen>, held: (String) -> Long): List<HiddenOrb> {
+    val shown = orbChoices(index, shelf, omens, held).mapTo(HashSet()) { it.code }
+    val applier = OrbApplier(index)
+    return shelf.mapNotNull { code -> Orb.of(code)?.takeIf { it != Orb.ORB_OF_REGRET && held(code) > 0 && it.name !in shown } }
+        .map { orb -> HiddenOrb(orb.name, refusal(applier, orb)?.let { refusalText(it) }.orEmpty()) }
 }

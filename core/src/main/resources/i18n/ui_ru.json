@@ -3100,6 +3100,8 @@
   "enum.stat.STOCK_VEILED": "Скрыто",
   "enum.stat.STOCK_VEILED_LOOT": "Скрытая добыча",
   "forge.tray_orbs": "Ваши сферы",
+  "forge.hidden_orbs": "Скрыто сфер: {0}",
+  "forge.hidden_title": "Не лягут на эту вещь",
   "forge.tray_seals": "Ваши оттиски Атласа",
   "forge.tray_essences": "Ваши эссенции",
   "forge.no_orbs_fit": "В сумке нет сфер, что подходят этому предмету",

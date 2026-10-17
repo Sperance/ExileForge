@@ -229,7 +229,8 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
       # Отладочной сборки нет нигде (4.12.x): lint - по релизному варианту, APK - только R8-сборки ниже
-      - run: bash gradlew :app:ktlintCheck
+      # Сторож :app: каждый файл с Android или @Composable - расчёты и модели экранов в :core
+      - run: bash gradlew :app:ktlintCheck :app:androidOnly
       # Android Lint - перед релизом и по ручному запуску: на обычном пуше хватает ktlint
       - if: ${{ needs.changes.outputs.release == 'true' || github.event_name == 'workflow_dispatch' }}
         run: bash gradlew :app:lintRelease

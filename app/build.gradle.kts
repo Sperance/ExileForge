@@ -87,3 +87,40 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     "minifiedTestImplementation"("androidx.compose.ui:ui-test-manifest")
 }
+
+/**
+ * Сторож границы модулей (`RULES.md` → «Архитектура»): в `:app` нет файла Kotlin без Android. Каждый файл `src/main` импортирует
+ * `android.*` или `androidx.*` (DI-граф - привязку Koin к Android) либо объявляет `@Composable`; расчёты, модели экранов и сервисы
+ * лежат в `:core`. Падение перечисляет нарушителей.
+ */
+abstract class AndroidOnlyCheck : DefaultTask() {
+    /** Исходники Kotlin приложения. */
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    /** Корень модуля: пути в отчёте - от него. */
+    @get:Internal
+    abstract val root: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val base = root.get().asFile
+        val android = Regex("""^import (android|androidx|org\.koin\.androidx?)\.""", RegexOption.MULTILINE)
+        val offenders = sources.files.filter { it.extension == "kt" }
+            .filterNot { file -> file.readText().let { android.containsMatchIn(it) || "@Composable" in it } }
+            .map { it.relativeTo(base).path }
+            .sorted()
+        if (offenders.isNotEmpty()) {
+            throw GradleException("Files in :app without Android or @Composable belong to :core (RULES.md, «Архитектура»): ${offenders.size}\n" + offenders.joinToString("\n"))
+        }
+    }
+}
+
+/** Сторож `:app` рядом с `:app:ktlintCheck` в job `app` CI. */
+val androidOnly by tasks.registering(AndroidOnlyCheck::class) {
+    group = "verification"
+    description = "Fails if a Kotlin file of :app has neither an Android import nor @Composable."
+    sources.from(fileTree("src/main") { include("**/*.kt") })
+    root.set(layout.projectDirectory)
+}

@@ -8,8 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
@@ -39,10 +37,8 @@ import com.sperance.exileforge.core.campaign.run.ObjectAction
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.crafts.Crafts
-import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.jobTitle
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
@@ -68,7 +64,6 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.sheet.itemSeals
-import com.sperance.exileforge.core.sheet.wearPlaces
 import com.sperance.exileforge.core.update.AppBuild
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.UpdateState
@@ -97,8 +92,6 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.Roll
-import com.sperance.exileforge.rules.roll.WorkBonus
-import com.sperance.exileforge.rules.roll.WorkLayers
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
@@ -121,7 +114,6 @@ import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.craft.TargetRail
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
-import com.sperance.exileforge.ui.screens.crafts.JobFields
 import com.sperance.exileforge.ui.screens.crafts.WorkPlaque
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
@@ -132,8 +124,6 @@ import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.hero.StatSheet
-import com.sperance.exileforge.ui.screens.hero.WearChoice
-import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
@@ -312,23 +302,6 @@ class KeyScreensShotTest {
         combat?.let { StatSheet(game(level), it.figures) }
     }
 
-    /** Временно: карточка амулета с итогом героя против надетого амулета - сравнение свёрнуто. */
-    @Test fun compareFolded() = shot("compare_folded") { CompareCard() }
-
-    /** Временно: то же сравнение, раскрытое касанием заголовка: все строки и «Теряешь». */
-    @Test fun compareOpen() = shot("compare_open", open = ui("relic.totals")) { CompareCard() }
-
-    /** Редкий амулет [sealedAmulet] в карточке против надетого амулета героя 70 уровня с другими строками. */
-    @Composable private fun CompareCard() {
-        val item = sealedAmulet()
-        val families = item.rolls.mapNotNull { index.modifier(it.code)?.family }.toSet()
-        val other = index.definitions.filter { it.rolls && it.affix && !it.crafted && it.influence == null && MAP_TAG !in it.tags && it.family !in families }.distinctBy { it.family }.take(4)
-        val worn = ItemInstance("shot-worn", item.template, Rarity.RARE, other.map { roll(it) }, slot = Slot.AMULET, itemLevel = 84)
-        val game = game(70, items = listOf(worn))
-        val choice = WearChoice(remember { game.wearPlaces(item) }, remember { mutableStateOf<Slot?>(null) })
-        ItemCard(view(item), enabled = false, detailed = true, action = false, totals = wearTotals(game, item, choice))
-    }
-
     /** Вид копии [item] над контентом закреплённого сервера. */
     private fun view(item: ItemInstance): ItemView = ItemView(item, index.template(item.template)!!, index)
 
@@ -401,33 +374,6 @@ class KeyScreensShotTest {
         WorkPlaque(game(40), vm, Crafts(CraftsState(now = now, professions = listOf(held), work = work), readAt = now), 0L)
     }
 
-    /** Поля листа работы свёрнутыми: все источники, длинное имя находки. */
-    @Test fun jobFields() = shot("job_fields") { JobFieldsSample(tool = true) }
-
-    /** Поля листа работы с раскрытым циклом. */
-    @Test fun jobFieldsOpen() = shot("job_fields_open", open = cycleLabel(tool = true)) { JobFieldsSample(tool = true) }
-
-    /** Поля листа работы без инструмента с раскрытым циклом: тусклая ступень «Инструмент: нет». */
-    @Test fun jobFieldsNoTool() = shot("job_fields_notool", open = cycleLabel(tool = false)) { JobFieldsSample(tool = false) }
-
-    private fun fieldsSample(tool: Boolean): Pair<ProfessionView, JobView> {
-        val (profession, job) = index.professions.professions.flatMap { p -> p.jobs.filterIsInstance<Job.Item>().map { p to it } }.maxBy { (_, j) -> j.extra.size * 100 + jobTitle(j.code).length }
-        val long = index.items.keys.maxBy { itemTitle(it.value).length }.value
-        val view = JobView(job, cycleMillis = 30_000, nothing = 10.0, extra = (job.extra + JobExtra(long, 0.5)).take(4), experience = 12.0)
-        val toolLayer = if (tool) WorkBonus(speed = 10.0, yield = 11.0) else WorkBonus()
-        val sheet = toolLayer.copy(speed = toolLayer.speed + 4, find = 3.0)
-        val guild = sheet.copy(speed = sheet.speed + 3, experience = 5.0)
-        val layers = WorkLayers(tool = toolLayer, sheet = sheet, guild = guild, fate = guild.copy(double = 5.0))
-        return ProfessionView(profession.code, tool = if (tool) "" else profession.tool.name, level = 14, bonus = layers.total, jobs = listOf(view), layers = layers) to view
-    }
-
-    private fun cycleLabel(tool: Boolean): String = fieldsSample(tool).let { (p, j) -> JobLedger.of(index.professions.rules, p, j).first().let { ui("crafts.ledger.open", it.caption, it.value) } }
-
-    @Composable private fun JobFieldsSample(tool: Boolean) {
-        val (profession, job) = fieldsSample(tool)
-        JobFields(JobLedger.of(index.professions.rules, profession, job), job.code) {}
-    }
-
     /** Состояние слота умения на снимке панели боя. */
     private data class SlotState(val ready: Float, val affordable: Boolean, val seconds: Double = 0.0, val casting: Float = 0f)
 
@@ -439,12 +385,10 @@ class KeyScreensShotTest {
     /** Строка модификатора [code] серединой первого тира. */
     private fun line(code: String): Line? = index.modifier(ModifierCode(code))?.let { def -> Line(def.code, def.tiers.firstOrNull()?.values.orEmpty().map { it.average() }) }
 
-    private fun game(level: Int, code: String = heroClass.code, items: List<ItemInstance> = emptyList()): GameUi {
+    private fun game(level: Int, code: String = heroClass.code): GameUi {
         val owner = index.classes.classes.first { it.code == code }
         val info = HeroInfo("hero", "owner", "Изгнанник", heroClass = code, level = level)
-        val sheet = Sheets.calculate(index, level, code, listOf(TakenNode(owner.startNode)), items)
-        val combat = if (items.isEmpty()) null else CombatSheet.of(index, sheet, level, code, HeroSkills(), null, items)
-        val hero = HeroView(info, items, sheet = sheet, combat = combat)
+        val hero = HeroView(info, emptyList(), sheet = Sheets.calculate(index, level, code, listOf(TakenNode(owner.startNode)), emptyList()))
         return GameUi(
             activity = Activity(busy = false),
             session = Session(DEFAULT_SERVER, profile = UserProfile("owner"), signedIn = true),

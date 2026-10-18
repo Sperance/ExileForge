@@ -155,7 +155,8 @@ sealed interface ModerationFate {
 
 @Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
 
-@Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false)
+/** Что смотрящий может сделать с целью досье; [fate] - сменить её Предначертание (сервер `ModerationPolicy.canRedrawFate`). */
+@Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false, val fate: Boolean = false)
 
 @Serializable data class DossierAccount(
     val userId: String,
@@ -218,8 +219,8 @@ sealed interface ModerationFate {
 )
 
 /**
- * Действие журнала модерации; [FATE] - администратор сменил Предначертание своему аккаунту: номера санкции нет, в
- * заметке - прежний и новый код дара через « → » ([ModerationEntryView.fateChange]).
+ * Действие журнала модерации; [FATE] - администратор сменил Предначертание аккаунту: номера санкции нет, в заметке -
+ * прежний и новый код дара через « → » ([ModerationEntryView.fateChange]), причина для игрока - [ModerationEntryView.reason].
  */
 @Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE }
 
@@ -235,6 +236,8 @@ sealed interface ModerationFate {
     val comment: String = "",
     val until: String? = null,
     val at: String,
+    /** Причина для игрока: у смены Предначертания чужому аккаунту; пусто - нет. */
+    val reason: String = "",
 ) {
     /**
      * Смена дара строки [ModerationAction.FATE]: прежний код (null - дара не было) и новый - из заметки сервера

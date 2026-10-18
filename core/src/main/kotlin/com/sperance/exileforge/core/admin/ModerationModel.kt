@@ -199,14 +199,16 @@ class ModerationModel(
     }
 
     /**
-     * Предначертание [code] своему аккаунту: только администратор и только себе - сервер берёт цель из сессии. Дар
-     * ложится в профиль сессии, досье перечитывается, герои и список героев - при следующем чтении.
+     * Предначертание [code] аккаунту [userId] досье: только администратор (право досье `rights.fate`). Себе - без причины, дар
+     * ложится в профиль сессии, герои и список героев перечитываются при следующем чтении; чужому - с причиной [reason] для
+     * игрока, он получит письмо. Досье перечитывается.
      */
-    fun redrawFate(code: String) {
-        val started = commands.task(writing = true, touches = setOf(Reads.HERO, Reads.CHARACTERS)) {
+    fun redrawFate(code: String, userId: String, reason: String) {
+        val own = userId == sessions.state.value.profile?.id
+        val started = commands.task(writing = true, touches = if (own) setOf(Reads.HERO, Reads.CHARACTERS) else emptySet()) {
             check(sessions.state.value.isAdmin) { ui("moderation.staff_only") }
-            val view = connection.api.admin.redrawFate(code)
-            sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = view.chosen?.code ?: code) }) }
+            val view = if (own) connection.api.admin.redrawFate(code) else connection.api.admin.redrawFate(code, userId, reason)
+            if (own) sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = view.chosen?.code ?: code) }) }
             notices.toast(ui("moderation.fate.changed", view.chosen?.title ?: FateCard(code).title))
             reloadDossier()
         }

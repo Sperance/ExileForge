@@ -38,8 +38,12 @@ class AdminClient internal constructor(private val http: Transport) {
     suspend fun moveHero(heroId: String, server: String): HeroMove = http.post("$ADMIN/hero/server", mapOf("heroId" to heroId, "server" to server))
 
     /**
-     * Предначертание [code] своему аккаунту (сервер `POST admin/fate`): любой дар контента, цель - только сам
-     * администратор из сессии; счётчики прежнего дара у героев с нуля, начатый заход доигрывает со старым. Неизвестный дар - `FT_006`.
+     * Предначертание [code] аккаунту [user] (сервер `POST admin/fate`): null - себе, без причины; чужому - с причиной [reason]
+     * для игрока (пустая - `MOD_012`), игрок получит письмо, чужой администратор - `MOD_001`. Любой дар контента; счётчики
+     * прежнего дара у героев с нуля, начатый заход доигрывает со старым. Неизвестный дар - `FT_006`.
      */
-    suspend fun redrawFate(code: String): FateView = http.post("$ADMIN/fate", mapOf("code" to code))
+    suspend fun redrawFate(code: String, user: String? = null, reason: String = ""): FateView {
+        val target = user?.let { mapOf("user" to it, "reason" to reason.trim()) }.orEmpty()
+        return http.post("$ADMIN/fate", mapOf("code" to code) + target)
+    }
 }

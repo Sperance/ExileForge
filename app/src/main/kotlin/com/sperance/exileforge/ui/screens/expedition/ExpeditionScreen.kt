@@ -13,16 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.unlocked
-import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.CampaignProgress
-import com.sperance.exileforge.rules.content.CampaignFile
-import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
@@ -30,6 +27,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
+import com.sperance.exileforge.ui.screens.expedition.world.WorldChart
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.screens.quests.StoryButton
 import com.sperance.exileforge.ui.theme.*
@@ -55,7 +53,8 @@ private const val CARD_TOP = .48f
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  *
  * Сюжет - над картой с первого уровня, доска заданий читается и без раздела, если её ещё нет. Вкладка нажата снова - лист зоны закрывается.
- * Первый кадр вкладки - голая карта, карта собирается, когда смена вкладки доехала ([TAB_SHIFT_MS]). Карта открывается там, где герой её
+ * Карта мира, туман и надписи собираются вне главного потока ([WorldChart]), когда смена вкладки доехала ([TAB_SHIFT_MS]); до того -
+ * голая карта. Карта открывается там, где герой её
  * оставил (на устройстве), впервые - на фронтире; камера запоминается после паузы, не на каждый кадр жеста. Зона шага сюжета - руническое
  * кольцо без запросов.
  */
@@ -77,7 +76,6 @@ private const val CARD_TOP = .48f
         return
     }
     val campaign = index.campaign
-    val world = remember(index, progress.cleared, progress.unlocked) { LastWorld.of(campaign, index.world, progress) }
     var settled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
@@ -85,14 +83,20 @@ private const val CARD_TOP = .48f
         settled = true
     }
     val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }
-    val density = LocalDensity.current.density
+    val screen = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val chart by produceState(WorldChart.cached(campaign, index.world, progress, screen), campaign, index.world, progress.cleared, progress.unlocked, screen, settled) {
+        if (settled) value = WorldChart.of(campaign, index.world, progress, measurer, screen)
+    }
+    val world = chart?.world
+    val density = screen.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
     val scope = rememberCoroutineScope()
-    val launch = expedition.launch?.takeIf { world.token(it.mapCode) != null }
+    val launch = expedition.launch?.takeIf { world?.token(it.mapCode) != null }
     val stash = remember(game.hero?.items, index) { stashCounts(game) }
     BackHandler(launch != null) { vm.closeZone() }
-    LaunchedEffect(camera, camera.viewport) {
-        if (camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
+    LaunchedEffect(camera, camera.viewport, world) {
+        if (world == null || camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
         val kept = vm.worldView(game.heroId)?.takeIf { launch == null }
         if (kept != null) camera.restore(kept) else camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
     }
@@ -103,41 +107,30 @@ private const val CARD_TOP = .48f
         }
     }
     LaunchedEffect(launch?.mapCode, camera.placed) {
-        val zone = launch?.let { world.token(it.mapCode) }?.zone ?: return@LaunchedEffect
+        val zone = launch?.let { world?.token(it.mapCode) }?.zone ?: return@LaunchedEffect
         val at = WorldPoint(zone.x, zone.y)
         if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
     }
     Box(Modifier.fillMaxSize()) {
-        if (!settled) {
+        val drawn = chart?.takeIf { settled }
+        if (drawn == null) {
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {
             val story = quests.board?.let { board -> game.index?.quests?.story?.getOrNull(board.chapter)?.steps?.getOrNull(board.step)?.zone?.value?.takeIf { it != com.sperance.exileforge.rules.content.MapCode.NONE.value } }
-            WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+            WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
             WorldBar(
                 Modifier,
-                onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
+                onFrontier = { world?.let { scope.launch { camera.glide(it.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } } },
             )
             Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StoryButton(game, quests.board, questModel)
                 ZoomButtons(camera, Modifier) { factor -> scope.launch { camera.zoomBy(factor) } }
             }
         }
-        launch?.let { ZoneCard(game, vm, world, it, expedition.forced, Modifier.align(Alignment.BottomCenter)) }
+        if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, Modifier.align(Alignment.BottomCenter))
     }
-}
-
-/**
- * Последняя карта мира: вход на вкладку с тем же прогрессом берёт её же, и с ней - уже измеренные надписи
- * холста, так что «Поход» не строит и не меряет мир на каждое нажатие.
- */
-private object LastWorld {
-    @Volatile private var last: Triple<WorldGraph, CampaignProgress, WorldMap>? = null
-
-    fun of(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress): WorldMap = last
-        ?.takeIf { (g, p, map) -> map.campaign === campaign && g === graph && p == progress }?.third
-        ?: WorldMap(campaign, graph, progress).also { last = Triple(graph, progress, it) }
 }
 
 /** The map's head: the title and the way back to the frontier. */

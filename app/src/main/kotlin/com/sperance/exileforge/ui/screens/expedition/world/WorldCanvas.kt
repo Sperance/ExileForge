@@ -31,7 +31,6 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
@@ -41,7 +40,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
@@ -53,6 +51,9 @@ import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.model.campaign.CampaignProgress
+import com.sperance.exileforge.rules.content.CampaignFile
+import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
@@ -60,6 +61,10 @@ import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.ModBlue
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.math.hypot
 
 /**
@@ -76,7 +81,7 @@ import kotlin.math.hypot
  */
 @Composable
 fun WorldCanvas(
-    world: WorldMap,
+    chart: WorldChart,
     art: WorldArt?,
     camera: WorldCamera,
     selected: String?,
@@ -85,17 +90,16 @@ fun WorldCanvas(
     story: String? = null,
     onTap: (String?) -> Unit,
 ) {
-    val measurer = rememberTextMeasurer()
+    val world = chart.world
     val pulse by motionPhase(PULSE_MS, still = .5f)
     val marchPhase by motionPhase(MARCH_MS)
     val spin by motionPhase(STORY_SPIN_MS)
     val height = camera.world.height.toFloat()
-    val roads = remember(world) { world.roads.map { Road(it.state, road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value)) } }
-    val ahead = remember(roads) { roads.filter { it.state == RoadState.AHEAD } }
-    val open = remember(world) { world.tokens.filter { it.state == TokenState.OPEN } }
-    val fog = remember(world, camera.world.width, height) { Fog.of(world, camera.world.width.toFloat(), height) }
-    val density = LocalDensity.current
-    val words = remember(world, measurer, density) { Words.of(world, measurer, density) }
+    val roads = chart.roads
+    val ahead = remember(chart) { roads.filter { it.state == RoadState.AHEAD } }
+    val open = remember(chart) { world.tokens.filter { it.state == TokenState.OPEN } }
+    val fog = chart.fog
+    val words = chart.words
     val artLayer = LocalWorldArtLayer.current ?: rememberWorldArtLayer()
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
@@ -155,6 +159,51 @@ fun WorldCanvas(
     }
 }
 
+/**
+ * Карта мира, готовая к рисованию: жетоны и дороги ([world]), пути дорог, туман и надписи. Строится вне главного потока ([of]) - мир,
+ * туман и мерка надписей держали вкладку на открытии; вход с тем же прогрессом, языком и плотностью экрана берёт последнюю ([cached]).
+ * Надписи жетонов меряются при первом появлении на экране.
+ */
+class WorldChart private constructor(val world: WorldMap, internal val roads: List<Road>, internal val fog: Fog, internal val words: Words) {
+    /** Из чего собрана карта: её же собирать заново не нужно. */
+    private class Source(val campaign: CampaignFile, val graph: WorldGraph, val progress: CampaignProgress, val look: List<Any>) {
+        fun fits(other: Source) = campaign === other.campaign && graph === other.graph && progress == other.progress && look == other.look
+    }
+
+    companion object {
+        @Volatile private var last: Pair<Source, WorldChart>? = null
+        private val building = Mutex()
+
+        private fun source(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, density: Density) =
+            Source(campaign, graph, progress, listOf(density.density, density.fontScale, uiLanguage))
+
+        /** Карта, если она уже собрана, - для первого кадра. */
+        fun cached(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, density: Density): WorldChart? {
+            val source = source(campaign, graph, progress, density)
+            return last?.takeIf { it.first.fits(source) }?.second
+        }
+
+        /** Карта, собранная вне главного потока; надписи меряет [measurer]. */
+        suspend fun of(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, measurer: TextMeasurer, density: Density): WorldChart {
+            val source = source(campaign, graph, progress, density)
+            return cached(campaign, graph, progress, density) ?: building.withLock {
+                last?.takeIf { it.first.fits(source) }?.second
+                    ?: withContext(Dispatchers.Default) { build(source, measurer) }.also { last = source to it }
+            }
+        }
+
+        private fun build(source: Source, measurer: TextMeasurer): WorldChart {
+            val world = WorldMap(source.campaign, source.graph, source.progress)
+            val width = source.campaign.world.width.toFloat()
+            val height = source.campaign.world.height.toFloat()
+            val roads = world.roads.map {
+                Road(it.state, road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value))
+            }
+            return WorldChart(world, roads, Fog.of(world, width, height), Words(world, measurer))
+        }
+    }
+}
+
 /** Рисунок в мере мира: перенос камеры и её масштаб. */
 private inline fun DrawScope.onWorld(camera: WorldCamera, block: DrawScope.() -> Unit) = withTransform({
     translate(camera.offset.x, camera.offset.y)
@@ -172,7 +221,7 @@ private fun WorldCamera.view(size: Size): Rect {
 private fun WorldToken.seen(view: Rect, height: Float): Boolean = view.contains(Offset(zone.x.toFloat(), height - zone.y))
 
 /** Дорога: её состояние, путь в мере мира и рамка пути. */
-private class Road(val state: RoadState, val path: Path) {
+internal class Road(val state: RoadState, val path: Path) {
     val bounds: Rect = path.getBounds()
 }
 
@@ -180,7 +229,7 @@ private class Road(val state: RoadState, val path: Path) {
  * Туман над тем, куда герой ещё не дошёл: чистый под фронтиром, густой на несколько рядов выше. Кисти - раз на карту: полоса
  * и одно пятно единичного радиуса, растянутое на каждый клуб.
  */
-private class Fog(private val width: Float, private val clearTo: Float, private val band: Brush?, private val puffs: FloatArray) {
+internal class Fog(private val width: Float, private val clearTo: Float, private val band: Brush?, private val puffs: FloatArray) {
     fun draw(scope: DrawScope) = with(scope) {
         band ?: return@with
         drawRect(band, size = Size(width, clearTo))
@@ -338,17 +387,7 @@ private fun radius(token: WorldToken): Float = if (token.zone.finale) FINALE_RAD
  * name, the regions the hero knows with their levels, and «Неизведанное» in the fog. A token's words are
  * laid out the first time it comes on screen, and one off screen is not drawn: the map opens without measuring the world.
  */
-private class Words(val world: WorldMap, private val measurer: TextMeasurer) {
-    companion object {
-        /** Слова последней карты: возврат на вкладку берёт уже измеренные, а не меряет мир заново. */
-        @Volatile private var last: Pair<List<Any>, Words>? = null
-
-        fun of(world: WorldMap, measurer: TextMeasurer, density: Density): Words {
-            val key = listOf(density.density, density.fontScale, uiLanguage)
-            return last?.takeIf { (k, words) -> words.world === world && k == key }?.second ?: Words(world, measurer).also { last = key to it }
-        }
-    }
-
+internal class Words(val world: WorldMap, private val measurer: TextMeasurer) {
     private val shade = Shadow(Color.Black, Offset(0f, 1f), 6f)
     private val levels = HashMap<String, TextLayoutResult>()
     private val names = HashMap<String, TextLayoutResult>()

@@ -12,7 +12,6 @@ import com.sperance.exileforge.rules.roll.WorkFigure
 import com.sperance.exileforge.rules.roll.WorkLine
 import com.sperance.exileforge.rules.roll.WorkSource
 import kotlin.math.abs
-import kotlin.math.ceil
 
 /** Вид поля листа работы: по нему экран берёт значок и цвет, [help] - ключ статьи справки ремёсел. */
 enum class LedgerKind(val help: String) {
@@ -22,7 +21,7 @@ enum class LedgerKind(val help: String) {
 
     /** Работа без пустых циклов: «впустую» не бывает. */
     SURE("sure"),
-    YIELD("double"),
+    YIELD("yield"),
     DOUBLE("bonuses"),
     TRIPLE("bonuses"),
     SAVE("bonuses"),
@@ -57,10 +56,9 @@ object JobLedger {
         val ladder = Ladder(profession)
         val spends = job.inputs.isNotEmpty()
         val nothing = breakdown[WorkFigure.NOTHING]
-        val sure = nothing.base == 0.0 && nothing.shifts.isEmpty()
+        val sure = nothing.isEmpty
         val cycle = breakdown[WorkFigure.CYCLE]
         val units = breakdown[WorkFigure.YIELD]
-        val extra = ceil(profession.bonus.yield.coerceAtLeast(0.0) / 100).toInt()
         val shown = listOfNotNull(
             ladder.row(LedgerKind.CYCLE, cycle, Scale.TIME, ui("crafts.help.cycle"), ui("crafts.ledger.base_note", clock(cycle.base.toLong())), clock(cycle.total.toLong())),
             breakdown[WorkFigure.HOUR].let { ladder.row(LedgerKind.HOUR, it, Scale.COUNT, ui("crafts.help.hour"), "", ui("crafts.about", fineNumber(it.total))) },
@@ -75,7 +73,7 @@ object JobLedger {
                 Scale.UNITS,
                 ui("crafts.ledger.yield"),
                 if (units.total > 1) ui("crafts.ledger.extra_note", percent((units.total - 1) * 100)) else "",
-                if (extra > 0) ui("crafts.yield_range", 1 + extra) else ui("crafts.yield_one"),
+                JobRates.yieldRange(profession.bonus),
             ),
             ladder.chance(LedgerKind.DOUBLE, breakdown[WorkFigure.DOUBLE], ui("crafts.ledger.double"), ""),
             ladder.chance(LedgerKind.TRIPLE, breakdown[WorkFigure.TRIPLE], ui("crafts.ledger.triple"), ui("crafts.ledger.triple_note")),
@@ -109,7 +107,7 @@ object JobLedger {
         private val toolless = profession.tool.isNotBlank() && profession.equipped == null
 
         /** Шанс, которого у работы может не быть: без базы и вкладов строки нет. */
-        fun chance(kind: LedgerKind, line: WorkLine, caption: String, note: String): LedgerRow? = if (line.base == 0.0 && line.shifts.isEmpty()) null else row(kind, line, Scale.PERCENT, caption, note, percent(line.total))
+        fun chance(kind: LedgerKind, line: WorkLine, caption: String, note: String): LedgerRow? = if (line.isEmpty) null else row(kind, line, Scale.PERCENT, caption, note, percent(line.total))
 
         fun row(kind: LedgerKind, line: WorkLine, unit: Scale, caption: String, note: String, value: String, key: String = kind.name, item: String = ""): LedgerRow = LedgerRow(key, kind, caption, note, value, line.shifts.any { it.source == WorkSource.TOOL }, steps(line, unit), item)
 

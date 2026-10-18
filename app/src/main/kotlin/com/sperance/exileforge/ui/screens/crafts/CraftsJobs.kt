@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.JobBlock
 import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.crafts.JobLedger
+import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
@@ -88,7 +89,6 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlin.math.ceil
 
 /** Работы профессии: строка работы, лист запуска с выбором и добавками, выбор инструмента. */
 /**
@@ -130,7 +130,8 @@ import kotlin.math.ceil
         }
         if (!locked) {
             Column(Modifier.clip(RoundedCornerShape(6.dp)).clickable(enabled = rules != null, role = Role.Button) { help = true }.padding(4.dp), horizontalAlignment = Alignment.End) {
-                Text(perHour(job, profession)?.let { fineNumber(it) } ?: "—", color = if (short) Muted else Vital, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                val hour = rules?.let { remember(it, profession.level, profession.layers, job) { JobRates.perHour(it, profession, job) } }
+                Text(hour?.let { fineNumber(it) } ?: "—", color = if (short) Muted else Vital, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(ui("crafts.metric_hour"), color = Muted, style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -268,7 +269,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             }
             RecipeFormula(game, profession, job, chosenAdditives) { it?.let(inspect) }
             ResultLine(game, job) { it?.let(inspect) }
-            crafts?.rules?.let { rules -> JobFields(remember(rules, profession, job) { JobLedger.of(rules, profession, job) }, job.code) { help = it } }
+            crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code) { help = it } }
             if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -328,18 +329,12 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             }
         }
         FormulaArrow()
-        FormulaSlot(yieldLabel(profession), Parchment, frame = Bronze, size = 56, onClick = resultCard(game, job)?.let { card -> { onOpen(card) } }) { JobIcon(job, Modifier.size(36.dp)) }
+        FormulaSlot(JobRates.yieldRange(profession.bonus), Parchment, frame = Bronze, size = 56, onClick = resultCard(game, job)?.let { card -> { onOpen(card) } }) { JobIcon(job, Modifier.size(36.dp)) }
         job.extra.forEach { find ->
             FormulaPlus()
             FormulaSlot(ui("crafts.percent", number(find.chance)), Brass, frame = Bronze, onClick = { onOpen(Inspect.Stack(find.item)) }) { BagIcon(find.item, Modifier.size(28.dp)) }
         }
     }
-}
-
-/** Сколько выхода приносит удачный цикл: «×1», с лишней добычей профессии - «×1–N». */
-private fun yieldLabel(profession: ProfessionView): String {
-    val extra = ceil(profession.bonus.yield.coerceAtLeast(0.0) / 100).toInt()
-    return if (extra > 0) ui("crafts.yield_range", 1 + extra) else ui("crafts.yield_one")
 }
 
 /** Ячейка формулы: значок в рамке [frame] размером [size] dp и подпись [label] цветом [tone]; касание - [onClick]. */

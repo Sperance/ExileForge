@@ -57,11 +57,13 @@ import kotlinx.serialization.Serializable
     val experience: Double = 0.0,
     val next: Double? = null,
     val equipped: ItemInstance? = null,
-    val bonus: WorkBonus = WorkBonus(),
     val jobs: List<JobView> = emptyList(),
-    /** Тот же [bonus] по слоям источников (инструмент, лист героя без дара, гильдия, дар) - сервер считает их одной функцией правил. */
+    /** Бонус ремесла по слоям источников (инструмент, лист героя без дара, гильдия, дар) - сервер считает их одной функцией правил. */
     val layers: WorkLayers = WorkLayers(),
 ) {
+    /** Бонус ремесла профессии - итог слоёв [layers], тот же, что берёт досчёт. */
+    val bonus: WorkBonus get() = layers.total
+
     /** Открыта ли работа [job] герою: профессия доросла до её уровня и сервер её пускает ([JobView.open]). */
     fun opens(job: JobView): Boolean = job.level <= level && job.open
 

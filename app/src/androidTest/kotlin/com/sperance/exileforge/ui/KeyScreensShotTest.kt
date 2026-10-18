@@ -418,7 +418,7 @@ class KeyScreensShotTest {
         val sheet = toolLayer.copy(speed = toolLayer.speed + 4, find = 3.0)
         val guild = sheet.copy(speed = sheet.speed + 3, experience = 5.0)
         val layers = WorkLayers(tool = toolLayer, sheet = sheet, guild = guild, fate = guild.copy(double = 5.0))
-        return ProfessionView(profession.code, tool = if (tool) "" else profession.tool.name, level = 14, bonus = layers.total, jobs = listOf(view), layers = layers) to view
+        return ProfessionView(profession.code, tool = if (tool) "" else profession.tool.name, level = 14, jobs = listOf(view), layers = layers) to view
     }
 
     private fun cycleLabel(tool: Boolean): String = fieldsSample(tool).let { (p, j) -> JobLedger.of(index.professions.rules, p, j).first().let { ui("crafts.ledger.open", it.caption, it.value) } }

@@ -42,9 +42,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.display.feedbackKindTitle
+import com.sperance.exileforge.core.display.feedbackStatusTitle
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackModel
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueState
@@ -62,12 +63,8 @@ import org.koin.compose.viewmodel.koinViewModel
 val LocalMailOpen = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /** A report's status by name, in the server's words. */
-fun statusTitle(status: ReportStatus): String = statusTitle(status.name)
-fun kindTitle(kind: FeedbackKind): String = kindTitle(kind.name)
-
-/** Статус и вид по имени из письма: незнакомое клиенту имя показывается словарём сервера или самим именем, не пустотой. */
-fun statusTitle(name: String): String = locOr("enum.BugStatus.$name", name)
-fun kindTitle(name: String): String = locOr("enum.FeedbackKind.$name", name)
+fun statusTitle(status: ReportStatus): String = feedbackStatusTitle(status.name)
+fun kindTitle(kind: FeedbackKind): String = feedbackKindTitle(kind.name)
 
 /** Цвет статуса модерации: созданный - пергамент, на рассмотрении - руна, отправленный - зелёный, отклонённый - кровь. */
 fun statusTint(status: ReportStatus): Color = when (status) {

@@ -16,6 +16,12 @@ fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) MailSche
 /** Текст письма словами игрока: системное - по схеме своего ключа с причиной строкой ниже, прочие - как написаны. */
 fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) MailSchemas.of(mail.key).body(mail) else mail.body
 
+/** Статус отчёта по имени: незнакомое клиенту имя показывается словарём сервера или самим именем, не пустотой. */
+fun feedbackStatusTitle(name: String): String = locOr("enum.BugStatus.$name", name)
+
+/** Вид отчёта по имени: незнакомое клиенту имя показывается словарём сервера или самим именем, не пустотой. */
+fun feedbackKindTitle(name: String): String = locOr("enum.FeedbackKind.$name", name)
+
 /** Подстановка системного письма: строка из аргументов письма словами игрока. */
 fun interface MailSlot {
     fun text(args: List<String>): String
@@ -77,8 +83,8 @@ object MailSchemas {
     /** День отчёта из даты ISO `гггг-мм-дд` - «дд.мм.гггг»; иная строка - пусто. */
     private fun reportDay(iso: String): String = iso.take(10).split('-').takeIf { it.size == 3 }?.let { (year, month, day) -> "$day.$month.$year" }.orEmpty()
 
-    private val kind = titled(KIND) { locOr("enum.FeedbackKind.$it", it) }
-    private val status = titled(STATUS) { locOr("enum.BugStatus.$it", it) }
+    private val kind = titled(KIND, ::feedbackKindTitle)
+    private val status = titled(STATUS, ::feedbackStatusTitle)
 
     /** Письмо об отчёте с судьбой [fate]: тема - вид и судьба, текст - судьба, первая строка отчёта и ссылка на него. */
     private fun feedback(fate: MailSlot) = MailSchema(listOf(kind, fate), listOf(fate, arg(LINE), reportRef), reason = REPLY)

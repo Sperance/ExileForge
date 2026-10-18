@@ -57,7 +57,10 @@ import kotlinx.serialization.Serializable
     val equipped: ItemInstance? = null,
     val bonus: WorkBonus = WorkBonus(),
     val jobs: List<JobView> = emptyList(),
-)
+) {
+    /** Открыта ли работа [job] герою: профессия доросла до её уровня и сервер её пускает ([JobView.open]). */
+    fun opens(job: JobView): Boolean = job.level <= level && job.open
+}
 
 /** The work under way: cycles are counted up to [settledAt]; the next lands at [nextAt] (epoch millis, the server's clock). */
 @Serializable data class WorkView(

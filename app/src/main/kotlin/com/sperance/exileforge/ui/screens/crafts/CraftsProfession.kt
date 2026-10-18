@@ -147,15 +147,16 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     var chosen by remember { mutableStateOf<JobView?>(null) }
     var group by remember(profession.code) { mutableStateOf<String?>(null) }
     val work = crafts.state?.work?.takeIf { it.profession == profession.code }
-    val groups = remember(profession.jobs, game.index) { JobGroups.of(profession.jobs, game.index) }
-    val locked = { job: JobView -> job.level > profession.level || !job.open }
+    val groups = remember(profession, game.index) { JobGroups.of(profession, game.index) }
+    val picked = group?.takeIf { it in groups }
+    val locked = { job: JobView -> !profession.opens(job) }
     val next = profession.jobs.firstOrNull(locked)
-    val shown = profession.jobs.filter { (!locked(it) || it == next) && (group == null || groups.groupOf(it) == group) }
+    val shown = profession.jobs.filter { (!locked(it) || it == next) && (picked == null || groups.groupOf(it) == picked) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { ProfessionHeader(game, crafts, profession, onBack = { vm.openProfession("") }) { toolOpen = true } }
         if (work != null) item { WorkPlaque(game, vm, crafts, offset) }
         item { SectionRule(ui("crafts.works")) }
-        if (groups.size > 1) item { JobFilters(groups, profession.jobs.size, group) { group = it } }
+        if (groups.size > 1) item { JobFilters(groups, picked) { group = it } }
         items(shown, key = { it.code }) { job ->
             JobRow(game, profession, job, crafts.state?.rules, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
         }

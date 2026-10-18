@@ -243,9 +243,9 @@ private fun powerFacts(view: PowerView): List<String> = if (view.standing) {
     emptyList()
 } else {
     listOfNotNull(
-        ui("fight.power.fired", view.fired).takeIf { view.fired > 0 },
-        ui("fight.power.every", view.count % view.every, view.every).takeIf { view.every > 1 },
-        ui("fight.power.cooldown", fineNumber(view.cooldown)).takeIf { view.cooldown > 0 },
+        if (view.fired > 0) ui("fight.power.fired", view.fired) else null,
+        view.nth?.let { (count, every) -> ui("fight.power.every", count, every) },
+        if (view.cooldown > 0) ui("fight.power.cooldown", fineNumber(view.cooldown)) else null,
     )
 }
 
@@ -260,9 +260,8 @@ private fun powerState(view: PowerView): String? = when {
 /** Метка в углу плитки силы-события: счёт «каждое N-е» или сколько раз сработала; нечего считать - null. */
 private fun powerBadge(view: PowerView): String? = when {
     view.standing -> null
-    view.every > 1 -> ui("fight.power.every_badge", view.count % view.every, view.every)
-    view.fired > 0 -> view.fired.toString()
-    else -> null
+    else -> view.nth?.let { (count, every) -> ui("fight.power.every_badge", count, every) }
+        ?: view.fired.takeIf { it > 0 }?.toString()
 }
 
 /**

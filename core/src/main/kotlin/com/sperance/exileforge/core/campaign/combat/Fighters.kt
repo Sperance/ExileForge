@@ -192,6 +192,9 @@ data class PowerView(
     val ready: Double = 0.0,
     val spent: Boolean = false,
 ) {
+    /** Счёт «каждое N-е» парой (сколько набрано до следующего, N); у силы без такого счёта - null. */
+    val nth: Pair<Int, Int>? get() = if (every > 1) count % every to every else null
+
     /** Доля перезарядки, что ещё осталась: 1 - только что сработала или потрачена на бой, 0 - готова. */
     val cooling: Float get() = when {
         spent -> 1f

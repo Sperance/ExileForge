@@ -303,7 +303,7 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
                 }
                 Journal(hud, onRetry)
                 MapVitals(live, Modifier.fillMaxWidth())
-                RoadEffects(live)
+                RoadEffects(live, run.index)
                 BlightLine(hud.blight)
                 if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
             }

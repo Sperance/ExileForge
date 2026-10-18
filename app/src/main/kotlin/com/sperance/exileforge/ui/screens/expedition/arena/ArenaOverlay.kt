@@ -97,7 +97,7 @@ private const val HERO_CARD = -1
             ) {
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, game.index, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -112,6 +112,7 @@ private const val HERO_CARD = -1
                                         track(foe.index).weight(1f).widthIn(max = 180.dp),
                                         large,
                                         traits[foe.index].orEmpty(),
+                                        game.index,
                                         narrow = fight.field.size >= 3,
                                     ) {
                                         onCommand(RunCommand.Focus(foe.index))

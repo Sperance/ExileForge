@@ -115,7 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
             )
             if (!conquered) {
                 tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {
-                    Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                    Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall)
                 }
             }
             ForgeButton(onClick = vm::enterTower, enabled = idle && seals >= 1 && trials.run == null && !conquered, modifier = Modifier.fillMaxWidth()) {

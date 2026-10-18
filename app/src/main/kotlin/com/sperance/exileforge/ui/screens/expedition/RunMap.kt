@@ -46,6 +46,7 @@ import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.rules.run.Reward
@@ -230,7 +231,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                 val tint = if (section == MapSection.MAP) ModBlue else Rune
                 Engraved(ui(section.title))
                 lines.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), tint = tint) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+                    Tipped({ Tip(statTitle(stat), tint = tint) }) { ModifierLine(effectText(stat, value, run.index), Glyph.ofStat(stat)) }
                 }
             }
         }
@@ -262,8 +263,11 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
         .forEach { add(rarityTint(it) to ui(it.key())) }
 }
 
-/** A map's summed line in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
-internal fun effectText(stat: String, value: Double): String = SkillText.statLine(stat, Op.ADD, value)
+/**
+ * A map's summed line in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона»;
+ * числа правил шаблона - из контента [index].
+ */
+internal fun effectText(stat: String, value: Double, index: ContentIndex): String = SkillText.statLine(stat, Op.ADD, value, index)
 
 /** Отметка объекта карты на миникарте: цвет и ключ легенды. */
 internal data class FeatureMark(val tint: Color, val legend: String)

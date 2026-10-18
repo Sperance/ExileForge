@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.SourceKind
@@ -146,8 +147,8 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
     fight.heroFate.forEach { add(Shelved.Fate(it)) }
 }
 
-@Composable internal fun ShelfTile(item: Shelved, side: Dp) {
-    val tip = { item.tip() }
+@Composable internal fun ShelfTile(item: Shelved, side: Dp, index: ContentIndex?) {
+    val tip = { item.tip(index) }
     when (item) {
         Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), item.bearing, side, tip)
         is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), item.bearing, side, tip)
@@ -163,8 +164,8 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
  * Подробная выноска плитки: имя, что делает - те же строки, что в листе эффектов ([row]), откуда, сколько осталось и
  * стаки; у недуга - ещё его сила.
  */
-internal fun Shelved.tip(): Tip {
-    val row = row()
+internal fun Shelved.tip(index: ContentIndex?): Tip {
+    val row = row(index)
     val own = (this as? Shelved.Sick)?.let { ailmentTip(it.view) }
     return Tip(
         row.title,
@@ -174,8 +175,8 @@ internal fun Shelved.tip(): Tip {
     )
 }
 
-/** Что сказать о плитке в листе эффектов: те же слова, что её подсказка, и строки, что она кладёт. */
-internal fun Shelved.row(): ShelfRow = when (this) {
+/** Что сказать о плитке в листе эффектов: те же слова, что её подсказка, и строки, что она кладёт; числа правил строк - из контента [index]. */
+internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
     Shelved.Stun -> ShelfRow(ui("expedition.stunned"), GoldBright, ui("fight.src.stun"), listOf(ui("fight.effect.STUN")), null)
 
     is Shelved.Sick -> ailmentTip(view).let { tip ->
@@ -201,7 +202,7 @@ internal fun Shelved.row(): ShelfRow = when (this) {
             view.halted -> listOf(ui("fight.flask_halted"))
             view.source == PROVOKED -> listOf(ui("fight.provoked_hint"))
             view.kind == EffectKind.MARK -> listOf(ui("fight.mark_hint"))
-            else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value) }
+            else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value, index) }
         },
         view.seconds.takeUnless { view.lasting || view.halted },
         ui("fight.flask_halted_short").takeIf { view.halted },
@@ -229,7 +230,7 @@ internal fun Shelved.row(): ShelfRow = when (this) {
         statTitle(view.stat),
         UniqueTint,
         ui("fight.src.power"),
-        listOf(SkillText.statLine(view.stat, Op.ADD, view.value)) + powerFacts(view),
+        listOf(SkillText.statLine(view.stat, Op.ADD, view.value, index)) + powerFacts(view),
         null,
         powerState(view),
     )
@@ -342,10 +343,10 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 
 /**
  * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание плитки - её подробная выноска ([tip]), касание «+N» - лист эффектов ([onOpen]).
+ * «+N» последней. Касание плитки - её подробная выноска ([tip], числа строк - из контента [index]), касание «+N» - лист эффектов ([onOpen]).
  * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
-@Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
+@Composable internal fun EffectShelf(items: List<Shelved>, index: ContentIndex?, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
     SubcomposeLayout(modifier) { constraints ->
         val sidePx = side.roundToPx()
         val gapPx = gap.roundToPx()
@@ -354,7 +355,7 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
         val over = items.size > fit
         val shown = if (over) fit - 1 else items.size
         val tile = Constraints.fixed(sidePx, sidePx)
-        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) }.first().measure(tile) } +
+        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side, index) }.first().measure(tile) } +
             (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side, onOpen) }.first().measure(tile)) else emptyList())
         val length = if (tiles.isEmpty()) 0 else tiles.size * sidePx + (tiles.size - 1) * gapPx
         val width = (if (vertical) sidePx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
@@ -437,7 +438,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
  * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
  * разбор. Читается вживую: таймеры идут, бой не стоит.
  */
-@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, onDismiss: () -> Unit) {
+@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, index: ContentIndex?, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -448,13 +449,13 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
             if (timed.isEmpty() && lasting.isEmpty() && flow == null) MutedText(ui("fight.no_states"))
             if (timed.isNotEmpty()) {
                 ShelfGroup(ui("fight.shelf.timed", timed.size))
-                timed.forEach { SheetRow(it) }
+                timed.forEach { SheetRow(it, index) }
             }
             val standing = lasting.size + (if (flow != null) 1 else 0)
             if (standing > 0) {
                 ShelfGroup(ui("fight.shelf.lasting", standing))
                 flow?.let { FlowRow(it) }
-                lasting.forEach { SheetRow(it) }
+                lasting.forEach { SheetRow(it, index) }
             }
         }
     }
@@ -493,9 +494,9 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
     ui("fight.shelf.now"),
 )
 
-@Composable private fun SheetRow(item: Shelved) {
-    val row = item.row()
-    EffectRow({ ShelfTile(item, 30.dp) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
+@Composable private fun SheetRow(item: Shelved, index: ContentIndex?) {
+    val row = item.row(index)
+    EffectRow({ ShelfTile(item, 30.dp, index) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
 }
 
 @Composable private fun EffectRow(tile: @Composable () -> Unit, row: ShelfRow, time: String) {

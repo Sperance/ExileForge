@@ -115,7 +115,7 @@ import kotlin.math.sin
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     FlowTile(fight.heroFlow, Modifier.size(30.dp))
-                    EffectShelf(lasting, 22.dp, openEffects, Modifier.weight(1f), vertical = true, gap = 3.dp)
+                    EffectShelf(lasting, game.index, 22.dp, openEffects, Modifier.weight(1f), vertical = true, gap = 3.dp)
                 }
             },
         ) {
@@ -161,11 +161,11 @@ import kotlin.math.sin
             if (timed.isEmpty()) {
                 MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
             } else {
-                EffectShelf(timed, 30.dp, openEffects, Modifier.weight(1f))
+                EffectShelf(timed, game.index, 30.dp, openEffects, Modifier.weight(1f))
             }
         }
     }
-    if (effectsOpen) EffectsSheet(ui("fight.shelf.hero"), timed, lasting, fight.heroFlow) { effectsOpen = false }
+    if (effectsOpen) EffectsSheet(ui("fight.shelf.hero"), timed, lasting, fight.heroFlow, game.index) { effectsOpen = false }
 }
 
 /** Мини-кнопка «все эффекты»: «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */

@@ -463,8 +463,8 @@ data class AbyssView(
  */
 data class FeatureView(val feature: MapFeature, val taken: List<Int>, val guarded: Boolean = false)
 
-/** A fountain as its offer reads: which one, and the share of life and mana it gives back. */
-data class FountainView(val id: Int, val heal: Double)
+/** Фонтан, как его читает предложение: какой, доля здоровья и маны и доля ёмкости зарядов фляг, что он даёт. */
+data class FountainView(val id: Int, val heal: Double, val flasks: Double)
 
 /**
  * Призыв стража: [price] - цена сейчас (`SummonLog.price` правил по району захода), [spent] - заход исчерпал

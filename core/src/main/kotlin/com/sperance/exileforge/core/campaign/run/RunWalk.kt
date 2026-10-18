@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
+import com.sperance.exileforge.core.campaign.combat.charged
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
@@ -94,13 +95,15 @@ internal fun ExpeditionRun.walk(dt: Double) {
     }
 }
 
-/** A fountain drunk dry: its share of life and mana back, and every flask full. */
+/** Фонтан выпит: его доля здоровья и маны назад, и каждой фляге - его доля её ёмкости зарядов ([charged]). */
 internal fun ExpeditionRun.drink(spring: Fountain) {
     spring.used = true
     fountain = null
     life = (life + hero.maxLife * spring.heal / 100).coerceAtMost(hero.maxLife)
     mana = (mana + manaCap() * spring.heal / 100).coerceAtMost(manaCap())
-    charges = kit.flasks.map { it?.sheet?.maxCharges ?: 0.0 }
+    charges = kit.flasks.mapIndexed { slot, flask ->
+        flask?.sheet?.let { it.charged(charges.getOrElse(slot) { 0.0 }, it.maxCharges * spring.flasks / 100, hero::get) } ?: 0.0
+    }
 }
 
 /** Выход: из зоны Ваал - обратно на карту, с карты - событие ухода; итог - по состоянию захода ([departed]). */

@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.campaign.WallGrain
 import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ExpeditionRules
+import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -311,9 +312,11 @@ class ExpeditionWorld(
     /**
      * Puts the map's fountains down, once: how many, between the rule's low and high,
      * and where, both by the seed — on the [ground], off the chests and apart.
-     * Each gives back [heal] percent of life, once.
+     * Each gives back the rule's share of life, mana and flask charges, once.
      */
-    fun placeFountains(low: Int, high: Int, heal: Double) {
+    fun placeFountains(rule: FountainRule) {
+        val low = rule.count.getOrElse(0) { 0 }
+        val high = rule.count.getOrElse(1) { low }
         if (high <= 0 || fountains.isNotEmpty()) return
         val placing = Random(seed * 104729 + 31)
         val count = low + placing.nextInt(high - low + 1)
@@ -322,7 +325,7 @@ class ExpeditionWorld(
         val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing)
         for (cell in candidates) {
             if (fountains.size >= count) break
-            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, heal)
+            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, rule.heal, rule.flasks)
         }
     }
 

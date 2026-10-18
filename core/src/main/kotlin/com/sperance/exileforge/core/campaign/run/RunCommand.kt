@@ -100,7 +100,7 @@ sealed interface RunCommand {
     /** A fountain tapped on the map: offered as if the hero stood at it. */
     data class OfferFountain(val id: Int) : RunCommand
 
-    /** The fountain offered is drunk: life and mana back by its share, the flasks full. */
+    /** Предложенный фонтан выпит: здоровье, мана и заряды фляг - по его долям. */
     data object TakeFountain : RunCommand
 
     /** Выбор на листе объекта карты: пара алтаря или вещь торговца по номеру. */

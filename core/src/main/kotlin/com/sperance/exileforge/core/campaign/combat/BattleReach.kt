@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.ChargeKind
+import com.sperance.exileforge.rules.sheet.FlaskSheet
 import kotlin.math.min
 
 /** A power that did something of its own, for the log and the number over the hero's card. */
@@ -20,9 +21,14 @@ internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.indices.forEach { 
  */
 internal fun Battle.chargeFlask(slot: Int, amount: Double) {
     val flask = kit.flasks.getOrNull(slot) ?: return
-    if (amount <= 0 || flask.sheet.starved(heroFighter.body::get)) return
-    charges[slot] = min(flask.sheet.maxCharges, charges[slot] + amount)
+    charges[slot] = flask.sheet.charged(charges[slot], amount, heroFighter.body::get)
 }
+
+/**
+ * Заряды фляги с [held] зарядами после начисления [amount]: не выше ёмкости, а фляга, что у героя со статами [hero]
+ * не получает зарядов ([FlaskSheet.starved]), остаётся при своих - одна формула начисления для боя и карты.
+ */
+internal fun FlaskSheet.charged(held: Double, amount: Double, hero: (String) -> Double): Double = if (amount <= 0 || starved(hero)) held else min(maxCharges, held + amount)
 
 /** [amount] charges of [kind] for the hero: the body is made again with them. */
 internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {

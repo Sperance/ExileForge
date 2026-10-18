@@ -48,6 +48,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.roundToInt
 
 /** The grimoire's two sections (the owner's mockup A «Гримуар»): the class's skills, and the belt. */
 internal enum class GrimoireSection(val title: String, val icon: ImageVector) {
@@ -130,7 +131,7 @@ internal sealed interface Pick {
                 }
 
                 GrimoireSection.BELT -> {
-                    item { MutedText(ui("skills.belt_hint")) }
+                    item { MutedText(ui("skills.belt_hint", index.campaign.fountains.flasks.roundToInt())) }
                     item { Belt(hero, index, skills, body, belt) { belt = it } }
                     item { BeltDetail(hero, index, skills, body, belt) { pick = Pick.Belt(belt) } }
                 }

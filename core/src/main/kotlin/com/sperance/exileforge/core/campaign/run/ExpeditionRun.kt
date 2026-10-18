@@ -586,8 +586,7 @@ class ExpeditionRun(
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
             val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
-            val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
-            world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } }, fountains.heal)
+            world.placeFountains(AtlasEffects.fountains(index.campaign.fountains, context.atlas))
             if (!vaal) {
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())

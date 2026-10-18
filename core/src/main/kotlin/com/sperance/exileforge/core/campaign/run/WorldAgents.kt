@@ -84,8 +84,8 @@ class Chest(val id: Int, val cell: Cell) {
     internal var event: Int? = null
 }
 
-/** A fountain on the map: where it stands, how much life it gives back, and whether it was drunk dry. */
-class Fountain(val id: Int, val cell: Cell, val heal: Double) {
+/** Фонтан на карте: где стоит, сколько процентов здоровья и маны ([heal]) и ёмкости зарядов фляг ([flasks]) даёт, выпит ли. */
+class Fountain(val id: Int, val cell: Cell, val heal: Double, val flasks: Double) {
     var used = false
 }
 

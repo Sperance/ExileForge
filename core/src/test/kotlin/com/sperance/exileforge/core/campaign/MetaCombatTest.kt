@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.sim.MobKit
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
@@ -82,9 +83,21 @@ class MetaCombatTest {
 
     /**
      * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
-     * запасы, чью ауру несёт герой.
+     * запасы, чью ауру несёт герой; здоровье и щит стаи ×[foesLife] - долгая схватка, в которой успевают сказаться медленные
+     * характеристики (длительность недугов), скорость атак и чар стаи ×[foesPace] - паузы между ударами, в которые
+     * перезаряжается щит героя.
      */
-    private data class Scenario(val heroClass: String, val style: SkillType, val foesPower: Double, val cleared: Boolean, val seed: Int, val pack: Long = PACK, val auras: Set<ReservePool> = setOf(ReservePool.MANA))
+    private data class Scenario(
+        val heroClass: String,
+        val style: SkillType,
+        val foesPower: Double,
+        val cleared: Boolean,
+        val seed: Int,
+        val pack: Long = PACK,
+        val auras: Set<ReservePool> = setOf(ReservePool.MANA),
+        val foesLife: Double = 1.0,
+        val foesPace: Double = 1.0,
+    )
 
     private val prints = java.util.concurrent.ConcurrentHashMap<Scenario, Int>()
 
@@ -139,7 +152,15 @@ class MetaCombatTest {
         return listOf(MonsterRarity.NORMAL, MonsterRarity.NORMAL, MonsterRarity.NORMAL, MonsterRarity.RARE).mapIndexed { n, rarity ->
             val dice = Dice(Streams.mix(scenario.pack, n.toLong(), rarity.ordinal.toLong()))
             val m = spawns.skilled(run.monsters.roll(zone, zone.monsters[n % zone.monsters.size], run.pool, dice, 0, index.campaign.rarity(rarity), run.areaLevel), dice)
-            phases.foe(m.copy(stats = m.stats.mapValues { (stat, v) -> if (stat in GuardianFloor.STRIKES) v * scenario.foesPower else v }), run.areaLevel)
+            val scaled = m.stats.mapValues { (stat, v) ->
+                when (stat) {
+                    in GuardianFloor.STRIKES -> v * scenario.foesPower
+                    CoreStat.HEALTH.code, CoreStat.ENERGY_SHIELD.code -> v * scenario.foesLife
+                    CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code -> v * scenario.foesPace
+                    else -> v
+                }
+            }
+            phases.foe(m.copy(stats = scaled), run.areaLevel)
         }
     }
 
@@ -228,6 +249,9 @@ class MetaCombatTest {
          */
         val SCENARIOS = listOf(
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, foesLife = 3.0),
+            Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13, foesLife = 3.0),
+            Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13, foesLife = 3.0, foesPace = 0.1),
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 13),
             Scenario("WITCH", SkillType.SPELL, 0.8, cleared = true, seed = 17),
             Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11),

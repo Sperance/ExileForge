@@ -758,7 +758,7 @@ data class Probe(val life: Double, val dps: Double, val perAction: Double, val t
     val actions: Double get() = life / perAction.coerceAtLeast(1.0)
 }
 
-/** Темп зоны у эталона: действий на обычного монстра, секунд на редкого и на стража (цели: 2-3, 10-20, 60-120). */
+/** Темп зоны у эталона: действий на обычного монстра, секунд на редкого и на стража (цели: 1-2, 5-10, 30-60). */
 data class Tempo(val normalActions: Double, val rareSeconds: Double, val bossSeconds: Double)
 
 const val BOSS = "BOSS"

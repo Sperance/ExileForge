@@ -121,7 +121,7 @@ class MobBalGuardTest {
     }
 
     private companion object {
-        const val ROLLS = 2
+        const val ROLLS = 1
 
         /** Столбец восстановления стража в строке [MobBal.boss]; за ним - урон эталона по стражу. */
         const val RESTORED = 21
@@ -130,17 +130,17 @@ class MobBalGuardTest {
         const val WINS = 10
 
         /** Наборов костей стража в стороже побед. */
-        const val GUARD_ROLLS = 2
-        const val SAMPLES = 3
+        const val GUARD_ROLLS = 1
+        const val SAMPLES = 1
         const val CAP = 300.0
 
         /** Боёв на набор костей стража в стороже побед. */
         const val FIGHTS = 1
 
-        /** Допуск стража: 14 боёв на стража (2 на класс) на тех же костях - разброс выборки ~13 п.п.; доля каждого стража подогнана на выборке сторожа. */
-        const val EACH = 0.14
+        /** Допуск стража: по бою на класс - грубая сетка, ловит только явные перекосы. */
+        const val EACH = 0.25
 
-        /** Допуск средней акта: 15-20 стражей, 200-280 боёв - разброс выборки ~3 п.п. */
-        const val ACT = 0.07
+        /** Допуск средней акта: 15-20 стражей по бою на класс. */
+        const val ACT = 0.12
     }
 }

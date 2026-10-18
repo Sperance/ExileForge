@@ -258,10 +258,10 @@ private fun powerState(view: PowerView): String? = when {
 }
 
 /** Метка в углу плитки силы-события: счёт «каждое N-е» или сколько раз сработала; нечего считать - null. */
-private fun powerBadge(view: PowerView): String? = when {
-    view.standing -> null
-    else -> view.nth?.let { (count, every) -> ui("fight.power.every_badge", count, every) }
-        ?: view.fired.takeIf { it > 0 }?.toString()
+private fun powerBadge(view: PowerView): String? = if (view.standing) {
+    null
+} else {
+    view.nth?.let { (count, every) -> ui("fight.power.every_badge", count, every) } ?: view.fired.takeIf { it > 0 }?.toString()
 }
 
 /**

@@ -73,7 +73,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     )
                 }
             }
-            WorkLedger(game, sums, made, makes = made.isNotEmpty(), level = away.level)
+            WorkLedger(game, sums, made, level = away.level)
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (made.isNotEmpty()) {

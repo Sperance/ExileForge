@@ -58,6 +58,7 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
+import com.sperance.exileforge.rules.roll.WorkMiss
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
@@ -76,7 +77,10 @@ import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
 
-/** Итог работы для книги учёта: и с начала работы ([WorkTally] сервера), и за сессию ([WorkGains] клиента). */
+/**
+ * Итог работы для книги учёта: и с начала работы ([WorkTally] сервера), и за сессию ([WorkGains] клиента). [made] - сколько вещей сделано
+ * по счёту сервера, [missed] - циклы впустую по причине.
+ */
 internal class WorkSums(
     val cycles: Long,
     val nothing: Long,
@@ -85,6 +89,7 @@ internal class WorkSums(
     val made: Long,
     val gathered: Map<String, Long>,
     val spent: Map<String, Long>,
+    val missed: Map<WorkMiss, Long>,
 ) {
     /** Общая шкала мини-полос: самая большая стопка, добытая или потраченная. */
     val scale: Long get() = (gathered.values + spent.values).maxOrNull()?.coerceAtLeast(1) ?: 1
@@ -96,24 +101,26 @@ internal class WorkSums(
     val spentSorted: List<Pair<String, Long>> = spent.entries.sortedByDescending { it.value }.map { it.key to it.value }
 
     companion object {
-        fun of(tally: WorkTally) = WorkSums(tally.cycles, tally.nothing, tally.experience, tally.levels, tally.made, tally.items, tally.spent)
+        fun of(tally: WorkTally) = WorkSums(tally.cycles, tally.nothing, tally.experience, tally.levels, tally.made, tally.items, tally.spent, tally.missed)
 
         fun of(gains: WorkGains) = WorkSums(
             gains.cycles.toLong(),
             gains.nothing.toLong(),
             gains.experience,
             gains.levels,
-            gains.equipment.size.toLong(),
+            gains.made.toLong(),
             gains.items,
             gains.spent,
+            gains.missed.mapValues { it.value.toLong() },
         )
     }
 }
 
 /**
  * Книга учёта ремесла: под чертой [title] итоги плитками в ряд короткими числами без переноса - время в работе (вживую, [startedAt] > 0 по
- * часам сервера со сдвигом [offset]: «1:05»), циклы («130 −2» впустую), опыт («+12.5k ▲1» уровни), сделано (только у работ, что делают
- * вещи: [makes]) и уровень профессии [level]; не влезло число - кегль плитки меньше; затем каждая
+ * часам сервера со сдвигом [offset]: «1:05»), циклы («130 −2» впустую), опыт («+12.5k ▲1» уровни), сделано (счёт сервера, плитки нет при 0)
+ * и уровень профессии [level]; не влезло число - кегль плитки меньше; под плитками - почему циклы прошли впустую («Впустую ×3: нет
+ * подходящих основ»); затем каждая
  * стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи [made] -
  * строками с иконкой в рамке редкости, именем её цвета, видом и уровнем: первые [MADE_SHOWN], прочие - под «Ещё N». [onShow] - кнопка
  * «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
@@ -126,7 +133,6 @@ internal fun WorkLedger(
     title: String? = null,
     startedAt: Long = 0,
     offset: Long = 0,
-    makes: Boolean = sums.made > 0,
     level: Int? = null,
     onShow: (() -> Unit)? = null,
 ) {
@@ -148,8 +154,15 @@ internal fun WorkLedger(
             LedgerTile(ui("crafts.totals_experience"), cell) {
                 TileFigure(AnnotatedString("+" + compactNumber(sums.experience) + (if (sums.levels > 0) " ▲${sums.levels}" else "")), Vital)
             }
-            if (makes) LedgerTile(ui("crafts.totals_made"), cell) { TileFigure(AnnotatedString(compactNumber(sums.made.toDouble())), Parchment) }
+            if (sums.made > 0) LedgerTile(ui("crafts.totals_made"), cell) { TileFigure(AnnotatedString(compactNumber(sums.made.toDouble())), Parchment) }
             level?.let { LedgerTile(ui("crafts.totals_profession"), cell) { TileFigure(AnnotatedString(ui("crafts.level", it)), Rune) } }
+        }
+        if (sums.missed.isNotEmpty()) {
+            Text(
+                sums.missed.entries.joinToString(" · ") { (miss, cycles) -> ui("crafts.missed", ui("crafts.miss.${miss.name}"), compactNumber(cycles.toDouble())) },
+                color = LifeRed,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
         if (sums.isEmpty) {
             Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)

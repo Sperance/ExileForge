@@ -214,7 +214,6 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             title = ui("crafts.totals_title"),
             startedAt = work.startedAt,
             offset = offset,
-            makes = crafts.state?.running?.kind?.makesItems == true,
             onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
         )
     }

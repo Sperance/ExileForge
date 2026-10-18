@@ -139,8 +139,9 @@ class MobKit(val index: ContentIndex) {
 
     private fun own(heroClass: HeroClass, level: Int) = stats(heroClass, level, emptyList(), emptyList())
 
-    private fun wearable(heroClass: HeroClass, level: Int, unique: Boolean): List<ItemTemplate> {
-        val own = own(heroClass, level)
+    /** Базы, что герой [heroClass] уровня [level] наденет с деревом [tree]: требования к атрибутам - по листу класса и дерева, как у игрока до вещей. */
+    private fun wearable(heroClass: HeroClass, level: Int, tree: List<TakenNode>, unique: Boolean): List<ItemTemplate> {
+        val own = stats(heroClass, level, tree, emptyList())
         return index.templates.values.filter {
             it.unique == unique && it.rarity != Rarity.MYTHICAL && (unique || it.tables.isNotEmpty()) && (it.heroClass == null || it.heroClass == heroClass.code) &&
                 it.dropsAt(level) && !it.slot.isFlask && it.slot != Slot.JEWEL && Requirements.unmet(it, level, own).isEmpty()
@@ -272,8 +273,8 @@ class MobKit(val index: ContentIndex) {
         val band = archetype.band
         val dice = Dice(Streams.mix(SimKit.SEED, level.toLong() * 31 + archetype.name.hashCode().toLong(), heroClass.code.hashCode().toLong()))
         val tree = tree(heroClass, index.classes.pointsTotal(level), archetype.style)
-        val rareTemplates = wearable(heroClass, level, unique = false)
-        val uniqueTemplates = if (archetype.source == GearSource.RARE) emptyList() else wearable(heroClass, level, unique = true)
+        val rareTemplates = wearable(heroClass, level, tree, unique = false)
+        val uniqueTemplates = if (archetype.source == GearSource.RARE) emptyList() else wearable(heroClass, level, tree, unique = true)
         val places = places(heroClass, archetype.shield)
         val found = places.mapIndexed { n, slot ->
             val bases = rareTemplates.filter { fits(it, slot, heroClass, archetype.guard) }.sortedWith(compareByDescending<ItemTemplate> { it.requiredLevel }.thenByDescending { it.level }.thenBy { it.code }).take(SimKit.BASES)

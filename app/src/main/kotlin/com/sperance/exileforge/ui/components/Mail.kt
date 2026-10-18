@@ -32,6 +32,7 @@ import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailKind
@@ -52,7 +53,7 @@ fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLi
 fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
     listOf(
         systemLine(mail, "body"),
-        mail.args.getOrNull(3)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) },
+        mail.args.getOrNull(if (mail.key == FATE_MAIL) FATE_REASON else REASON)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) },
     ).filterNotNull().joinToString("\n\n")
 } else {
     mail.body
@@ -61,9 +62,10 @@ fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
 /**
  * Письма об отчёте ([FEEDBACK_MAIL]): аргументы - вид, судьба, первая строка отчёта, слово модерации или разработчика, версия
  * исправления (у судьбы Issue), номер Issue (пусто - Issue нет) и дата отчёта ISO; тело называет отчёт номером и датой ([reportRef]).
- * Письма аукциона называют предмет лота кодом и число.
+ * Письма аукциона называют предмет лота кодом и число; письмо о смене Предначертания - дар кодом и причину ([FATE_MAIL]).
  */
 private fun systemLine(mail: Mail, part: String): String {
+    if (mail.key == FATE_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let { FateCard(it).title }.orEmpty()))
     if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
     val kind = mail.args.getOrNull(0)?.takeIf { it.isNotBlank() }?.let(::kindTitle).orEmpty()
     val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { if (mail.key == ISSUE_MAIL) issueStateTitle(it, mail.args.getOrNull(4).orEmpty()) else statusTitle(it) }.orEmpty()
@@ -551,6 +553,13 @@ private const val TICK_MS = 1_000L
 
 /** Письмо о новой судьбе Issue отчёта. */
 private const val ISSUE_MAIL = "mail.feedback_issue"
+
+/** Письмо игроку: администратор сменил его Предначертание; аргументы - код дара и причина ([FATE_REASON]). */
+private const val FATE_MAIL = "mail.fate_redrawn"
+
+/** Номер аргумента причины: у писем об отчёте - слово модерации или разработчика, у письма о смене дара - причина. */
+private const val REASON = 3
+private const val FATE_REASON = 1
 
 /** Письма автору о его отчёте: судьба, судьба Issue и ответ разработчика. */
 private val FEEDBACK_MAIL = setOf("mail.feedback_status", ISSUE_MAIL, "mail.feedback_reply")

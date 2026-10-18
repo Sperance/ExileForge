@@ -211,7 +211,7 @@ private enum class DossierFold(val title: String) {
                         DossierFold.FATE -> {
                             val fate = dossier.account.fate
                             if (fate == null) MutedText(DASH) else FateRibbon(FateCard(fate), ui("moderation.fate.chosen", dossier.account.fateAt?.let(::dayOf) ?: DASH), Modifier.fillMaxWidth())
-                            if (account.isAdmin && dossier.account.userId == account.session.profile?.id) {
+                            if (dossier.rights.fate) {
                                 ForgeOutlinedButton(enabled = !account.busy, onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.fate.change"), color = Gold) }
                             }
                         }
@@ -221,9 +221,10 @@ private enum class DossierFold(val title: String) {
         }
     }
     if (redrawing) {
-        FateRedrawSheet(account, dossier.account.fate, onDismiss = { redrawing = false }) { code ->
+        val other = dossier.account.userId != account.session.profile?.id
+        FateRedrawSheet(account, dossier.account.fate, dossier.account.login.takeIf { other }, onDismiss = { redrawing = false }) { code, reason ->
             redrawing = false
-            vm.redrawFate(code)
+            vm.redrawFate(code, dossier.account.userId, reason)
         }
     }
 }
@@ -374,16 +375,19 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
 }
 
 /**
- * Лист смены Предначертания своему аккаунту: сетка всех даров контента по имени в два столбца, описание выбранного и
- * «удержи, чтобы сменить» - нынешний дар выбрать нельзя. Счётчики дара у героев начнутся с нуля, начатый заход доиграет со старым.
+ * Лист смены Предначертания: сетка всех даров контента по имени в два столбца, описание выбранного и «удержи, чтобы
+ * сменить» - нынешний дар выбрать нельзя. Счётчики дара у героев начнутся с нуля, начатый заход доиграет со старым. Чужому
+ * аккаунту [other] (логин; null - свой) - ещё обязательная причина для игрока: без неё кнопка неактивна, игрок получит её письмом.
  */
-@Composable private fun FateRedrawSheet(account: AccountUi, current: String?, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+@Composable private fun FateRedrawSheet(account: AccountUi, current: String?, other: String?, onDismiss: () -> Unit, onPick: (String, String) -> Unit) {
     val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
     var picked by remember { mutableStateOf(current) }
+    var reason by remember { mutableStateOf("") }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            Text(other?.let { ui("moderation.fate.change_for", it) } ?: ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("moderation.fate.change_note"))
+            if (other != null) MutedText(ui("moderation.fate.letter_note"))
             LazyVerticalGrid(
                 GridCells.Fixed(2),
                 Modifier.fillMaxWidth().heightIn(max = FATE_GRID_HEIGHT),
@@ -395,7 +399,9 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
             picked?.let { code ->
                 Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
-            HoldButton(ui("moderation.fate.hold"), Gold, Modifier.fillMaxWidth(), enabled = !account.busy && picked != null && picked != current) { picked?.let(onPick) }
+            if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
+            val ready = picked != null && picked != current && (other == null || reason.isNotBlank())
+            HoldButton(ui("moderation.fate.hold"), Gold, Modifier.fillMaxWidth(), enabled = !account.busy && ready) { picked?.let { onPick(it, reason) } }
         }
     }
 }

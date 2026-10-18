@@ -313,7 +313,7 @@ internal val FATE_GRID_HEIGHT = 228.dp
     }
 }
 
-/** Смена дара - без санкции: ни номера, ни категории; дары - именами. */
+/** Смена дара - без санкции: ни номера, ни категории; дары - именами, ниже - причина для игрока, если была. */
 @Composable private fun JournalRow(entry: ModerationEntryView) {
     ForgePanel {
         Text(
@@ -325,6 +325,7 @@ internal val FATE_GRID_HEIGHT = 228.dp
         MutedText(listOfNotNull(entry.number.takeIf { it > 0 }?.let { "#$it" }, categoryTitle(entry.category).takeIf { fate == null }, entry.until?.let { ui("moderation.until", listedAt(it).orEmpty()) }, listedAt(entry.at)).joinToString(" · "))
         if (fate != null) {
             MutedText("${fate.first?.let { FateCard(it).title } ?: "—"} → ${FateCard(fate.second).title}")
+            entry.reason.takeIf { it.isNotBlank() }?.let { MutedText("«$it»") }
         } else if (entry.comment.isNotBlank()) {
             MutedText("«${entry.comment}»")
         }
@@ -353,7 +354,6 @@ internal val FATE_GRID_HEIGHT = 228.dp
     var category by remember { mutableStateOf(SanctionCategory.OTHER) }
     var comment by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
-    val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val name = dossier.hero?.name ?: dossier.account.login
@@ -388,8 +388,8 @@ internal val FATE_GRID_HEIGHT = 228.dp
             )
             Label(ui("moderation.category"))
             Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
-            OutlinedTextField(reason, { reason = it.take(limit) }, label = { Text(ui("moderation.reason_for_player")) }, minLines = 2, supportingText = { LengthCounter(reason, limit) }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.comment")) }, minLines = 2, supportingText = { LengthCounter(comment, limit) }, modifier = Modifier.fillMaxWidth())
+            ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
+            ModerationText(account, comment, ui("moderation.comment")) { comment = it }
             val term = custom.toIntOrNull() ?: hours
             ForgeButton(
                 enabled = !account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0),
@@ -409,7 +409,6 @@ internal val FATE_GRID_HEIGHT = 228.dp
     var comment by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
     val days = account.index?.rules?.moderation?.trashDays ?: TRASH_DAYS
-    val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
     val hero = dossier.hero?.takeIf { !it.deleted }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -420,8 +419,8 @@ internal val FATE_GRID_HEIGHT = 228.dp
             }
             MutedText(ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_note" else "moderation.delete_account_note", days))
             Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
-            OutlinedTextField(reason, { reason = it.take(limit) }, label = { Text(ui("moderation.reason_for_player")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.delete_reason")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+            ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
+            ModerationText(account, comment, ui("moderation.delete_reason")) { comment = it }
             HoldButton(
                 ui("moderation.hold_delete"),
                 LifeRed,
@@ -430,6 +429,15 @@ internal val FATE_GRID_HEIGHT = 228.dp
             ) { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) }
         }
     }
+}
+
+/**
+ * Поле текста модерации - причины для игрока или служебной заметки: несколько строк, предел `inputs.sanctionComment` правил
+ * со счётчиком; лишнее не вводится.
+ */
+@Composable internal fun ModerationText(account: AccountUi, value: String, label: String, onValueChange: (String) -> Unit) {
+    val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
+    OutlinedTextField(value, { onValueChange(it.take(limit)) }, label = { Text(label) }, minLines = 2, supportingText = { LengthCounter(value, limit) }, modifier = Modifier.fillMaxWidth())
 }
 
 @Composable internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {

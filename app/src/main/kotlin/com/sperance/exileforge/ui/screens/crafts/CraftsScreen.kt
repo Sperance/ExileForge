@@ -160,7 +160,7 @@ fun CraftsScreen() {
  * Идущая работа - одна плашка на главном экране вкладки и в окне профессии: «Сейчас», имя работы целиком (до двух строк), профессия с
  * циклом и вариантом, квадратная «Остановить»; вещь в работе; полоса цикла, под ней одной строкой часы цикла «0:12 / 0:30» слева и выход
  * в час фишками справа ([HourChips]); строка уровня профессии ([LevelRow]); запас входа и учёт с начала работы ([WorkLedger]) - сделанное
- * с начала работы - вещи героя с меткой происхождения этой работы ([WorkView.made]), кнопка под ними открывает тайник с фильтром
+ * с начала работы - вещи героя с меткой происхождения этой работы ([CraftsViewModel.made], вне главного потока), кнопка под ними открывает тайник с фильтром
  * «Сделано ремеслом». [help] - значок справки в строке «Сейчас» (на главном экране; в окне профессии справка - в его шапке). Нет работы -
  * строка «Сейчас» и что герой не работает.
  *
@@ -204,8 +204,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         if (profession != null && job != null) LevelRow(profession, job, work, offset)
         crafts.state?.running?.let { StockRow(game, work, it) }
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
-        val hero = game.hero
-        val made = remember(work, hero?.items, hero?.overflow) { work.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()) }
+        val made by vm.made.collectAsStateWithLifecycle()
         val heroModel = koinViewModel<HeroViewModel>()
         WorkLedger(
             game,

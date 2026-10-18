@@ -14,8 +14,15 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.rules.content.SmithChoice
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.sperance.exileforge.rules.roll.ItemInstance
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Экран ремёсел: ремёсла из репозитория, действия общие; открытое окно профессии - состояние экрана. */
@@ -33,6 +40,17 @@ class CraftsViewModel(
     val activity: StateFlow<Activity> = commands.state
 
     private val model = CraftsModel(store, sessions, viewModelScope)
+
+    /**
+     * Вещи героя, что сделала идущая работа ([com.sperance.exileforge.core.model.crafts.WorkView.made]): ищутся вне главного потока, когда
+     * сменилась работа или вещи героя; работы нет - пусто.
+     */
+    val made: StateFlow<List<ItemInstance>> = combine(
+        crafts.map { it.state?.work }.distinctUntilChanged(),
+        game.map { it.hero }.distinctUntilChanged { a, b -> a?.items === b?.items && a?.overflow === b?.overflow },
+    ) { work, hero -> work?.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()).orEmpty() }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(SHARE_STOP_MS), emptyList())
 
     /** Код профессии, чьё окно открыто; пусто - плитки. */
     val profession: StateFlow<String> = model.profession
@@ -53,3 +71,6 @@ class CraftsViewModel(
 
     fun rememberSmithChoice(heroId: String, choice: SmithChoice) = model.rememberSmithChoice(heroId, choice)
 }
+
+/** Сколько счёт сделанного живёт без экрана: поворот экрана не начинает его заново. */
+private const val SHARE_STOP_MS = 5_000L

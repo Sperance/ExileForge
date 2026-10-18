@@ -55,7 +55,7 @@ import kotlin.math.roundToInt
 /**
  * A line of the fight's log, laid open: first the outcome — the figure, what marked the blow, and per damage type
  * what it was, what landed and what cut it; «Полный расчёт» lays out the rest — the formula as a chain of chips (a chip
- * tapped lays out the stats it reads by source), the dice, where the damage went, and tabs of the striker, the target and
+ * tapped lays out the stats it reads by source), where the damage went, and tabs of the striker, the target and
  * what lay on both at that moment. Every figure is the fight's own.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -179,7 +179,7 @@ internal fun cuts(type: TypeTrace): List<String> = listOfNotNull(
     type.penetration.takeIf { it > 0 }?.let { ui("trace.cut.penetration", fineNumber(it)) },
 )
 
-/** «Полный расчёт ▾»: the formula, the dice and the sides, folded until asked for. */
+/** «Полный расчёт ▾»: the formula, where the damage went and the sides, folded until asked for. */
 @Composable internal fun FullToggle(open: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Text(

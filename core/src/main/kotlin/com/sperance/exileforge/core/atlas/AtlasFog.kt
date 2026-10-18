@@ -78,10 +78,10 @@ object AtlasEffects {
     }
 
     /**
-     * Строки атласа [atlas], которые правила кладут строками карты-предмета источника атласа ([LootRoller.atlasPowers]): окно карты
+     * Строки атласа [atlas], которые правила кладут строками карты-предмета источника атласа ([LootRoller.ATLAS_MAP_POWERS]): окно карты
      * показывает их строками карты, а не строками атласа.
      */
-    fun laid(index: ContentIndex, atlas: Map<String, Double>): Set<String> = LootRoller(index).let { loot -> atlas.keys.filterTo(HashSet()) { loot.atlasPowers(mapOf(it to 1.0)).isNotEmpty() } }
+    fun laid(atlas: Map<String, Double>): Set<String> = atlas.keys intersect LootRoller.ATLAS_MAP_POWERS.keys
 
     /** Что атлас захода [atlas] (с долями гильдии и зелья) кладёт в строки карты ([map]); нулевые не входят. */
     private fun extras(atlas: Map<String, Double>): Map<String, Double> = (

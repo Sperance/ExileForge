@@ -257,7 +257,7 @@ class ExpeditionRun(
      */
     val windowLines: Map<MapSection, Map<String, Double>>
         get() {
-            val laid = AtlasEffects.laid(index, atlas)
+            val laid = AtlasEffects.laid(atlas)
             val sourced = mapSources.map { MapSection.of(it.source) to it.effects } + (MapSection.MAP to MapEffects.sum(runLines, pacts))
             val shares = atlas.filterKeys { it !in laid }.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> MapSection.of(source.kind) to mapOf(code to share) } }
             return (sourced + shares).groupBy({ it.first }, { it.second })

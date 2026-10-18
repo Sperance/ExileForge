@@ -3946,7 +3946,6 @@
   "relic.totals": "HERO TOTALS",
   "relic.flask_totals": "FLASK TOTALS",
   "relic.tool_totals": "CRAFT TOTALS",
-  "compare.more": "Show {0} more",
   "compare.better": "{0} better",
   "compare.worse": "{0} worse",
   "compare.off": "turns off",

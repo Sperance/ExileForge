@@ -33,7 +33,6 @@ import com.sperance.exileforge.core.sheet.wearing
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.LostBlock
-import com.sperance.exileforge.ui.components.MightComparison
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.components.RelicLook
@@ -74,14 +73,14 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
 
 /**
  * «Если надеть» в итоге героя карточки: что станет с листом с этой вещью, сложенное здесь формулой правил, -
- * строка на каждую сдвинутую характеристику, под ними - одна строка Мощи «было → стало» (только когда сдвиг стоит
+ * строка на каждую сдвинутую характеристику, Мощь «было → стало» - в заголовке сравнения (только когда сдвиг стоит
  * показа, `MightShift.shown`). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
  * Над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги итог - «ИТОГ ФЛЯГИ», у
  * инструмента - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
- * ([StatComparison]), свёрнутое до важнейших строк, под ним - «Теряешь» ([LostLines]): строки заменяемой вещи, которых нет на этой.
+ * ([StatComparison]), свёрнутое целиком под заголовком, в нём же - «Теряешь» ([LostLines]): строки заменяемой вещи, которых нет на этой.
  *
- * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - одной строкой «было → стало»
- * из того же листа боя, что сдвиги.
+ * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - из того же листа
+ * боя, что сдвиги.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, choice: WearChoice, look: RelicLook) {
     val unmet = game.unmetFor(item.template)
@@ -100,11 +99,9 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
             }
             val verdict = selected?.verdict
             if (delta != null) {
-                StatComparison(ui("relic.totals"), delta, look = look, lost = lost)
-                might?.let { MightComparison(it, look) }
+                StatComparison(ui("relic.totals"), delta, look = look, lost = lost, might = might)
             } else if (verdict is FlaskVerdict) {
-                StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look, lost = lost)
-                verdict.might?.let { MightComparison(it, look) }
+                StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look, lost = lost, might = verdict.might)
             } else if (verdict is ToolVerdict) {
                 if (verdict.delta.isEmpty()) {
                     MutedText(ui("wear.tool_same"), style = MaterialTheme.typography.labelSmall)

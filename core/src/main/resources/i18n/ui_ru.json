@@ -3946,7 +3946,6 @@
   "relic.totals": "ИТОГ ГЕРОЯ",
   "relic.flask_totals": "ИТОГ ФЛЯГИ",
   "relic.tool_totals": "ИТОГ РЕМЕСЛА",
-  "compare.more": "Показать ещё {0}",
   "compare.better": "{0} лучше",
   "compare.worse": "{0} хуже",
   "compare.off": "отключится",

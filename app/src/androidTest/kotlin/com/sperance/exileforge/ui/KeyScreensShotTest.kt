@@ -8,6 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
@@ -64,6 +66,7 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.sheet.itemSeals
+import com.sperance.exileforge.core.sheet.wearPlaces
 import com.sperance.exileforge.core.update.AppBuild
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.UpdateState
@@ -124,6 +127,8 @@ import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.hero.StatSheet
+import com.sperance.exileforge.ui.screens.hero.WearChoice
+import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
@@ -302,6 +307,23 @@ class KeyScreensShotTest {
         combat?.let { StatSheet(game(level), it.figures) }
     }
 
+    /** Временно: карточка амулета с итогом героя против надетого амулета - сравнение свёрнуто. */
+    @Test fun compareFolded() = shot("compare_folded") { CompareCard() }
+
+    /** Временно: то же сравнение, раскрытое касанием заголовка: все строки и «Теряешь». */
+    @Test fun compareOpen() = shot("compare_open", open = ui("relic.totals")) { CompareCard() }
+
+    /** Редкий амулет [sealedAmulet] в карточке против надетого амулета героя 70 уровня с другими строками. */
+    @Composable private fun CompareCard() {
+        val item = sealedAmulet()
+        val families = item.rolls.mapNotNull { index.modifier(it.code)?.family }.toSet()
+        val other = index.definitions.filter { it.rolls && it.affix && !it.crafted && it.influence == null && MAP_TAG !in it.tags && it.family !in families }.distinctBy { it.family }.take(4)
+        val worn = ItemInstance("shot-worn", item.template, Rarity.RARE, other.map { roll(it) }, slot = Slot.AMULET, itemLevel = 84)
+        val game = game(70, items = listOf(worn))
+        val choice = WearChoice(remember { game.wearPlaces(item) }, remember { mutableStateOf<Slot?>(null) })
+        ItemCard(view(item), enabled = false, detailed = true, action = false, totals = wearTotals(game, item, choice))
+    }
+
     /** Вид копии [item] над контентом закреплённого сервера. */
     private fun view(item: ItemInstance): ItemView = ItemView(item, index.template(item.template)!!, index)
 
@@ -385,10 +407,12 @@ class KeyScreensShotTest {
     /** Строка модификатора [code] серединой первого тира. */
     private fun line(code: String): Line? = index.modifier(ModifierCode(code))?.let { def -> Line(def.code, def.tiers.firstOrNull()?.values.orEmpty().map { it.average() }) }
 
-    private fun game(level: Int, code: String = heroClass.code): GameUi {
+    private fun game(level: Int, code: String = heroClass.code, items: List<ItemInstance> = emptyList()): GameUi {
         val owner = index.classes.classes.first { it.code == code }
         val info = HeroInfo("hero", "owner", "Изгнанник", heroClass = code, level = level)
-        val hero = HeroView(info, emptyList(), sheet = Sheets.calculate(index, level, code, listOf(TakenNode(owner.startNode)), emptyList()))
+        val sheet = Sheets.calculate(index, level, code, listOf(TakenNode(owner.startNode)), items)
+        val combat = if (items.isEmpty()) null else CombatSheet.of(index, sheet, level, code, HeroSkills(), null, items)
+        val hero = HeroView(info, items, sheet = sheet, combat = combat)
         return GameUi(
             activity = Activity(busy = false),
             session = Session(DEFAULT_SERVER, profile = UserProfile("owner"), signedIn = true),

@@ -183,10 +183,8 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /** Строка сводки: касание открывает разбор ([open]). */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String) -> Unit) {
-    StatRow(
-        key, value, was, before, accent, figures, game,
-        Modifier.fillMaxWidth().then(if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 9.dp),
-    )
+    val lit = if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier
+    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 9.dp))
 }
 
 /**

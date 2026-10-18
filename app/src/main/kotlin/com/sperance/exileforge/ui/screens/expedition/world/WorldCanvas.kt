@@ -174,8 +174,7 @@ class WorldChart private constructor(val world: WorldMap, internal val roads: Li
         @Volatile private var last: Pair<Source, WorldChart>? = null
         private val building = Mutex()
 
-        private fun source(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, density: Density) =
-            Source(campaign, graph, progress, listOf(density.density, density.fontScale, uiLanguage))
+        private fun source(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, density: Density) = Source(campaign, graph, progress, listOf(density.density, density.fontScale, uiLanguage))
 
         /** Карта, если она уже собрана, - для первого кадра. */
         fun cached(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress, density: Density): WorldChart? {

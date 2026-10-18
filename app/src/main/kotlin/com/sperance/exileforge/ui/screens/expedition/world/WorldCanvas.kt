@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -75,9 +77,10 @@ import kotlin.math.hypot
  * units under one transform; the words are laid out once and only scaled.
  *
  * [story] - зона шага сюжета, вокруг жетона кольцо; null - сюжета на карте нет. Без анимаций жетоны и дороги стоят; общие часы декора, а не
- * свой бесконечный переход. Пергамент записан один раз в свой слой ([LocalWorldArtLayer], живёт с оболочкой) и воспроизводится под камерой.
- * Неподвижное рисуется заново лишь со сдвигом, масштабом или выбором; часы будят только дышащее и только на экране. Пока арт не собран -
- * голый пергамент с дорогами и жетонами.
+ * свой бесконечный переход. Пергамент записан один раз в свой слой ([LocalWorldArtLayer], живёт с оболочкой); пергамент, туман и дороги
+ * записаны в неподвижный слой карты ([StillLayer]), камера его не перерисовывает, а лишь сдвигает и масштабирует. Жетоны, ореолы, кольцо
+ * сюжета и надписи - свои холсты: их меняют выбор, метки тайника и часы декора; часы будят только дышащее и только на экране. Пока арт
+ * не собран - голый пергамент с дорогами и жетонами.
  */
 @Composable
 fun WorldCanvas(
@@ -101,6 +104,7 @@ fun WorldCanvas(
     val fog = chart.fog
     val words = chart.words
     val artLayer = LocalWorldArtLayer.current ?: rememberWorldArtLayer()
+    val stillLayer = rememberStillLayer()
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
     Box(
@@ -111,29 +115,15 @@ fun WorldCanvas(
             .pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }
             .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } },
     ) {
-        Canvas(Modifier.matchParentSize()) {
-            onWorld(camera) {
-                if (art == null) {
-                    drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
-                } else {
-                    drawLayer(with(artLayer) { of(art, IntSize(camera.world.width, camera.world.height)) })
-                }
-                fog.draw(this)
-                val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
-                roads.forEach { road ->
-                    when (road.state) {
-                        RoadState.WALKED -> {
-                            drawPath(road.path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
-                            drawPath(road.path, ROAD_GOLD, style = Stroke(2.4f, cap = StrokeCap.Round))
-                        }
-
-                        RoadState.AHEAD -> drawPath(road.path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
-
-                        RoadState.UNTRODDEN -> drawPath(road.path, Muted.copy(alpha = .85f), style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = dots))
-                    }
-                }
-            }
-        }
+        Canvas(
+            Modifier.matchParentSize().graphicsLayer {
+                transformOrigin = TransformOrigin(0f, 0f)
+                translationX = camera.offset.x
+                translationY = camera.offset.y
+                scaleX = camera.unit
+                scaleY = camera.unit
+            },
+        ) { drawLayer(with(stillLayer) { of(chart, art, artLayer) }) }
         Canvas(Modifier.matchParentSize()) {
             if (ahead.isEmpty() && open.isEmpty()) return@Canvas
             val view = camera.view(size)
@@ -518,6 +508,10 @@ private const val VIEW_MARGIN = 140f
 
 private val OPEN_GLOW = Brush.radialGradient(listOf(GoldBright.copy(alpha = .45f), GoldBright.copy(alpha = 0f)), Offset.Zero, 1f)
 private val PULSE_RING = Stroke(1.5f)
+private val WALKED_INK = Stroke(7f, cap = StrokeCap.Round)
+private val WALKED_GOLD = Stroke(2.4f, cap = StrokeCap.Round)
+private val UNTRODDEN_INK = Muted.copy(alpha = .85f)
+private val UNTRODDEN = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(1f, 7f)))
 
 /**
  * Слой пергамента карты мира: записывается один раз на рисунок [WorldArt] и переживает уход с вкладки - его держит оболочка
@@ -534,6 +528,50 @@ class WorldArtLayer internal constructor(private val layer: GraphicsLayer) {
         }
         return layer
     }
+}
+
+/**
+ * Неподвижный слой карты мира в мере мира: пергамент ([WorldArtLayer]), туман и дороги. Пишется при первом рисовании новой карты
+ * ([WorldChart]) или пришедшего пергамента, дальше камера только воспроизводит его своим переносом и масштабом. Слой - запись команд
+ * рисования, а не растр: под масштабом камеры дороги и туман растеризуются в разрешении экрана, на любом приближении без мыла, и памяти
+ * под пиксели мира слой не держит. Живёт с холстом карты ([rememberStillLayer]): уход с вкладки его освобождает.
+ */
+internal class StillLayer(private val layer: GraphicsLayer) {
+    private var chart: WorldChart? = null
+    private var art: WorldArt? = null
+
+    /** Слой карты [chart] на пергаменте [art] (null - голый пергамент): та же пара - как есть, другая пишется заново. */
+    fun DrawScope.of(chart: WorldChart, art: WorldArt?, artLayer: WorldArtLayer): GraphicsLayer {
+        if (this@StillLayer.chart === chart && this@StillLayer.art === art) return layer
+        val world = chart.world.campaign.world
+        val size = IntSize(world.width, world.height)
+        val parchment = art?.let { with(artLayer) { of(it, size) } }
+        layer.record(size) {
+            if (parchment == null) drawRect(BARE) else drawLayer(parchment)
+            chart.fog.draw(this)
+            chart.roads.forEach { road ->
+                when (road.state) {
+                    RoadState.WALKED -> {
+                        drawPath(road.path, ROAD_INK, style = WALKED_INK)
+                        drawPath(road.path, ROAD_GOLD, style = WALKED_GOLD)
+                    }
+
+                    RoadState.AHEAD -> drawPath(road.path, ROAD_INK, style = WALKED_INK)
+
+                    RoadState.UNTRODDEN -> drawPath(road.path, UNTRODDEN_INK, style = UNTRODDEN)
+                }
+            }
+        }
+        this@StillLayer.chart = chart
+        this@StillLayer.art = art
+        return layer
+    }
+}
+
+/** Неподвижный слой карты, что живёт, пока жив холст. */
+@Composable private fun rememberStillLayer(): StillLayer {
+    val layer = rememberGraphicsLayer()
+    return remember(layer) { StillLayer(layer) }
 }
 
 /** Слой пергамента оболочки игры; null - карта рисуется вне неё (превью) и держит свой. */

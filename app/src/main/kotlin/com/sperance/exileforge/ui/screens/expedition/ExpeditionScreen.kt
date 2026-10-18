@@ -53,8 +53,8 @@ private const val CARD_TOP = .48f
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
  *
  * Сюжет - над картой с первого уровня, доска заданий читается и без раздела, если её ещё нет. Вкладка нажата снова - лист зоны закрывается.
- * Карта мира, туман и надписи собираются вне главного потока ([WorldChart]), когда смена вкладки доехала ([TAB_SHIFT_MS]); до того -
- * голая карта. Карта открывается там, где герой её
+ * Карта мира, туман и надписи собираются вне главного потока ([WorldChart]); собранная прежде рисуется с первого кадра, а первая сборка
+ * ждёт, пока смена вкладки доедет ([TAB_SHIFT_MS]), - до того голая карта; новый прогресс собирается под прежней картой. Карта открывается там, где герой её
  * оставил (на устройстве), впервые - на фронтире; камера запоминается после паузы, не на каждый кадр жеста. Зона шага сюжета - руническое
  * кольцо без запросов.
  */
@@ -76,17 +76,15 @@ private const val CARD_TOP = .48f
         return
     }
     val campaign = index.campaign
-    var settled by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        delay(TAB_SHIFT_MS.toLong())
-        settled = true
-    }
     val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }
     val screen = LocalDensity.current
     val measurer = rememberTextMeasurer()
-    val chart by produceState(WorldChart.cached(campaign, index.world, progress, screen), campaign, index.world, progress.cleared, progress.unlocked, screen, settled) {
-        if (settled) value = WorldChart.of(campaign, index.world, progress, measurer, screen)
+    val chart by produceState(WorldChart.cached(campaign, index.world, progress, screen), campaign, index.world, progress.cleared, progress.unlocked, screen) {
+        if (value == null) {
+            withFrameNanos { }
+            delay(TAB_SHIFT_MS.toLong())
+        }
+        value = WorldChart.of(campaign, index.world, progress, measurer, screen)
     }
     val world = chart?.world
     val density = screen.density
@@ -112,7 +110,7 @@ private const val CARD_TOP = .48f
         if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
     }
     Box(Modifier.fillMaxSize()) {
-        val drawn = chart?.takeIf { settled }
+        val drawn = chart
         if (drawn == null) {
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {

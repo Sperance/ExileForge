@@ -163,7 +163,7 @@ class RiftActions(
      * Итог забега, как всякий ответ со снимком, уже освежил героя; перечитывается лишь заведомо устаревший.
      */
     private suspend fun land(report: RiftReport) {
-        report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
+        receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
         report.result?.let { result -> mutable.update { it.copy(result = result) } }
         show(report.board)
         if (report.result != null && heroes.state.value.readAt == 0L) heroSync.readHero()

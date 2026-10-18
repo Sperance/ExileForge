@@ -411,7 +411,7 @@ class ExpeditionActions(
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
-            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
+            receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
             if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)

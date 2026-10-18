@@ -221,7 +221,7 @@ private enum class DossierFold(val title: String) {
         }
     }
     if (redrawing) {
-        val other = dossier.account.userId != account.session.profile?.id
+        val other = !vm.owns(dossier.account.userId)
         FateRedrawSheet(account, dossier.account.fate, dossier.account.login.takeIf { other }, onDismiss = { redrawing = false }) { code, reason ->
             redrawing = false
             vm.redrawFate(code, dossier.account.userId, reason)

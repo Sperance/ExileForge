@@ -198,16 +198,19 @@ class ModerationModel(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
+    /** Свой ли аккаунт [userId] у смотрящего: своё досье - себе, без причины и письма. */
+    fun owns(userId: String): Boolean = userId == sessions.state.value.profile?.id
+
     /**
      * Предначертание [code] аккаунту [userId] досье: только администратор (право досье `rights.fate`). Себе - без причины, дар
      * ложится в профиль сессии, герои и список героев перечитываются при следующем чтении; чужому - с причиной [reason] для
      * игрока, он получит письмо. Досье перечитывается.
      */
     fun redrawFate(code: String, userId: String, reason: String) {
-        val own = userId == sessions.state.value.profile?.id
+        val own = owns(userId)
         val started = commands.task(writing = true, touches = if (own) setOf(Reads.HERO, Reads.CHARACTERS) else emptySet()) {
             check(sessions.state.value.isAdmin) { ui("moderation.staff_only") }
-            val view = if (own) connection.api.admin.redrawFate(code) else connection.api.admin.redrawFate(code, userId, reason)
+            val view = connection.api.admin.redrawFate(code, userId, reason)
             if (own) sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = view.chosen?.code ?: code) }) }
             notices.toast(ui("moderation.fate.changed", view.chosen?.title ?: FateCard(code).title))
             reloadDossier()

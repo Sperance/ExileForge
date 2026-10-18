@@ -23,9 +23,6 @@ fun compactNumber(value: Double): String = when {
     else -> value.roundToLong().toString()
 }
 
-/** Множитель части стойкости в разборе Мощи: «×1.45» - две цифры после точки. */
-fun mightFactor(factor: Double): String = ui("might.factor", String.format(java.util.Locale.ROOT, "%.2f", factor))
-
 /** Как враг стоит против героя словами: «сильнее на 27%», «слабее на 60%», «сопоставим». */
 fun mightStandingText(foe: Double, hero: Double): String {
     val percent = if (hero > 0) ((foe / hero - 1) * 100).roundToInt() else 0

@@ -6,7 +6,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,8 +32,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -49,14 +49,12 @@ import com.sperance.exileforge.core.character.Mights
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.mightChange
-import com.sperance.exileforge.core.display.mightFactor
 import com.sperance.exileforge.core.display.mightLine
 import com.sperance.exileforge.core.display.mightStandingText
 import com.sperance.exileforge.core.display.mightText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.roll.RolledMonster
-import com.sperance.exileforge.rules.sheet.MightDefense
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.ui.theme.*
@@ -92,10 +90,9 @@ fun MightStanding.tint(): Color = when (this) {
 
 /**
  * Мощь героя на его листе: чип «⚜ 12.5k» высотой 28dp в строке с номером героя - одно число, без черты долей. Касание открывает
- * разбор ([MightBreakdown]). [reading] null - Мощь ещё не посчитана: «…» вместо числа, без разбора; [defense] - из чего сложена
- * стойкость, без него разбор без частей.
+ * разбор ([MightBreakdown]). [reading] null - Мощь ещё не посчитана: «…» вместо числа, без разбора.
  */
-@Composable fun MightMark(reading: MightReading?, defense: MightDefense?, modifier: Modifier = Modifier) {
+@Composable fun MightMark(reading: MightReading?, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     Box(modifier) {
@@ -109,7 +106,7 @@ fun MightStanding.tint(): Color = when (this) {
             Text(MIGHT_GLYPH, color = Caution, fontSize = 12.sp, lineHeight = 14.sp)
             Text(reading?.let { compactNumber(it.value) } ?: PENDING, color = GoldBright, fontSize = 13.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
         }
-        if (open && reading != null) TipCallout(Caution, onClose = { open = false }) { MightBreakdown(reading, defense) }
+        if (open && reading != null) TipCallout(Caution, onClose = { open = false }) { MightBreakdown(reading) }
     }
 }
 
@@ -129,64 +126,32 @@ fun MightStanding.tint(): Color = when (this) {
     )
 }
 
-/** Часть стойкости в разборе: подпись, число и цвет метки. */
-private class DefensePart(val label: String, val value: String, val hue: Color)
-
-/** Части стойкости по порядку разбора: запас, мана перед здоровьем, затем множители эффективного здоровья. */
-private fun MightDefense.parts(): List<DefensePart> = listOf(
-    DefensePart(ui("might.part.pool"), mightText(pool), PoolHue),
-    DefensePart(ui("might.part.mana"), "+" + mightText(manaShield), ManaShieldHue),
-    DefensePart(ui("might.part.avoidance"), mightFactor(1 / avoidance), Rune),
-    DefensePart(ui("might.part.less"), mightFactor(1 / lessTaken), LessTakenHue),
-    DefensePart(ui("might.part.sustain"), mightFactor(sustainFactor), Vital),
-)
-
 /**
- * Разбор Мощи героя: «⚜ Мощь» и число целиком, формула «√ натиск × стойкость», натиск (урон в секунду) и стойкость
- * (эффективное здоровье) своими цветами; под стойкостью - её части из [defense] правил (`Might.defense`): здоровье и щит, мана перед
- * здоровьем, множители подавления и отражения, меньшего получаемого урона и пополнения (реген, вампиризм, флаконы). Под чертой - строка
- * «Вне Мощи»: что Мощь не читает (условные строки, карта, гильдия, зелья), и «не прогноз боя».
+ * Разбор Мощи героя: «⚜ Мощь» и число целиком, одна короткая строка, что это за число, и одной строкой натиск и стойкость
+ * своими цветами: «⚔ Натиск 12.5k · 🛡 Стойкость 40k».
  */
-@Composable private fun ColumnScope.MightBreakdown(reading: MightReading, defense: MightDefense?) {
+@Composable private fun ColumnScope.MightBreakdown(reading: MightReading) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(MIGHT_GLYPH, color = Caution, style = MaterialTheme.typography.titleSmall)
         Text(ui("might.title"), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         Text(mightText(reading.value), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     }
-    Text(ui("might.formula"), color = Muted, style = MaterialTheme.typography.labelSmall)
-    MightSide(ui("might.offense"), ui("might.offense_unit"), compactNumber(reading.offense), Ember)
-    MightSide(ui("might.defense"), ui("might.defense_unit"), compactNumber(reading.defense), Rune)
-    defense?.parts()?.forEach { part ->
-        Row(Modifier.fillMaxWidth().padding(start = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(Modifier.size(8.dp).clip(RoundedCornerShape(2.dp)).background(part.hue))
-            Text(part.label, color = Parchment, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            Text(part.value, color = Rune, style = MaterialTheme.typography.labelMedium)
-        }
-    }
-    HorizontalDivider(color = Bronze)
-    MightOutside()
     Text(ui("might.note"), color = Muted, style = MaterialTheme.typography.labelSmall)
+    Text(
+        buildAnnotatedString {
+            side(OFFENSE_GLYPH, ui("might.offense"), compactNumber(reading.offense), Ember)
+            withStyle(SpanStyle(color = Muted)) { append(SIDE_SEPARATOR) }
+            side(DEFENSE_GLYPH, ui("might.defense"), compactNumber(reading.defense), Rune)
+        },
+        color = Parchment,
+        style = MaterialTheme.typography.labelMedium,
+    )
 }
 
-/** Строка «Вне Мощи» разбора: пустое кольцо, имя и что Мощь не читает - словами словаря. */
-@Composable private fun MightOutside() {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.padding(top = 4.dp).size(8.dp).border(1.dp, Muted, CircleShape))
-        Column(Modifier.weight(1f)) {
-            Text(ui("might.outside"), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-            Text(ui("might.outside_body"), color = Muted, style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
-
-/** Сторона Мощи в разборе: точка цвета [hue], имя, что она мерит, и короткое число. */
-@Composable private fun MightSide(name: String, unit: String, value: String, hue: Color) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(hue))
-        Text(name, color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-        Text(unit, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(value, color = hue, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-    }
+/** Сторона Мощи в строке разбора: знак, имя и короткое число цвета [hue]. */
+private fun AnnotatedString.Builder.side(glyph: String, name: String, value: String, hue: Color) {
+    append("$glyph $name ")
+    withStyle(SpanStyle(color = hue, fontWeight = FontWeight.Bold)) { append(value) }
 }
 
 /** Мощь врага мелко: печать и короткое число цвета его стойки против героя ([FightMight]); без Мощи героя - золото. */
@@ -266,10 +231,10 @@ private const val PENDING = "…"
 /** Высота чипа Мощи в строке с номером героя. */
 private val MARK_HEIGHT = 28.dp
 
-/** Метки частей стойкости в разборе: запас - сталь, мана перед здоровьем - бледная синь, меньший урон - лёд. */
-private val PoolHue = Color(0xFF5E7F95)
-private val ManaShieldHue = Color(0xFF7FB2D4)
-private val LessTakenHue = Color(0xFFB4E2FF)
+/** Знаки сторон Мощи в разборе и черта между ними. */
+private const val OFFENSE_GLYPH = "⚔"
+private const val DEFENSE_GLYPH = "🛡"
+private const val SIDE_SEPARATOR = " · "
 
 /** Толщина кольца печати долей её размера. */
 private const val RING_SHARE = .076f

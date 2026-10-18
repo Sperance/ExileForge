@@ -19,7 +19,6 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.HeroBody
 import com.sperance.exileforge.rules.sheet.Might
-import com.sperance.exileforge.rules.sheet.MightDefense
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.Recovery
@@ -267,9 +266,6 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Что Мощь берёт сверх листа: урон умений, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
     val mightExtras: MightExtras get() = hero.extras
-
-    /** Разбор стойкости Мощи героя для листа героя: запас, мана перед здоровьем, уклонение, получаемый урон, пополнение. */
-    val mightDefense: MightDefense by lazy { Might.defense(index, hero) }
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }

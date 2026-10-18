@@ -81,7 +81,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         ShortCodeChip(ui("hero.number_own"), hero.info.number)
         Spacer(Modifier.weight(1f))
-        MightMark(hero.might, hero.combat?.mightDefense)
+        MightMark(hero.might)
         if (place > 0) MightPlaceMark(place, onClick = { vm.openMightBoard(heroId) })
     }
 }

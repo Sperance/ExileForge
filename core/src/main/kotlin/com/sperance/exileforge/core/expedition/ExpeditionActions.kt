@@ -293,7 +293,7 @@ class ExpeditionActions(
         val run = Run(i, zone, started.seed, started.context)
         val marks = repository.state.value.saleMarks.takeIf { marked == started.id }.orEmpty()
         marked = started.id
-        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, saleMarks = marks).also { runJournal = it }
+        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, saleMarks = marks, chestStock = started.chestStock).also { runJournal = it }
         if (marks.isNotEmpty()) persist()
         val board = quests.board().takeIf { it.board != null }
         expedition {
@@ -446,7 +446,10 @@ class ExpeditionActions(
         if (!j.settled) flushes.trySend(Unit)
     }
 
-    /** Ответ ложится на идущие походы - награды по событиям, затем принесённая кампания, - а снаряжение в «Новый лут». */
+    /**
+     * Ответ ложится на идущие походы - награды по событиям, затем принесённая кампания, - а снаряжение в «Новый лут». Перекатанный
+     * запас сундуков ответа подменяет запас журнала.
+     */
     private fun settle(j: RunJournal, batch: List<RunEvent>, report: RunReport) {
         val fell = batch.any { it.kind == RunEventKind.FALL && it.n < report.applied && it.n !in report.rejected }
         val crystals = report.rewards.mapNotNull { event -> event.crystal?.let { event.n to it.crystal } }.toMap()
@@ -459,6 +462,7 @@ class ExpeditionActions(
             report.rewards.mapNotNull { r -> r.rank?.let { r.n to it } }.toMap(),
             report.rewards.filter { it.atlas.isNotEmpty() }.associate { it.n to it.atlas },
         )
+        report.rewards.lastOrNull { it.chestStock != null }?.chestStock?.let { j.chestStock = it }
         val reported = runs().takeIf { it.isNotEmpty() }?.let { report.rewards.filter { r -> r.kind in FOUGHT_EVENTS }.flatMap { r -> r.atlas } }.orEmpty()
         runs().forEach { it.send(answer) }
         campaign()

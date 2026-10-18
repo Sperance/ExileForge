@@ -302,16 +302,23 @@ class ExpeditionRun(
     /** Копия [drops] с их добычей для снимка: меняется только с новым сундуком или ответом, не на кадр. */
     internal var dropsShown: List<MapDrop> = emptyList()
 
-    /** Сундук или объект с добычей открыт событием [n]: его добыча придёт с ответом сервера. */
-    internal fun dropped(n: Int) {
+    /** Номер сундука карты по номеру события, что его открыло: его добыча - в запасе сундуков журнала ([RunJournal.chestStock]). */
+    private val chestEvents = HashMap<Int, Int>()
+
+    /** Сундук номер [chest] или объект с добычей (null) открыт событием [n]: сундук показывает добычу из запаса сразу, объект - с ответом сервера. */
+    internal fun dropped(n: Int, chest: Int? = null) {
+        chest?.let { chestEvents[n] = it }
         drops += n
         showDrops()
     }
 
     internal fun showDrops() {
-        dropsShown = drops.map { n -> MapDrop(n, earned[n] ?: Reward.NONE.takeIf { n < answered }) }
-        bagShown = bag.map { (n, tag) -> BagEntry(n, tag.first, tag.second, earned[n] ?: Reward.NONE.takeIf { n < answered }) }.filter { it.shown }.asReversed()
+        dropsShown = drops.map { n -> MapDrop(n, loot(n)) }
+        bagShown = bag.map { (n, tag) -> BagEntry(n, tag.first, tag.second, loot(n)) }.filter { it.shown }.asReversed()
     }
+
+    /** Добыча события [n]: что дал ответ сервера (отказ - ничего); до ответа - сундук из запаса захода; null - ждёт ответа. */
+    private fun loot(n: Int): Reward? = earned[n] ?: if (n < answered) Reward.NONE else chestEvents[n]?.let { journal.chestStock[it] }
 
     /** Все события захода с добычей: источник и когда записано - для «Сумки захода»; ответы - [earned]. */
     internal val bag = LinkedHashMap<Int, Pair<LootFrom, Long>>()

@@ -51,7 +51,7 @@ import kotlin.random.Random
 // ==================== The map between fights ====================
 /**
  * Недуги из боя и ловушек тикают на дороге и убивают. Страж вручную - сперва экран-вызов; запечатанный босс не встаёт. Крышка сундука
- * открывается сразу, герой идёт дальше: добыча вылетит с ответом сервера.
+ * открывается сразу, герой идёт дальше: добыча вылетает сразу из запаса сундуков захода.
  */
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
@@ -70,7 +70,7 @@ internal fun ExpeditionRun.walk(dt: Double) {
 
         is WorldEvent.Opened -> rewarding(record { RunEvent.Chest(it, event.chest.id) })?.let { opened ->
             event.chest.event = opened.n
-            dropped(opened.n)
+            dropped(opened.n, event.chest.id)
         }
 
         is WorldEvent.AtFountain -> fountain = event.fountain

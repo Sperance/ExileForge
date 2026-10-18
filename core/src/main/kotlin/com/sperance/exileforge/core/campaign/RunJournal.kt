@@ -1,12 +1,13 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.rules.run.ChestStock
 import com.sperance.exileforge.rules.run.RunEvent
 import kotlinx.serialization.Serializable
 
 /**
- * Журнал на диске: события захода по порядку, номер первого, докуда их принял сервер, пачка в пути и вещи добычи, помеченные
- * к продаже ([saleMarks]) - пометки переживают перезапуск приложения.
+ * Журнал на диске: события захода по порядку, номер первого, докуда их принял сервер, пачка в пути, вещи добычи, помеченные
+ * к продаже ([saleMarks]), и запас сундуков захода ([chestStock]) - они переживают перезапуск приложения.
  */
 @Serializable data class JournalState(
     val runId: String,
@@ -17,6 +18,7 @@ import kotlinx.serialization.Serializable
     val base: Int = 0,
     val batch: JournalBatch? = null,
     val saleMarks: Set<String> = emptySet(),
+    val chestStock: ChestStock = ChestStock(),
 )
 
 /**
@@ -44,11 +46,15 @@ class RunJournal(
     val base: Int = 0,
     batch: JournalBatch? = null,
     saleMarks: Set<String> = emptySet(),
+    chestStock: ChestStock = ChestStock(),
 ) {
     private val events = events.toMutableList()
 
     /** Id вещей добычи захода, помеченных к продаже: хранятся с журналом. */
     var saleMarks: Set<String> = saleMarks
+
+    /** Содержимое сундуков захода по номеру сундука, как его скатал сервер: сундук показывает его сразу при открытии. */
+    @Volatile var chestStock: ChestStock = chestStock
 
     private val end: Int get() = base + events.size
     var applied: Int = applied.coerceIn(base, base + events.size)
@@ -99,14 +105,14 @@ class RunJournal(
         batch = null
     }
 
-    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch, saleMarks)
+    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch, saleMarks, chestStock)
     fun encode(): String = WireJson.encodeToString(JournalState.serializer(), snapshot())
 
     companion object {
         /** The most events one batch carries: the server refuses a longer journal whole (CP_022). */
         const val MAX_BATCH = 64
 
-        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch, state.saleMarks)
+        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch, state.saleMarks, state.chestStock)
         fun decode(text: String): RunJournal? = runCatching { of(WireJson.decodeFromString(JournalState.serializer(), text)) }.getOrNull()
     }
 }

@@ -13,6 +13,7 @@ import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.CrystalWindow
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.rules.run.ChestStock
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -91,6 +92,8 @@ import kotlinx.serialization.Serializable
     val rank: Long? = null,
     /** Ключи очков Атласа `<вид>:<карта>`, впервые заработанные событием: о новом очке - без чтения героя. */
     val atlas: List<String> = emptyList(),
+    /** Весь запас сундуков захода после события, сменившего сделки алтарей: неоткрытые сундуки перекатаны; у прочих событий null. */
+    val chestStock: ChestStock? = null,
 )
 
 /** A crystal after an event: its [index] in the zone's window, as the event named it, and the [crystal] it became. */

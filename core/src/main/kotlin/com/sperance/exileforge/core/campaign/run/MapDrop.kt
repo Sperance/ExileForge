@@ -4,8 +4,8 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.Reward
 
 /**
- * Добыча сундука или объекта карты: событие [n] и что сервер за него дал; null - ответа
- * ещё нет, сундук ждёт. Добычу катит только сервер: здесь она лишь раскладывается для показа.
+ * Добыча сундука или объекта карты: событие [n] и что сервер за него дал или скатал в запас сундуков захода; null - ни ответа, ни
+ * запаса, объект ждёт. Добычу катит только сервер: здесь она лишь раскладывается для показа.
  */
 data class MapDrop(val n: Int, val reward: Reward?) {
     val waiting: Boolean get() = reward == null

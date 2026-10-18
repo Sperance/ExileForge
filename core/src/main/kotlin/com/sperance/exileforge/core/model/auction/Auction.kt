@@ -18,6 +18,9 @@ import kotlinx.serialization.Serializable
 /** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. [EXPIRED]: its time ran out, the goods went back to the seller. */
 @Serializable enum class LotStatus { ACTIVE, SOLD, CANCELLED, EXPIRED }
 
+/** Куда товар закрытого лота вернулся продавцу: [STASH] - вещь в тайник или переполнение, стопка в сумку; [MAIL] - письмом, места не было. */
+@Serializable enum class LotReturn { STASH, MAIL }
+
 /**
  * One lot of the player auction. While it is on the showcase the goods live inside it: a copy leaves the
  * seller's document, a stack is debited from the bag. The price is in orbs — [priceOrb] is the item code
@@ -52,6 +55,8 @@ import kotlinx.serialization.Serializable
     val sold: ItemInstance? = null,
     /** Сколько раз лот продлён (сервер): не больше `auction.extendMax`. */
     val extended: Int = 0,
+    /** Куда товар вернулся продавцу при снятии или истечении (сервер); null - лот на витрине, продан или старый. */
+    val returned: LotReturn? = null,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
@@ -67,8 +72,11 @@ import kotlinx.serialization.Serializable
     val amount: Long get() = goods?.amount ?: 1
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
 
-    /** Срок вышел, а сервер лот ещё не закрыл: товар вернётся продавцу почтой, купить и снять его уже нельзя. */
+    /** Срок вышел, а сервер лот ещё не закрыл: товар возвращается продавцу, купить и снять его уже нельзя. */
     val returning: Boolean get() = status == LotStatus.ACTIVE && expiresAt > 0 && System.currentTimeMillis() >= expiresAt
+
+    /** Срок лота вышел и товар вернулся продавцу ([returned] - куда). */
+    val expiredBack: Boolean get() = status == LotStatus.EXPIRED && returned != null
 
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }

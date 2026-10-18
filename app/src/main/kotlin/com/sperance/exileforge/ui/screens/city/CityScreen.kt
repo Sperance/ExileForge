@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_CITY
 import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.reachable
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.guild.Guilds
@@ -92,7 +93,7 @@ private val Building.titleKey: String
     val board by quests.quests.collectAsStateWithLifecycle()
     val trade by market.market.collectAsStateWithLifecycle()
     val guilds by guild.guilds.collectAsStateWithLifecycle()
-    val auction = game.unlocked(Feature.AUCTION)
+    val auction = game.reachable(Feature.AUCTION)
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()

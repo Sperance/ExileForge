@@ -49,7 +49,7 @@ fun AuctionScreen() {
             }
             return@Column
         }
-        val mine = market.ownLots.size
+        val mine = market.ownLots.count { !it.expiredBack }
         val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.history"))
         val tab = market.tab.coerceIn(tabs.indices)
         PillTabs(tabs, tab, model::tab, enabled = !busy)

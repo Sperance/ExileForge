@@ -184,6 +184,9 @@ class ConnectionActions(
         e
     }
 
+    /** Срез игры из хранилищ: открыт ли раздел, чьё здание перечитывается. */
+    private val glance: GameUi get() = GameUi(world = world.state.value, session = sessions.state.value, holding = heroes.state.value)
+
     /**
      * What the player looks at, read again quietly: the hero (unless [hero] is off - the queue's answers already brought it), and
      * the tab's own data where it has any.
@@ -201,11 +204,13 @@ class ConnectionActions(
                     when (now.tab) {
                         TAB_CRAFTS -> crafts.load(silent = true)
 
-                        TAB_CITY -> when (now.building) {
-                            Building.QUESTS -> quests.load()
-                            Building.AUCTION -> market.loadAuction()
-                            Building.GUILD -> guild.load()
-                            Building.MERCHANT, Building.HISTORY, Building.HALL, null -> Unit
+                        TAB_CITY -> if (glance.reachable(Feature.ofBuilding(now.building))) {
+                            when (now.building) {
+                                Building.QUESTS -> quests.load()
+                                Building.AUCTION -> market.loadAuction()
+                                Building.GUILD -> guild.load()
+                                Building.MERCHANT, Building.HISTORY, Building.HALL, null -> Unit
+                            }
                         }
                     }
                 }

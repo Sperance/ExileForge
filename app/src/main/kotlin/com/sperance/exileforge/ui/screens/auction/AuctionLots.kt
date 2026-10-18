@@ -62,10 +62,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Свои лоты и история сделок. */
 /**
- * The hero's own lots that are still on sale, and those whose time ran out and are on their way back by mail; withdrawn and sold lots leave this list.
+ * The hero's own lots that are still on sale, and those whose time ran out; withdrawn and sold lots leave this list.
  *
  * Места лотов одинаковы у всех героев и не покупаются. Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату
- * выставления против кошелька; истёкший лот уже возвращается почтой.
+ * выставления против кошелька; истёкший лот возвращается сразу в тайник (письмом - только когда места нет), строка ниже продающихся
+ * называет, куда он вернулся.
  */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }

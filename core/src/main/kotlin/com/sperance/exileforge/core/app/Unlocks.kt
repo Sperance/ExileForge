@@ -42,6 +42,12 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
 /** Whether the hero being played has [feature] open. */
 fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester || heroLevel >= feature.level(index?.rules)
 
+/**
+ * Открыт ли раздел [feature] по прочитанным правилам: пока правил нет, уровень открытия неизвестен - раздел закрыт, его запросы ждут
+ * правил. Раздела нет - открыт.
+ */
+fun GameUi.reachable(feature: Feature?): Boolean = feature == null || index != null && unlocked(feature)
+
 /** Уровень, с которого раздел открыт, по таблице `unlocks` ([EngineRules.unlockLevel]); без правил - первый. */
 fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1
 

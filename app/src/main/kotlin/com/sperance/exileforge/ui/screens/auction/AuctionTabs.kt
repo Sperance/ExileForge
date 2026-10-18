@@ -109,8 +109,12 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-/** How long an own lot still stands: days and hours, hours and minutes on its last day; null when it names no end. */
+/**
+ * How long an own lot still stands: days and hours, hours and minutes on its last day; null when it names no end. Истёкший и вернувшийся -
+ * куда вернулся товар («Вернулся в тайник», «В почте»).
+ */
 internal fun lotExpiry(lot: AuctionLot): String? {
+    lot.returned?.takeIf { lot.expiredBack }?.let { return ui("auction.returned.${it.name}") }
     if (lot.returning) return ui("auction.returning")
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
     return if (minutes >= MINUTES_A_DAY) {

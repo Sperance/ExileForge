@@ -179,6 +179,7 @@ class UiStringsTest {
     fun every_code_the_client_enumerates_is_named() {
         val expected = buildSet {
             LotKind.entries.forEach { add("enum.lot.${it.name}") }
+            com.sperance.exileforge.core.model.auction.LotReturn.entries.forEach { add("auction.returned.${it.name}") }
             Orb.entries.forEach {
                 add("enum.orb.${it.name}")
                 add("enum.orb.${it.name}.rule")

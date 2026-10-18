@@ -25,8 +25,11 @@ data class Market(
     /** Витрина не загрузилась: показан отказ с «Повторить», а не пустая витрина. */
     val showcaseFailed: Boolean = false,
 ) {
-    /** Свои лоты, что ещё продаются, и те, чей срок вышел и что ещё возвращаются почтой ([AuctionLot.returning]). */
-    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning }
+    /**
+     * Свои лоты: что ещё продаются, чей срок вышел и что ещё возвращаются ([AuctionLot.returning]), и ниже - истёкшие, чей товар уже
+     * вернулся ([AuctionLot.expiredBack]).
+     */
+    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning || it.expiredBack }.sortedBy { it.expiredBack }
 }
 
 /** Единственный источник правды о рынке. */

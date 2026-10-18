@@ -40,12 +40,16 @@ import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.feedback.DetailLoad
+import com.sperance.exileforge.core.feedback.ReportSection
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
+import com.sperance.exileforge.core.model.command.CrashTrace
+import com.sperance.exileforge.core.model.command.RequestFailure
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.crafts.JobView
@@ -57,6 +61,7 @@ import com.sperance.exileforge.core.model.feedback.FullReport
 import com.sperance.exileforge.core.model.feedback.IssueNote
 import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
+import com.sperance.exileforge.core.model.feedback.ReportDetail
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -346,21 +351,41 @@ class KeyScreensShotTest {
         Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {}) }
     }
 
-    /** Модерация: плотные строки и раскрытые тикеты - новый (Отклонить / В GitHub) и отправленный с ответом (Закрыть… / Issue #N ↗). */
-    @Test fun moderation() = shot("moderation") {
-        val vm = GlobalContext.get().get<FeedbackViewModel>().model
-        val account = AccountUi(Session(DEFAULT_SERVER, profile = UserProfile("owner", role = "MODERATOR"), signedIn = true))
-        fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG) = AdminReport(
-            FullReport(id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind, createdAt = "2026-10-17T10:00:00", issue = issue),
+    /**
+     * Модерация: строки в две линии (версия, падения, ошибки запросов, Issue, голоса) и раскрытые тикеты - новый с техническим (секция
+     * «Падения» раскрыта, стек свёрнут) и отправленный с ответом, чьё техническое не загрузилось («Повторить»).
+     */
+    @Test fun moderation() {
+        val stack = (listOf("java.lang.ArithmeticException: divide by zero") + (1..12).map { "\tat com.sperance.exileforge.ui.screens.expedition.arena.EffectShelfKt.powerFacts(EffectShelf.kt:${240 + it})" }).joinToString("\n")
+        fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG, crashes: Int = 0, failures: Int = 0) = AdminReport(
+            FullReport(
+                id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind, likes = 4, dislikes = 1,
+                createdAt = "2026-10-17T10:00:00", issue = issue, clientVersion = "0.16.3", crashCount = crashes, failureCount = failures,
+            ),
             login = "sperance",
             moves = if (status == ReportStatus.CREATED) listOf(ReportStatus.SENT, ReportStatus.REJECTED) else emptyList(),
             deletable = true,
         )
-        ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", ReportStatus.SENT, IssueView(258))) {}
-        AdminTicket(account, vm, report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально", ReportStatus.CREATED)) {}
-        val answered = IssueView(265, "https://github.com", notes = listOf(IssueNote(NoteAuthor.DEVELOPER, "Спасибо, поправим в следующей версии.")))
-        AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", ReportStatus.SENT, answered)) {}
-        ReportLine(report("r3", "Жалоба на письмо: оскорбления", ReportStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
+        val fresh = report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально, и проверь все экраны, где числа в секунду бывают нулём", ReportStatus.CREATED, crashes = 2, failures = 1)
+        val detail = ReportDetail(
+            "r1",
+            "run",
+            mapOf("model" to "vivo V2419A", "android" to "16 (API 36)", "net" to "мобильная"),
+            listOf(RequestFailure("POST", "/api/v1/rift/claim", 500, "RIFT_003", "2026-10-17T09:59:40")),
+            listOf("09:58:02 ▸ Поход", "09:59:40 POST /api/v1/rift/claim → 500"),
+            listOf("Здоровье 472, Мана 230"),
+            listOf(CrashTrace(stack, "0.16.2"), CrashTrace(stack, "0.16.2")),
+            sentAt = 0,
+        )
+        shot("moderation", open = ReportSection.CRASHES.summary(fresh.report, detail)) {
+            val vm = GlobalContext.get().get<FeedbackViewModel>().model
+            val account = AccountUi(Session(DEFAULT_SERVER, profile = UserProfile("owner", role = "MODERATOR"), signedIn = true))
+            ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", ReportStatus.SENT, IssueView(258), crashes = 3, failures = 12)) {}
+            AdminTicket(account, vm, fresh, DetailLoad.Ready(detail), onCollapse = {}) {}
+            val answered = IssueView(265, "https://github.com", notes = listOf(IssueNote(NoteAuthor.DEVELOPER, "Спасибо, поправим в следующей версии.")))
+            AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", ReportStatus.SENT, answered), DetailLoad.Failed, onCollapse = {}) {}
+            ReportLine(report("r3", "Жалоба на письмо: оскорбления", ReportStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
+        }
     }
 
     /** Плашка идущей работы: длинное имя, часы цикла и три фишки выхода в час с «+N», строка уровня и итоги одним рядом. */

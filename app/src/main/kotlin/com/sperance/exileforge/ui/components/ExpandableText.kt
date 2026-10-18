@@ -23,7 +23,7 @@ import com.sperance.exileforge.ui.theme.Muted
 private const val FOLDED_LINES = 2
 
 /**
- * Текст, что раскрывается нажатием на месте: свёрнутый - [folded] строк с многоточием (и строкой «Ещё…» под ним, если [more]),
+ * Текст, что раскрывается нажатием на месте: свёрнутый - [folded] строк с многоточием (и строкой [more] под ним - «Ещё…», «Читать целиком»; null - без неё),
  * развёрнутый - целиком, без обрезки. Нажимается, только если текст в свёрнутом виде не уместился; общее для знамений,
  * катализаторов, строк верстака и текста отчётов.
  */
@@ -34,7 +34,7 @@ fun ExpandableText(
     color: Color = Muted,
     style: TextStyle = MaterialTheme.typography.bodySmall,
     folded: Int = FOLDED_LINES,
-    more: Boolean = false,
+    more: String? = null,
 ) {
     var open by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
@@ -52,6 +52,6 @@ fun ExpandableText(
             overflow = if (open) TextOverflow.Clip else TextOverflow.Ellipsis,
             onTextLayout = { if (!open) clipped = it.hasVisualOverflow },
         )
-        if (more && clipped && !open) Text(ui("common.read_more"), color = Gold, style = MaterialTheme.typography.labelSmall)
+        if (more != null && clipped && !open) Text(more, color = Gold, style = MaterialTheme.typography.labelSmall)
     }
 }

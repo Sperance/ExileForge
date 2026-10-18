@@ -11,7 +11,9 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.ProfessionProgress
 import com.sperance.exileforge.rules.roll.Work
 import com.sperance.exileforge.rules.roll.WorkBonus
+import com.sperance.exileforge.rules.roll.WorkBreakdown
 import com.sperance.exileforge.rules.roll.WorkGains
+import com.sperance.exileforge.rules.roll.WorkLayers
 import com.sperance.exileforge.rules.roll.WorkTally
 import kotlinx.serialization.Serializable
 
@@ -32,7 +34,7 @@ import kotlinx.serialization.Serializable
     val choice: String = "",
     /** The variants of a choosing work — a condensed essence, a skill book of the hero's class — each a plain work of its own. */
     val options: List<JobView> = emptyList(),
-    /** Опыт профессии за цикл - присылает сервер по кривой опыта ремесла. */
+    /** Опыт профессии за удачный цикл - присылает сервер по кривой опыта ремесла с бонусом опыта героя ([Work.experience]). */
     val experience: Double = 0.0,
 ) {
     val code: String get() = job.code
@@ -57,9 +59,14 @@ import kotlinx.serialization.Serializable
     val equipped: ItemInstance? = null,
     val bonus: WorkBonus = WorkBonus(),
     val jobs: List<JobView> = emptyList(),
+    /** Тот же [bonus] по слоям источников (инструмент, лист героя без дара, гильдия, дар) - сервер считает их одной функцией правил. */
+    val layers: WorkLayers = WorkLayers(),
 ) {
     /** Открыта ли работа [job] герою: профессия доросла до её уровня и сервер её пускает ([JobView.open]). */
     fun opens(job: JobView): Boolean = job.level <= level && job.open
+
+    /** Разбор мер работы [job] по источникам при правилах ремёсел [rules]: итог каждой меры - число, что показывает и досчитывает сервер. */
+    fun breakdown(rules: CraftsRules, job: JobView): WorkBreakdown = WorkBreakdown.of(rules, job.job, level, layers)
 }
 
 /** The work under way: cycles are counted up to [settledAt]; the next lands at [nextAt] (epoch millis, the server's clock). */

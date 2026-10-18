@@ -70,7 +70,7 @@ import kotlin.random.Random
  *
  * Баланс монстров (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными функциями правил
  * и настоящим боем клиента ([Battle]). Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над
- * стражем своего уровня ([GuardianTarget]). Быстрый сторож на выборке - `MobBalGuardTest`.
+ * стражем своего уровня ([GuardianTarget]).
  */
 enum class GearBand(val candidates: Int, val share: Double, val tierStep: Int, val rarities: List<Rarity>, val maxUniques: Int, val flasks: Rarity) {
     WEAK(12, 0.125, -1, listOf(Rarity.RARE, Rarity.MAGIC), 2, Rarity.MAGIC),
@@ -310,7 +310,7 @@ class MobKit(val index: ContentIndex) {
 
     /**
      * Эталон [hero] на уровне [level] (не ниже его): те же вещи, а дерево, умения и фляги - уровня [level]. Поиск вещей - самая дорогая
-     * часть постройки, быстрый сторож (`MobBalGuardTest`) строит вещи на сетке уровней и переносит их на уровень зоны.
+     * часть постройки: вещи можно строить на сетке уровней и переносить на уровень зоны.
      *
      * Набор, подобранный боем на уровне вещей ([LoadoutTuner]), остаётся; новые слоты уровня - по правилу.
      */
@@ -662,7 +662,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         }
     }
 
-    /** Темп зоны (сторож баланса): медианы действий героя на обычного монстра, секунд на редкого и на стража. */
+    /** Темп зоны: медианы действий героя на обычного монстра, секунд на редкого и на стража. */
     fun tempo(zone: Zone, hero: Hero): Tempo {
         val probes = probes(zone, hero, 0, Rarity.COMMON).third
         fun med(kind: String, f: (Probe) -> Double) = probes.getValue(kind).map(f).sorted().let { it[it.size / 2] }
@@ -1245,7 +1245,7 @@ fun main(args: Array<String>) {
 
 /**
  * Цель побед эталона над стражем своего уровня (RULES «Общее»): [WINS] боёв, финал акта - у нижней границы ([FINALS]).
- * Карты своего уровня, вожди Бездны, Разлом недели и Матерь Скверны равняются на неё же (отчёты режимов, сторож `ModesBalanceGuardTest`).
+ * Карты своего уровня, вожди Бездны, Разлом недели и Матерь Скверны равняются на неё же (отчёты режимов).
  */
 object GuardianTarget {
 
@@ -1321,7 +1321,7 @@ const val GUARD_TOLERANCE = 0.10
 const val RIFT_WEEK = 2_900L
 
 /**
- * Стражей на уровень в режиме `classes` и в `ClassBalanceGuardTest`: ближайшие зоны не выше уровня героя. Восемь: четыре
+ * Стражей на уровень в режиме `classes`: ближайшие зоны не выше уровня героя. Восемь: четыре
  * ближайших - стражи одного акта и часто одного вида урона (у 40-го все бьют физикой), их подбор решал победы класса больше его обороны.
  */
 const val CLASS_BOSSES = 8

@@ -22,7 +22,7 @@ kotlin { jvmToolchain(17) }
  * Симуляции баланса (отчёты, не тесты): свой набор исходников поверх main - вне test и ворот CI, новых зависимостей не требует; видит
  * internal main. Запуск - задача `mobBal` ниже.
  *
- * Тестам виден набор sim: сторож темпа `MobBalGuardTest` зовёт эталонных героев. Задача `mobBal` - баланс монстров (отчёт, не тест):
+ * Тестам виден набор sim: тесты зовут эталонных героев и прохождение. Задача `mobBal` - баланс монстров (отчёт, не тест):
  * эталонные герои против монстров и боссов кампании и карт настоящим боем клиента; `./gradlew :core:mobBal [-Pcontent=<папка>]
  * -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|spread|trials|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
  */
@@ -114,32 +114,8 @@ tasks.withType<Test>().configureEach {
     }
 }
 
-/**
- * Классы сторожей баланса: бои эталонов на минуты. Обычный `test` их не берёт - быстрые тесты ядра, классы в нескольких JVM
- * на ядра машины.
- */
-val balanceGuards = "com.sperance.exileforge.core.sim.*GuardTest"
-
 tasks.test {
-    filter { excludeTestsMatching(balanceGuards) }
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
-}
-
-/**
- * Сторожа баланса (`MobBalGuardTest`, `ModesBalanceGuardTest`, `ClassBalanceGuardTest`) - своя задача и свой job CI рядом с `core`:
- * одна JVM, эталоны общим пулом на прогон (`GuardHeroes`) и дисковым кэшем `build/guard-heroes` (ключ - отпечаток кода `CodePrint` и
- * контента). Контент сервера - вход задачи: его правка перезапускает сторожей. `./gradlew :core:balanceGuard [--tests <класс>]`.
- */
-val balanceGuard by tasks.registering(Test::class) {
-    group = "verification"
-    description = "Balance guards: reference heroes against guardians, modes and classes"
-    testClassesDirs = sourceSets.test.get().output.classesDirs
-    classpath = sourceSets.test.get().runtimeClasspath
-    filter { includeTestsMatching(balanceGuards) }
-    maxHeapSize = "4g"
-    inputs.dir(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content")).withPropertyName("content").withPathSensitivity(PathSensitivity.RELATIVE)
-    systemProperty("guardHeroes", layout.buildDirectory.dir("guard-heroes").get().asFile.path)
-    jvmArgumentProviders += objects.newInstance<CodePrint>().apply { files.from(sim.runtimeClasspath) }
 }
 
 /**

@@ -74,7 +74,8 @@ import com.sperance.exileforge.ui.theme.*
  * The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. Над любой целью
  * кузницы ([ForgeTarget]): [chosen] - сфера лотка, что ляжет на цель; нет её - полоса просит выбрать.
  *
- * Сфера качества, что сбросит качество другого вида, сперва спрашивает подтверждение. Сфера, что идёт только со знамением, ждёт его. Сбор
+ * Сфера качества, что сбросит качество другого вида, сперва спрашивает подтверждение; Очищение предупреждает строкой, что снимет качество,
+ * катализатор и закалку ([ForgeTarget.scoured]). Сфера, что идёт только со знамением, ждёт его. Сбор
  * золотом - по уровню предмета копии, одна функция правил. Сфера гравёра тратится в листе выбора строки ([EngraveSheet]).
  */
 @Composable internal fun OrbBar(
@@ -106,6 +107,10 @@ import com.sperance.exileforge.ui.theme.*
         )
         val resets = code == Orb.QUALITY_ORB.name && lost > 0
         if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        val scoured = Orb.of(code)?.let(target::scoured).orEmpty()
+        if (scoured.isNotEmpty()) {
+            Text(ui("forge.scour_strips", scoured.joinToString(", ") { ui("forge.scoured.${it.name}") }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        }
         if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
         }

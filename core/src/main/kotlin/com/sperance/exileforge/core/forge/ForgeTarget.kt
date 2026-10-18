@@ -14,6 +14,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.AtlasSeals
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 
@@ -22,6 +23,13 @@ private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 
 /** Эссенция делает обычную вещь редкой; только обычную, редкую не перековывает (`OrbApplier`). */
 private val ESSENTIAL = setOf(Rarity.COMMON)
+
+/** Что сверх строк снимает с вещи Сфера очищения (`Orbs.scour` правил): [on] - есть ли это на вещи. */
+enum class ScouredTrait(val on: (ItemInstance) -> Boolean) {
+    QUALITY({ it.quality > 0 }),
+    CATALYST({ it.catalyst != null }),
+    TEMPERED({ it.tempered }),
+}
 
 /**
  * Над чем работает кузница - зеркало правил [OrbTarget]: вещь. Наковальня, лоток сфер и полоса с удерживаемой кнопкой
@@ -63,6 +71,9 @@ sealed interface ForgeTarget {
 
     /** Уникалки, что может дать сфера удачи, - тот же список правил, что тянет сервер. */
     fun chanceUniques(index: ContentIndex): List<String> = emptyList()
+
+    /** Что сфера [orb] снимет с цели сверх строк: Очищение - качество, катализатор и закалку, что на ней есть; пусто - ничего. */
+    fun scoured(orb: Orb): List<ScouredTrait> = emptyList()
 
     /** Пойдёт ли сфера [orb] на цель (со знамением [omen]): сфера одной строки - если хоть одну строку правила примут. */
     fun accepts(applier: OrbApplier, orb: Orb, omen: Omen? = null): Boolean = applier.accepts(orb, orbTarget, omen)
@@ -112,6 +123,8 @@ sealed interface ForgeTarget {
         override fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = QualityForecast.of(index, view.item, view.template, omen)
 
         override fun chanceUniques(index: ContentIndex): List<String> = OrbApplier(index).chanceUniques(view.item, view.template).map { it.value.code }
+
+        override fun scoured(orb: Orb): List<ScouredTrait> = if (orb == Orb.ORB_OF_SCOURING) ScouredTrait.entries.filter { it.on(view.item) } else emptyList()
 
         override fun accepts(applier: OrbApplier, orb: Orb, omen: Omen?): Boolean = if (orb == Orb.ENGRAVERS_ORB) {
             view.item.rolls.indices.any { applier.accepts(orb, OrbTarget.Gear(view.item, view.template, it), omen) }

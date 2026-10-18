@@ -128,6 +128,8 @@ sealed interface RunCommand {
         val crystals: Map<Int, Crystal> = emptyMap(),
         /** First wins over a guardian: the event and the hero's place among all who won it. */
         val ranks: Map<Int, Long> = emptyMap(),
+        /** Ключи очков Атласа, впервые заработанных событием, по его номеру. */
+        val atlas: Map<Int, List<String>> = emptyMap(),
     ) : RunCommand
 
     /** The hero's campaign as the server holds it now: the Vaal zone a portal opened and a crystal a Vaal orb changed are read from it. */

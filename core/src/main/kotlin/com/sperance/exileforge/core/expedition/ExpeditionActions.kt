@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.UnfinishedRun
 import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.FOUGHT_EVENTS
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
@@ -456,20 +457,22 @@ class ExpeditionActions(
             report.lost.takeIf { fell },
             crystals,
             report.rewards.mapNotNull { r -> r.rank?.let { r.n to it } }.toMap(),
+            report.rewards.filter { it.atlas.isNotEmpty() }.associate { it.n to it.atlas },
         )
+        val reported = runs().takeIf { it.isNotEmpty() }?.let { report.rewards.filter { r -> r.kind in FOUGHT_EVENTS }.flatMap { r -> r.atlas } }.orEmpty()
         runs().forEach { it.send(answer) }
         campaign()
         loot(j.heroId, report.rewards.flatMap { it.reward.equipment })
-        atlasEarned(j.heroId, report.rewards.flatMap { it.atlas })
+        atlasEarned(j.heroId, report.rewards.flatMap { it.atlas }, reported)
     }
 
     /**
-     * Новые очки Атласа из ответа: тост на каждое и строки в итогах карты или испытания; [heroId] - чей ответ, чужой
-     * экран их не получает.
+     * Новые очки Атласа из ответа: строки в итогах карты или испытания и тост на каждое, кроме [reported] - их показывает отчёт
+     * боя или окно уровня; [heroId] - чей ответ, чужой экран их не получает.
      */
-    fun atlasEarned(heroId: String, keys: List<String>) {
+    fun atlasEarned(heroId: String, keys: List<String>, reported: Collection<String> = emptyList()) {
         if (keys.isEmpty() || !heroes.onScreen(heroId)) return
-        heroSync.pointsEarned(keys)
+        heroSync.pointsEarned(keys, reported)
         expedition { it.copy(atlasPoints = (it.atlasPoints + keys).distinct()) }
     }
 

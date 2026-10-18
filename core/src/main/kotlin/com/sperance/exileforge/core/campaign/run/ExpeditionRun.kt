@@ -275,6 +275,9 @@ class ExpeditionRun(
     /** The fight's guardian fell to this hero for the first time: their place among all who beat it. */
     internal var rank: Long? = null
 
+    /** Очки Атласа, что принесли события идущего отчёта боя: строкой в окне уровня или плиткой отчёта. */
+    internal var fightAtlas: List<String> = emptyList()
+
     /** The last level the level-up screen told of; the hero's level at the run's start until then. */
     internal var levelShown: Int = heroLevel
 
@@ -512,6 +515,7 @@ class ExpeditionRun(
     internal fun clearSpoils() {
         reward = null
         rank = null
+        fightAtlas = emptyList()
         fightEvents.clear()
     }
 

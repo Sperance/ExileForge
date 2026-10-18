@@ -43,6 +43,7 @@ import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import com.sperance.exileforge.rules.run.RunEventKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -133,6 +134,9 @@ internal fun ExpeditionRun.release() {
     crystalOutcome = null
     engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5, crystal = spot.id, joinsBrawl = false))
 }
+
+/** Виды событий, что пишет падение врага в бою ([fell]): их награда и очки Атласа - в отчёте боя. */
+val FOUGHT_EVENTS: Set<RunEventKind> = setOf(RunEventKind.KILL, RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL)
 
 /** A foe of the fight fell: the event by what it was; its reward comes with the server's answer. */
 internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {

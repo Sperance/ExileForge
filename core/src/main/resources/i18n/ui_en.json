@@ -1152,6 +1152,7 @@
   "levelup.passive_slot": "Passive skill slot unlocked: +{0}",
   "levelup.skill": "Skill available: {0} — find its book",
   "levelup.points": "Passive tree points: +{0}",
+  "levelup.atlas": "Atlas point +{0} — {1}",
   "levelup.opened": "Unlocked",
   "levelup.next": "Next: {0} at level {1}",
   "term.title": "Terms",

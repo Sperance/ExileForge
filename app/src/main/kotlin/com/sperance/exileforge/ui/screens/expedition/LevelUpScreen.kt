@@ -37,9 +37,11 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.display.atlasPointSource
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -56,7 +58,7 @@ import kotlin.math.sin
 /**
  * What a rise brings: the class's growth for every level, the skill slots and the tree's points that open on the way;
  * разделы, открытые по таблице `unlocks` ([opened]), и ближайший следующий ([next]). Тестировщику открыто всё -
- * ни тех, ни другого.
+ * ни тех, ни другого. [atlas] - очки Атласа, что принесло то же событие: сколько очков и откуда.
  */
 internal data class LevelGains(
     val stats: List<Pair<String, Double>>,
@@ -67,9 +69,10 @@ internal data class LevelGains(
     val next: Feature?,
     /** Умения класса и общие, что стали доступны на этих уровнях: их книги теперь падают и читаются. */
     val skills: List<String> = emptyList(),
+    val atlas: List<Pair<Int, String>> = emptyList(),
 )
 
-internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean): LevelGains {
+internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, atlas: List<String> = emptyList()): LevelGains {
     val stats = heroClass?.perLevel.orEmpty().filterValues { it != 0.0 }.map { (stat, value) -> stat to value * rise.levels }
     val within = { levels: List<Int> -> levels.count { it in (rise.from + 1)..rise.to } }
     val rules = index?.skills?.rules
@@ -81,6 +84,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
         opened = if (tester) emptyList() else Feature.gained(rise.from, rise.to, index?.rules),
         next = if (tester) null else Feature.next(rise.to, index?.rules),
         skills = heroClass?.let { c -> index?.skills?.ofClass(c.code)?.filter { it.unlock in (rise.from + 1)..rise.to }?.map { it.code } }.orEmpty(),
+        atlas = atlas.map { key -> (index?.atlas?.points?.let { AtlasPoints.total(it, listOf(key)) } ?: 1) to atlasPointSource(key) },
     )
 }
 
@@ -90,10 +94,11 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
  * (with the attributes every level adds), the skill slots and the tree's points it opened. Several levels at once are one screen.
  * Ниже - «Открыто»: каждый раздел, что открыл уровень, значком и строкой о нём, и «Следующее» - ближайший раздел.
  *
- * Открывшееся умение - строкой, что открывает его карточку.
+ * Открывшееся умение - строкой, что открывает его карточку. Очки Атласа [atlas], что принесло то же событие, - строкой «Очко Атласа +N —
+ * откуда» среди открытого.
  */
-@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, onDone: () -> Unit) {
-    val gains = remember(rise, heroClass, index, tester) { levelGains(rise, heroClass, index, tester) }
+@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, atlas: List<String> = emptyList(), onDone: () -> Unit) {
+    val gains = remember(rise, heroClass, index, tester, atlas) { levelGains(rise, heroClass, index, tester, atlas) }
     val motion = LocalMotion.current
     val drop = remember { Animatable(if (motion) 0f else 1f) }
     var shown by remember { mutableIntStateOf(if (motion) 0 else Int.MAX_VALUE) }
@@ -136,7 +141,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                     ui("levelup.active_slot", gains.active).takeIf { gains.active > 0 },
                     ui("levelup.passive_slot", gains.passive).takeIf { gains.passive > 0 },
                     ui("levelup.points", gains.points).takeIf { gains.points > 0 },
-                )
+                ) + gains.atlas.map { (points, source) -> ui("levelup.atlas", points, source) }
                 if ((unlocks.isNotEmpty() || gains.skills.isNotEmpty()) && shown > gains.stats.size) {
                     val inspect = rememberSkillInspect()
                     Column(

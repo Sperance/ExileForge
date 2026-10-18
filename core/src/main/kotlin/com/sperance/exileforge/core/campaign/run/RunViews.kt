@@ -348,6 +348,8 @@ data class RunHud(
     val rewardAwaiting: Int = 0,
     /** A first win over this guardian: the hero's place among all who beat it. */
     val rank: Long? = null,
+    /** Ключи очков Атласа, что принёс выигранный бой: строкой в окне уровня, если он поднял уровень, иначе плиткой отчёта. */
+    val atlas: List<String> = emptyList(),
     /** The levels the answered experience raised the hero by and the report has not told of yet. */
     val levelUp: LevelUp? = null,
     val slain: RolledMonster? = null,

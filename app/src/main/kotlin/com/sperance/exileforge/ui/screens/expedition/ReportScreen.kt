@@ -66,7 +66,8 @@ import java.util.Locale
  *
  * Гибель открывается на журнале рокового боя. Награды в пути спрашиваются сразу; жест «назад» держит только копилка Бездны при гибели.
  * Первая победа над стражем - место героя среди всех победивших. Гибель ведёт к итогам карты, а не в лагерь. Над отчётом - карточка строки
- * журнала, разбор боя, рецепт с убийства и экран нового уровня.
+ * журнала, разбор боя, рецепт с убийства и экран нового уровня. Очки Атласа боя - строкой в экране уровня, если бой поднял уровень,
+ * иначе плиткой отчёта.
  */
 @Composable internal fun ReportScreen(game: GameUi, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
@@ -81,6 +82,8 @@ import java.util.Locale
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
     LaunchedEffect(receiving) { if (receiving) model.flushRun() }
     val holding = receiving && !won
+    var levelled by remember(report) { mutableStateOf(false) }
+    LaunchedEffect(hud.levelUp) { if (hud.levelUp != null) levelled = true }
     BackHandler(enabled = holding) {}
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
@@ -90,6 +93,7 @@ import java.util.Locale
         if (won) hud.rank?.let { place -> FirstWin(place, monsterTitle(report.monster.code)) }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (won) Spoils(game, hud, onStack = { inspect(Inspect.Stack(it)) }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
+            if (won && hud.levelUp == null && !levelled) AtlasBlock(hud.atlas)
             if (logOpen) {
                 Box(
                     Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
@@ -116,7 +120,7 @@ import java.util.Locale
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
     if (breakdown) FightStatsSheet(report.stats, hud.summary.fights) { breakdown = false }
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
-    if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index, game.isTester) { model.runCommand(RunCommand.LevelSeen) } }
+    if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index, game.isTester, hud.atlas) { model.runCommand(RunCommand.LevelSeen) } }
 }
 
 /**

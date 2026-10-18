@@ -53,10 +53,10 @@ class HeroSync(
 
     /**
      * Новые очки Атласа из награды события похода или испытания (ключи [com.sperance.exileforge.rules.content.AtlasPoints.key]):
-     * тост на каждое - за что оно, - раз; следующее чтение героя их не повторяет.
+     * тост на каждое - за что оно, - раз, кроме [shown] - о них уже говорит экран события; следующее чтение героя их не повторяет.
      */
-    fun pointsEarned(keys: Collection<String>) {
-        keys.filter { announcedPoints.add(it) }.forEach { notices.toast(atlasPointToast(it), NoticeKind.ATLAS) }
+    fun pointsEarned(keys: Collection<String>, shown: Collection<String> = emptyList()) {
+        keys.filter { announcedPoints.add(it) && it !in shown }.forEach { notices.toast(atlasPointToast(it), NoticeKind.ATLAS) }
     }
 
     private var parts: HeroParts? = null

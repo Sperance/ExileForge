@@ -30,6 +30,7 @@ internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
     if (fallEvent != null) answer.lost?.let { fall = it }
     answer.crystals.forEach { (n, changed) -> if (n in vaalings) vaaled[n] = changed }
     answer.ranks.forEach { (n, place) -> if (n in fightEvents) rank = place }
+    answer.atlas.forEach { (n, keys) -> if (n in fightEvents) fightAtlas = (fightAtlas + keys).distinct() }
     showDrops()
     resolve()
 }

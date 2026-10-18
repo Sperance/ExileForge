@@ -202,7 +202,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         CycleBar(work, offset, crafts.last)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             CycleClock(work, offset)
-            val rules = crafts.rules
+            val rules = crafts.state?.rules
             if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
         }
         if (profession != null && job != null) LevelRow(profession, job, work, offset)

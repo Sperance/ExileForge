@@ -505,4 +505,3 @@ private const val QUOTE_LINES = 3
 private const val DAY_MS = 86_400_000L
 private const val SECOND_MS = 1_000L
 private const val TICK_MS = 1_000L
-

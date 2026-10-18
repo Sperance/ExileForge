@@ -102,6 +102,26 @@ class SheetExplainTest {
         assertTrue(summary < 0 && abs(fight - summary) < abs(summary) * 0.01, "бой $fight/с != сводка $summary/с")
     }
 
+    /**
+     * Регенерация маны не ниже нуля: отрицательная база или «увеличение» останавливают её - сводка ноль, разбор доходит до нуля,
+     * и после базы ни один шаг не уводит итог ниже нуля.
+     */
+    @Test fun manaRegenStopsAtZero() {
+        val index = TestContent.index
+        val heroClass = index.classes.classes.first()
+        val sheet = Sheets.calculate(index, 40, heroClass.code, emptyList(), emptyList())
+        val combat = CombatSheet.of(index, sheet, 40, heroClass.code, HeroSkills(), null, emptyList())!!
+        val reading = FightReading.MANA_REGEN
+        listOf(CoreStat.MANA_REGEN_FLAT.code to -1e4, CoreStat.MANA_REGEN.code to -1e4).forEach { (stat, delta) ->
+            val stats = combat.stats + (stat to (combat.stats[stat] ?: 0.0) + delta)
+            val summary = combat.figures(stats).values[reading.stat] ?: 0.0
+            val body = Combatant(stats, 40, index.campaign.combat)
+            val totals = reading.steps(body)!!.runningFold(body[reading.stat]) { at, step -> at + step.delta }
+            assertTrue(abs(summary) < 1e-9 && abs(totals.last()) < 1e-9, "$stat: сводка $summary, разбор ${totals.last()}")
+            assertTrue(totals.drop(2).all { it >= -1e-9 }, "$stat: отрицательный шаг разбора $totals")
+        }
+    }
+
     /** Часть строки сводки из контента (`partOf`) читается боем вместе со строкой: иначе её цифра пропала бы из сводки. */
     @Test fun everyRowPartIsReadByTheFight() {
         val registry = TestContent.index.stats

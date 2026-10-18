@@ -99,16 +99,21 @@ enum class FightReading(override val stat: String, override val from: String, ov
 
     /**
      * Регенерация маны: строка сводки - итог потока маны в секунду ([Recovery.manaFlow]): к плоской - доля максимума по
-     * правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления.
+     * правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления. Не положительная база останавливает регенерацию
+     * шагом [ReadingPart.MANA_FLOOR], не положительное «увеличение» - своим шагом в ноль: цепочка доходит до нуля, маны не отнимает.
      */
     MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true) {
         override fun steps(body: Combatant): List<ReadingStep> {
             val flow = Recovery.manaFlow(body, body.rules.mana)
-            val base = flow.ofMax + flow.flat
             return ReadingSteps(body[stat]).apply {
-                to(ReadingPart.MANA_OF_MAX, base)
-                to(ReadingPart.MANA_INCREASE, base * flow.increase, flow.increase)
-                to(ReadingPart.MANA_SHARE, flow.total, flow.share)
+                to(ReadingPart.MANA_OF_MAX, flow.raw)
+                if (flow.raw > 0) {
+                    val increase = flow.increase.coerceAtLeast(0.0)
+                    to(ReadingPart.MANA_INCREASE, flow.raw * increase, increase)
+                    to(ReadingPart.MANA_SHARE, flow.total, flow.share)
+                } else {
+                    to(ReadingPart.MANA_FLOOR, flow.total)
+                }
             }.steps
         }
     },
@@ -153,6 +158,10 @@ enum class ReadingPart(val stat: String?) {
     MANA_OF_MAX(CoreStat.MANA.code),
     MANA_INCREASE(CoreStat.MANA_REGEN.code),
     MANA_SHARE(CoreStat.MANA_REGEN_LESS.code),
+
+    /** Регенерация маны не ниже нуля: не положительная база её останавливает. */
+    MANA_FLOOR(null),
+
     SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code),
     KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code),
     CHARGE_BASE(null),

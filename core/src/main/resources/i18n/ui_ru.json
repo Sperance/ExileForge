@@ -2730,6 +2730,7 @@
   "stat.flow.MANA_OF_MAX": "Доля максимума маны",
   "stat.flow.MANA_INCREASE": "Увеличение регенерации маны",
   "stat.flow.MANA_SHARE": "Меньше регенерации маны",
+  "stat.flow.MANA_FLOOR": "Регенерация не ниже нуля",
   "stat.flow.SHIELD_OF_MAX": "Доля максимума щита",
   "stat.flow.KILL_OF_MAX": "Доля максимума здоровья",
   "stat.flow.CHARGE_BASE": "База правил",

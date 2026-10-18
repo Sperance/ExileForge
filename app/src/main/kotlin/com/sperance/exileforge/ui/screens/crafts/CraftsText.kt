@@ -215,12 +215,6 @@ internal fun shortNote(game: GameUi, job: JobView, additives: List<String>): Str
     return line + " " + ui("crafts.short_source", professionTitle(source.first.code), jobTitle(source.second.code), source.second.level)
 }
 
-/** Время часами: «3:41», «1:05:09». */
-internal fun clock(millis: Long): String {
-    val seconds = (millis / 1000).coerceAtLeast(0)
-    return if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60) else "%d:%02d".format(seconds / 60, seconds % 60)
-}
-
 internal fun eta(millis: Long): String {
     val seconds = (millis + 999) / 1000
     return when {

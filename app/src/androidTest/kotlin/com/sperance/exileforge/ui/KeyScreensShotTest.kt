@@ -39,8 +39,10 @@ import com.sperance.exileforge.core.campaign.run.ObjectAction
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.crafts.Crafts
+import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.jobTitle
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
@@ -95,6 +97,8 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.roll.WorkBonus
+import com.sperance.exileforge.rules.roll.WorkLayers
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
@@ -117,6 +121,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.craft.TargetRail
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
+import com.sperance.exileforge.ui.screens.crafts.JobFields
 import com.sperance.exileforge.ui.screens.crafts.WorkPlaque
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
@@ -394,6 +399,33 @@ class KeyScreensShotTest {
         val work = WorkView(profession.code, job.code, settledAt = now - 12_000, cycleMillis = 30_000, startedAt = now - 65 * 60_000, totals = WorkTally(cycles = 130, nothing = 2, items = mapOf(job.output to 118), experience = 12_345.0, levels = 1))
         val vm: CraftsViewModel = GlobalContext.get().get()
         WorkPlaque(game(40), vm, Crafts(CraftsState(now = now, professions = listOf(held), work = work), readAt = now), 0L)
+    }
+
+    /** Поля листа работы свёрнутыми: все источники, длинное имя находки. */
+    @Test fun jobFields() = shot("job_fields") { JobFieldsSample(tool = true) }
+
+    /** Поля листа работы с раскрытым циклом. */
+    @Test fun jobFieldsOpen() = shot("job_fields_open", open = cycleLabel(tool = true)) { JobFieldsSample(tool = true) }
+
+    /** Поля листа работы без инструмента с раскрытым циклом: тусклая ступень «Инструмент: нет». */
+    @Test fun jobFieldsNoTool() = shot("job_fields_notool", open = cycleLabel(tool = false)) { JobFieldsSample(tool = false) }
+
+    private fun fieldsSample(tool: Boolean): Pair<ProfessionView, JobView> {
+        val (profession, job) = index.professions.professions.flatMap { p -> p.jobs.filterIsInstance<Job.Item>().map { p to it } }.maxBy { (_, j) -> j.extra.size * 100 + jobTitle(j.code).length }
+        val long = index.items.keys.maxBy { itemTitle(it.value).length }.value
+        val view = JobView(job, cycleMillis = 30_000, nothing = 10.0, extra = (job.extra + JobExtra(long, 0.5)).take(4), experience = 12.0)
+        val toolLayer = if (tool) WorkBonus(speed = 10.0, yield = 11.0) else WorkBonus()
+        val sheet = toolLayer.copy(speed = toolLayer.speed + 4, find = 3.0)
+        val guild = sheet.copy(speed = sheet.speed + 3, experience = 5.0)
+        val layers = WorkLayers(tool = toolLayer, sheet = sheet, guild = guild, fate = guild.copy(double = 5.0))
+        return ProfessionView(profession.code, tool = if (tool) "" else profession.tool.name, level = 14, bonus = layers.total, jobs = listOf(view), layers = layers) to view
+    }
+
+    private fun cycleLabel(tool: Boolean): String = fieldsSample(tool).let { (p, j) -> JobLedger.of(index.professions.rules, p, j).first().let { ui("crafts.ledger.open", it.caption, it.value) } }
+
+    @Composable private fun JobFieldsSample(tool: Boolean) {
+        val (profession, job) = fieldsSample(tool)
+        JobFields(JobLedger.of(index.professions.rules, profession, job), job.code) {}
     }
 
     /** Состояние слота умения на снимке панели боя. */

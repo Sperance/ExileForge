@@ -35,7 +35,6 @@ import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
 import com.sperance.exileforge.core.sheet.reserve
@@ -95,16 +94,12 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable fun StatSheet(game: GameUi, figures: StatFigures, before: Map<String, Double>? = null, shifts: Map<String, List<Shift>> = emptyMap()) {
     var open by remember { mutableStateOf<String?>(null) }
-    var unfold by remember { mutableStateOf(false) }
-    val show: (String, Boolean) -> Unit = { stat, detail ->
-        open = stat
-        unfold = detail
-    }
+    val show: (String) -> Unit = { open = it }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, show) } }
     }
-    open?.let { StatBreakdownSheet(game, it, figures.stats, shifts, unfold) { open = null } }
+    open?.let { StatBreakdownSheet(game, it, figures.stats, shifts) { open = null } }
 }
 
 internal fun StatSection.accent(): Color = when (this) {
@@ -133,9 +128,9 @@ private val StatSection.glyph: Glyph get() = when (this) {
 /**
  * A section: a card headed by its icon and name in its colour, then its figures one to a row, a thin line between. Строки, что поднимают
  * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их. [open] -
- * разбор строки, с раскрытым описанием или без.
+ * разбор строки.
  */
-@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, open: (String, Boolean) -> Unit) {
+@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, open: (String) -> Unit) {
     val accent = group.accent()
     val shape = RoundedCornerShape(10.dp)
     val raisers = remember(game.index) { game.index?.let(StatLimits::raisers).orEmpty() }
@@ -186,44 +181,12 @@ private val StatSection.glyph: Glyph get() = when (this) {
     }
 }
 
-/**
- * Строка сводки и под ней - раскрытое на месте начало подробного описания ([StatDetail]: первый абзац) со ссылкой «Подробнее в
- * разборе →». Касание строки открывает разбор ([open] без описания), стрелка справа - отдельная зона касания - раскрывает и сворачивает
- * описание; у характеристики без описания стрелки нет.
- */
-@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String, Boolean) -> Unit) {
-    val lead = remember(key, game.index, game.lang) { StatDetail.paragraphs(key, game.index, game.lang).firstOrNull() }
-    var unfolded by rememberSaveable(key) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().then(if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier)) {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
-            StatRow(key, value, was, before, accent, figures, game, Modifier.weight(1f).clickable { open(key, false) }.padding(start = 12.dp, end = if (lead == null) 12.dp else 0.dp, top = 9.dp, bottom = 9.dp))
-            if (lead != null) {
-                Box(
-                    Modifier.fillMaxHeight().width(40.dp).clickable(role = Role.Button, onClickLabel = ui("stat.fold.toggle")) { unfolded = !unfolded },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(if (unfolded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, ui("stat.fold.toggle"), tint = Muted, modifier = Modifier.size(18.dp))
-                }
-            }
-        }
-        if (unfolded && lead != null) DetailLead(lead, accent) { open(key, true) }
-    }
-}
-
-/** Начало описания под строкой сводки: черта цвета раздела слева, текст и ссылка «Подробнее в разборе →» ([more]). */
-@Composable private fun DetailLead(lead: String, accent: Color, more: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = 40.dp, end = 12.dp, bottom = 8.dp)) {
-        Box(Modifier.width(2.dp).fillMaxHeight().background(accent.copy(alpha = .4f)))
-        Column(Modifier.padding(start = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(lead, color = Parchment, style = MaterialTheme.typography.bodySmall)
-            Text(
-                ui("stat.fold.in_breakdown"),
-                color = ModBlue,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.clickable(role = Role.Button, onClick = more).padding(vertical = 4.dp),
-            )
-        }
-    }
+/** Строка сводки: касание открывает разбор ([open]). */
+@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String) -> Unit) {
+    StatRow(
+        key, value, was, before, accent, figures, game,
+        Modifier.fillMaxWidth().then(if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 9.dp),
+    )
 }
 
 /**

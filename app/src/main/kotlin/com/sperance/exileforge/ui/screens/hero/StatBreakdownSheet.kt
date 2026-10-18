@@ -22,18 +22,14 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.stat
 import com.sperance.exileforge.core.character.StatPolarity
-import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.contentKeys
-import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
@@ -46,9 +42,6 @@ import com.sperance.exileforge.core.sheet.ShareRow
 import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.core.sheet.StatExplainer
 import com.sperance.exileforge.core.sheet.StatExplanation
-import com.sperance.exileforge.core.sheet.StatHolder
-import com.sperance.exileforge.core.sheet.StatLinks
-import com.sperance.exileforge.core.sheet.StatRelations
 import com.sperance.exileforge.core.sheet.reserve
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ReservePool
@@ -58,8 +51,6 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.StatIcon
-import com.sperance.exileforge.ui.screens.skills.SkillPeek
-import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 
 internal fun ShareKind.color(): Color = when (this) {
@@ -88,12 +79,11 @@ internal fun ShareKind.color(): Color = when (this) {
  * пассивные умения и шаги Предначертания - доли итога, полосы и формулы.
  *
  * Ключи карточек - по виду и заголовку: переход по цифрам не перекомпонует совпавшие карточки. Пределы и защита процентом - по
- * листу [stats], с которого нарисована сводка (во вкладке «Под картой» - с картой). Под цитатой - свёртка «Подробнее» ([DetailFold]),
- * [unfold] - открыть её сразу (касание «Подробнее в разборе →» сводки).
+ * листу [stats], с которого нарисована сводка (во вкладке «Под картой» - с картой). Под цитатой - свёртка «Подробнее» ([DetailFold]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, shifts: Map<String, List<Shift>>, unfold: Boolean = false, onDismiss: () -> Unit) {
+fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
     val combat = game.hero?.combat ?: run {
         LaunchedEffect(stat) { onDismiss() }
         return
@@ -112,10 +102,8 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
         }
     }
     val accent = game.index?.stats?.section(current)?.accent() ?: Muted
-    val relations = remember(game.index) { game.index?.let(::StatRelations) }
     val detail = remember(current, game.index, game.lang) { StatDetail.paragraphs(current, game.index, game.lang) }
-    val links = remember(current, relations) { relations?.of(current) }
-    var folded by rememberSaveable(stat) { mutableStateOf(!unfold) }
+    var folded by rememberSaveable(stat) { mutableStateOf(true) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
             Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(),
@@ -129,7 +117,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             }
             val defence = game.index?.let { index -> game.hero?.level?.let { StatLimits.defence(current, stats, it, index) } }
             item { Header(current, view, defence, stats, accent, game) }
-            if (detail.isNotEmpty() || links?.isEmpty == false) item { DetailFold(detail, links, folded, game) { folded = !folded } }
+            if (detail.isNotEmpty()) item { DetailFold(detail, folded) { folded = !folded } }
             defence?.let { reading -> item { DefenceCard(current, reading, stats, game) } }
             game.index?.campaign?.let { StatLimits.of(current, stats, it) }?.let { limit -> item { LimitCard(limit, game, follow) } }
             ReservePool.entries.firstOrNull { it.stat == current }?.let(game::reserve)?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
@@ -334,11 +322,8 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
     }
 }
 
-/**
- * Свёртка «Подробнее» под цитатой разбора: «Что даёт» - абзацы подробного описания ([StatDetail]), «Кто даёт» и «Кто тратит» -
- * фишки носителей ([StatRelations]): умение открывает свою карточку, уникальный предмет - витрину шаблона, узел древа - только имя.
- */
-@Composable private fun DetailFold(detail: List<String>, links: StatLinks?, folded: Boolean, game: GameUi, onToggle: () -> Unit) {
+/** Свёртка «Подробнее» под цитатой разбора: «Что даёт» - абзацы подробного описания ([StatDetail]). */
+@Composable private fun DetailFold(detail: List<String>, folded: Boolean, onToggle: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             Modifier.clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onToggle).padding(vertical = 4.dp, horizontal = 2.dp),
@@ -354,22 +339,12 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
             Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (detail.isNotEmpty()) {
-                FoldTitle(ui("stat.fold.what"))
-                detail.forEach { paragraph ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("•", color = Muted, style = MaterialTheme.typography.bodySmall)
-                        Text(paragraph, color = Parchment, style = MaterialTheme.typography.bodySmall)
-                    }
+            FoldTitle(ui("stat.fold.what"))
+            detail.forEach { paragraph ->
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("•", color = Muted, style = MaterialTheme.typography.bodySmall)
+                    Text(paragraph, color = Parchment, style = MaterialTheme.typography.bodySmall)
                 }
-            }
-            links?.gives?.takeIf { it.isNotEmpty() }?.let { holders ->
-                FoldTitle(ui("stat.fold.givers"))
-                HolderChips(holders, game)
-            }
-            links?.spends?.takeIf { it.isNotEmpty() }?.let { holders ->
-                FoldTitle(ui("stat.fold.spenders"))
-                HolderChips(holders, game)
             }
         }
     }
@@ -378,43 +353,3 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
 @Composable private fun FoldTitle(text: String) {
     Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
 }
-
-/**
- * Фишки носителей: первые [HOLDERS_SHOWN], остальные - за фишкой «ещё N»; умение и уникальный предмет - ссылкой на карточку, узел
- * древа - без касания.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun HolderChips(holders: List<StatHolder>, game: GameUi) {
-    val inspect = rememberInspect()
-    val peek = rememberSkillInspect()
-    var all by remember(holders) { mutableStateOf(false) }
-    val shown = if (all) holders else holders.take(HOLDERS_SHOWN)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        shown.forEach { holder ->
-            when (holder) {
-                is StatHolder.Skill -> HolderChip(SkillText.title(holder.code)) { peek(SkillPeek(holder.code)) }
-                is StatHolder.Unique -> HolderChip(equipmentTitle(holder.template)) { inspect(Inspect.Showcase(holder.template)) }
-                is StatHolder.Node -> HolderChip(nodeTitle(holder.code), null)
-            }
-        }
-        if (!all && holders.size > HOLDERS_SHOWN) HolderChip(ui("stat.fold.rest", holders.size - HOLDERS_SHOWN)) { all = true }
-    }
-}
-
-/** Фишка носителя: со ссылкой [onClick] - синяя рамка и касание, без неё - простая. */
-@Composable private fun HolderChip(title: String, onClick: (() -> Unit)?) {
-    val shape = RoundedCornerShape(8.dp)
-    Text(
-        title,
-        color = if (onClick != null) ModBlue else Parchment,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.clip(shape).background(Panel).border(1.dp, if (onClick != null) ModBlue.copy(alpha = .35f) else Bronze, shape)
-            .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier).padding(horizontal = 8.dp, vertical = 4.dp),
-    )
-}
-
-/** Сколько фишек носителей видно сразу; остальные - за фишкой «ещё N». */
-private const val HOLDERS_SHOWN = 12

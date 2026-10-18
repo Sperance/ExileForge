@@ -294,8 +294,8 @@ class KeyScreensShotTest {
         InspectActions(Inspect.Copy(item, InspectAction(ui("bag.to_forge")) {}, InspectAction(ui("hero.equip")) {}, menu), InspectChoice(null)) {}
     }
 
-    /** Сводка героя: раздел «Заряды» с действующим максимумом и раскрытое стрелкой ▾ описание под первой строкой. */
-    @Test fun heroSummary() = shot("hero_summary", open = ui("stat.fold.toggle")) {
+    /** Сводка героя: раздел «Заряды» с действующим максимумом. */
+    @Test fun heroSummary() = shot("hero_summary") {
         val level = 70
         val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         val combat = CombatSheet.of(index, sheet, level, heroClass.code, HeroSkills(), null, emptyList())

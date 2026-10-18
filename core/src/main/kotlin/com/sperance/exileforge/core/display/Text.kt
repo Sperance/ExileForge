@@ -239,6 +239,12 @@ fun modNumber(stat: String, value: Double): String = if (stat in preciseStats) s
 /** A small figure with its tenth: a bleed of 0.4 a second is «0.4», not «0»; from ten up the whole number stays. */
 fun fineNumber(value: Double): String = if (kotlin.math.abs(value) >= 10) Math.round(value).toString() else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
 
+/** Время часами: «3:41», «1:05:09». */
+fun clock(millis: Long): String {
+    val seconds = (millis / 1000).coerceAtLeast(0)
+    return if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60) else "%d:%02d".format(seconds / 60, seconds % 60)
+}
+
 /**
  * Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14" reads «Требуется 30 силы»:
  * the hero's own figure is on the hero screen already, so only the need is told.

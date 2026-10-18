@@ -15,14 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -35,7 +29,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -50,8 +43,10 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.JobBlock
 import com.sperance.exileforge.core.crafts.JobGroups
+import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle
+import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentDescription
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -210,8 +205,8 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
 
 /**
  * Лист работы формулой рецепта: имя и «профессия · с ур. N», выбор варианта (и вещи у Осквернения), полоса-формула «вход + вход → выход
- * + находки» (касание материала или выхода - карточка), что получится - имя, сведения и описание (касание - карточка), четыре показателя
- * плитками 2×2 (касание - справка: цикл, в час, впустую или лишняя добыча, опыт), примеси кузнеца, у нехватки - где материал добывается,
+ * + находки» (касание материала или выхода - карточка), что получится - имя, сведения и описание (касание - карточка), поля работы списком
+ * с разбором по источникам ([JobFields]), примеси кузнеца, у нехватки - где материал добывается,
  * и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион, инструмент или нехватка на цикл.
  *
  * Работа с выбором запускается одним из вариантов; недоступный виден с замком. Кузнец открывается в последнем режиме этого героя на
@@ -273,7 +268,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             }
             RecipeFormula(game, profession, job, chosenAdditives) { it?.let(inspect) }
             ResultLine(game, job) { it?.let(inspect) }
-            JobFigures(profession, job) { help = it }
+            crafts?.rules?.let { rules -> JobFields(remember(rules, profession, job) { JobLedger.of(rules, profession, job) }, job.code) { help = it } }
             if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -395,52 +390,6 @@ private fun yieldLabel(profession: ProfessionView): String {
             if (description.isNotEmpty()) Text(description, color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
         if (card != null) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
-    }
-}
-
-/**
- * Четыре показателя работы плитками 2×2: цикл (с базой), выход в час, исход цикла (лишняя добыча, впустую или гарантия) и опыт за цикл;
- * касание - [onHelp] с ключом статьи справки.
- */
-@Composable private fun JobFigures(profession: ProfessionView, job: JobView, onHelp: (String) -> Unit) {
-    val extra = profession.bonus.yield.coerceAtLeast(0.0)
-    val outcome = when {
-        extra > 0 -> Figure(Icons.Outlined.Add, "+" + ui("crafts.percent", number(extra)), ui("crafts.metric_yield"), Vital, "double")
-        job.nothing > 0 -> Figure(Icons.Outlined.Block, ui("crafts.percent", number(job.nothing)), ui("crafts.metric_waste"), LifeRed, "waste")
-        else -> Figure(Icons.Outlined.Check, "✓", ui("crafts.metric_sure"), Vital, "sure")
-    }
-    val figures = listOf(
-        Figure(Icons.Outlined.Schedule, clock(job.cycleMillis), ui("crafts.metric_cycle_base", clock((job.seconds * 1000).toLong())), Parchment, "cycle"),
-        Figure(Icons.Outlined.TrendingUp, perHour(job, profession)?.let { ui("crafts.about", fineNumber(it)) } ?: "—", ui("crafts.metric_hour"), Vital, "hour"),
-        outcome,
-        Figure(Icons.Outlined.StarOutline, "+" + number(job.experience), ui("crafts.metric_experience"), Rune, "experience"),
-    )
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        figures.chunked(2).forEach { pair ->
-            Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                pair.forEach { figure -> FigureTile(figure, Modifier.weight(1f).fillMaxHeight()) { onHelp(figure.help) } }
-            }
-        }
-    }
-}
-
-/** Показатель листа: значок, число цветом [tint], подпись и ключ справки [help]. */
-private class Figure(val icon: ImageVector, val value: String, val caption: String, val tint: Color, val help: String)
-
-@Composable private fun FigureTile(figure: Figure, modifier: Modifier, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(9.dp)
-    Row(
-        modifier.clip(shape).background(Abyss).border(1.dp, Bronze, shape).clickable(role = Role.Button, onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.size(30.dp).background(PanelRaised, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-            Icon(figure.icon, null, tint = figure.tint, modifier = Modifier.size(17.dp))
-        }
-        Column {
-            Text(figure.value, color = figure.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(figure.caption, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2)
-        }
     }
 }
 

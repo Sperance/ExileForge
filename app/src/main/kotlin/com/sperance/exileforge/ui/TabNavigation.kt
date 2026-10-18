@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.CubicBezierEasing
@@ -14,14 +15,18 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation3.runtime.NavEntryDecorator
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import com.sperance.exileforge.ui.components.LocalScreenAway
 import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.nav.barSlot
 import kotlin.math.roundToInt
@@ -70,6 +75,16 @@ fun tabShift(step: Int): ContentTransform {
         },
         label = "tabChrome",
     ) { content(it) }
+}
+
+/**
+ * Украшение записей `NavDisplay`: запись, чей выход доводит переход, стоит ([LocalScreenAway]) - уходящий экран не дышит декором,
+ * пока доезжает, и не делит кадры с входящим.
+ */
+val ScreenAwayDecorator: NavEntryDecorator<Route> = NavEntryDecorator { entry ->
+    val transition = LocalNavAnimatedContentScope.current.transition
+    val away = remember(transition) { derivedStateOf { transition.targetState == EnterExitState.PostExit } }
+    CompositionLocalProvider(LocalScreenAway provides away) { entry.Content() }
 }
 
 /**

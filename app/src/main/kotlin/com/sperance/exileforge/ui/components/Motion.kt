@@ -10,6 +10,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -22,6 +23,14 @@ import kotlinx.coroutines.flow.first
 
 /** Whether the screens move («Анимации» in the settings): the pulses, glows and marching roads stand still when off. */
 val LocalMotion = staticCompositionLocalOf { true }
+
+/**
+ * Уходит ли экран сменой экрана (`NavDisplay` доводит его выход): пока уходит, его декор стоит на последней фазе и не перерисовывается
+ * шагом часов. Читается в рисовании; вне стека экранов - никогда.
+ */
+val LocalScreenAway = staticCompositionLocalOf<State<Boolean>> { NEVER_AWAY }
+
+private val NEVER_AWAY: State<Boolean> = mutableStateOf(false)
 
 /** The player's settings for the screens that read one directly: the fight's numbers and its pause. */
 val LocalSettings = staticCompositionLocalOf { GameSettings() }
@@ -97,7 +106,8 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
     val clock = LocalDecorClock.current
     val moving = LocalMotion.current
     DecorReader(clock, moving)
-    return remember(clock, moving, periodMs, still) { derivedStateOf { if (!moving || clock == null) still else (clock.now * MS_PER_S % periodMs) / periodMs } }
+    val away = LocalScreenAway.current
+    return remember(clock, moving, away, periodMs, still) { held(still, away) { if (!moving || clock == null) still else (clock.now * MS_PER_S % periodMs) / periodMs } }
 }
 
 /**
@@ -108,7 +118,14 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
     val clock = LocalDecorClock.current
     val moving = LocalMotion.current
     DecorReader(clock, moving)
-    return remember(clock, moving) { derivedStateOf { if (!moving || clock == null) 0f else clock.now } }
+    val away = LocalScreenAway.current
+    return remember(clock, moving, away) { held(0f, away) { if (!moving || clock == null) 0f else clock.now } }
+}
+
+/** Значение [read], что стоит на последнем прочитанном, пока экран уходит ([away]): часы его тогда не будят. */
+private fun held(start: Float, away: State<Boolean>, read: () -> Float): State<Float> {
+    var last = start
+    return derivedStateOf { if (away.value) last else read().also { last = it } }
 }
 
 /** Сон часов декора между шагами: с ожиданием следующего кадра шаг - около 30 раз в секунду. */

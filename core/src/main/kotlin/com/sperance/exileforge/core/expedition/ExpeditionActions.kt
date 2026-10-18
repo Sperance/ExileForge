@@ -121,6 +121,9 @@ class ExpeditionActions(
     /** Журнал похода, что идёт. */
     private var runJournal: RunJournal? = null
 
+    /** Заход, которому принадлежат пометки к продаже на экране: вход в него же после перезапуска их сохраняет, в другой - снимает. */
+    private var marked: String? = null
+
     /** Заход, который сервер уже закрыл по ответу журнала (выход или гибель, `RunReport.open` = false): бросать его нечего. */
     private var shut: String? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
@@ -287,11 +290,14 @@ class ExpeditionActions(
         val zone = i.zone(started.zone) ?: return
         val gear = gear() ?: return
         val run = Run(i, zone, started.seed, started.context)
-        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied).also { runJournal = it }
+        val marks = repository.state.value.saleMarks.takeIf { marked == started.id }.orEmpty()
+        marked = started.id
+        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, saleMarks = marks).also { runJournal = it }
+        if (marks.isNotEmpty()) persist()
         val board = quests.board().takeIf { it.board != null }
         expedition {
             it.copy(
-                runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet(),
+                runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = marks,
                 quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion,
             )
         }
@@ -496,8 +502,17 @@ class ExpeditionActions(
         }
     }
 
-    /** Пометка вещи добычи к продаже посреди захода: в итогах карты помеченное уже отмечено; повтор снимает. */
-    fun toggleSaleMark(itemId: String) = expedition { it.copy(saleMarks = if (itemId in it.saleMarks) it.saleMarks - itemId else it.saleMarks + itemId) }
+    /**
+     * Пометка вещи добычи к продаже посреди захода: в итогах карты помеченное уже отмечено; повтор снимает. Пометки пишутся в журнал
+     * захода на устройстве ([RunJournal.saleMarks]) и переживают перезапуск.
+     */
+    fun toggleSaleMark(itemId: String) {
+        expedition { it.copy(saleMarks = if (itemId in it.saleMarks) it.saleMarks - itemId else it.saleMarks + itemId) }
+        runJournal?.let { j ->
+            j.saleMarks = repository.state.value.saleMarks
+            persist()
+        }
+    }
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
     fun flushRun() {
@@ -506,7 +521,8 @@ class ExpeditionActions(
 
     /**
      * При входе в героя: журнал с прошлого запуска отправляется, если поход героя всё ещё тот, что он называет;
-     * начатый с тех пор или никакой значит, что сервер его закрыл, и журнал отбрасывается.
+     * начатый с тех пор или никакой значит, что сервер его закрыл, и журнал отбрасывается. Пометки к продаже журнала того же
+     * захода возвращаются на экран; принятый сервером журнал с пометками лежит на диске до входа в заход.
      */
     suspend fun resume(id: String) {
         store.journal(id)?.let(RunJournal::decode)?.let { kept -> resumeJournal(id, kept) }
@@ -515,8 +531,14 @@ class ExpeditionActions(
 
     private suspend fun resumeJournal(id: String, kept: RunJournal) {
         val open = hero?.takeIf { it.id == id }?.campaign?.run
-        if (open?.id != kept.runId || kept.settled) {
+        if (open?.id != kept.runId) {
             store.clearJournal(id)
+            return
+        }
+        marked = kept.runId
+        expedition { it.copy(saleMarks = kept.saleMarks) }
+        if (kept.settled) {
+            if (kept.saleMarks.isEmpty()) store.clearJournal(id)
             return
         }
         runJournal = kept

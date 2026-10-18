@@ -4,7 +4,10 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.rules.run.RunEvent
 import kotlinx.serialization.Serializable
 
-/** The journal on disk: one run's events in order, the number the first of them bears, how far the server has applied them, and the batch in flight. */
+/**
+ * Журнал на диске: события захода по порядку, номер первого, докуда их принял сервер, пачка в пути и вещи добычи, помеченные
+ * к продаже ([saleMarks]) - пометки переживают перезапуск приложения.
+ */
 @Serializable data class JournalState(
     val runId: String,
     val heroId: String,
@@ -13,6 +16,7 @@ import kotlinx.serialization.Serializable
     val applied: Int = 0,
     val base: Int = 0,
     val batch: JournalBatch? = null,
+    val saleMarks: Set<String> = emptySet(),
 )
 
 /**
@@ -39,8 +43,12 @@ class RunJournal(
     applied: Int = 0,
     val base: Int = 0,
     batch: JournalBatch? = null,
+    saleMarks: Set<String> = emptySet(),
 ) {
     private val events = events.toMutableList()
+
+    /** Id вещей добычи захода, помеченных к продаже: хранятся с журналом. */
+    var saleMarks: Set<String> = saleMarks
 
     private val end: Int get() = base + events.size
     var applied: Int = applied.coerceIn(base, base + events.size)
@@ -91,14 +99,14 @@ class RunJournal(
         batch = null
     }
 
-    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch)
+    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch, saleMarks)
     fun encode(): String = WireJson.encodeToString(JournalState.serializer(), snapshot())
 
     companion object {
         /** The most events one batch carries: the server refuses a longer journal whole (CP_022). */
         const val MAX_BATCH = 64
 
-        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch)
+        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch, state.saleMarks)
         fun decode(text: String): RunJournal? = runCatching { of(WireJson.decodeFromString(JournalState.serializer(), text)) }.getOrNull()
     }
 }

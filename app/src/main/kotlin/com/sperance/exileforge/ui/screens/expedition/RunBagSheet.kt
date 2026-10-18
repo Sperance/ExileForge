@@ -1,5 +1,9 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -58,7 +63,8 @@ import kotlinx.coroutines.delay
  * Лист «Сумки захода»: [bag] - порции новые сверху, [gold] и [experience] - итог захода, [awaiting] - событий ждут ответа.
  *
  * «Сумка захода»: вся добыча захода - бои, сундуки, объекты карты, Ваал-зона - порциями по событию, новое сверху; над списком - золото и
- * опыт захода. Данные - пришедшие ответы сервера (`RunHud.bag`), новых запросов нет; заход стоит, пока лист открыт. Подпись «N мин назад» -
+ * опыт захода. Данные - пришедшие ответы сервера (`RunHud.bag`), новых запросов нет; заход стоит, пока лист открыт ([HoldsRun]), касания мимо
+ * панели забирает затемнение (стик их не видит, касание закрывает лист), «Назад» закрывает лист. Подпись «N мин назад» -
  * по часам захода шагом в полминуты. Пометка к продаже удержанием - монета на строке, отклик, счёт в шапке.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -79,7 +85,10 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         vm.toggleSaleMark(id)
     }
+    HoldsRun(run)
+    BackHandler(onBack = onClose)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = SCRIM_ALPHA)).clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClose))
         RunPanel(Modifier, GoldBright, footer = { ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) } }) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(ui("expedition.bag.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -161,6 +170,9 @@ private fun fromTitle(entry: BagEntry): String = entry.from.monster?.takeIf { en
 private fun age(millis: Long): String = (millis / MINUTE_MS).let { if (it < 1) ui("expedition.bag.just_now") else ui("expedition.bag.minutes_ago", it) }
 
 private const val MINUTE_MS = 60_000L
+
+/** Затемнение карты под открытой сумкой. */
+private const val SCRIM_ALPHA = .35f
 
 /** Шаг часов подписи «N мин назад». */
 private const val AGE_TICK_MS = 30_000L

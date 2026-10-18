@@ -172,14 +172,14 @@ fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
 /**
  * Строка уровня профессии под полосой цикла: «Ур. 14», тонкая полоса опыта и сколько работа ещё идёт до следующего - «до 15 · 42 мин»,
  * считая здесь: опыт цикла сверх шанса «впустую», сколько циклов это оставляет, минус пройденное идущим циклом. На последнем уровне -
- * «макс.». Опыт удачного цикла - [JobView.experience] по кривой сервера, не поле работы.
+ * «макс.». Опыт удачного цикла - [JobView.experience] сервера: по кривой опыта и уже с бонусом опыта героя, не поле работы.
  */
 @Composable internal fun LevelRow(profession: ProfessionView, job: JobView, work: WorkView, offset: Long) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
         LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(3.dp), color = Vital, trackColor = PanelRaised)
         val next = profession.next
-        val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
+        val perCycle = job.experience * (1 - job.nothing / 100)
         when {
             next == null -> LevelNote(ui("crafts.level_top_short"))
 
@@ -259,13 +259,13 @@ internal class HourYield(val code: String?, val amount: Double)
 /**
  * What the work under way brings in an hour on average, counted from the job as the server
  * sends it — the cycle [cycleMillis], the «nothing» chance and each find's chance already made of the hero's gear —
- * and the yield bonus's extra units: the cycles an hour holds, less the empty ones, times what one brings.
+ * and the yield bonus's extra units with doubling ([Work.hourly]): the cycles an hour holds, less the empty ones, times what one brings.
  * Display only: the server's dice decide. Первым - что работа делает, за ним находки; нулевые не пишутся.
  */
 internal fun hourYields(profession: ProfessionView, job: JobView, cycleMillis: Long): List<HourYield> {
     if (cycleMillis <= 0) return emptyList()
-    val landed = landed(cycleMillis, job)
-    val made = HourYield(job.output.takeIf { it.isNotBlank() && job.kind in STACK_WORKS }, landed * yieldFactor(profession))
+    val landed = Work.landed(cycleMillis, job.nothing)
+    val made = HourYield(job.output.takeIf { it.isNotBlank() && job.kind in STACK_WORKS }, Work.hourly(cycleMillis, job.nothing, profession.bonus))
     val finds = job.extra.map { HourYield(it.item, landed * it.chance / 100) }
     return (listOf(made) + finds).filter { it.amount > 0 }
 }
@@ -273,16 +273,8 @@ internal fun hourYields(profession: ProfessionView, job: JobView, cycleMillis: L
 /** Работы, чей выход - стопка сумки: её фишка открывает карточку материала. */
 private val STACK_WORKS = setOf(JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE)
 
-/** The cycles an hour of [cycleMillis] brings that do not come back empty. */
-internal fun landed(cycleMillis: Long, job: JobView): Double = HOUR_MILLIS / cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)
-
-/** The profession's chance to double a cycle's yield, as the factor it multiplies the average by. */
-internal fun yieldFactor(profession: ProfessionView): Double = 1 + profession.bonus.yield.coerceAtLeast(0.0) / 100
-
-/** About how many of its product a work brings an hour, by its own cycle; null for one that has no cycle yet. */
-internal fun perHour(job: JobView, profession: ProfessionView): Double? = job.cycleMillis.takeIf { it > 0 }?.let { landed(it, job) * yieldFactor(profession) }
-
-internal const val HOUR_MILLIS = 3_600_000.0
+/** About how many of its product a work brings an hour, by its own cycle ([Work.hourly]); null for one that has no cycle yet. */
+internal fun perHour(job: JobView, profession: ProfessionView): Double? = job.cycleMillis.takeIf { it > 0 }?.let { Work.hourly(it, job.nothing, profession.bonus) }
 
 /** A cycle's price against the bag: each material as have/need, short ones in red; «бесплатно» for a work that spends nothing. */
 internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnotatedString {

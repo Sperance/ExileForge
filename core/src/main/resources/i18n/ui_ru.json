@@ -894,6 +894,7 @@
   "sell.shards": "+{0} {1} ({2}/{3})",
   "sell.shards_orb": "+{0} {1}",
   "stash.received": "Тайник полон: в переполнение {0}, продано торговцу {1} за {2} золота",
+  "stash.auto_sold": "Автопродажа: {0} за {1} золота",
   "stash.group.flask": "Фляги",
   "stash.group.ring": "Кольца",
   "stash.group.tool": "Инструменты",

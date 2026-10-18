@@ -126,8 +126,23 @@ import kotlinx.serialization.Serializable
     val guildQuests: com.sperance.exileforge.rules.content.GuildQuests? = null,
 )
 
-/** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */
-@Serializable data class Received(val stashed: Int = 0, val overflowed: Int = 0, val sold: Int = 0, val gold: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
+/** Продажа торговцу сразу при получении: [count] вещей за [gold] золота и [shards] осколков. */
+@Serializable data class Sale(val count: Int = 0, val gold: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
+
+/**
+ * Куда легли пришедшие герою вещи: в тайник, в переполнение или торговцу.
+ *
+ * @property sold вещи, проданные торговцу из-за полных тайника и переполнения; [gold] и [shards] - выручка только с них.
+ * @property autoSold добыча, проданная фильтром автопродажи героя при любом числе свободных мест.
+ */
+@Serializable data class Received(
+    val stashed: Int = 0,
+    val overflowed: Int = 0,
+    val sold: Int = 0,
+    val gold: Long = 0,
+    val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList(),
+    val autoSold: Sale = Sale(),
+)
 
 /** A trial entered: the trial itself and the hero's context frozen on entry, the monsters stood up by it. */
 @Serializable data class TrialStart(val run: TrialRun, val context: RunContext)

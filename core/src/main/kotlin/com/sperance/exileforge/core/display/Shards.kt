@@ -22,5 +22,16 @@ fun withShards(sold: String, yields: List<ShardYield>, perOrb: Int): String = sh
 /** Сколько осколков склеиваются в сферу по правилам контента; контента ещё нет - 0 (у правил нет значений по умолчанию). */
 val ContentIndex?.shardsPerOrb: Int get() = this?.rules?.sell?.shardsPerOrb ?: 0
 
-/** Тост добычи, не легшей в тайник, - с осколками того, что продано торговцу. */
-fun receivedText(received: Received, perOrb: Int): String = withShards(ui("stash.received", received.overflowed, received.sold, received.gold), received.shards, perOrb)
+/**
+ * Тост добычи, не легшей в тайник: переполнение и продажа из-за полного тайника, автопродажа фильтром героя - частями
+ * через « · », с осколками всего проданного строкой ниже; всё легло в тайник - null.
+ */
+fun receivedText(received: Received, perOrb: Int): String? {
+    val auto = received.autoSold
+    val parts = listOfNotNull(
+        ui("stash.received", received.overflowed, received.sold, received.gold).takeIf { received.overflowed > 0 || received.sold > 0 },
+        ui("stash.auto_sold", auto.count, auto.gold).takeIf { auto.count > 0 },
+    )
+    if (parts.isEmpty()) return null
+    return withShards(parts.joinToString(" · "), ShardYield.merged(received.shards + auto.shards), perOrb)
+}

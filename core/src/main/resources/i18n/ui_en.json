@@ -894,6 +894,7 @@
   "sell.shards": "+{0} {1} ({2}/{3})",
   "sell.shards_orb": "+{0} {1}",
   "stash.received": "Stash full: {0} to the overflow, {1} sold to the merchant for {2} gold",
+  "stash.auto_sold": "Auto-sell: {0} for {1} gold",
   "stash.group.flask": "Flasks",
   "stash.group.ring": "Rings",
   "stash.group.tool": "Tools",

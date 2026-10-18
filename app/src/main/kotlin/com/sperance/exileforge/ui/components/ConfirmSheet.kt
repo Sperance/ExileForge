@@ -62,7 +62,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  *
  * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
  * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
- * погашена, а [warning] без своего говорит недостачу.
+ * погашена, а [warning] без своего говорит недостачу. [holdMillis] - сколько держать кнопку (сброс всего дерева держат дольше).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +79,7 @@ fun ConfirmSheet(
     icon: (@Composable () -> Unit)? = null,
     options: (@Composable () -> Unit)? = null,
     gold: GoldBill? = null,
+    holdMillis: Int = HOLD_TO_CONFIRM_MS,
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
@@ -110,7 +111,7 @@ fun ConfirmSheet(
                         Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked && gold?.affordable != false) {
+                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked && gold?.affordable != false, millis = holdMillis) {
                     onDismiss()
                     onConfirm()
                 }

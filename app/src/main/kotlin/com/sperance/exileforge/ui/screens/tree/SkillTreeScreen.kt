@@ -310,7 +310,10 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
     return index.content.tree.nodes.mapNotNullTo(HashSet()) { node -> node.code.takeIf { TreeAllocation.placement(index.tree, node, taken, start) == null } }
 }
 
-/** Сброс оплачивается сферой - код и сколько её в сумке; старт не возвращается и не оплачивается. */
+/**
+ * Сброс всего дерева - лист с ценой в Сферах сожаления и кнопкой удержания на [TREE_RESET_HOLD_MS], как сброс древа гильдии, без отката;
+ * старт не возвращается и не оплачивается.
+ */
 @Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
     val regretTitle = itemTitle(Orb.ORB_OF_REGRET.name)
@@ -327,7 +330,10 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
             note = ui("tree.reset_confirm"), warning = shortage(returned), blocked = shortage(returned) != null, danger = true,
-            confirm = ui("tree.reset_do"), onDismiss = onClear,
+            confirm = ui("tree.reset_do"), onDismiss = onClear, holdMillis = TREE_RESET_HOLD_MS,
         ) { onReset() }
     }
 }
+
+/** Сколько держать кнопку сброса всего дерева, мс: дольше обычного подтверждения. */
+private const val TREE_RESET_HOLD_MS = 1_200

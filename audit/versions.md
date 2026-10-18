@@ -67,6 +67,7 @@
 - 89 - пакет 0.16.0: тайник героя в своей коллекции `HeroItem` (форма `hero/view` прежняя), метка ремесла `ItemInstance.og` (#92, #64, #109); без автопробега - сняты `auto` старта захода и поля контента `auto*`, `chestSteps`, `fountainSteps`, новые `expedition.clearSteps`, `features.blight.spacing` (#79, #55); `atlas.json` с блоком `layout` (#96); `guild/log` отвечает `{entries, more}` (#100), `GuildStashView.roleTakes` (#99), `Mail.link` (#73), `POST admin/feedback/note` (#68); `POST hero/autosell/below`, отказы `CR_052-054`, без `CH_037` (#67, #119); ремёсла - `CraftsState.from`, `brewFloor`, `awayMinutes`, `NodeRules.spread`, `Job.Item.look` (#110, #130, #111, #136); умения `reserves`, `combat.caps.reserve`, `bosses.sustainShare`, статы `LIFE_RESERVATION`, `BLOOD_AURA_EFFECT` (#95, #102).
 - 90 - пакет 0.16.2: падение клиента - пара стек и версия сборки, стек расшифровывается картой своей версии (#262); отчёты модерации без системных данных, письма называют отчёт (#266, #263); карточка игрока - место на доске Мощи (#251); итоги захода метят продвинутые задания (#182); раздел характеристик `CHARGES` и числа правил по пути в текстах `{r:…}` (#260); формы карт «Лабиринт» и «Арены» (#215).
 - 91 - пакет 0.16.3: предролл сундуков захода `RunStart.chestStock`, пересбор после пакта `EventReward.chestStock` (#178); эффекты карты с источником `ActiveMap.sources` (#197); `AuctionLot.returned` (#204); `WorkGains/WorkTally.missed` и счёт сделанного (#192); `FountainRule.flasks` (#241).
+- 92 - пакет 0.16.5: добыча - `Received.overflowSold` и `Received.autoSold` (`Sale`) вместо плоских `sold/gold/shards` (#276); ремёсла - `ProfessionView.layers` (`WorkLayers`) вместо `bonus`, опыт работы с бонусом, разбор `WorkBreakdown` в `rules/` (#277); `POST admin/fate?code=&user=&reason=` - смена Предначертания другому, `MOD_012`, письмо `mail.fate_redrawn`, `DossierRights.fate`, `ModerationEntry.reason` (#275); `FullReport.clientVersion|crashCount|failureCount` и `GET admin/feedback/detail` (`ReportDetail`, `BUG_004`) (#283); ключи системных писем `SystemMail`.
 
 ## API_REVISION (клиент, `core/model/sync/Sync.kt`)
 
@@ -129,6 +130,7 @@
 - 89 - пакет 0.16.0: тайник `HeroItem` и фильтр «Сделано ремеслом»; без автопробега, чистая зона объектов карты; дерево Атласа по `layout`; журнал гильдии страницами, пределы хранилища по ролям, ссылка письма, дополнение модерации; автопродажа «ниже героя»; ремёсла с `CraftsState.from`, облик узлов; резерв здоровья аурами, щит по виду урона.
 - 90 - пакет 0.16.2: стеки падений с версией сборки, моделирование отчётов тикетами, место на доске Мощи, раздел `CHARGES` и подробные описания характеристик, формы карт «Лабиринт» и «Арены».
 - 91 - пакет 0.16.3: запас сундуков в журнале захода, окно карты по источникам эффектов, возврат лота, пустые циклы ремёсел, заряды фляг фонтана.
+- 92 - пакет 0.16.5: продажа при переполнении и автопродажа раздельно, слои бонуса ремесла и разбор по источникам, смена Предначертания другому игроку, подробности отчётов для модерации.
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 

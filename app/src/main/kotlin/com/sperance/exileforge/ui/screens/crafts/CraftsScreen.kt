@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -333,24 +334,25 @@ private const val HOUR_CHIPS = 3
 
 /**
  * Всплывашка сбора над полосой цикла: что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
- * на [HARVEST_SHOWN] мс. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
+ * на [HARVEST_SHOWN] мс; окно всплывашки живёт, только пока надпись видна или гаснет. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
  */
 @Composable private fun HarvestPopup(last: Harvest?) {
     val seen = remember { last?.seq ?: 0L }
     var text by remember { mutableStateOf("") }
-    var visible by remember { mutableStateOf(false) }
+    val shown = remember { MutableTransitionState(false) }
     LaunchedEffect(last?.seq) {
         val fresh = last?.takeIf { it.seq > seen } ?: return@LaunchedEffect
         text = harvestLine(fresh.gains)
-        visible = true
+        shown.targetState = true
         delay(HARVEST_SHOWN)
-        visible = false
+        shown.targetState = false
     }
+    if (!shown.currentState && !shown.targetState) return
     val motion = LocalMotion.current
     val lift = with(LocalDensity.current) { 30.dp.roundToPx() }
     Popup(alignment = Alignment.TopCenter, offset = IntOffset(0, -lift)) {
         AnimatedVisibility(
-            visible,
+            shown,
             enter = if (motion) fadeIn() + slideInVertically { it / 2 } else EnterTransition.None,
             exit = if (motion) fadeOut() else ExitTransition.None,
         ) {

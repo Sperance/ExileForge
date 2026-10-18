@@ -40,9 +40,10 @@ import com.sperance.exileforge.ui.theme.*
  * панель узла дерева. Строка - имя, «было → **стало**» и плашка разницы (рост `Vital`, потеря `LifeRed`, без сдвига -
  * приглушённая). Больше [Comparison.LEADING] строк - свёрнуто до важнейших ([Comparison.leading]), под ними контурная
  * кнопка во всю ширину «Показать ещё N · X лучше · Y хуже» / «Свернуть». Пустое говорит, что ничего не изменится.
- * Цвета подписей - из [look] карточки вещи, вне карточки - приглушённые темы.
+ * Цвета подписей - из [look] карточки вещи, вне карточки - приглушённые темы. Под итогом - блок «Теряешь» ([LostLines]):
+ * строки заменяемой вещи [lost], которых нет на новой.
  */
-@Composable fun StatComparison(title: String, comparison: Comparison, modifier: Modifier = Modifier, look: RelicLook? = null) {
+@Composable fun StatComparison(title: String, comparison: Comparison, modifier: Modifier = Modifier, look: RelicLook? = null, lost: List<String> = emptyList()) {
     val muted = look?.muted ?: Muted
     val faint = look?.faint ?: Bronze
     var open by rememberSaveable(comparison.lines.size) { mutableStateOf(false) }
@@ -50,16 +51,26 @@ import com.sperance.exileforge.ui.theme.*
         Text(title, color = muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.8.sp, modifier = Modifier.padding(bottom = 4.dp))
         if (comparison.lines.isEmpty()) {
             Text(ui("wear.nothing"), color = muted, style = MaterialTheme.typography.bodySmall)
-            return@Column
+        } else {
+            val shown = if (open || !comparison.foldable) comparison.lines else comparison.leading
+            shown.forEachIndexed { i, line ->
+                if (i > 0) HorizontalDivider(thickness = 1.dp, color = faint.copy(alpha = .35f))
+                ComparisonRow(line, muted, faint)
+            }
+            if (comparison.foldable) {
+                ComparisonToggle(open, comparison.hidden, faint) { open = !open }
+            }
         }
-        val shown = if (open || !comparison.foldable) comparison.lines else comparison.leading
-        shown.forEachIndexed { i, line ->
-            if (i > 0) HorizontalDivider(thickness = 1.dp, color = faint.copy(alpha = .35f))
-            ComparisonRow(line, muted, faint)
-        }
-        if (comparison.foldable) {
-            ComparisonToggle(open, comparison.hidden, faint) { open = !open }
-        }
+        LostBlock(lost, muted, Modifier.padding(top = 10.dp))
+    }
+}
+
+/** Блок «Теряешь»: строки старой вещи, что пропадут с заменой, - текстом карточки красным; пусто - блока нет. */
+@Composable fun LostBlock(lines: List<String>, muted: Color, modifier: Modifier = Modifier) {
+    if (lines.isEmpty()) return
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(ui("compare.lost"), color = muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.8.sp)
+        lines.forEach { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

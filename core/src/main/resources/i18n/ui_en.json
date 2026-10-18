@@ -3952,6 +3952,7 @@
   "compare.better": "{0} better",
   "compare.worse": "{0} worse",
   "compare.off": "turns off",
+  "compare.lost": "YOU LOSE",
   "flask.measure.LIFE": "Life per draught",
   "flask.measure.MANA": "Mana per draught",
   "flask.measure.INSTANT": "At once",

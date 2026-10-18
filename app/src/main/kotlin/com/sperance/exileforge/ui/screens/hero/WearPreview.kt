@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.ToolVerdict
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.Comparison
+import com.sperance.exileforge.core.display.LostLines
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
@@ -31,6 +32,7 @@ import com.sperance.exileforge.core.sheet.wearPlaces
 import com.sperance.exileforge.core.sheet.wearing
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.components.LostBlock
 import com.sperance.exileforge.ui.components.MightComparison
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
@@ -76,7 +78,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
  * показа, `MightShift.shown`). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
  * Над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги итог - «ИТОГ ФЛЯГИ», у
  * инструмента - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
- * ([StatComparison]), свёрнутое до важнейших строк.
+ * ([StatComparison]), свёрнутое до важнейших строк, под ним - «Теряешь» ([LostLines]): строки заменяемой вещи, которых нет на этой.
  *
  * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - одной строкой «было → стало»
  * из того же листа боя, что сдвиги.
@@ -89,6 +91,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val outcome = remember(item, game.hero, game.index, place) { if (apart) null else game.wearing(item, place) }
     val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index, sheet = game.hero?.figures?.values, level = game.hero?.level ?: 0) } }
     val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
+    val lost = remember(item, selected?.replaced, game.index) { LostLines.of(game.index, item, selected?.replaced) }
     if (unmet.isEmpty()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (choice.choosable && selected != null) {
@@ -97,16 +100,17 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
             }
             val verdict = selected?.verdict
             if (delta != null) {
-                StatComparison(ui("relic.totals"), delta, look = look)
+                StatComparison(ui("relic.totals"), delta, look = look, lost = lost)
                 might?.let { MightComparison(it, look) }
             } else if (verdict is FlaskVerdict) {
-                StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look)
+                StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look, lost = lost)
                 verdict.might?.let { MightComparison(it, look) }
             } else if (verdict is ToolVerdict) {
                 if (verdict.delta.isEmpty()) {
                     MutedText(ui("wear.tool_same"), style = MaterialTheme.typography.labelSmall)
+                    LostBlock(lost, look.muted)
                 } else {
-                    StatComparison(ui("relic.tool_totals"), remember(verdict) { Comparison.of(verdict.delta, game.index) }, look = look)
+                    StatComparison(ui("relic.tool_totals"), remember(verdict) { Comparison.of(verdict.delta, game.index) }, look = look, lost = lost)
                 }
             }
         }

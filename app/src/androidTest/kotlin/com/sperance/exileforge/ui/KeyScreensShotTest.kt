@@ -106,6 +106,8 @@ import com.sperance.exileforge.ui.components.InspectActions
 import com.sperance.exileforge.ui.components.InspectChoice
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.LocalWallClock
+import com.sperance.exileforge.ui.components.StillClock
 import com.sperance.exileforge.ui.components.UpdateDialog
 import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
@@ -362,7 +364,7 @@ class KeyScreensShotTest {
     }
 
     /** Плашка идущей работы: длинное имя, часы цикла и три фишки выхода в час с «+N», строка уровня и итоги одним рядом. */
-    @Test fun workPlaque() = shot("work", scroll = false, frozen = true) {
+    @Test fun workPlaque() = shot("work") {
         val (profession, job) = index.professions.professions.flatMap { p -> p.jobs.filterIsInstance<Job.Item>().map { p to it } }.maxBy { (_, j) -> j.extra.size * 100 + jobTitle(j.code).length }
         val now = System.currentTimeMillis()
         val view = JobView(job, cycleMillis = 30_000, nothing = 10.0, extra = (job.extra + index.items.keys.take(3).map { JobExtra(it.value, 2.0) }).take(4), experience = 12.0)
@@ -402,7 +404,7 @@ class KeyScreensShotTest {
     private fun shot(name: String, scroll: Boolean = true, open: String? = null, frozen: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
         if (frozen) compose.mainClock.autoAdvance = false
         compose.setContent {
-            CompositionLocalProvider(LocalMotion provides false) {
+            CompositionLocalProvider(LocalMotion provides false, LocalWallClock provides StillClock(System.currentTimeMillis())) {
                 ForgeTheme {
                     Column(
                         Modifier.width(360.dp).background(Ink).then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(8.dp),

@@ -206,12 +206,7 @@ class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit:
 }
 
 /** Часы окна: пересчёт отсчётов раз в [TICK_MS]. */
-@Composable private fun ticking(): State<Long> = produceState(System.currentTimeMillis()) {
-    while (true) {
-        delay(TICK_MS)
-        value = System.currentTimeMillis()
-    }
-}
+@Composable private fun ticking(): State<Long> = rememberNow(TICK_MS)
 
 /** Фон окна запуска: свечение, знак игры по центру и версия под ним; [content] - поверх, во весь экран под системными полосами. */
 @Composable private fun SplashBackdrop(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit = {}) {

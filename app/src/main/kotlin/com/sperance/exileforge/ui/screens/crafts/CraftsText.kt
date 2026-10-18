@@ -71,13 +71,13 @@ import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
+import com.sperance.exileforge.ui.components.rememberNow
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
 /** Строки и числа ремёсел: названия, итоги, подсказки по уровню и часовой выработке. */
@@ -196,12 +196,7 @@ fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
  * (часы в листовом элементе, вкладка ремёсел не теряет кадров).
  */
 @Composable private fun LevelEta(level: Int, total: Long, work: WorkView, offset: Long) {
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            delay(1000)
-            value = System.currentTimeMillis()
-        }
-    }
+    val now by rememberNow(1000L)
     LevelNote(ui("crafts.level_eta", level, eta((total - work.phase(now + offset)).coerceAtLeast(0L))))
 }
 

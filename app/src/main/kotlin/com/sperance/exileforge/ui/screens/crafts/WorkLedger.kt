@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +62,7 @@ import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.components.rememberNow
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -75,7 +75,6 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
-import kotlinx.coroutines.delay
 
 /** Итог работы для книги учёта: и с начала работы ([WorkTally] сервера), и за сессию ([WorkGains] клиента). */
 internal class WorkSums(
@@ -218,12 +217,7 @@ internal fun WorkLedger(
 
 /** Время в работе живьём: свои часы - перерисовывается только это число, не книга учёта вокруг. */
 @Composable private fun WorkTime(startedAt: Long, offset: Long) {
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            value = System.currentTimeMillis()
-            delay(CLOCK_TICK_MS)
-        }
-    }
+    val now by rememberNow(CLOCK_TICK_MS)
     TileFigure(AnnotatedString(workAge(now + offset - startedAt)), Parchment)
 }
 

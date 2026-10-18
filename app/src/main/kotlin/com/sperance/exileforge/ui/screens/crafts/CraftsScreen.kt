@@ -76,6 +76,7 @@ import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.rememberNow
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
@@ -306,12 +307,7 @@ private const val HOUR_CHIPS = 3
 @Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6) {
     var widthPx by remember { mutableIntStateOf(0) }
     val step = cycleStepMs(work.cycleMillis, widthPx)
-    val now by produceState(System.currentTimeMillis(), step) {
-        while (true) {
-            value = System.currentTimeMillis()
-            delay(step)
-        }
-    }
+    val now by rememberNow(step)
     Box(Modifier.fillMaxWidth()) {
         LinearProgressIndicator(
             progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
@@ -325,12 +321,7 @@ private const val HOUR_CHIPS = 3
 
 /** Идущий цикл часами - «3:41 / 5:19» одной строкой цифрами одной ширины - несколько раз в секунду: перерисовывается только текст, не полоса. */
 @Composable internal fun CycleClock(work: WorkView, offset: Long) {
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            value = System.currentTimeMillis()
-            delay(CLOCK_TICK)
-        }
-    }
+    val now by rememberNow(CLOCK_TICK)
     Text(
         ui("crafts.cycle_clock", clock(work.phase(now + offset)), clock(work.cycleMillis)),
         color = Parchment,

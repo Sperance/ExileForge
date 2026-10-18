@@ -10,8 +10,6 @@ import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -37,21 +35,18 @@ val TabShiftEasing: Easing = CubicBezierEasing(.2f, 0f, 0f, 1f)
 /** Доля ширины, на которую уезжает экран при смене вкладки. */
 private const val SHIFT_SHARE = .3f
 
-/** Насколько уменьшен уходящий и входящий экран в начале и в конце сдвига. */
-private const val SHIFT_SCALE = .98f
-
 private fun <T> shiftSpec(): FiniteAnimationSpec<T> = tween(TAB_SHIFT_MS, easing = TabShiftEasing)
 
 /**
  * Переход смены вкладки: при [step] ≠ 0 новое входит со стороны порядка вкладок (вкладка правее - справа), прежнее уходит
- * в другую сторону, оба на ~30% ширины, с затуханием и лёгким масштабом; при 0 (экран поверх, «назад») - только затухание.
+ * в другую сторону, оба на ~30% ширины, с затуханием, без масштаба; при 0 (экран поверх, «назад») - только затухание.
  * Переходы экранов анимируются всегда, без `LocalMotion`.
  */
 fun tabShift(step: Int): ContentTransform {
     if (step == 0) return fadeIn(shiftSpec()) togetherWith fadeOut(shiftSpec())
     val slide = shiftSpec<IntOffset>()
-    val enter = slideInHorizontally(slide) { (it * SHIFT_SHARE * step).roundToInt() } + fadeIn(shiftSpec()) + scaleIn(shiftSpec(), SHIFT_SCALE)
-    val exit = slideOutHorizontally(slide) { (-it * SHIFT_SHARE * step).roundToInt() } + fadeOut(shiftSpec()) + scaleOut(shiftSpec(), SHIFT_SCALE)
+    val enter = slideInHorizontally(slide) { (it * SHIFT_SHARE * step).roundToInt() } + fadeIn(shiftSpec())
+    val exit = slideOutHorizontally(slide) { (-it * SHIFT_SHARE * step).roundToInt() } + fadeOut(shiftSpec())
     return enter togetherWith exit
 }
 

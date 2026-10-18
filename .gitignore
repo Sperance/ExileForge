@@ -11,7 +11,11 @@ local.properties
 *.apk
 
 # Claude Code worktrees and session files
-.claude/
+# Личное Claude Code не коммитится; хук старта облачной сессии и общие настройки - в репозитории
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+.claude/settings.local.json
 
 # Кэш байткода Python скриптов - не исходник.
 __pycache__/

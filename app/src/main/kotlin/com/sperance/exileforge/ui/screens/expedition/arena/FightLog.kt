@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -48,9 +51,10 @@ import kotlin.math.roundToInt
 /**
  * The blows so far, newest first: when, who, what came of it - and the target's life before and after.
  * Живой журнал: пока игрок наверху, новая строка держит список на ней; отлистал вниз - список стоит, а кнопка
- * «↑ новое (N)» считает пришедшие строки; касание кнопки или возврат наверх снова держат список на новой.
+ * «↑ новое (N)» считает пришедшие строки; касание кнопки, возврат наверх или [LOG_RETURN_MS] без касаний списка снова держат
+ * список на новой.
  *
- * Игрок листает - следование снято; наверху - снова следим. Ключ строки - её место от начала боя: новая строка сверху не сдвигает ключи
+ * Игрок листает - следование снято; наверху или после паузы без касаний - снова следим. Ключ строки - её место от начала боя: новая строка сверху не сдвигает ключи
  * прочих.
  */
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
@@ -59,6 +63,8 @@ import kotlin.math.roundToInt
     val scope = rememberCoroutineScope()
     var follow by remember { mutableStateOf(true) }
     var seen by remember { mutableIntStateOf(events.size) }
+    var touches by remember { mutableIntStateOf(0) }
+    var held by remember { mutableStateOf(false) }
     fun atTop() = state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0
     LaunchedEffect(state) {
         launch {
@@ -71,13 +77,27 @@ import kotlin.math.roundToInt
         }
         snapshotFlow { atTop() }.collect { top -> if (top) follow = true }
     }
+    LaunchedEffect(follow, held, touches, state.isScrollInProgress) {
+        if (follow || held || state.isScrollInProgress) return@LaunchedEffect
+        delay(LOG_RETURN_MS)
+        follow = true
+    }
     LaunchedEffect(events.size, follow) {
         if (follow) {
             seen = events.size
             if (!atTop()) state.scrollToItem(0)
         }
     }
-    Box(modifier.fillMaxWidth()) {
+    Box(
+        modifier.fillMaxWidth().pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    held = awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed }
+                    touches++
+                }
+            }
+        },
+    ) {
         LazyColumn(Modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
             itemsIndexed(events, key = { i, _ -> events.size - i }) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
         }
@@ -96,6 +116,9 @@ import kotlin.math.roundToInt
         }
     }
 }
+
+/** Сколько миллисекунд без касаний журнал, отлистанный вниз, ждёт, прежде чем сам вернуться к новой строке. */
+private const val LOG_RETURN_MS = 3_000L
 
 /** A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. */
 private sealed interface PackRow {

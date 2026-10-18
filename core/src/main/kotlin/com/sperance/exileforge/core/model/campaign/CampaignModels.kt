@@ -132,15 +132,13 @@ import kotlinx.serialization.Serializable
 /**
  * Куда легли пришедшие герою вещи: в тайник, в переполнение или торговцу.
  *
- * @property sold вещи, проданные торговцу из-за полных тайника и переполнения; [gold] и [shards] - выручка только с них.
+ * @property overflowSold вещи, проданные торговцу из-за полных тайника и переполнения, с выручкой только с них.
  * @property autoSold добыча, проданная фильтром автопродажи героя при любом числе свободных мест.
  */
 @Serializable data class Received(
     val stashed: Int = 0,
     val overflowed: Int = 0,
-    val sold: Int = 0,
-    val gold: Long = 0,
-    val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList(),
+    val overflowSold: Sale = Sale(),
     val autoSold: Sale = Sale(),
 )
 

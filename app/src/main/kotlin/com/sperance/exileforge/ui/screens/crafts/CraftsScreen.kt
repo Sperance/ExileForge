@@ -51,6 +51,8 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.Harvest
+import com.sperance.exileforge.core.crafts.HourYield
+import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.choiceTitle
@@ -200,7 +202,8 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         CycleBar(work, offset, crafts.last)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             CycleClock(work, offset)
-            if (profession != null && job != null) HourChips(job, hourYields(profession, job, work.cycleMillis), Modifier.weight(1f))
+            val rules = crafts.rules
+            if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
         }
         if (profession != null && job != null) LevelRow(profession, job, work, offset)
         crafts.state?.running?.let { StockRow(game, work, it) }

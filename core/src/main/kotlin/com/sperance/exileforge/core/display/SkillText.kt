@@ -22,6 +22,7 @@ import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
+import com.sperance.exileforge.rules.text.TextNumbers
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -109,7 +110,7 @@ object SkillText {
     fun manaRate(pace: SkillPace): String = ui("skill.line.mana_rate", Rate.perSecond(pace.manaRate), Rate.perSecond(pace.regen))
 
     /** What a monster's skill does, for the scouting panel and the log: one sentence; числа строк характеристик - из контента [index]. */
-    fun monster(skill: MonsterSkill, index: ContentIndex?): List<String> = buildList {
+    fun monster(skill: MonsterSkill, index: ContentIndex): List<String> = buildList {
         skill.hit?.let { addAll(hit(it, 1, index)) }
         skill.buff?.let { addAll(buff(it, 1, index)) }
         skill.curse?.let { curse ->
@@ -120,7 +121,7 @@ object SkillText {
         if (skill.manaBurn > 0) add(ui("skill.line.mana_burn", number(skill.manaBurn)))
     }
 
-    private fun hit(hit: SkillHit, level: Int, index: ContentIndex?): List<String> = buildList {
+    private fun hit(hit: SkillHit, level: Int, index: ContentIndex): List<String> = buildList {
         hit.weapon?.let { add(ui("skill.line.weapon", number(it.at(level)))) }
         hit.spell?.let { add(ui("skill.line.spell", number(it.min.at(level)), number(it.max.at(level)), element(it.element))) }
         if (hit.targets != 1) add(targets(hit.targets))
@@ -141,7 +142,7 @@ object SkillText {
         addAll(stats(hit.stats, level, index))
     }
 
-    private fun buff(buff: SkillBuff, level: Int, index: ContentIndex?): List<String> = buildList {
+    private fun buff(buff: SkillBuff, level: Int, index: ContentIndex): List<String> = buildList {
         add(ui("skill.line.buff", fineNumber(buff.duration)))
         addAll(stats(buff.stats, level, index))
         buff.counter?.let { add(ui("skill.line.counter", number(it.at(level)))) }
@@ -186,7 +187,7 @@ object SkillText {
 
     private fun ailments(list: List<SkillAilment>, level: Int) = list.map { ui("skill.line.ailment", number(it.chance.at(level)), ailment(it.ailment)) }
 
-    private fun stats(list: List<SkillStat>, level: Int, index: ContentIndex?) = list.map { statLine(it.stat, it.op, it.value.at(level), index) }
+    private fun stats(list: List<SkillStat>, level: Int, index: ContentIndex) = list.map { statLine(it.stat, it.op, it.value.at(level), index) }
 
     /** An element as the skill names it: `FIRE` … `CHAOS`, or `RANDOM` — any of the three elements. */
     fun element(name: String): String = ui("skill.element.$name")
@@ -208,8 +209,8 @@ object SkillText {
         val template = (negative ?: locOr(key, "")).takeIf(String::isNotBlank)
         val shown = if (negative != null) abs(value) else value
         val number = if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown)
-        val filled = template?.let { index?.textNumbers?.fill(stat, it) ?: it }?.let { fillTemplate(it.replace("{v}", "{0}"), listOf(number)) }
-        return filled?.takeUnless { PLACEHOLDER in it } ?: plainStatLine(stat, operation, value)
+        val numbered = template?.let { if (index == null) it.takeUnless { text -> TextNumbers.wants(text) } else index.textNumbers.fill(stat, it) }
+        return numbered?.let { fillTemplate(it.replace("{v}", "{0}"), listOf(number)) } ?: plainStatLine(stat, operation, value)
     }
 
     /** Строка стата без шаблона сервера: имя характеристики и число по операции. */
@@ -229,9 +230,6 @@ object SkillText {
      */
     fun draughtLine(stat: String, operation: Op, value: Double, index: ContentIndex?): String = listOf(statLine(stat, operation, value, index), locOr(ModifierText.DRAUGHT, ""))
         .filter(String::isNotBlank).joinToString(" ")
-
-    /** Начало подстановки, что осталась в тексте незаполненной. */
-    private const val PLACEHOLDER = '{'
 }
 
 /**

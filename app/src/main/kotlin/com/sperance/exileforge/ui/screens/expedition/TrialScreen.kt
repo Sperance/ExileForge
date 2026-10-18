@@ -23,7 +23,6 @@ import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
@@ -52,11 +51,11 @@ import org.koin.compose.viewmodel.koinViewModel
                 ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, clock, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
             }
             if (hud.phase == TrialPhase.FIGHT) {
-                TrialPlate(hud, game.index, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
+                TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
             } else {
                 TrialEnding(game, model, hud)
             }
-            hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options, game.index) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
+            hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
             val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
             val boss = fight?.boss
             val stage = hud.step to fight?.round
@@ -85,7 +84,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** Выбор строки угрозы десятка башни: варианты по силе, у каждого - прибавка к кладу. */
-@Composable private fun TowerChoice(floor: Int, options: List<com.sperance.exileforge.rules.content.TowerMod>, index: ContentIndex?, onPick: (Int) -> Unit) {
+@Composable private fun TowerChoice(floor: Int, options: List<com.sperance.exileforge.rules.content.TowerMod>, onPick: (Int) -> Unit) {
+    val index = LocalContentIndex.current
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
@@ -106,7 +106,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** The trial's plate over the arena: which boss of how many or which floor, the clock against the rush's limit, the floor's lines. */
-@Composable private fun TrialPlate(hud: TrialHud, index: ContentIndex?, modifier: Modifier) {
+@Composable private fun TrialPlate(hud: TrialHud, modifier: Modifier) {
+    val index = LocalContentIndex.current
     val shape = RoundedCornerShape(10.dp)
     Column(
         modifier.widthIn(max = 180.dp).background(Panel.copy(alpha = .9f), shape).border(1.dp, Gold.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp),

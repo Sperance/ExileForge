@@ -43,7 +43,6 @@ import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
@@ -126,7 +125,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(model, index, rules, board, engine, run, idle = !game.busy)
+            if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(model, rules, board, engine, run, idle = !game.busy)
         }
         state.result?.let { RiftResultSheet(game, model, it) }
     }
@@ -280,7 +279,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
 private enum class RunSheet { BOONS, CURSES }
 
 /** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу. */
-@Composable private fun RiftRunView(model: ExpeditionViewModel, index: ContentIndex, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean) {
+@Composable private fun RiftRunView(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean) {
     var looking by remember { mutableStateOf<RiftNode?>(null) }
     var sheet by remember { mutableStateOf<RunSheet?>(null) }
     BackHandler { model.closeRift() }
@@ -296,7 +295,7 @@ private enum class RunSheet { BOONS, CURSES }
         ) {
             Column(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp).heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
-            ) { offer?.let { OfferPlate(index, rules, engine, run, it, idle, model::riftAct) } }
+            ) { offer?.let { OfferPlate(rules, engine, run, it, idle, model::riftAct) } }
         }
     }
     looking?.let { node ->
@@ -309,7 +308,7 @@ private enum class RunSheet { BOONS, CURSES }
         RunSheet.BOONS -> ForgeSheet(onDismissRequest = { sheet = null }) {
             Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(ui("rift.boons", run.boons.size, rules.nodes.slots), color = RiftColors.Soft, style = MaterialTheme.typography.titleMedium)
-                run.boons.forEach { held -> BoonLine(index, rules, held.code, held.grade) }
+                run.boons.forEach { held -> BoonLine(rules, held.code, held.grade) }
             }
         }
 
@@ -404,7 +403,8 @@ private enum class RunSheet { BOONS, CURSES }
 }
 
 /** Дар одной строкой: имя цветом редкости, ступень и его строки листа; дар правил - своим описанием. */
-@Composable private fun BoonLine(index: ContentIndex, rules: RiftRules, code: String, grade: Int = 0, modifier: Modifier = Modifier) {
+@Composable private fun BoonLine(rules: RiftRules, code: String, grade: Int = 0, modifier: Modifier = Modifier) {
+    val index = LocalContentIndex.current
     val boon = rules.boonsByCode[code] ?: return
     val scale = 1 + rules.nodes.gradePower / 100 * grade
     Column(modifier) {
@@ -470,7 +470,7 @@ private const val RUNES = 24
 private const val SPARKS = 14
 
 /** Предложение узла: дары, пары алтаря, Отдых, Кузня, контракт Владыки. */
-@Composable private fun OfferPlate(index: ContentIndex, rules: RiftRules, engine: RiftEngine, run: RiftRun, offer: RiftOffer, idle: Boolean, onAct: (RiftAct) -> Unit) {
+@Composable private fun OfferPlate(rules: RiftRules, engine: RiftEngine, run: RiftRun, offer: RiftOffer, idle: Boolean, onAct: (RiftAct) -> Unit) {
     val full = run.boons.size >= rules.nodes.slots
     var replacing by remember(offer) { mutableStateOf<((Int) -> RiftAct)?>(null) }
     RiftPlate(RiftColors.Hot) {
@@ -478,7 +478,7 @@ private const val SPARKS = 14
             is RiftOffer.Boons -> {
                 Text(ui("rift.boons_title"), color = RiftColors.Hot, style = MaterialTheme.typography.titleSmall)
                 offer.options.forEachIndexed { i, code ->
-                    Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) { BoonLine(index, rules, code) }
+                    Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) { BoonLine(rules, code) }
                 }
                 ForgeTextButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle) { Text(ui("rift.skip"), color = RiftColors.Muted) }
             }
@@ -488,16 +488,16 @@ private const val SPARKS = 14
                 Text(ui("rift.altar_hint", rules.score.altarCurse.toInt()), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
                 offer.pacts.forEachIndexed { i, pact ->
                     Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
-                        BoonLine(index, rules, pact.boon)
+                        BoonLine(rules, pact.boon)
                         CurseLine(pact.curse)
                     }
                 }
                 ForgeTextButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle) { Text(ui("rift.skip"), color = RiftColors.Muted) }
             }
 
-            RiftOffer.Rest -> RestChoices(index, rules, run, idle, onAct)
+            RiftOffer.Rest -> RestChoices(rules, run, idle, onAct)
 
-            is RiftOffer.Forge -> ForgeChoices(index, rules, engine, run, offer, idle, full, { replacing = it }, onAct)
+            is RiftOffer.Forge -> ForgeChoices(rules, engine, run, offer, idle, full, { replacing = it }, onAct)
 
             RiftOffer.Contract -> {
                 Text(ui("rift.contract_title"), color = RiftColors.Warn, style = MaterialTheme.typography.titleSmall)
@@ -510,7 +510,7 @@ private const val SPARKS = 14
         }
     }
     replacing?.let { make ->
-        SlotPicker(index, rules, run, ui("rift.replace_hint"), onDismiss = { replacing = null }) { slot ->
+        SlotPicker(rules, run, ui("rift.replace_hint"), onDismiss = { replacing = null }) { slot ->
             replacing = null
             onAct(make(slot))
         }
@@ -525,7 +525,7 @@ private const val SPARKS = 14
 }
 
 /** Отдых: лечение, усиление дара (выбор дара) или снятие проклятия (выбор проклятия). */
-@Composable private fun RestChoices(index: ContentIndex, rules: RiftRules, run: RiftRun, idle: Boolean, onAct: (RiftAct) -> Unit) {
+@Composable private fun RestChoices(rules: RiftRules, run: RiftRun, idle: Boolean, onAct: (RiftAct) -> Unit) {
     var target by remember { mutableStateOf<RiftRest?>(null) }
     Text(ui("rift.rest_title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleSmall)
     RiftRest.entries.forEach { choice ->
@@ -539,7 +539,7 @@ private const val SPARKS = 14
         }
     }
     when (target) {
-        RiftRest.UPGRADE -> SlotPicker(index, rules, run, ui("rift.rest_pick_boon"), onDismiss = { target = null }, enabled = { run.boons[it].grade < rules.nodes.maxGrade }) {
+        RiftRest.UPGRADE -> SlotPicker(rules, run, ui("rift.rest_pick_boon"), onDismiss = { target = null }, enabled = { run.boons[it].grade < rules.nodes.maxGrade }) {
             target = null
             onAct(RiftAct.Rest(RiftRest.UPGRADE, it))
         }
@@ -562,7 +562,6 @@ private const val SPARKS = 14
 
 /** Кузня: витрина за Эхо и слияние двух даров одной редкости; открыта, пока герой не уйдёт. */
 @Composable private fun ForgeChoices(
-    index: ContentIndex,
     rules: RiftRules,
     engine: RiftEngine,
     run: RiftRun,
@@ -577,7 +576,7 @@ private const val SPARKS = 14
     offer.shop.forEachIndexed { i, code ->
         val price = rules.boonsByCode[code]?.rarity?.let(rules.nodes.prices::get) ?: 0
         Choice(idle && run.echo >= price, { if (full) onReplace { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
-            BoonLine(index, rules, code)
+            BoonLine(rules, code)
             Text(ui("rift.forge_buy", price), color = if (run.echo >= price) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
         }
     }
@@ -590,7 +589,6 @@ private const val SPARKS = 14
         var first by remember { mutableStateOf<Int?>(null) }
         val rarityOf = { i: Int -> rules.boonsByCode[run.boons[i].code]?.rarity }
         SlotPicker(
-            index,
             rules,
             run,
             ui("rift.merge_pick"),
@@ -609,11 +607,11 @@ private const val SPARKS = 14
 }
 
 /** Выбор ячейки дара. */
-@Composable private fun SlotPicker(index: ContentIndex, rules: RiftRules, run: RiftRun, title: String, onDismiss: () -> Unit, enabled: (Int) -> Boolean = { true }, onPick: (Int) -> Unit) {
+@Composable private fun SlotPicker(rules: RiftRules, run: RiftRun, title: String, onDismiss: () -> Unit, enabled: (Int) -> Boolean = { true }, onPick: (Int) -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, color = RiftColors.Text, style = MaterialTheme.typography.titleSmall)
-            run.boons.forEachIndexed { i, held -> Choice(enabled(i), { onPick(i) }) { BoonLine(index, rules, held.code, held.grade) } }
+            run.boons.forEachIndexed { i, held -> Choice(enabled(i), { onPick(i) }) { BoonLine(rules, held.code, held.grade) } }
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.sperance.exileforge.core.app.GameSettings
+import com.sperance.exileforge.rules.content.ContentIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
@@ -34,6 +35,12 @@ private val NEVER_AWAY: State<Boolean> = mutableStateOf(false)
 
 /** The player's settings for the screens that read one directly: the fight's numbers and its pause. */
 val LocalSettings = staticCompositionLocalOf { GameSettings() }
+
+/**
+ * Контент игры с сервера для мест, что печатают его числа (строки характеристик боя, Разлома и испытаний): задаёт корень игры;
+ * null - контент ещё не пришёл (или превью), строка печатается общей.
+ */
+val LocalContentIndex = staticCompositionLocalOf<ContentIndex?> { null }
 
 /**
  * Правка настроек устройства для мест без своей модели (свёртки карточки предмета): правка ложится сразу на экран и на устройство;

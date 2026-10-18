@@ -25,7 +25,6 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CombatRules
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
@@ -49,9 +48,9 @@ internal fun ScoutPanel(
     level: Int,
     rules: CombatRules,
     stance: HeroStance,
-    index: ContentIndex?,
     traits: List<TraitView>,
 ) {
+    val index = LocalContentIndex.current
     val body = remember(foe.monster) { Combatant(foe.monster.stats, level, rules) }
     val shape = RoundedCornerShape(10.dp)
     val ring = rarityTint(foe.monster.rarity)

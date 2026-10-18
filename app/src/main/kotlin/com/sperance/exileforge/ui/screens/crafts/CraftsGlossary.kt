@@ -33,7 +33,7 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
     GlossaryEntry("inputs"),
     GlossaryEntry("waste") { listOf(number(it.luckCap)) },
     GlossaryEntry("sure"),
-    GlossaryEntry("double"),
+    GlossaryEntry("yield"),
     GlossaryEntry("hour"),
     GlossaryEntry("experience"),
     GlossaryEntry("finds") { listOf(number(it.levelFind), it.maxLevel) },

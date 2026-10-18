@@ -64,9 +64,9 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
          * С листом героя [sheet] уровня [level] уклонение и броня - процентом защиты, разница - в п.п.
          *
          * Флаг не прибавляется: разница - его новая отметка. Строка, чьё «было» и «стало» печатаются одинаково, не пишется.
-         * Характеристика из [off] (строка `SET` в ноль) - «отключится», даже когда сейчас и так ноль: узел закроет её; закрыть -
-         * убавить (у «меньше лучше» - к лучшему). Строка сводки, чью часть закрывает [off], - «отключится», только когда сама
-         * уходит в ноль.
+         * Характеристика из [off] (строка `SET` в ноль) - «отключится»: узел закроет её; закрыть - убавить (у «меньше лучше» -
+         * к лучшему). Строка сводки, чью часть закрывает [off], - «отключится», только когда сама уходит в ноль. Что и сейчас
+         * печатается нулём, не отключается: строки «0 → отключится» нет.
          */
         fun of(delta: List<StatDelta>, index: ContentIndex? = null, off: Set<String> = emptySet(), sheet: Map<String, Double>? = null, level: Int = 0): Comparison {
             val after = sheet?.let { it + delta.associate { change -> change.stat to change.after } }
@@ -77,10 +77,12 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
                     if (index != null && sheet != null && after != null) defenceLine(it, index, sheet, after, level)?.let { line -> return@map line }
                     val multiplier = index?.stats?.get(it.stat)?.multiplier == true
                     val shown = statValue(it.stat, it.after, index)
+                    val was = statValue(it.stat, it.before, index)
+                    val zero = statValue(it.stat, 0.0, index)
                     ComparisonLine(
                         statTitle(it.stat),
-                        statValue(it.stat, it.before, index),
-                        if (it.stat in off || it.stat in partly && shown == statValue(it.stat, 0.0, index)) ui("compare.off") else shown,
+                        was,
+                        if (was != zero && (it.stat in off || it.stat in partly && shown == zero)) ui("compare.off") else shown,
                         when {
                             multiplier -> factorChange((100 + it.after) / (100 + it.before))
                             statFlag(it.stat, index) -> shown
@@ -90,8 +92,6 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
                         StatPriority.rank(it.stat),
                         share(it.before, it.after),
                     )
-                } + (off - delta.map { it.stat }.toSet()).filter(row).map { stat ->
-                    ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", StatPolarity.better(index, stat, -1.0), StatPriority.rank(stat), 1.0)
                 },
             )
         }

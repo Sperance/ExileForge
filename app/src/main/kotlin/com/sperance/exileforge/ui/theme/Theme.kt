@@ -51,6 +51,12 @@ val Rune = Color(0xFF8FD3FF)
 /** Every modifier's sentence — item, monster, map or atlas — in one sky blue. */
 val ModBlue = Color(0xFF8EC5FF)
 val LifeRed = Color(0xFFD24A43)
+
+/** Красный текст потерь: [LifeRed] на фоне карточки даёт меньше 4.5:1, а надпись должна читаться; заливки и полосы остаются [LifeRed]. */
+val LossText = Color(0xFFF08580)
+
+/** Нить кнопки-рамки на фоне карточки: контраст не ниже 3:1, где [Bronze] теряется. */
+val Seam = Color(0xFF6B7983)
 val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)

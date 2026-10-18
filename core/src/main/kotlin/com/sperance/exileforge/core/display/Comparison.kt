@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.character.FlaskMeasure
 import com.sperance.exileforge.core.character.FlaskRow
 import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
+import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.character.StatPriority
@@ -33,30 +34,35 @@ data class ComparisonLine(
 }
 
 /**
- * Сравнение листа «было → стало»: строки по важности - группа [StatPriority],
- * затем величина изменения. Больше [LEADING] строк - свёрнутое показывает [leading], остальное ([hidden]) - по кнопке. [lossesFirst]
- * (фляги) - потери идут первыми и не сворачиваются: что пропадёт с заменой, видно сразу.
+ * Сравнение листа «было → стало»: строки по важности - группа [StatPriority], затем величина изменения; [lossesFirst]
+ * (фляги) - потери идут первыми: что пропадёт с заменой, видно сразу, как сравнение раскроют. Свёрнутое сравнение - один
+ * заголовок со счётом [better] и [worse] и сдвигом Мощи ([speech] - он же для диктора).
  */
 class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean = false) {
     /** Строки, что что-то меняют ([ComparisonLine.moves]), важнейшие первыми. */
     val lines: List<ComparisonLine> = lines.filter(ComparisonLine::moves).sortedWith(compareBy<ComparisonLine> { if (lossesFirst && it.better == false) 0 else 1 }.thenBy { it.rank }.thenByDescending { it.weight })
 
-    /** Сколько строк видно свёрнутым: не меньше [LEADING] и все потери, если они идут первыми. */
-    private val shown: Int get() = maxOf(LEADING, if (lossesFirst) lines.count { it.better == false } else 0)
+    /** Сколько строк к лучшему. */
+    val better: Int = this.lines.count { it.better == true }
 
-    /** Сворачивается ли сравнение: строк больше, чем видно свёрнутым. */
-    val foldable: Boolean get() = lines.size > shown
+    /** Сколько строк к худшему; нейтральные не считаются ни туда, ни сюда. */
+    val worse: Int = this.lines.count { it.better == false }
 
-    /** Строки, видные в свёрнутом сравнении. */
-    val leading: List<ComparisonLine> get() = lines.take(shown)
-
-    /** Строки под кнопкой «Показать ещё». */
-    val hidden: List<ComparisonLine> get() = lines.drop(shown)
+    /**
+     * Описание заголовка для диктора: имя [title], Мощь «было → стало» с разницей, если [might] стоит показа, счёт без нулевых
+     * частей и действие касания - «Раскрыть» или «Свернуть» по [open].
+     */
+    fun speech(title: String, might: MightShift?, open: Boolean): String {
+        val parts = listOfNotNull(
+            title.lowercase().replaceFirstChar(Char::titlecase),
+            might?.takeIf { it.shown }?.let { "${ui("might.title")} ${mightText(it.before)} → ${mightText(it.after)}, ${mightChange(it)}" },
+            ui("compare.better", better).takeIf { better > 0 },
+            ui("compare.worse", worse).takeIf { worse > 0 },
+        )
+        return parts.joinToString(", ") + ". " + ui(if (open) "common.collapse" else "common.expand")
+    }
 
     companion object {
-        /** Сколько строк видно в свёрнутом сравнении. */
-        const val LEADING = 4
-
         /**
          * Сравнение листа героя: каждая сдвинутая характеристика [delta]; к лучшему ли сдвиг - полярность характеристики
          * ([StatPolarity], меньше получаемого урона - лучше, нейтральная - без цвета). С контентом [index] - только

@@ -168,19 +168,15 @@ private fun AnnotatedString.Builder.side(glyph: String, name: String, value: Str
 }
 
 /**
- * Мощь героя «было → стало» с вещью - строкой сравнения, как у [StatComparison], с плашкой разницы; одна строка Мощи в
- * карточке, и только когда сдвиг стоит показа ([MightShift.shown]).
+ * Сдвиг Мощи героя с вещью «⚜ Мощь было → **стало**» с плашкой разницы - строкой заголовка сравнения ([StatComparison]);
+ * зовут, только когда сдвиг стоит показа ([MightShift.shown]).
  */
-@Composable fun MightComparison(shift: MightShift, look: RelicLook? = null) {
-    if (!shift.shown) return
-    val muted = look?.muted ?: Muted
-    val faint = look?.faint ?: Bronze
-    val better = shift.shift == GearVerdict.Shift.UP
-    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@Composable internal fun MightShiftLine(shift: MightShift, muted: Color, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(MIGHT_GLYPH, color = Caution, style = MaterialTheme.typography.bodySmall)
-        Text(ui("might.title"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        ComparisonFigures(mightText(shift.before), mightText(shift.after), muted, faint)
-        DiffPill(mightChange(shift), better, muted)
+        Text(ui("might.title"), color = Parchment, style = MaterialTheme.typography.bodySmall)
+        ComparisonFigures(mightText(shift.before), mightText(shift.after), muted)
+        DiffPill(mightChange(shift), shift.shift == GearVerdict.Shift.UP, muted)
     }
 }
 

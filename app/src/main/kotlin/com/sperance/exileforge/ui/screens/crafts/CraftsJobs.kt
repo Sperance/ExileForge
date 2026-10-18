@@ -175,10 +175,10 @@ import kotlin.math.ceil
     }
 }
 
-/** Отбор работ по группе выхода: «Все N» и каждая группа с числом работ; [selected] null - все. */
-@Composable internal fun JobFilters(groups: JobGroups, total: Int, selected: String?, onSelect: (String?) -> Unit) {
+/** Отбор работ по группе выхода: «Все N» и каждая группа с числом открытых работ; [selected] null - все. */
+@Composable internal fun JobFilters(groups: JobGroups, selected: String?, onSelect: (String?) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(ui("crafts.group_all", total)) })
+        FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(ui("crafts.group_all", groups.total)) })
         groups.counts.forEach { (group, count) ->
             FilterChip(selected = selected == group, onClick = { onSelect(group) }, label = { Text(ui("crafts.group_count", ui("crafts.group.$group"), count)) })
         }
@@ -258,7 +258,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                                 selected = option.choice == picked,
                                 onClick = { picked = option.choice },
                                 label = { Text(choiceTitle(option.choice)) },
-                                leadingIcon = if (option.level > profession.level || !option.open) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
+                                leadingIcon = if (!profession.opens(option)) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
                             )
                         }
                     }

@@ -78,7 +78,7 @@ import com.sperance.exileforge.ui.theme.*
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  *
  * Тир карты поднимает уровень района: по нему монстры, добыча и мифические захода. Захваченная карта - сильнее монстры и влияние на добычу.
- * Атлас усиливает действующие числа карты, как их сложит сервер на входе.
+ * Атлас и взятые скарабеи усиливают действующие числа карты, как их сложит сервер на входе.
  */
 @Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunch) {
     val maps = stashMaps(game).filter { it.item.mapZone == zone.code }
@@ -108,7 +108,8 @@ import com.sperance.exileforge.ui.theme.*
     val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }
     val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
     val loot = LootRoller(index)
-    val bonus = loot.activeMap(zone.code, loot.atlasPowers(loot.mapEffects(picked.item, atlas.mapEffect), atlas.effects), rarity, picked.item.mapTier, influence, atlas.effects)
+    val scarabs = launch.scarabs.mapNotNull(index.rules.brews::scarab)
+    val bonus = loot.activeMap(zone.code, loot.mapSources(picked.item, atlas.mapEffect, atlas.effects, scarabs), rarity, picked.item.mapTier, influence, atlas.effects)
     MapCapture.of(index.campaign.maps.influence, influence) { stat -> atlas.effects[stat] ?: 0.0 }?.let { Captured(it) }
     Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
         Figure(bonus.quantity, ui("expedition.launch_quantity"))

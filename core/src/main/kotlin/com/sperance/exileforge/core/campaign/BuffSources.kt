@@ -4,33 +4,42 @@ import com.sperance.exileforge.core.display.effectUnit
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.roll.EffectSource
+import com.sperance.exileforge.rules.roll.SourcedEffects
 
-/** Откуда строка карты на монстре: строки карты-предмета, силы атласа героя, сделки алтаря. */
-enum class BuffSource { MAP, ATLAS, PACT }
+/** Откуда строка карты на монстре: строки карты-предмета по источникам сервера ([EffectSource]) и сделки алтаря. */
+enum class BuffSource {
+    MAP,
+    ATLAS,
+    SCARAB,
+    INFLUENCE,
+    PACT,
+    ;
+
+    companion object {
+        /** Источник доли строк карты-предмета источника [source]. */
+        fun of(source: EffectSource): BuffSource = when (source) {
+            EffectSource.MAP -> MAP
+            EffectSource.ATLAS -> ATLAS
+            EffectSource.SCARAB -> SCARAB
+            EffectSource.INFLUENCE -> INFLUENCE
+        }
+    }
+}
 
 /** Доля источника [source] в строке монстра [stat] с операцией [op]. */
 data class BuffShare(val source: BuffSource, val stat: String, val op: Op, val value: Double)
 
 /**
- * Источники строк карты на монстрах захода. Сервер складывает силы атласа в строки карты (`MAP_MONSTER_*`), поэтому доля
- * атласа - его собственные числа, а доля карты - остаток; сделки алтаря лежат отдельно. [boss] - боссу ещё и сила босса карты.
+ * Источники строк карты на монстрах захода: каждый источник карты-предмета [sources], как их сложил сервер, свои строки захода [own]
+ * (зона Ваал) - к карте, сделки алтаря [pacts] - отдельно. [boss] - боссу ещё и сила босса карты.
  */
 object BuffSources {
-    private val ATLAS_POWERS = mapOf(
-        MapStat.MONSTER_LIFE.code to AtlasStat.MONSTER_LIFE.code,
-        MapStat.MONSTER_DAMAGE.code to AtlasStat.MONSTER_DAMAGE.code,
-        MapStat.MONSTER_SPEED.code to AtlasStat.MONSTER_SPEED.code,
-    )
-
-    fun of(effects: Map<String, Double>, atlas: Map<String, Double>, pacts: Map<String, Double>, boss: Boolean): List<BuffShare> {
-        val atlasPart = ATLAS_POWERS.mapNotNull { (map, own) -> atlas[own]?.takeIf { it != 0.0 && map in effects }?.let { map to it } }.toMap()
-        val mapPart = effects.mapValues { (code, value) -> value - (atlasPart[code] ?: 0.0) }.filterValues { it != 0.0 }
+    fun of(sources: List<SourcedEffects>, own: Map<String, Double>, pacts: Map<String, Double>, boss: Boolean): List<BuffShare> {
         fun shares(source: BuffSource, part: Map<String, Double>) = (MapEffects.buffs(part) + if (boss) MapEffects.bossBuffs(part) else emptyList()).map { BuffShare(source, it.stat, it.op, it.value) }
-        return shares(BuffSource.MAP, mapPart) + shares(BuffSource.ATLAS, atlasPart) + shares(BuffSource.PACT, pacts)
+        return sources.flatMap { shares(BuffSource.of(it.source), it.effects) } + shares(BuffSource.MAP, own) + shares(BuffSource.PACT, pacts)
     }
 }
 
@@ -42,7 +51,7 @@ fun monsterLineParts(line: MonsterLine, shares: List<BuffShare>, index: ContentI
     if (line.stat == com.sperance.exileforge.rules.content.CoreStat.TAUNT.code) return null
     val mine = shares.filter { it.stat == line.stat && it.op == line.op }.groupBy { it.source }.mapValues { (_, list) -> list.sumOf { it.value } }.filterValues { it != 0.0 }
     val parts = (if (line.own != 0.0) 1 else 0) + mine.size
-    if (parts < 2 && mine.keys.singleOrNull() != BuffSource.ATLAS && mine.keys.singleOrNull() != BuffSource.PACT) return monsterLineSources(line, index)
+    if (parts < 2 && mine.keys.singleOrNull().let { it == null || it == BuffSource.MAP }) return monsterLineSources(line, index)
     val unit = effectUnit(line.stat, line.op, index)
     fun part(key: String, value: Double) = ui(key, signedNumber(value) { v -> modNumber(line.stat, v) } + unit)
     return buildList {

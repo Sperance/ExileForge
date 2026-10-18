@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.MapStat
+import com.sperance.exileforge.rules.roll.LootRoller
 
 /**
  * The atlas as the screen reads it: which nodes a tap could take or give back. The whole sky is shown (no fog);
@@ -76,8 +77,14 @@ object AtlasEffects {
         return (effects.keys + extra.keys).associateWith { (effects[it] ?: 0.0) + (extra[it] ?: 0.0) }
     }
 
+    /**
+     * Строки атласа [atlas], которые правила кладут строками карты-предмета источника атласа ([LootRoller.atlasPowers]): окно карты
+     * показывает их строками карты, а не строками атласа.
+     */
+    fun laid(index: ContentIndex, atlas: Map<String, Double>): Set<String> = LootRoller(index).let { loot -> atlas.keys.filterTo(HashSet()) { loot.atlasPowers(mapOf(it to 1.0)).isNotEmpty() } }
+
     /** Что атлас захода [atlas] (с долями гильдии и зелья) кладёт в строки карты ([map]); нулевые не входят. */
-    fun extras(atlas: Map<String, Double>): Map<String, Double> = (
+    private fun extras(atlas: Map<String, Double>): Map<String, Double> = (
         mapOf(MapStat.PACK_SIZE.code to (atlas[PACK_SIZE] ?: 0.0), MapStat.RARE_MONSTERS.code to (atlas[RARE_MONSTERS] ?: 0.0)) +
             (hero.keys + GUARDIAN_POWER + ABYSS_POWER + com.sperance.exileforge.rules.content.BrewStat.ALL).associateWith { atlas[it] ?: 0.0 }
         ).filterValues { it != 0.0 }

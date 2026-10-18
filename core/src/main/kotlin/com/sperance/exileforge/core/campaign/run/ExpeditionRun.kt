@@ -55,9 +55,11 @@ import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SummonLog
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
+import com.sperance.exileforge.rules.roll.ActiveMap
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
+import com.sperance.exileforge.rules.roll.SourcedEffects
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.FeatureUse
@@ -68,7 +70,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -95,6 +96,8 @@ class ExpeditionRun(
     internal val seed: Long,
     /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря: с ними встали стаи на входе. */
     val baseEffects: Map<String, Double>,
+    /** Строки захода сверх карты-предмета и атласа: штраф сопротивлений акта и строки зоны Ваал. */
+    val runLines: Map<String, Double>,
     /** This run is the Vaal zone behind the portal. */
     val vaal: Boolean,
     startPools: HeroPools?,
@@ -244,18 +247,21 @@ class ExpeditionRun(
     var atlas: Map<String, Double> = emptyMap()
         internal set
 
+    /** Строки карты-предмета захода по источникам, как их сложил сервер на входе ([ActiveMap.sources]). */
+    val mapSources: List<SourcedEffects> get() = run.context.active?.sources.orEmpty()
+
     /**
-     * Строки окна карты по разделам ([MapSection]), каждая доля один раз: свои строки карты (предмет, зона Ваал, штраф акта, сделки
-     * алтарей) - [mapEffects] без того, что в них положил атлас захода ([AtlasEffects.extras]); [atlas] - по долям [origins].
+     * Строки окна карты по разделам ([MapSection]), каждая доля один раз: источники карты-предмета ([mapSources]); свои строки захода
+     * ([runLines]) и сделки алтарей - к строкам карты; [atlas] - по долям [origins], кроме сил монстров, что сервер уже положил строками
+     * карты источника атласа ([AtlasEffects.laid]).
      */
     val windowLines: Map<MapSection, Map<String, Double>>
         get() {
-            val laid = AtlasEffects.extras(run.context.atlas)
-            val own = (mapEffects.keys + laid.keys).associateWith { (mapEffects[it] ?: 0.0) - (laid[it] ?: 0.0) }.filterValues { abs(it) > MapSection.EPSILON }
-            val shares = atlas.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> Triple(MapSection.of(source.kind), code, share) } }
-                .groupBy({ it.first }) { it.second to it.third }
-                .mapValues { (_, lines) -> lines.groupBy({ it.first }, { it.second }).mapValues { (_, parts) -> parts.sum() } }
-            return mapOf(MapSection.MAP to own) + shares
+            val laid = AtlasEffects.laid(index, atlas)
+            val sourced = mapSources.map { MapSection.of(it.source) to it.effects } + (MapSection.MAP to MapEffects.sum(runLines, pacts))
+            val shares = atlas.filterKeys { it !in laid }.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> MapSection.of(source.kind) to mapOf(code to share) } }
+            return (sourced + shares).groupBy({ it.first }, { it.second })
+                .mapValues { (_, parts) -> parts.reduce(MapEffects::sum).filterValues { it != 0.0 } }
         }
 
     /**
@@ -576,8 +582,8 @@ class ExpeditionRun(
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
             val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
-            val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStat.HERO_RESIST.code to penalty)) else base
-            val effects = if (vaal) MapEffects.sum(acted, context.vaal?.effects.orEmpty()) else acted
+            val own = MapEffects.sum(mapOf(MapStat.HERO_RESIST.code to penalty).filterValues { it > 0 }, if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
+            val effects = MapEffects.sum(base, own)
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))
             val stats = build.body.stats
@@ -598,7 +604,7 @@ class ExpeditionRun(
                 world.placeFeatures(run.features.all, features, index.campaign.features)
             }
             return ExpeditionRun(
-                index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
+                index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, fateRun,
             ).also {
                 if (!it.carry.bare) it.rebody()

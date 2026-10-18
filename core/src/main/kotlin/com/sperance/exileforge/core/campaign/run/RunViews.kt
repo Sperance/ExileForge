@@ -44,6 +44,7 @@ import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
+import com.sperance.exileforge.rules.roll.EffectSource
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
@@ -498,11 +499,13 @@ data class LevelUp(val from: Int, val to: Int) {
 data class ObjectAction(val feature: MapFeature, val progress: Float?)
 
 /**
- * Раздел окна карты ([ExpeditionRun.windowLines]): свои строки карты, атлас, древо гильдии, зелье; [title] - ключ заголовка,
- * [empty] - ключ строки пустого раздела (null - пустой не показывается).
+ * Раздел окна карты ([ExpeditionRun.windowLines]): строки самой карты, скарабеи, влияние, атлас, древо гильдии, зелье; [title] - ключ
+ * заголовка, [empty] - ключ строки пустого раздела (null - пустой не показывается).
  */
 enum class MapSection(val title: String, val empty: String? = null) {
     MAP("map.modifiers", "map.no_modifiers"),
+    SCARAB("map.scarabs"),
+    INFLUENCE("map.influence"),
     ATLAS("map.atlas"),
     GUILD("map.guild"),
     POTION("map.potion"),
@@ -516,7 +519,12 @@ enum class MapSection(val title: String, val empty: String? = null) {
             else -> ATLAS
         }
 
-        /** Остаток строки карты меньше этого - след вычитания, не строка. */
-        const val EPSILON = 1e-9
+        /** Раздел строк карты-предмета источника [source]. */
+        fun of(source: EffectSource): MapSection = when (source) {
+            EffectSource.MAP -> MAP
+            EffectSource.ATLAS -> ATLAS
+            EffectSource.SCARAB -> SCARAB
+            EffectSource.INFLUENCE -> INFLUENCE
+        }
     }
 }

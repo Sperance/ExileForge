@@ -169,7 +169,7 @@ import kotlin.math.roundToInt
                         game, frame, fight, fight.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance, clock,
                         onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
                         biome = run.zone.biome,
-                        shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
+                        shares = { boss -> BuffSources.of(run.mapSources, run.runLines, run.pacts, boss) },
                         mapEffects = run.mapEffects,
                         origins = run.origins,
                         pulse = run.pulse,

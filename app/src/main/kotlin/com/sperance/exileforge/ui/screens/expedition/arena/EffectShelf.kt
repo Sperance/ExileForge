@@ -147,7 +147,8 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
     fight.heroFate.forEach { add(Shelved.Fate(it)) }
 }
 
-@Composable internal fun ShelfTile(item: Shelved, side: Dp, index: ContentIndex?) {
+@Composable internal fun ShelfTile(item: Shelved, side: Dp) {
+    val index = LocalContentIndex.current
     val tip = { item.tip(index) }
     when (item) {
         Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), item.bearing, side, tip)
@@ -343,10 +344,10 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 
 /**
  * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание плитки - её подробная выноска ([tip], числа строк - из контента [index]), касание «+N» - лист эффектов ([onOpen]).
+ * «+N» последней. Касание плитки - её подробная выноска ([tip]), касание «+N» - лист эффектов ([onOpen]).
  * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
-@Composable internal fun EffectShelf(items: List<Shelved>, index: ContentIndex?, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
+@Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
     SubcomposeLayout(modifier) { constraints ->
         val sidePx = side.roundToPx()
         val gapPx = gap.roundToPx()
@@ -355,7 +356,7 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
         val over = items.size > fit
         val shown = if (over) fit - 1 else items.size
         val tile = Constraints.fixed(sidePx, sidePx)
-        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side, index) }.first().measure(tile) } +
+        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) }.first().measure(tile) } +
             (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side, onOpen) }.first().measure(tile)) else emptyList())
         val length = if (tiles.isEmpty()) 0 else tiles.size * sidePx + (tiles.size - 1) * gapPx
         val width = (if (vertical) sidePx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
@@ -438,7 +439,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
  * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
  * разбор. Читается вживую: таймеры идут, бой не стоит.
  */
-@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, index: ContentIndex?, onDismiss: () -> Unit) {
+@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -449,13 +450,13 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
             if (timed.isEmpty() && lasting.isEmpty() && flow == null) MutedText(ui("fight.no_states"))
             if (timed.isNotEmpty()) {
                 ShelfGroup(ui("fight.shelf.timed", timed.size))
-                timed.forEach { SheetRow(it, index) }
+                timed.forEach { SheetRow(it) }
             }
             val standing = lasting.size + (if (flow != null) 1 else 0)
             if (standing > 0) {
                 ShelfGroup(ui("fight.shelf.lasting", standing))
                 flow?.let { FlowRow(it) }
-                lasting.forEach { SheetRow(it, index) }
+                lasting.forEach { SheetRow(it) }
             }
         }
     }
@@ -494,9 +495,9 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
     ui("fight.shelf.now"),
 )
 
-@Composable private fun SheetRow(item: Shelved, index: ContentIndex?) {
-    val row = item.row(index)
-    EffectRow({ ShelfTile(item, 30.dp, index) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
+@Composable private fun SheetRow(item: Shelved) {
+    val row = item.row(LocalContentIndex.current)
+    EffectRow({ ShelfTile(item, 30.dp) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
 }
 
 @Composable private fun EffectRow(tile: @Composable () -> Unit, row: ShelfRow, time: String) {

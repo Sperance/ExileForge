@@ -73,7 +73,6 @@ import com.sperance.exileforge.core.display.totemTitle
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.TotemKind
 import com.sperance.exileforge.ui.components.*
@@ -141,7 +140,6 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
-    index: ContentIndex?,
     track: (Int) -> Modifier,
     onFocus: (Int) -> Unit,
     onInspect: (Int) -> Unit,
@@ -149,13 +147,13 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val name = monsterTitle(foe.monster.code)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        BossFrame(foe, name, boss, fight, frame, index)
+        BossFrame(foe, name, boss, fight, frame)
         if (boss.slots.isEmpty()) {
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, index, track, onFocus) }
+                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
                 PortraitStage(foe, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
-                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, index, track, onFocus) }
+                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
             }
         } else {
             NicheArena(foe, boss, fight, frame, chosen, track, name) { tap(fight, it, onFocus, onInspect) }
@@ -170,7 +168,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
  * Имя на всю ширину сжимается до минимума, дальше многоточие. Фаза и ярость - табулярными цифрами: ширина не прыгает. Ярость - сколько
  * прибавила и когда следующая ступень. Нить каста мерцает в рисовании кадра.
  */
-@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, index: ContentIndex?) {
+@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame) {
     val lore = LocalLore.current
     val shape = RoundedCornerShape(10.dp)
     Column(
@@ -211,7 +209,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, frame)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
-        if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(ui("fight.shelf.foe", name), foe.ailments, foe.held, index, foe.effects)
+        if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects)
         boss.cast?.let { cast ->
             Row(
                 Modifier.fillMaxWidth().then(if (lore != null) Modifier.clickable { lore(Lore.Skill(cast.code, name, null, fight.heroBody)) } else Modifier),
@@ -785,14 +783,13 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
-    index: ContentIndex?,
     track: (Int) -> Modifier,
     onFocus: (Int) -> Unit,
 ) {
     Column(Modifier.width(72.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         foes.forEach { foe ->
             key(foe.index) {
-                FoeCard(foe, fight, frame, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), index, narrow = true) { onFocus(foe.index) }
+                FoeCard(foe, fight, frame, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), narrow = true) { onFocus(foe.index) }
             }
         }
     }

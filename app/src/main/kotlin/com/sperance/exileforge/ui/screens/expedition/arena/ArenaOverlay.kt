@@ -97,7 +97,7 @@ private const val HERO_CARD = -1
             ) {
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, frame, chosen, large, traits, game.index, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -112,7 +112,6 @@ private const val HERO_CARD = -1
                                         track(foe.index).weight(1f).widthIn(max = 180.dp),
                                         large,
                                         traits[foe.index].orEmpty(),
-                                        game.index,
                                         narrow = fight.field.size >= 3,
                                     ) {
                                         onCommand(RunCommand.Focus(foe.index))
@@ -131,7 +130,6 @@ private const val HERO_CARD = -1
                             shown.monster.level.takeIf { it > 0 } ?: level,
                             rules,
                             stance,
-                            game.index,
                             traits[shown.index].orEmpty(),
                         )
                     } else {
@@ -152,7 +150,6 @@ private const val HERO_CARD = -1
                     fight,
                     foe.monster.level.takeIf { it > 0 } ?: level,
                     rules,
-                    game.index,
                     traits[foe.index].orEmpty(),
                     fight.boss,
                     remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },

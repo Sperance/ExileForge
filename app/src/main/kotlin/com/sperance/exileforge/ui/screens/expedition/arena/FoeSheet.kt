@@ -42,7 +42,6 @@ import com.sperance.exileforge.core.display.totemText
 import com.sperance.exileforge.core.display.totemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CombatRules
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
@@ -65,12 +64,12 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     fight: FightHud,
     level: Int,
     rules: CombatRules,
-    index: ContentIndex?,
     traits: List<TraitView>,
     boss: BossHud?,
     shares: List<BuffShare>,
     onDismiss: () -> Unit,
 ) {
+    val index = LocalContentIndex.current
     val body = remember(foe.monster, level) { Combatant(foe.monster.stats, level, rules) }
     val hero = fight.heroBody
     val ownBoss = boss?.takeIf { it.index == foe.index }
@@ -93,10 +92,10 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when (tab) {
-                    FoeTab.STATS -> StatsTab(foe, body, hero, rules, index)
-                    FoeTab.SKILLS -> SkillsTab(foe, body, hero, traits, index, name)
+                    FoeTab.STATS -> StatsTab(foe, body, hero, rules)
+                    FoeTab.SKILLS -> SkillsTab(foe, body, hero, traits, name)
                     FoeTab.PHASES -> ownBoss?.let { PhasesTab(it, totems, name) }
-                    FoeTab.MODS -> ModsTab(foe, shares, index)
+                    FoeTab.MODS -> ModsTab(foe, shares)
                 }
             }
         }
@@ -131,7 +130,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
 
 /** Характеристики: запасы, скорость, урон, защита - и что от защиты остаётся против героя. */
-@Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules, index: ContentIndex?) {
+@Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules) {
     Head(ui("fight.sheet_pools"))
     Row2(ui("fight.stat_life"), "${number(foe.life.toDouble())} / ${number(body.maxLife)}", LifeRed)
     if (body.maxShield > 0) Row2(ui("fight.stat_shield"), "${number(foe.shield.toDouble())} / ${number(body.maxShield)}", ShieldCyan)
@@ -162,12 +161,13 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
     }
     if (foe.effects.isNotEmpty() || foe.ailments.isNotEmpty() || foe.held) {
         Head(ui("fight.sheet_now"))
-        StateTiles(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), foe.ailments, foe.held, index, foe.effects)
+        StateTiles(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), foe.ailments, foe.held, foe.effects)
     }
 }
 
 /** Навыки и свойства: суть каждого умения, урон по герою, перезарядка; свойства с их строками. */
-@Composable private fun SkillsTab(foe: FoeView, body: Combatant, hero: Combatant?, traits: List<TraitView>, index: ContentIndex?, name: String) {
+@Composable private fun SkillsTab(foe: FoeView, body: Combatant, hero: Combatant?, traits: List<TraitView>, name: String) {
+    val index = LocalContentIndex.current
     val lore = LocalLore.current
     if (foe.monster.skills.isEmpty() && traits.isEmpty()) MutedText(ui("fight.sheet_no_skills"))
     foe.monster.skills.forEach { code ->
@@ -175,7 +175,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
         val hit = skill?.let { monsterSkillDamage(it, body, hero) }
         Column(Modifier.fillMaxWidth().clickable { lore?.invoke(Lore.Skill(code, name, body, hero)) }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(SkillText.title(code), color = if (skill?.curse != null) LifeRed else Rune, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            skill?.let { SkillText.monster(it, index) }?.forEach { Text(it, color = Parchment, style = MaterialTheme.typography.labelSmall) }
+            index?.let { content -> skill?.let { SkillText.monster(it, content) } }?.forEach { Text(it, color = Parchment, style = MaterialTheme.typography.labelSmall) }
             val facts = listOfNotNull(
                 hit?.taken?.let { ui("fight.skill_hits_you", number(it)) },
                 skill?.let { ui("lore.cooldown") + " " + ui("lore.seconds", fineNumber(it.cooldown)) },
@@ -224,7 +224,8 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
 }
 
 /** Модификаторы: каждая строка суммой и из чего она сложена - монстр, карта, атлас, сделки; у босса своих нет, только влияние карты. */
-@Composable private fun ModsTab(foe: FoeView, shares: List<BuffShare>, index: ContentIndex?) {
+@Composable private fun ModsTab(foe: FoeView, shares: List<BuffShare>) {
+    val index = LocalContentIndex.current
     val lines = remember(foe.monster) { monsterLines(foe.monster) }
     if (lines.isEmpty()) MutedText(ui(if (foe.monster.power != null) "fight.sheet_no_influence" else "fight.sheet_no_mods"))
     lines.forEach { line ->

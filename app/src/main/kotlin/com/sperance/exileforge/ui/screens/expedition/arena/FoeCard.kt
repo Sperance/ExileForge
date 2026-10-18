@@ -39,7 +39,6 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
@@ -140,7 +139,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     modifier: Modifier,
     large: Boolean,
     traits: List<TraitView>,
-    index: ContentIndex?,
     narrow: Boolean = false,
     onTap: () -> Unit,
 ) {
@@ -254,7 +252,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 val tile = if (large) 16.dp else 14.dp
                 if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
                     val shelf = timedShelf(foe.held, foe.ailments, foe.effects) + foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }
-                    EffectShelf(shelf, index, tile, { effectsOpen = true }, Modifier.fillMaxWidth().height(tile), gap = 2.dp)
+                    EffectShelf(shelf, tile, { effectsOpen = true }, Modifier.fillMaxWidth().height(tile), gap = 2.dp)
                 }
             }
             if (narrow && foe.monster.level > 0) {
@@ -293,7 +291,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     }
     if (effectsOpen) {
         val timed = timedShelf(foe.held, foe.ailments, foe.effects)
-        EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), timed, foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }, null, index) { effectsOpen = false }
+        EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), timed, foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }, null) { effectsOpen = false }
     }
 }
 

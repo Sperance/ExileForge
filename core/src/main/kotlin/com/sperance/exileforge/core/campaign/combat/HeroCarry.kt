@@ -11,9 +11,9 @@ import kotlin.math.max
 
 /**
  * Что герой несёт между боем и картой, в обе стороны: недуги (урон во времени, Изранение и Иссушение, холод, шок и заморозка -
- * каждый своей строкой), временные баффы и проклятия, энергощит и заряды. Время - «сколько осталось», как у глотков флаконов
+ * каждый своей строкой), временные баффы и проклятия, энергощит, заряды и отложенный урон ([delayed]). Время - «сколько осталось», как у глотков флаконов
  * ([HeroPools.flaskLeft]): в бою - до его конца, на карте тает по часам дороги ([after]), в следующий бой входит остатком.
- * Не несёт: оглушение и удержание, перезарядки, барьер, неуязвимость, отложенный урон, полосы накопления и носимое весь бой.
+ * Не несёт: оглушение и удержание, перезарядки, барьер, неуязвимость, полосы накопления и носимое весь бой.
  * Несёт и счёт сил «каждое N-е» ([counts]); бафф скорости передвижения силы на карте ускоряет шаг.
  * Горение и яд ловушек карты - те же недуги ([AilmentLaw.laid]): одна система, и они тоже входят в следующий бой.
  */
@@ -25,15 +25,18 @@ data class HeroCarry(
     val charges: List<CarriedCharge> = emptyList(),
     /** Счётчики сил «каждое N-е»: следующий бой захода считает дальше; со временем не тают. */
     val counts: Map<String, Int> = emptyMap(),
+    /** Отложенная доля ударов по герою, что ещё не дошла до здоровья. */
+    val delayed: List<CarriedDelay> = emptyList(),
 ) {
     /** Нечего нести, кроме щита. */
-    val bare: Boolean get() = ailments.isEmpty() && effects.isEmpty() && charges.isEmpty()
+    val bare: Boolean get() = ailments.isEmpty() && effects.isEmpty() && charges.isEmpty() && delayed.isEmpty()
 
     /** Прошло [dt] секунд вне боя: всё тает, истёкшее уходит. */
     fun after(dt: Double): HeroCarry = copy(
         ailments = ailments.mapNotNull { it.copy(left = it.left - dt).takeIf { a -> a.left > 0 } },
         effects = effects.mapNotNull { it.copy(left = it.left - dt).takeIf { e -> e.left > 0 } },
         charges = charges.mapNotNull { it.copy(left = it.left - dt).takeIf { c -> c.left > 0 } },
+        delayed = delayed.mapNotNull { it.copy(left = it.left - dt).takeIf { d -> d.left > 0 } },
     )
 
     /** Строки, что несомое кладёт на героя вне боя: эффекты (условные - без условий боя) и заряды по правилам [rules] (null - без зарядов). */
@@ -83,6 +86,12 @@ data class CarriedEffect(
 
 /** Заряды одного вида вне боя: [count] штук ещё [left] секунд. */
 data class CarriedCharge(val kind: ChargeKind, val count: Int, val left: Double)
+
+/** Отложенный урон вне боя: [rate] здоровья в секунду ещё [left] секунд, мимо щита - как [Delayed] в бою. */
+data class CarriedDelay(val rate: Double, val left: Double) {
+    /** Сколько здоровья он снимет за [dt] секунд. */
+    fun over(dt: Double): Double = rate * minOf(dt, left)
+}
 
 /**
  * Сила недуга [ailment]: сильнейший экземпляр [strongest], усиленный приёмом недуга на бойце [body]

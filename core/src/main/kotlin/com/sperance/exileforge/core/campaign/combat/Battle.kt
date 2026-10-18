@@ -508,8 +508,8 @@ class Battle(
     }
 
     /**
-     * Несомое [carry] ложится на героя к началу боя: недуги - от врагов, с первым тиком через секунду; эффекты и заряды -
-     * остатком своего времени.
+     * Несомое [carry] ложится на героя к началу боя: недуги - от врагов, с первым тиком через секунду; эффекты, заряды и
+     * отложенный урон - остатком своего времени.
      */
     private fun carryIn(carry: HeroCarry) {
         carry.ailments.forEach { a ->
@@ -518,6 +518,7 @@ class Battle(
         }
         carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }
         carry.charges.forEach { heroCharges.carryIn(it) }
+        carry.delayed.forEach { delayed += Delayed(it.rate, time + it.left) }
     }
 
     fun foe(index: Int) = foeFighters[index]

@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
 /**
  * Недуги, баффы, проклятия и заряды на герое вне боя за [dt] секунд дороги: урон недугов каждый кадр
  * по законам боя ([AilmentLaw]: сила, шок, приём урона во времени) - в щит, затем в здоровье (яд и хаос мимо щита); ноль здоровья -
- * гибель на карте. На экран - тиком недуга раз в [TICK_SECONDS]. Затем всё несомое тает ([com.sperance.exileforge.core.campaign.combat.HeroCarry.after]).
+ * гибель на карте; отложенный урон боя - так же, мимо щита ([wound]). На экран - тиком недуга раз в [TICK_SECONDS]. Затем всё несомое тает ([com.sperance.exileforge.core.campaign.combat.HeroCarry.after]).
  *
  * Гибель от тика: несомое уже снято, заход кончен.
  */
@@ -27,6 +27,10 @@ internal fun ExpeditionRun.ailing(dt: Double) {
         val wound = hurt(law.perSecond(hero, ailments, active) * minOf(dt, active.left), law.type(active))
         if (phase != RunPhase.MAP) return
         ticks.getOrPut(active.ailment) { AilmentTick() }.wound += wound
+    }
+    for (late in carry.delayed) {
+        wound(late.over(dt), 0.0)
+        if (phase != RunPhase.MAP) return
     }
     val before = carry
     carry = carry.after(dt)
@@ -65,14 +69,14 @@ internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { i
 
 /**
  * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
- * недуга ([RoadLife]), деген листа и урон недугов; что из него принимает энергощит (яд и хаос - мимо), здоровья не
+ * недуга ([RoadLife]), деген листа, урон недугов и отложенный урон боя; что из него принимает энергощит (яд и хаос - мимо), здоровья не
  * трогает ([LifeFlow.shielded]). Метка на полосе жизни и лист эффектов карты.
  */
 internal fun ExpeditionRun.roadFlow(): LifeFlow {
     val rates = hurtingRates()
     val total = rates.sumOf { it.second }
     return RoadLife.flow(hero, pace, seconds - hitAt, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
-        .copy(ailments = total, shielded = EnergyShield.absorbed(shield, rates.map { (active, rate) -> law.type(active) to rate }))
+        .copy(ailments = total, delayed = carry.delayed.sumOf { it.rate }, shielded = EnergyShield.absorbed(shield, rates.map { (active, rate) -> law.type(active) to rate }))
 }
 
 /** Недуги на герое вне боя - плитками полки, как в бою: по недугу - доля времени, стаки, секунды (до десятой) и сила. */

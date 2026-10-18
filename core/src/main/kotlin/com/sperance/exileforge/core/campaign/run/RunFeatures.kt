@@ -239,9 +239,11 @@ internal fun ExpeditionRun.showHazard(view: HazardView) {
 }
 
 /** Урон вне боя вида [type] (через щит, как в бою, - [EnergyShield]): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
-internal fun ExpeditionRun.hurt(damage: Double, type: DamageType?): Wound {
+internal fun ExpeditionRun.hurt(damage: Double, type: DamageType?): Wound = wound(damage, EnergyShield.absorbed(shield, damage, type))
+
+/** Урон [damage] вне боя, из которого щит принимает [absorbed], остальное - здоровье: ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
+internal fun ExpeditionRun.wound(damage: Double, absorbed: Double): Wound {
     if (damage <= 0 || phase != RunPhase.MAP) return Wound()
-    val absorbed = EnergyShield.absorbed(shield, damage, type)
     shield -= absorbed
     hitAt = seconds
     val taken = minOf(life, damage - absorbed)

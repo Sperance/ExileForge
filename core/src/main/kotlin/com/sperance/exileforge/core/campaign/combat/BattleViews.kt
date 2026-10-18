@@ -24,8 +24,8 @@ fun Battle.pools(): HeroPools = HeroPools(
 )
 
 /**
- * Что герой уносит из боя на карту ([HeroCarry]): недуги, временные баффы и проклятия (не глотки и не носимое весь бой), щит и
- * заряды - остатком своего времени.
+ * Что герой уносит из боя на карту ([HeroCarry]): недуги, временные баффы и проклятия (не глотки и не носимое весь бой), щит,
+ * заряды и отложенный урон - остатком своего времени.
  */
 fun Battle.carry(): HeroCarry {
     val held = heroFighter.ailments.filter { it.until > time }
@@ -36,6 +36,7 @@ fun Battle.carry(): HeroCarry {
         heroFighter.shield,
         heroCharges.carried(time),
         powers.tally,
+        delayed.filter { it.until > time }.map { CarriedDelay(it.rate, it.until - time) },
     )
 }
 

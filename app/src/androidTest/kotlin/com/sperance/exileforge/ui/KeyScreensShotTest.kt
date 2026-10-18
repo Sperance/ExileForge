@@ -337,11 +337,11 @@ class KeyScreensShotTest {
     }
 
     /** Окно обязательного обновления: найдено (версии чипами, заметки с прокруткой, «Обновить», размер) и загрузка (тонкая полоса и «64% · 24 из 38 МБ»). */
-    @Test fun update() = shot("update") {
+    @Test fun update() = shot("update", scroll = false) {
         val notes = (1..9).joinToString("\n") { "• Строки предмета сгруппированы по источникам, пункт $it" }
         val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com")
-        UpdateDialog(update, UpdateState(checking = false, update = update), {}, {})
-        UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {})
+        Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update), {}, {}) }
+        Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {}) }
     }
 
     /** Модерация: плотные строки и раскрытые тикеты - новый (Отклонить / В GitHub) и отправленный с ответом (Закрыть… / Issue #N ↗). */
@@ -362,7 +362,7 @@ class KeyScreensShotTest {
     }
 
     /** Плашка идущей работы: длинное имя, часы цикла и три фишки выхода в час с «+N», строка уровня и итоги одним рядом. */
-    @Test fun workPlaque() = shot("work", frozen = true) {
+    @Test fun workPlaque() = shot("work", scroll = false, frozen = true) {
         val (profession, job) = index.professions.professions.flatMap { p -> p.jobs.filterIsInstance<Job.Item>().map { p to it } }.maxBy { (_, j) -> j.extra.size * 100 + jobTitle(j.code).length }
         val now = System.currentTimeMillis()
         val view = JobView(job, cycleMillis = 30_000, nothing = 10.0, extra = (job.extra + index.items.keys.take(3).map { JobExtra(it.value, 2.0) }).take(4), experience = 12.0)

@@ -98,6 +98,7 @@ internal fun Battle.hud(
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(), heroFate = fateGlows(),
         heroBarrier = h.barrier.roundToInt(),
+        heroMaxLife = shownMax(h.body.maxLife), heroMaxShield = h.body.maxShield.roundToInt(),
         level = level,
         round = round, rounds = rounds,
         heroBody = h.body,

@@ -138,8 +138,8 @@ import kotlin.math.sin
                         )
                         fight.heroProvoke?.let { provoke -> TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(provoke) } }
                     }
-                    if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
-                    VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 }, reserved = hud.heroLifeReserved)
+                    if (fight.heroMaxShield > 0) VitalBar(fight.heroShield, fight.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
+                    VitalBar(fight.heroLife, fight.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 }, reserved = hud.heroLifeReserved)
                     if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
                     fight.heroBuildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                     SwingBar({ swing() }, fight.heroHeld, Modifier.fillMaxWidth())

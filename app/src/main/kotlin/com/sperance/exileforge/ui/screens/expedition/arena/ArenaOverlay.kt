@@ -66,7 +66,7 @@ private const val HERO_CARD = -1
     val breath = decorTime()
     val frame = remember(clock, pulse, breath) { FightFrame(clock, pulse, breath) }
     val settings = LocalSettings.current
-    val share = if (hud.heroMaxLife > 0) fight.heroLife / hud.heroMaxLife.toFloat() else 1f
+    val share = if (fight.heroMaxLife > 0) fight.heroLife / fight.heroMaxLife.toFloat() else 1f
     val low = share * 100 < settings.autoPause
     val danger = share < DANGER_SHARE
     LaunchedEffect(low) { if (low && fight.started && !fight.paused && fight.outcome == null) onCommand(RunCommand.Pause) }

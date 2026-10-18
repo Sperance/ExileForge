@@ -264,6 +264,9 @@ data class FightHud(
     /** Действующие рычаги Предначертания героя: значок ✦ среди его состояний. */
     val heroFate: List<FateGlow> = emptyList(),
     val heroBarrier: Int = 0,
+    /** Максимум здоровья и щита боевого тела героя: шкала полос [heroLife] и [heroShield] в бою. */
+    val heroMaxLife: Int = 0,
+    val heroMaxShield: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
     /** Бой цепочки, с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома, раунд собранных стай; у одиночного боя - 1 из 1. */

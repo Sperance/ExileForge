@@ -56,10 +56,11 @@ internal fun ExpeditionRun.snapshot(): RunHud {
     val flow = if (battle == null && phase == RunPhase.MAP) roadFlow() else null
     val figures = stats.summary(kills)
     val awaiting = mine.count(::awaits)
+    val maxLife = battle?.heroFighter?.body?.maxLife ?: hero.maxLife
     return RunHud(
         phase = phase, mapCode = zone.code,
-        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, hero.maxLife, falling = battle == null && flow?.let { it.net < 0 } == true),
-        heroMaxLife = shownMax(hero.maxLife),
+        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, maxLife, falling = battle == null && flow?.let { it.net < 0 } == true),
+        heroMaxLife = shownMax(maxLife),
         heroShield = (battle?.heroFighter?.shield ?: shield).roundToInt(), heroMaxShield = (battle?.heroFighter?.body?.maxShield ?: hero.maxShield).roundToInt(),
         alive = world.alive, total = world.total, sealed = world.sealed,
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),

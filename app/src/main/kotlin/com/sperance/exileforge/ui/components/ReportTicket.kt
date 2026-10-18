@@ -37,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Карточка отчёта - тикет, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
  * логин, герой ссылкой на его карточку и место); текст до трёх строк; путь отчёта шкалой из трёх шагов ([StepPath]); переписка цитатами;
- * ответ автора; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
+ * ответ автора; [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
  * места, ссылки на GitHub у игрока нет. Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
  * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
  * (у модерации сворачивает тикет в строку).
@@ -50,6 +50,7 @@ import com.sperance.exileforge.ui.theme.*
     createdAt: String,
     thread: List<Pair<NoteAuthor, String>>,
     dim: Boolean,
+    version: String = "",
     fresh: Boolean = false,
     focused: Boolean = false,
     onAnswer: ((String) -> Unit)? = null,
@@ -68,11 +69,12 @@ import com.sperance.exileforge.ui.theme.*
             ReportKindMark(kind, fate.tint)
             issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
             FatePill(fate, kind, issue, fresh)
+            if (version.isNotBlank()) VersionTag(version)
             Spacer(Modifier.weight(1f))
             Text(reportDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         author?.let { Box(Modifier.padding(horizontal = 12.dp).padding(top = 4.dp)) { it() } }
-        ExpandableText(text, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = true)
+        ExpandableText(text, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = ui("feedback.read_all"))
         FateSteps(StepPath.of(fate, kind, issue), Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp))
         thread.forEach { (who, words) -> ThreadNote(who, words) }
         onAnswer?.let { send -> AnswerField(send) }
@@ -135,6 +137,19 @@ private data class StepPath(val labels: List<String>, val reached: Int, val tint
             }
         }
     }
+}
+
+/** Версия клиента отчёта мелкой плашкой в нити: шапка тикета модерации и строка списка. */
+@Composable internal fun VersionTag(version: String) {
+    val shape = RoundedCornerShape(5.dp)
+    Text(
+        version,
+        color = Parchment,
+        style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.border(1.dp, Seam, shape).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /** День и месяц отчёта из ISO-времени сервера («2026-10-15T13:06:30» → «15.10»); не разобралось - пусто. */

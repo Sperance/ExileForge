@@ -331,8 +331,8 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     }
 }
 
-/** Выпадающий выбор строки управления: значение «Админ ▾» в нити; пункт [options] - подпись и что он делает. */
-@Composable private fun Picker(value: String, enabled: Boolean, options: List<Pair<String, () -> Unit>>) {
+/** Компактный выпадающий выбор: значение «Админ ▾» в нити (строка управления досье, версия у отчётов); пункт [options] - подпись и что он делает. */
+@Composable internal fun Picker(value: String, enabled: Boolean, options: List<Pair<String, () -> Unit>>) {
     var expanded by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     Box {

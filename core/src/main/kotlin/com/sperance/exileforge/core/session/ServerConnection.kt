@@ -25,6 +25,9 @@ object Reads {
 
     /** Отчёты у модерации: своё чтение - не гасит и не теряет чтение листа отчётов игрока. */
     const val FEEDBACK_ADMIN = "feedback_admin"
+
+    /** Техническое отчёта модерации: приставка ключа, к ней - id отчёта; чтения разных отчётов друг друга не гасят. */
+    const val FEEDBACK_DETAIL = "feedback_detail:"
     const val MODERATION = "moderation"
     const val DOSSIER = "dossier"
     const val SERVERS = "servers"

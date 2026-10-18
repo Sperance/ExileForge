@@ -116,7 +116,7 @@ private fun accented(text: String, part: String, color: Color): AnnotatedString 
             Engraved(ui("story.law.title"), accent = GoldBright, modifier = Modifier.weight(1f))
             Text(loc(LocaleKey.chapterTitle(chapter.region)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        ExpandableText(loc(LocaleKey.chapterOutro(chapter.region)), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = OUTRO_LINES, more = true)
+        ExpandableText(loc(LocaleKey.chapterOutro(chapter.region)), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = OUTRO_LINES, more = ui("common.read_more"))
         HorizontalDivider(color = Bronze)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(ForgeGlyphs.Scales, null, tint = Caution, modifier = Modifier.size(16.dp))

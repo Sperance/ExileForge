@@ -27,7 +27,10 @@ data class ComparisonLine(
     val better: Boolean?,
     val rank: Int,
     val weight: Double,
-)
+) {
+    /** Строка что-то меняет: «было» и «стало» печатаются по-разному; строка без перемены нигде не пишется. */
+    val moves: Boolean get() = before != after
+}
 
 /**
  * Сравнение листа «было → стало»: строки по важности - группа [StatPriority],
@@ -35,8 +38,8 @@ data class ComparisonLine(
  * (фляги) - потери идут первыми и не сворачиваются: что пропадёт с заменой, видно сразу.
  */
 class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean = false) {
-    /** Все строки, важнейшие первыми. */
-    val lines: List<ComparisonLine> = lines.sortedWith(compareBy<ComparisonLine> { if (lossesFirst && it.better == false) 0 else 1 }.thenBy { it.rank }.thenByDescending { it.weight })
+    /** Строки, что что-то меняют ([ComparisonLine.moves]), важнейшие первыми. */
+    val lines: List<ComparisonLine> = lines.filter(ComparisonLine::moves).sortedWith(compareBy<ComparisonLine> { if (lossesFirst && it.better == false) 0 else 1 }.thenBy { it.rank }.thenByDescending { it.weight })
 
     /** Сколько строк видно свёрнутым: не меньше [LEADING] и все потери, если они идут первыми. */
     private val shown: Int get() = maxOf(LEADING, if (lossesFirst) lines.count { it.better == false } else 0)
@@ -60,29 +63,34 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
          * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «100% → 60%», разница - «−40%».
          * С листом героя [sheet] уровня [level] уклонение и броня - процентом защиты, разница - в п.п.
          *
-         * Флаг не прибавляется: разница - его новая отметка. Отключение видно и тогда, когда сейчас и так ноль: узел закроет
-         * характеристику; закрыть - убавить (у «меньше лучше» - к лучшему).
+         * Флаг не прибавляется: разница - его новая отметка. Строка, чьё «было» и «стало» печатаются одинаково, не пишется.
+         * Характеристика из [off] (строка `SET` в ноль) - «отключится», даже когда сейчас и так ноль: узел закроет её; закрыть -
+         * убавить (у «меньше лучше» - к лучшему). Строка сводки, чью часть закрывает [off], - «отключится», только когда сама
+         * уходит в ноль.
          */
         fun of(delta: List<StatDelta>, index: ContentIndex? = null, off: Set<String> = emptySet(), sheet: Map<String, Double>? = null, level: Int = 0): Comparison {
             val after = sheet?.let { it + delta.associate { change -> change.stat to change.after } }
+            val row: (String) -> Boolean = { stat -> index == null || index.stats.section(stat) != null && index.stats[stat]?.partOf == null }
+            val partly = index?.let { off.mapNotNullTo(HashSet()) { stat -> it.stats[stat]?.partOf } }.orEmpty()
             return Comparison(
-                delta.filter { index == null || index.stats.section(it.stat) != null && index.stats[it.stat]?.partOf == null }.map {
+                delta.filter { row(it.stat) }.map {
                     if (index != null && sheet != null && after != null) defenceLine(it, index, sheet, after, level)?.let { line -> return@map line }
                     val multiplier = index?.stats?.get(it.stat)?.multiplier == true
+                    val shown = statValue(it.stat, it.after, index)
                     ComparisonLine(
                         statTitle(it.stat),
                         statValue(it.stat, it.before, index),
-                        if (it.stat in off) ui("compare.off") else statValue(it.stat, it.after, index),
+                        if (it.stat in off || it.stat in partly && shown == statValue(it.stat, 0.0, index)) ui("compare.off") else shown,
                         when {
                             multiplier -> factorChange((100 + it.after) / (100 + it.before))
-                            statFlag(it.stat, index) -> statValue(it.stat, it.after, index)
+                            statFlag(it.stat, index) -> shown
                             else -> signed(it.change) { size -> statValue(it.stat, size, index) }
                         },
                         StatPolarity.better(index, it.stat, it.change),
                         StatPriority.rank(it.stat),
                         share(it.before, it.after),
                     )
-                } + (off - delta.map { it.stat }.toSet()).map { stat ->
+                } + (off - delta.map { it.stat }.toSet()).filter(row).map { stat ->
                     ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", StatPolarity.better(index, stat, -1.0), StatPriority.rank(stat), 1.0)
                 },
             )

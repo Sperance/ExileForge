@@ -3939,7 +3939,7 @@
   "notice.title.DELETION.DEVICE": "Device blocked",
   "relic.crafted": "bench",
   "relic.amplified": "▲",
-  "relic.serial": "No. {0} in the world",
+  "relic.serial": "No. {0} across all worlds",
   "relic.totals": "HERO TOTALS",
   "relic.flask_totals": "FLASK TOTALS",
   "relic.tool_totals": "CRAFT TOTALS",

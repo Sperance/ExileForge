@@ -310,7 +310,7 @@ private fun starPath(r: Float, c: Offset): Path = Path().apply {
     close()
 }
 
-/** «◆ № 41 в мире ◆»: номер экземпляра уникальной или мифической вещи, между двух нитей золота. */
+/** «◆ № 41 из всех миров ◆»: сквозной по всем мирам номер экземпляра уникальной или мифической вещи, между двух нитей золота. */
 @Composable fun SerialSeal(serial: Long, look: RelicLook) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.width(30.dp).height(1.dp).background(Brush.horizontalGradient(listOf(look.gold.copy(alpha = 0f), look.gold))))

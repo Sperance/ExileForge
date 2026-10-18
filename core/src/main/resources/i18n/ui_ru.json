@@ -3939,7 +3939,7 @@
   "notice.title.DELETION.DEVICE": "Устройство заблокировано",
   "relic.crafted": "ремесло",
   "relic.amplified": "▲",
-  "relic.serial": "№ {0} в мире",
+  "relic.serial": "№ {0} из всех миров",
   "relic.totals": "ИТОГ ГЕРОЯ",
   "relic.flask_totals": "ИТОГ ФЛЯГИ",
   "relic.tool_totals": "ИТОГ РЕМЕСЛА",

@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.screens.expedition.arena.AllEffects
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectShelf
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectsSheet
@@ -35,17 +36,17 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
  *
  * Полка читает живой снимок (тело экрана несомого не видит) и перекомпонуется сама, когда несомое сменилось.
  */
-@Composable internal fun RoadEffects(live: State<RunHud>) {
+@Composable internal fun RoadEffects(live: State<RunHud>, index: ContentIndex) {
     val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
     val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
     var open by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (timed.isNotEmpty()) {
             AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = true }
-            EffectShelf(timed, TILE, { open = true }, Modifier.weight(1f))
+            EffectShelf(timed, index, TILE, { open = true }, Modifier.weight(1f))
         }
     }
-    if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow) { open = false }
+    if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow, index) { open = false }
 }
 
 /** Несомое героя одним значением. */

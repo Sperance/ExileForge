@@ -96,7 +96,7 @@ import com.sperance.exileforge.ui.theme.*
         SkillText.title(code),
         listOfNotNull(owner?.let { ui("lore.skill_of", it) }, kind).joinToString(" · "),
         if (skill.curse != null) LifeRed else GoldBright,
-        listOf(ui("lore.essence") to SkillText.monster(skill)),
+        listOf(ui("lore.essence") to SkillText.monster(skill, index)),
         facts,
         onDismiss = onDismiss,
     )
@@ -125,7 +125,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun SkillCurseSheet(index: ContentIndex, code: String, owner: String?, left: Double?, onDismiss: () -> Unit) {
     val monster = index.skills.monsterByCode[code]
     val hero = index.skills.byCode[code]
-    val lines = monster?.let(SkillText::monster) ?: hero?.let { SkillText.lines(it, 1, index.campaign.combat) }.orEmpty()
+    val lines = monster?.let { SkillText.monster(it, index) } ?: hero?.let { SkillText.lines(it, 1, index) }.orEmpty()
     val total = monster?.curse?.duration ?: hero?.curse?.duration
     CurseSheet(SkillText.title(code), owner, lines, left, total, null, onDismiss)
 }

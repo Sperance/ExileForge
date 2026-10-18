@@ -144,7 +144,7 @@ internal fun SkillSheet(
     val hero = remember(stats, heroLevel) { Combatant(stats, heroLevel, index.campaign.combat) }
     val pace = remember(skill, level, hero) { SkillText.pace(skill, level, hero) }
     Price(skill, pace, condition)
-    SkillLines(SkillText.lines(skill, level, index.campaign.combat) + listOfNotNull(pace?.let(SkillText::manaRate)), tone)
+    SkillLines(SkillText.lines(skill, level, index) + listOfNotNull(pace?.let(SkillText::manaRate)), tone)
 }
 
 /** An active skill's price and pace (цена, применение, перезарядка у героя), an aura's reserve: the chips over its lines. */

@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
@@ -39,6 +40,7 @@ import com.sperance.exileforge.ui.theme.*
     title: String,
     ailments: List<AilmentView>,
     held: Boolean,
+    index: ContentIndex?,
     effects: List<EffectView> = emptyList(),
     charges: List<ChargeView> = emptyList(),
     fates: List<FateGlow> = emptyList(),
@@ -50,9 +52,9 @@ import com.sperance.exileforge.ui.theme.*
     if (all.isEmpty()) {
         MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
     } else {
-        EffectShelf(all, 30.dp, { open = true }, Modifier.fillMaxWidth())
+        EffectShelf(all, index, 30.dp, { open = true }, Modifier.fillMaxWidth())
     }
-    if (open) EffectsSheet(title, timed, lasting, null) { open = false }
+    if (open) EffectsSheet(title, timed, lasting, null, index) { open = false }
 }
 
 /**

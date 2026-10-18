@@ -93,7 +93,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when (tab) {
-                    FoeTab.STATS -> StatsTab(foe, body, hero, rules)
+                    FoeTab.STATS -> StatsTab(foe, body, hero, rules, index)
                     FoeTab.SKILLS -> SkillsTab(foe, body, hero, traits, index, name)
                     FoeTab.PHASES -> ownBoss?.let { PhasesTab(it, totems, name) }
                     FoeTab.MODS -> ModsTab(foe, shares, index)
@@ -131,7 +131,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
 
 /** Характеристики: запасы, скорость, урон, защита - и что от защиты остаётся против героя. */
-@Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules) {
+@Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules, index: ContentIndex?) {
     Head(ui("fight.sheet_pools"))
     Row2(ui("fight.stat_life"), "${number(foe.life.toDouble())} / ${number(body.maxLife)}", LifeRed)
     if (body.maxShield > 0) Row2(ui("fight.stat_shield"), "${number(foe.shield.toDouble())} / ${number(body.maxShield)}", ShieldCyan)
@@ -162,7 +162,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
     }
     if (foe.effects.isNotEmpty() || foe.ailments.isNotEmpty() || foe.held) {
         Head(ui("fight.sheet_now"))
-        StateTiles(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), foe.ailments, foe.held, foe.effects)
+        StateTiles(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), foe.ailments, foe.held, index, foe.effects)
     }
 }
 
@@ -175,7 +175,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
         val hit = skill?.let { monsterSkillDamage(it, body, hero) }
         Column(Modifier.fillMaxWidth().clickable { lore?.invoke(Lore.Skill(code, name, body, hero)) }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(SkillText.title(code), color = if (skill?.curse != null) LifeRed else Rune, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            skill?.let(SkillText::monster)?.forEach { Text(it, color = Parchment, style = MaterialTheme.typography.labelSmall) }
+            skill?.let { SkillText.monster(it, index) }?.forEach { Text(it, color = Parchment, style = MaterialTheme.typography.labelSmall) }
             val facts = listOfNotNull(
                 hit?.taken?.let { ui("fight.skill_hits_you", number(it)) },
                 skill?.let { ui("lore.cooldown") + " " + ui("lore.seconds", fineNumber(it.cooldown)) },

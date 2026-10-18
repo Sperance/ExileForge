@@ -9,8 +9,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,12 +26,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
@@ -44,7 +51,6 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.ItemRow
@@ -122,66 +128,81 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Единый шаблон листа объекта карты: метка вида [kind] цветом [tone], гнездо с
- * иконкой [icon], имя [name] серифом и подпись [sub], факты фишками [facts], своё тело [body] (товары, полоса сбора) и действия
- * [actions] одной строкой. Новый объект карты с листом - этот шаблон, а не своя вёрстка.
+ * Единый шаблон листа объекта карты, компактный - в одну-две строки: гнездо 40dp с иконкой [icon] в рамке тона [tone], имя [name]
+ * серифом и сводка фактов [facts] текстом через «·», круглый ✕ ([onDismiss]) справа. Вторая строка - фишка [lead] слева
+ * (инструмент) и главное действие [action] справа; запрет [blocked] - красная строка причины на месте фишки, действие гаснет.
+ * Своё тело [body] (товары торговца) - под шапкой. Новый объект карты с листом - этот шаблон, а не своя вёрстка.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FeatureCard(
-    kind: String,
     tone: Color,
     name: String,
-    sub: String?,
     facts: List<FeatureFact>,
     icon: @Composable () -> Unit,
     onDismiss: () -> Unit,
+    lead: FeatureFact? = null,
+    blocked: String? = null,
     body: @Composable ColumnScope.() -> Unit = {},
-    actions: @Composable RowScope.() -> Unit,
+    action: (@Composable RowScope.(enabled: Boolean) -> Unit)? = null,
 ) {
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val pill = RoundedCornerShape(50)
-            Text(
-                kind.uppercase(),
-                color = tone,
-                style = MaterialTheme.typography.labelSmall,
-                letterSpacing = 0.8.sp,
-                modifier = Modifier.background(tone.copy(alpha = .07f), pill).border(1.dp, tone.copy(alpha = .4f), pill).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val socket = RoundedCornerShape(10.dp)
-                Box(Modifier.size(50.dp).background(Abyss, socket).border(1.dp, tone.copy(alpha = .45f), socket), contentAlignment = Alignment.Center) { icon() }
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val socket = RoundedCornerShape(9.dp)
+                val rim = if (blocked != null) LifeRed else tone
+                Box(Modifier.size(40.dp).background(Abyss, socket).border(1.dp, rim.copy(alpha = .5f), socket), contentAlignment = Alignment.Center) { icon() }
                 Column(Modifier.weight(1f)) {
-                    Text(name, color = GoldBright, style = relicName(17))
-                    sub?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
+                    Text(name, color = GoldBright, style = relicName(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (facts.isNotEmpty()) Text(summary(facts), style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp).border(1.dp, Parchment.copy(alpha = .12f), CircleShape)) {
+                    Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp))
                 }
             }
-            if (facts.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    facts.forEach { fact ->
-                        Text(
-                            fact.text,
-                            color = fact.tone,
-                            style = MaterialTheme.typography.labelMedium,
-                            maxLines = 1,
-                            modifier = Modifier.background(fact.tone.copy(alpha = .08f), pill).border(1.dp, fact.tone.copy(alpha = .3f), pill).padding(horizontal = 9.dp, vertical = 4.dp),
-                        )
+            if (action != null || lead != null || blocked != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
+                        when {
+                            blocked != null -> Text("✕ $blocked", color = LifeRed, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            lead != null -> FactChip(lead)
+                        }
                     }
+                    action?.invoke(this, blocked == null)
                 }
             }
             body()
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
         }
     }
 }
 
-/** Факт объекта карты фишкой: текст и его цвет. */
-private data class FeatureFact(val text: String, val tone: Color = Parchment)
+/** Факты сводкой одной строкой: каждый своим цветом, между ними - приглушённая «·». */
+private fun summary(facts: List<FeatureFact>): AnnotatedString = buildAnnotatedString {
+    facts.forEachIndexed { i, fact ->
+        if (i > 0) withStyle(SpanStyle(color = Muted)) { append(" · ") }
+        withStyle(SpanStyle(color = fact.tone)) { append(fact.text) }
+    }
+}
+
+/** Фишка факта: текст его цветом в пилюле того же тона. */
+@Composable private fun FactChip(fact: FeatureFact) {
+    val pill = RoundedCornerShape(50)
+    Text(
+        fact.text,
+        color = fact.tone,
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.background(fact.tone.copy(alpha = .08f), pill).border(1.dp, fact.tone.copy(alpha = .3f), pill).padding(horizontal = 9.dp, vertical = 4.dp),
+    )
+}
+
+/** Факт объекта карты: текст и его цвет. */
+private data class FeatureFact(val text: String, val tone: Color = Muted)
 
 /**
- * Странствующий торговец (шаблон объекта карты): вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка
- * не нажимается. Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города.
+ * Странствующий торговец (шаблон объекта карты): в сводке - золото героя, сколько товаров осталось, куплено и скидка; под шапкой -
+ * вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка не нажимается. Нажатие на товар открывает полную
+ * карточку со сравнением с надетым - ту же, что у лавки Города.
  *
  * Скидка против витрины Города - множитель цены торговца из правил меньше единицы; цена против кошелька - чип «цена / есть».
  */
@@ -190,18 +211,18 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
     var chosen by remember { mutableStateOf<Int?>(null) }
     val left = merchant.offers.indices.count { it !in bought }
     FeatureCard(
-        kind = ui("feature.kind.MERCHANT"),
         tone = GoldBright,
         name = ui("feature.merchant.title"),
-        sub = ui("feature.merchant.note", number(money.toDouble())),
         facts = listOfNotNull(
-            FeatureFact(ui("feature.merchant.left", left)),
+            FeatureFact(ui("feature.merchant.gold", number(money.toDouble())), GoldBright),
+            FeatureFact(ui("feature.merchant.left", left), Parchment),
             FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() },
             game.index?.campaign?.features?.merchant?.markup?.takeIf { it < 1 }?.let { FeatureFact(ui("feature.merchant.discount", number((1 - it) * 100)), Vital) },
         ),
-        icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(28.dp)) },
+        icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp)) },
         onDismiss = { onCommand(RunCommand.StepOff) },
         body = {
+            MutedText(ui("feature.merchant.note"))
             merchant.offers.forEachIndexed { i, offer ->
                 val item = game.view(offer.item) ?: return@forEachIndexed
                 val sold = i in bought
@@ -225,9 +246,7 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
                 )
             }
         },
-    ) {
-        ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
-    }
+    )
     chosen?.takeIf { it !in bought }?.let { i ->
         val offer = merchant.offers.getOrNull(i) ?: return@let
         OfferSheet(game, offer.item, offer.price, onDismiss = { chosen = null }) {
@@ -238,9 +257,9 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 }
 
 /**
- * Узел ремесла (шаблон объекта карты): ресурс в гнезде, профессия и её уровень, факты фишками - сколько штук,
- * опыт ремесла, сколько уже есть, инструмент (надет - зелёным, нет - красным «нужен»). Под стражами сокровищ ([guarded])
- * сбор не начать, пока они стоят; идущий сбор - панель действия у объекта ([ObjectActionPanel]), не этот лист.
+ * Узел ремесла (шаблон объекта карты): ресурс в гнезде, в сводке - сколько штук, опыт ремесла, сколько уже есть и уровень
+ * профессии; надетый инструмент - зелёной фишкой рядом с «Собрать». Нет инструмента или узел под стражами сокровищ ([guarded]) -
+ * красная причина и погасшая кнопка; идущий сбор - пилюля действия у объекта ([ObjectActionPanel]), не этот лист.
  */
 @Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
     val index = game.index
@@ -249,25 +268,25 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
     val level = game.hero?.crafts?.professions?.get(node.profession)?.level ?: 1
     val experience = index?.let { it.professions.rules.experience(node.job) * node.share } ?: 0.0
     val facts = listOfNotNull(
-        FeatureFact(ui("feature.node.amount", node.amount.first(), node.amount.last())),
+        FeatureFact(ui("feature.node.amount", node.amount.first(), node.amount.last()), Parchment),
         FeatureFact(ui("feature.node.experience", number(experience)), Rune).takeIf { experience > 0 },
         game.bagAmount(output)?.let { FeatureFact(ui("feature.node.have", number(it.toDouble()))) },
-        if (tool != null) FeatureFact(equipmentTitle(tool.template), Vital) else FeatureFact(ui("feature.node.tool", professionTitle(node.profession)), LifeRed),
-        FeatureFact(ui("feature.guarded"), LifeRed).takeIf { guarded },
+        FeatureFact(ui("feature.node.profession", professionTitle(node.profession), level)),
     )
+    val blocked = listOfNotNull(
+        ui("feature.node.tool", professionTitle(node.profession)).takeIf { tool == null },
+        ui("feature.guarded").takeIf { guarded },
+    ).joinToString(" · ").ifEmpty { null }
     FeatureCard(
-        kind = ui("feature.kind.NODE"),
         tone = Vital,
         name = itemTitle(output),
-        sub = ui("feature.node.profession", professionTitle(node.profession), level),
         facts = facts,
-        icon = { BagIcon(output, Modifier.size(30.dp)) },
+        icon = { BagIcon(output, Modifier.size(26.dp)) },
         onDismiss = { onCommand(RunCommand.StepOff) },
-    ) {
-        ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
-        ForgeButton(enabled = tool != null && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.weight(2f)) {
-            Text(ui("feature.node.gather_for", number(node.seconds)))
-        }
+        lead = tool?.let { FeatureFact(equipmentTitle(it.template), Vital) },
+        blocked = blocked,
+    ) { enabled ->
+        ForgeButton(enabled = enabled, onClick = { onCommand(RunCommand.Gather) }) { Text(ui("feature.node.gather_for", number(node.seconds)), maxLines = 1) }
     }
 }
 

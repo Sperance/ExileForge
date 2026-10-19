@@ -269,13 +269,5 @@ private val ManaDeep = Color(0xFF3F86D6)
                 drawCircle(GoldBright.copy(alpha = .75f), radius * .4f, knob)
             }
         }
-        if (centre == null) {
-            Text(
-                ui("expedition.stick_hint"),
-                color = Muted.copy(alpha = .8f),
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
-            )
-        }
     }
 }

@@ -142,12 +142,13 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     traits: Map<Int, List<TraitView>>,
     track: (Int) -> Modifier,
     onFocus: (Int) -> Unit,
+    onFrame: (Float) -> Unit,
     onInspect: (Int) -> Unit,
 ) {
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val name = monsterTitle(foe.monster.code)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        BossFrame(foe, name, boss, fight, frame)
+        BossFrame(foe, name, boss, fight, frame, Modifier.onGloballyPositioned { onFrame(it.boundsInRoot().bottom) })
         if (boss.slots.isEmpty()) {
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -168,11 +169,11 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
  * Имя на всю ширину сжимается до минимума, дальше многоточие. Фаза и ярость - табулярными цифрами: ширина не прыгает. Ярость - сколько
  * прибавила и когда следующая ступень. Нить каста мерцает в рисовании кадра.
  */
-@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame) {
+@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, modifier: Modifier) {
     val lore = LocalLore.current
     val shape = RoundedCornerShape(10.dp)
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(FrameDeep, FrameInk))).border(1.dp, Color(0xFF7A5C26), shape)
+        modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(FrameDeep, FrameInk))).border(1.dp, Color(0xFF7A5C26), shape)
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
@@ -243,15 +244,23 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
 }
 
 /**
- * Имя босса в одну строку: серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие. Общее для
- * рамки боя и заставки.
+ * Имя босса в [maxLines] строк (по умолчанию одну): серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие.
+ * Общее для рамки боя и плашки входа стража.
  */
-@Composable internal fun FittedName(name: String, color: Color, max: TextUnit, min: TextUnit, modifier: Modifier = Modifier, align: TextAlign = TextAlign.Start) {
+@Composable internal fun FittedName(
+    name: String,
+    color: Color,
+    max: TextUnit,
+    min: TextUnit,
+    modifier: Modifier = Modifier,
+    align: TextAlign = TextAlign.Start,
+    maxLines: Int = 1,
+) {
     BasicText(
         name,
         modifier,
         style = TextStyle(color = color, fontFamily = FontFamily.Serif, fontWeight = FontWeight.SemiBold, fontSize = max, textAlign = align),
-        maxLines = 1,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         autoSize = TextAutoSize.StepBased(minFontSize = min, maxFontSize = max, stepSize = NAME_STEP),
     )
@@ -646,13 +655,19 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
     }
 }
 
-/** Портал, из которого встаёт жилец ниши: кольцо раскручивается, вспыхивает и гаснет. */
+/** Портал, из которого встаёт жилец ниши: кольцо раскручивается, вспыхивает и гаснет; жильцы входа стража - после входа. */
 @Composable private fun PortalBurst(tint: Color) {
+    val intro = LocalBossIntro.current
     val anim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { anim.animateTo(1f, tween(1100, easing = LinearEasing)) }
-    val t = anim.value
-    if (t >= 1f) return
+    LaunchedEffect(Unit) {
+        intro.awaitEffects()
+        anim.animateTo(1f, tween(1100, easing = LinearEasing))
+    }
+    val done by remember { derivedStateOf { anim.value >= 1f } }
+    if (done) return
     Canvas(Modifier.fillMaxSize()) {
+        val t = anim.value
+        if (t <= 0f) return@Canvas
         val grow = if (t < .35f) t / .35f * 1.15f else 1.15f - (t - .35f) / .65f * .95f
         val r = size.minDimension * .42f * grow
         val c = Offset(size.width / 2, size.height * .42f)
@@ -664,14 +679,15 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
 }
 
 /**
- * Портрет босса: двойная золотая рамка, аура цвета фазы дышит за ним, удар - вспышкой, крит - коротким толчком (без него при
- * упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза - титулом поверх, павший босс
- * растворяется искрами.
+ * Портрет босса: двойная золотая рамка, аура цвета фазы дышит за ним (разгорается после входа стража), удар - вспышкой, крит -
+ * коротким толчком (без него при упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза -
+ * титулом поверх, павший босс растворяется искрами.
  *
  * Толчок крита - к часам кадра, в рисовании; Матерь показывает порванные пуповины.
  */
 @Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
+    val intro = LocalBossIntro.current
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     val aura = phaseAura(phaseNumber(boss))
     val focused = fight.focus == foe.index
@@ -686,7 +702,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val breath = .55f + .2f * sin(frame.time * 2f)
-            drawOval(Brush.radialGradient(listOf(aura.copy(alpha = .45f * breath * (1 - gone)), Color.Transparent), center, size.maxDimension * .62f), Offset(-size.width * .15f, -size.height * .08f), Size(size.width * 1.3f, size.height * 1.16f))
+            drawOval(Brush.radialGradient(listOf(aura.copy(alpha = .45f * breath * (1 - gone) * intro.effects), Color.Transparent), center, size.maxDimension * .62f), Offset(-size.width * .15f, -size.height * .08f), Size(size.width * 1.3f, size.height * 1.16f))
         }
         Box(
             Modifier.fillMaxSize().padding(horizontal = 4.dp).graphicsLayer {

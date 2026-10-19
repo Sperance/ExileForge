@@ -1,49 +1,55 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.geometry.isSimple
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.ui.theme.*
-import kotlin.math.ceil
+import com.sperance.exileforge.ui.theme.GoldBright
+import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Quiet
+import com.sperance.exileforge.ui.theme.Rune
+import com.sperance.exileforge.ui.theme.Vital
+import com.sperance.exileforge.ui.theme.glow
 
 /**
- * The roll quality in steps of twenty: each step louder than the one below — from a quiet grey
- * with no frame to a gold that glows — and a perfect hundred is molten gold (не радуга:
- * она выбивалась бы из тёмного фэнтези).
+ * Ступень качества роллов шагом в двадцать: цвет дуги метки. Ступени различаются длиной дуги и цифрой, цвет лишь
+ * подсказывает; идеальная сотня - расплавленное золото (не радуга: она выбивалась бы из тёмного фэнтези).
  */
-private enum class RollTier(val key: String, val tint: Color, val fill: Float, val edge: Float, val glow: Dp) {
-    POOR("card.roll_poor", Muted, .06f, .25f, 0.dp),
-    MODEST("card.roll_modest", Parchment, .12f, .4f, 0.dp),
-    FAIR("card.roll_fair", Rune, .18f, .55f, 2.dp),
-    GOOD("card.roll_good", Vital, .24f, .75f, 5.dp),
-    SUPERB("card.roll_superb", GoldBright, .3f, .95f, 9.dp),
-    PERFECT("card.roll_perfect", GoldBright, .32f, 1f, 12.dp),
+private enum class RollTier(val key: String, val tint: Color) {
+    POOR("card.roll_poor", Muted),
+    MODEST("card.roll_modest", Parchment),
+    FAIR("card.roll_fair", Rune),
+    GOOD("card.roll_good", Vital),
+    SUPERB("card.roll_superb", GoldBright),
+    PERFECT("card.roll_perfect", GoldBright),
     ;
 
     companion object {
@@ -51,8 +57,17 @@ private enum class RollTier(val key: String, val tint: Color, val fill: Float, v
     }
 }
 
-/** Расплавленное золото идеального ролла: тёмная бронза, золото и белый жар посередине. */
-private val Molten = listOf(Color(0xFF8A5A12), Color(0xFFF2D27A), Color(0xFFFFF1C2), Color(0xFFF2D27A), Color(0xFF8A5A12))
+/** Золото жара идеального ролла: цвет его цифры и ореола. */
+private val MoltenGold = Color(0xFFF2D27A)
+
+/** Белый жар посередине течения. */
+private val MoltenHeat = Color(0xFFFFF1C2)
+
+/** Расплавленное золото дуги идеального ролла: тёмная бронза, золото и белый жар посередине. */
+private val Molten = listOf(Color(0xFF8A5A12), MoltenGold, MoltenHeat, MoltenGold, Color(0xFF8A5A12))
+
+/** Жар цифры идеального ролла: без тёмной бронзы, чтобы мелкая цифра не гасла. */
+private val MoltenFigure = listOf(MoltenGold, MoltenHeat, MoltenGold, Color(0xFFC99A3E))
 
 /**
  * Течение жара идеального ролла: доля круга [MOLTEN_MS] состоянием - читается в рисовании, так что ролл
@@ -60,35 +75,18 @@ private val Molten = listOf(Color(0xFF8A5A12), Color(0xFFF2D27A), Color(0xFFFFF1
  */
 @Composable private fun moltenPhase(): State<Float> = motionPhase(MOLTEN_MS, still = MOLTEN_STILL)
 
-/** Свет идеального ролла на доле течения [shift]: жар медленно течёт по золоту. */
-private fun moltenBrush(shift: Float): Brush {
+/** Свет [colors] на доле течения [shift]: жар медленно течёт по золоту. */
+private fun moltenBrush(shift: Float, colors: List<Color> = Molten): Brush {
     val span = MOLTEN_SPAN
-    return Brush.linearGradient(Molten, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
+    return Brush.linearGradient(colors, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
 }
 
-/**
- * Заливка [fill] (null - тем же жаром) и рамка [width] жаром идеального ролла по [shape] - как `background` + `border`,
- * но кисть жара собирается в рисовании по фазе [phase].
- */
-private fun Modifier.moltenFill(phase: State<Float>, shape: Shape, width: Dp, fill: Brush?): Modifier = drawBehind {
-    val brush = moltenBrush(phase.value)
-    val outline = shape.createOutline(size, layoutDirection, this)
-    drawOutline(outline, fill ?: brush)
-    val stroke = ceil(width.toPx())
-    if (outline is Outline.Rounded && outline.roundRect.isSimple && stroke * 2 <= size.minDimension) {
-        val half = stroke / 2
-        val corner = outline.roundRect.topLeftCornerRadius
-        drawRoundRect(
-            brush,
-            topLeft = Offset(half, half),
-            size = Size(size.width - stroke, size.height - stroke),
-            cornerRadius = CornerRadius((corner.x - half).coerceAtLeast(0f), (corner.y - half).coerceAtLeast(0f)),
-            style = Stroke(stroke),
-        )
-    } else {
-        drawOutline(outline, brush, style = Stroke(stroke))
+/** Перекрашивает нарисованный текст жаром на фазе [phase]: кисть собирается в рисовании, без перекомпоновки. */
+private fun Modifier.moltenText(phase: State<Float>): Modifier = graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+    .drawWithContent {
+        drawContent()
+        drawRect(moltenBrush(phase.value, MoltenFigure), blendMode = BlendMode.SrcIn)
     }
-}
 
 /** Сколько течёт жар по идеальному роллу, мс. */
 private const val MOLTEN_MS = 3600
@@ -99,55 +97,77 @@ private const val MOLTEN_STILL = .5f
 /** Длина полосы градиента жара, px. */
 private const val MOLTEN_SPAN = 240f
 
-/** Рамка идеального ролла. */
-private val MOLTEN_EDGE = 1.5.dp
-
-/** The frame, fill and glow a roll quality wears on [shape]; a perfect one is [solid]ly molten on a pill, framed on a card. */
-@Composable private fun Modifier.rollShine(tier: RollTier, shape: Shape, solid: Boolean = false): Modifier {
-    val base = glow(tier.tint, on = tier.glow > 0.dp, radius = tier.glow, shape = shape)
-    return if (tier == RollTier.PERFECT) {
-        base.moltenFill(moltenPhase(), shape, MOLTEN_EDGE, fill = if (solid) null else Brush.horizontalGradient(listOf(PanelRaised, Abyss)))
-    } else {
-        base.background(Brush.horizontalGradient(listOf(tier.tint.copy(alpha = tier.fill), tier.tint.copy(alpha = tier.fill / 3))), shape)
-            .border(1.dp, tier.tint.copy(alpha = tier.edge), shape)
-    }
-}
+/** Непрозрачность дуги обычной ступени: плоская метка не спорит с иконкой и именем. */
+private const val ARC_ALPHA = .75f
 
 /**
- * How well the item rolled (a ring in the card's head): a gauge filling its
- * ring to the share with the figure inside, in its step's colour; a tap says «Модификаторы предмета · Хорошие · 72%».
+ * Размеры метки: кольцо [ring] со штрихом [stroke] над дорожкой непрозрачности [track], цифра кеглем [figure] через [gap],
+ * ореол сотни силой [glow].
  */
-@Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
-    val tier = RollTier.of(quality)
-    val tint = tier.tint
-    Tipped({ Tip(ui("card.roll_quality", ui(tier.key), quality), tint = tint) }, modifier) {
-        Box(Modifier.size(34.dp).glow(tint, on = tier.glow > 0.dp, radius = tier.glow / 2, shape = CircleShape), contentAlignment = Alignment.Center) {
-            val molten = if (tier == RollTier.PERFECT) moltenPhase() else null
-            Canvas(Modifier.fillMaxSize()) {
-                val width = 3.5.dp.toPx()
-                val arc = Size(size.width - width, size.height - width)
+private class RollMarkSpec(val ring: Dp, val stroke: Dp, val track: Float, val gap: Dp, val figure: TextUnit, val glow: Dp)
+
+/** Шапка полной карточки. */
+private val RingSpec = RollMarkSpec(ring = 26.dp, stroke = 1.5.dp, track = .10f, gap = 6.dp, figure = 12.sp, glow = 8.dp)
+
+/** Строка списка. */
+private val PillSpec = RollMarkSpec(ring = 12.dp, stroke = 1.4.dp, track = .12f, gap = 5.dp, figure = 11.sp, glow = 5.dp)
+
+/**
+ * Плоская дуга доли [quality] цветом [tint] поверх тусклой дорожки; при [molten] - полное кольцо жаром с ореолом. Штрихи и
+ * цвета собираются в кэше рисования, жар читает фазу только в рисовании.
+ */
+@Composable private fun RollArc(quality: Int, tint: Color, molten: State<Float>?, spec: RollMarkSpec) {
+    Spacer(
+        Modifier.size(spec.ring)
+            .glow(MoltenGold, on = molten != null, radius = spec.glow, shape = CircleShape)
+            .drawWithCache {
+                val width = spec.stroke.toPx()
+                val stroke = Stroke(width, cap = StrokeCap.Round)
+                val track = Stroke(width)
+                val trackColor = Parchment.copy(alpha = spec.track)
+                val arcColor = tint.copy(alpha = ARC_ALPHA)
                 val corner = Offset(width / 2, width / 2)
-                drawArc(PanelRaised, -90f, 360f, false, corner, arc, style = Stroke(width))
-                if (molten != null) {
-                    drawArc(moltenBrush(molten.value), -90f, 360f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
-                } else {
-                    drawArc(tint, -90f, 360f * quality / 100f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
+                val arc = Size(size.width - width, size.height - width)
+                val sweep = 360f * quality.coerceIn(0, 100) / 100f
+                onDrawBehind {
+                    drawArc(trackColor, -90f, 360f, false, corner, arc, style = track)
+                    when {
+                        molten != null -> drawArc(moltenBrush(molten.value), -90f, 360f, false, corner, arc, style = stroke)
+                        sweep > 0f -> drawArc(arcColor, -90f, sweep, false, corner, arc, style = stroke)
+                    }
                 }
-            }
-            Text("$quality", color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-        }
+            },
+    )
+}
+
+/** Метка качества роллов: кольцо-значок и «N%» рядом тихим цветом; у сотни кольцо и цифра в жару. */
+@Composable private fun RollMark(quality: Int, spec: RollMarkSpec, modifier: Modifier = Modifier) {
+    val tier = RollTier.of(quality)
+    val molten = if (tier == RollTier.PERFECT) moltenPhase() else null
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(spec.gap), verticalAlignment = Alignment.CenterVertically) {
+        RollArc(quality, tier.tint, molten, spec)
+        Text(
+            ui("row.rolls", quality),
+            color = if (molten != null) MoltenGold else Quiet,
+            fontSize = spec.figure,
+            fontWeight = if (molten != null) FontWeight.SemiBold else FontWeight.Medium,
+            maxLines = 1,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = if (molten != null) Modifier.moltenText(molten) else Modifier,
+        )
     }
 }
 
-/** «роллы 87%» as a pill in its step's dress: the one figure a list line is judged by. */
-@Composable fun RollPill(quality: Int) {
+/** Качество роллов в шапке карточки: кольцо 26dp с дугой до доли и «N%» рядом; касание - «Модификаторы предмета · Хорошие · 72%». */
+@Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
     val tier = RollTier.of(quality)
-    val shape = RoundedCornerShape(50)
-    Text(
-        ui("row.rolls", quality),
-        color = if (tier == RollTier.PERFECT) Ink else tier.tint,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.rollShine(tier, shape, solid = true).padding(horizontal = 8.dp, vertical = 1.dp),
-    )
+    Tipped({ Tip(ui("card.roll_quality", ui(tier.key), quality), tint = tier.tint) }, modifier) {
+        RollMark(quality, RingSpec)
+    }
+}
+
+/** Качество роллов в строке списка: значок-кольцо и «N%»; чтение экрана слышит «Модификаторы предмета · ступень · N%». */
+@Composable fun RollPill(quality: Int) {
+    val label = ui("card.roll_quality", ui(RollTier.of(quality).key), quality)
+    RollMark(quality, PillSpec, Modifier.clearAndSetSemantics { contentDescription = label })
 }

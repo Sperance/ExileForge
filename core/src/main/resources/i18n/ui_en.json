@@ -1445,7 +1445,7 @@
   "hero.worn_note": "A worn item cannot be sold or listed on the auction — take it off first.",
   "hero.no_template": "No base in the content fits",
   "hero.level": "Level {0}",
-  "row.rolls": "rolls {0}%",
+  "row.rolls": "{0}%",
   "row.worn": "Worn",
   "api.no_world_file": "No reference file given",
   "api.choose_class": "Choose a class",

@@ -402,6 +402,8 @@ data class RunHud(
     val swift: Boolean = false,
     /** Счёт боевых заданий за этот заход: счётчик летописи - сколько прибавит. */
     val questTally: Map<String, Long> = emptyMap(),
+    /** Выигранных в заходе боёв Разгона ([com.sperance.exileforge.core.campaign.combat.FateRun.won]); без рычага - 0. */
+    val fateWon: Int = 0,
     /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */
     val pending: Int = 0,
     val applied: Int = 0,

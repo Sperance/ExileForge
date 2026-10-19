@@ -40,6 +40,7 @@ import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hall.HallModel
 import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.hero.HeroPageModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -201,6 +202,7 @@ val appModule = module {
     factoryOf(::HallModel)
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
+    single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }
     factoryOf(::CharactersModel)
     factoryOf(::TreeModel)
     viewModelOf(::ShellViewModel)

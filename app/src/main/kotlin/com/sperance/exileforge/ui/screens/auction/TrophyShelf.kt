@@ -15,7 +15,6 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.ui.components.FateInk
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -35,7 +34,7 @@ import com.sperance.exileforge.ui.theme.Parchment
     val index = game.index ?: return
     val trophies = hero.info.trophies.filterValues { it > 0 }
     if (trophies.isEmpty()) return
-    val price = FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.of(FateLever.TROPHIES)?.value?.toInt()
+    val price = FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.trophyPrice()
     ForgePanel(accent = FateInk.Gold) {
         Text(ui("fate.trophies_title"), color = FateInk.GoldLight, style = MaterialTheme.typography.titleSmall)
         Text(ui("fate.trophies_hint"), color = Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))

@@ -9,6 +9,8 @@ import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.hero.HeroFate
+import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.hero.HeroPageModel
@@ -43,11 +45,15 @@ class HeroViewModel(
     slice: GameSlice,
     private val pages: HeroPageModel,
     private val hall: HallFocus,
+    fates: HeroFateModel,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val holding: StateFlow<HeroHolding> = heroes.state
     val activity: StateFlow<Activity> = commands.state
+
+    /** Дар героя со счётом - лента листа героя. */
+    val fate: StateFlow<HeroFate?> = fates.fate
 
     fun load() = sync.load()
     fun ensure() = sync.ensure()

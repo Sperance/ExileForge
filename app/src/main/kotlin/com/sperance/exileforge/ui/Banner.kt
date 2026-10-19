@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Building
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_ACCOUNT
 import com.sperance.exileforge.core.app.TAB_HERO
@@ -42,6 +43,7 @@ import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.nav.Route
+import com.sperance.exileforge.ui.screens.hero.HeroFateChip
 import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.theme.*
@@ -69,7 +71,8 @@ import org.koin.compose.viewmodel.koinViewModel
     val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
     val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }
     if (hero != null) {
-        HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
+        val visit = remember(shell) { { building: Building -> shell.building(building) } }
+        HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }, counter = { HeroFateChip(shell.fate, visit) }) {
             LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
             MailBadge(feedback.unread)
             SettingsButton(settingsOpen = false, onSettings = shell::openSettings)

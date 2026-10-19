@@ -78,7 +78,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
  * Над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги итог - «ИТОГ ФЛЯГИ», у
  * инструмента - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
  * ([StatComparison]), свёрнутое целиком под заголовком, в нём же - «Теряешь» ([LostLines]): строки всего, что снимет надевание,
- * чьих характеристик эта вещь не даёт.
+ * чьи характеристики у героя с этой вещью уходят в ноль.
  *
  * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - из того же листа
  * боя, что сдвиги.
@@ -91,7 +91,9 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val outcome = remember(item, game.hero, game.index, place) { if (apart) null else game.wearing(item, place) }
     val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index, sheet = game.hero?.figures?.values, level = game.hero?.level ?: 0) } }
     val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
-    val lost = remember(item, selected?.removed, game.index) { LostLines.of(game.index, item, selected?.removed.orEmpty()) }
+    val lost = remember(item, selected?.removed, game.index, outcome) {
+        LostLines.of(game.index, item, selected?.removed.orEmpty(), if (apart) emptyList() else game.hero?.items.orEmpty(), outcome?.stats.orEmpty())
+    }
     if (unmet.isEmpty()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (choice.choosable && selected != null) {

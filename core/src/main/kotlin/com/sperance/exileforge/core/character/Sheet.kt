@@ -92,9 +92,10 @@ class SheetModel(
 }
 
 /**
- * Что даст надеть вещь: сдвинутые цифры сводки [delta] и Мощь героя с вещью [might] (null - листа боя нет).
+ * Что даст надеть вещь: сдвинутые цифры сводки [delta], Мощь героя с вещью [might] (null - листа боя нет) и итоги листа героя
+ * с ней [stats] - по ним «Теряешь» ([com.sperance.exileforge.core.display.LostLines]) видит, что ушло в ноль.
  */
-data class WearOutcome(val delta: List<StatDelta>, val might: MightReading?) {
+data class WearOutcome(val delta: List<StatDelta>, val might: MightReading?, val stats: Map<String, Double> = emptyMap()) {
     companion object {
         val NONE = WearOutcome(emptyList(), null)
     }
@@ -159,7 +160,7 @@ object Sheets {
         val after = worn(index, item, items, place) ?: return WearOutcome.NONE
         val sheet = calculate(index, level, heroClass, tree, after, laws, fate)
         val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped })
-        return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might)
+        return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might, sheet.stats)
     }
 
     /**

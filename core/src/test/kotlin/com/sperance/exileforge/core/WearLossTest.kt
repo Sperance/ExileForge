@@ -10,7 +10,10 @@ import com.sperance.exileforge.rules.roll.Roll
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** «Теряешь»: надевание снимает всё, что вытесняет (двуручное - оружие и щит, лук - щит), теряется то, чего новая вещь не даёт совсем. */
+/**
+ * «Теряешь»: надевание снимает всё, что вытесняет (двуручное - оружие и щит, лук - щит), теряется то, чей итог у героя после замены -
+ * ноль: ни новая вещь, ни прочее надетое, ни лист героя этого не дают.
+ */
 class WearLossTest {
     private val index = TestContent.index
 
@@ -36,11 +39,26 @@ class WearLossTest {
         assertEquals(listOf(axe, shield), Sheets.takenOff(index, bow, worn, null))
     }
 
+    private val blade = ItemInstance("blade", "CORRODED_BLADE", rolls = listOf(roll(affixes[0])))
+
     @Test
-    fun lost_is_only_what_the_new_item_does_not_give() {
-        val blade = ItemInstance("blade", "CORRODED_BLADE", rolls = listOf(roll(affixes[0])))
+    fun lost_is_what_goes_to_zero() {
         val removed = Sheets.takenOff(index, blade, worn, null)
         val shieldLines = ItemView.of(shield, index)!!.orderedLines.map { it.text }
-        assertEquals(shieldLines, LostLines.of(index, blade, removed))
+        assertEquals(shieldLines, LostLines.of(index, blade, removed, worn))
+    }
+
+    @Test
+    fun what_another_worn_item_gives_is_not_lost() {
+        val template = index.templates.values.first { it.slot == Slot.RING && !it.unique }.code
+        val ring = ItemInstance("ring", template, slot = Slot.RING, rolls = listOf(roll(affixes[1])))
+        val gear = worn + ring
+        assertEquals(emptyList(), LostLines.of(index, blade, Sheets.takenOff(index, blade, gear, null), gear))
+    }
+
+    @Test
+    fun what_the_sheet_keeps_is_not_lost() {
+        val after = mapOf(affixes[1].effects.single().stat to 5.0)
+        assertEquals(emptyList(), LostLines.of(index, blade, Sheets.takenOff(index, blade, worn, null), worn, after))
     }
 }

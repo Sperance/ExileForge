@@ -100,9 +100,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * and piece the server granted for it, folded under its count. The run in numbers is one line with the way into the whole
  * run's sheet. The loot is the server's roll: while some of it is on its way the screen says so, asks for it at once and
  * fills in as the answers arrive. A piece opens its comparison with what is worn, a stack its description.
- * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
+ * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N и вернуться» на месте возврата в лагерь.
  *
- * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе уже отмечено, продаётся «Продать и вернуться» после захода. Из
+ * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе и подходящее фильтру автопродажи уже отмечено (сервер в заходе её
+ * не продаёт, а кладёт в тайник), отметку можно снять. Есть отмеченное - выход из итогов продаёт его: кнопка «Продать N и вернуться» вместо
+ * возврата, «Назад» - так же (с ценным - сперва режим продажи, где оно подтверждается). Из
  * выигранной зоны Ваал возвращаются на карту без продажи; павший в зоне продаёт и её добычу, и добычу основной карты. Разбор золота и опыта
  * - прибавки контекста захода, как их берёт сервер. Режим продажи включает удержание вещи; страница открывается в обычном режиме. Кнопки
  * итогов оживают не сразу: нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход. Ниже уровня штрафа гибель даром.
@@ -127,12 +129,18 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val experience = remember(run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
+    val ruled = remember { HashSet<String>() }
+    LaunchedEffect(pick, offered) { if (offered) pick.markByRules(ruled) }
     var selling by rememberSaveable { mutableStateOf(false) }
     val selecting = offered && selling
     val docked = offered && (selling || pick.picked.isNotEmpty())
     BackHandler(enabled = selecting) {
         pick.clear()
         selling = false
+    }
+    BackHandler(enabled = docked && !selecting) {
+        val picked = pick.picked
+        if (picked.any { it.valuable }) selling = true else onDone(picked.map { it.id })
     }
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -182,15 +190,16 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                 },
                 onSell = onDone,
             )
-        }
-        ForgeButton(
-            onClick = { onDone(emptyList()) },
-            state = ButtonState.of(armed),
-            modifier = Modifier.fillMaxWidth(),
-            size = ButtonSize.Wide,
-            accent = head.accent,
-        ) {
-            Text(head.done, style = MaterialTheme.typography.titleMedium)
+        } else {
+            ForgeButton(
+                onClick = { onDone(emptyList()) },
+                state = ButtonState.of(armed),
+                modifier = Modifier.fillMaxWidth(),
+                size = ButtonSize.Wide,
+                accent = head.accent,
+            ) {
+                Text(head.done, style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
     looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }, markable = false) }

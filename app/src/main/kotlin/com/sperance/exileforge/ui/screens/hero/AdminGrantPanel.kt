@@ -35,7 +35,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
  * шаблона. Количество только положительное: сервер стопки не забирает.
  */
 @Composable fun AdminGrantPanel(game: GameUi, vm: AdminViewModel) {
-    if (!game.adminTools || !game.isAdmin || game.heroId.isBlank()) return
+    if (!game.isAdmin || game.heroId.isBlank()) return
     var expanded by remember(game.heroId) { mutableStateOf(true) }
     val enabled = !game.busy && game.session.signedIn && game.heroId.isNotBlank()
     val any = ui("grant.any")

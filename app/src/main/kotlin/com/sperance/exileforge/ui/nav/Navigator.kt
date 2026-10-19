@@ -114,7 +114,6 @@ private val Landing.route: Route
         Landing.CHARACTERS -> Route.Characters
         Landing.FATE -> Route.Fate
         Landing.HERO -> Route.Hero
-        Landing.ADMIN -> Route.Admin
         Landing.ATLAS -> Route.Atlas
         Landing.AUCTION -> Route.Auction
         Landing.GUILD -> Route.Guild

@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.admin.RedemptionActions
 import com.sperance.exileforge.core.admin.SanctionModel
 import com.sperance.exileforge.core.app.Actions
-import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.CharacterActions
 import com.sperance.exileforge.core.app.CharactersModel
@@ -172,8 +171,7 @@ val appModule = module {
     single { LanguageRepository() }
     single { LinkRepository() }
     single { AdminRepository() }
-    single { AppModes() }
-    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)

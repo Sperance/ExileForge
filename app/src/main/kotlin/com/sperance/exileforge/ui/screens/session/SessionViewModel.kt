@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.session
 
 import androidx.lifecycle.ViewModel
-import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.CharacterActions
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
@@ -44,7 +43,6 @@ class SessionViewModel(
 
     fun changePassword(current: String, replacement: String) = sessionActions.changePassword(current, replacement)
     fun bind(login: String, password: String) = sessionActions.bind(login, password)
-    fun mode(mode: AppMode) = sessionActions.mode(mode)
 
     /** Тестовые учётки администратора, как их просят страницы настроек. */
     fun refreshLocale() = loader.refreshLocale()

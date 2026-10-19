@@ -4,10 +4,8 @@ import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.admin.Admin
 import com.sperance.exileforge.core.admin.AdminRepository
 import com.sperance.exileforge.core.admin.RedemptionActions
-import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.SessionActions
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.rules.content.Rarity
@@ -16,14 +14,13 @@ import com.sperance.exileforge.ui.nav.Route
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Инструменты администратора: режим, выдачи герою и коды наград - для отладочных экранов. Команды - у сервисов
- * сессии, героя и кодов наград.
+ * Инструменты администратора: выдачи герою и коды наград - для отладочных экранов. Команды - у сервисов
+ * героя и кодов наград.
  */
 class AdminViewModel(
     slice: GameSlice,
     admins: AdminRepository,
     private val navigator: Navigator,
-    private val session: SessionActions,
     private val hero: HeroActions,
     private val redemptions: RedemptionActions,
 ) : ViewModel() {
@@ -35,7 +32,6 @@ class AdminViewModel(
 
     /** С кодов наград - назад к инструментам: звено «Администратор» цепочки. */
     fun back() = navigator.back()
-    fun mode(mode: AppMode) = session.mode(mode)
 
     /** Случайная вещь: редкость и слот с панели, пусто - любые. */
     fun grantRandom(rarity: String, slot: String) = hero.grantRandom(rarity, slot)

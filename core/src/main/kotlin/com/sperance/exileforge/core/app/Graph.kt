@@ -35,7 +35,6 @@ class Repositories(
     val languages: LanguageRepository,
     val links: LinkRepository,
     val admins: AdminRepository,
-    val modes: AppModes,
 )
 
 /** Действия игры одним узлом: их зовут и экраны через свои модели, и сервисы приложения - из прогрева, входа и связи. */

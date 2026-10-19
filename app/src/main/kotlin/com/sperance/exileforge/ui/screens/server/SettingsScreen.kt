@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Animation
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
@@ -40,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.app.AccountUi
-import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.DamageNumbers
 import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.app.KeepScreen
@@ -184,12 +182,8 @@ internal enum class SettingsPage(val title: String) {
 /**
  * Разделы персонала: модерация модератору и администратору, инструменты разработчика тестировщику и администратору.
  * Живут на экране «Аккаунт», а не в настройках; каждая строка открывает свою страницу настроек напрямую.
- *
- * Модерация - модератору и администратору; инструменты разработчика - тестировщику и администратору; выключенные инструменты администратора
- * прячут свою вкладку, поэтому путь назад живёт не только в ней.
  */
 @Composable internal fun StaffGroups(account: AccountUi, onPage: (SettingsPage) -> Unit) {
-    val sessionModel: SessionViewModel = koinViewModel()
     if (account.isModerator) {
         RowGroup(ui("moderation.group")) {
             AccountRow(Icons.Outlined.Gavel, ui("moderation.title"), enabled = !account.busy) { onPage(SettingsPage.MODERATION) }
@@ -207,9 +201,6 @@ internal enum class SettingsPage(val title: String) {
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
             if (account.grants) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
-            if (account.isModerator && !account.adminTools) {
-                AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !account.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
-            }
         }
     }
 }

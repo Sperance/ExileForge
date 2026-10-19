@@ -1,7 +1,5 @@
 package com.sperance.exileforge.core.expedition
 
-import com.sperance.exileforge.core.app.PreferencesRepository
-import com.sperance.exileforge.core.app.speedPresses
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialPhase
@@ -44,7 +42,6 @@ class TrialActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val prefs: PreferencesRepository,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -67,8 +64,6 @@ class TrialActions(
     fun start() {
         scope.launch { for (signal in sends) flush() }
     }
-
-    private val speedSteps: Int get() = speedPresses(world.state.value.content, prefs.settings.value.fightSpeed)
 
     /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (с 0). */
     fun rush(region: String, tier: Int = 0) = enter { api.trials.rush(it, region, tier) }
@@ -109,7 +104,6 @@ class TrialActions(
             batch = null
         }
         mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.campaign.trials.towerPicks, onEvent = ::recorded)
-            .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 
     /** «Завершить»: открытое на сервере испытание без арены здесь - приложение закрылось посреди - кончается, принесённое остаётся. */

@@ -52,9 +52,9 @@ class PreferencesRepositoryTest {
     fun edits_go_through_the_store_and_unchanged_ones_are_not_written() = runTest {
         val store = MemoryStore()
         val prefs = PreferencesRepository(store, backgroundScope)
-        prefs.editSettings { copy(fightSpeed = 2) }
+        prefs.editSettings { copy(autoPause = 30) }
         runCurrent()
-        assertEquals(2, prefs.settings.value.fightSpeed)
+        assertEquals(30, prefs.settings.value.autoPause)
         assertEquals(1, store.settingsWrites)
         prefs.editSettings { this }
         assertEquals(1, store.settingsWrites)

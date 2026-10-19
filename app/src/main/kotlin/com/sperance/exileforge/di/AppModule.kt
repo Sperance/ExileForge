@@ -158,8 +158,8 @@ val appModule = module {
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
     single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), lazy { get<HeroActions>() }, get(named(APP_SCOPE))) }
-    single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
-    single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { ContentLoader() }
@@ -226,7 +226,7 @@ val appModule = module {
     viewModelOf(::SmithyViewModel)
     viewModelOf(::GrimoireViewModel)
     viewModelOf(::ExpeditionViewModel)
-    viewModel { SettingsViewModel(get(), get()) }
+    viewModel { SettingsViewModel(get()) }
     viewModelOf(::ServerViewModel)
     viewModel { params ->
         val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena, get<RiftActions>().state) { run, arena, rift -> run != null || arena != null || rift.arena != null }

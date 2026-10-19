@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,29 +119,39 @@ internal class WorkSums(
 }
 
 /**
- * Книга учёта ремесла: под чертой [title] итоги плитками в ряд короткими числами без переноса - время в работе (вживую, [startedAt] > 0 по
+ * Книга учёта ремесла: итоги плитками в ряд короткими числами без переноса - время в работе (вживую, [startedAt] > 0 по
  * часам сервера со сдвигом [offset]: «1:05»), циклы («130 −2» впустую), опыт («+12.5k ▲1» уровни), сделано (счёт сервера, плитки нет при 0)
  * и уровень профессии [level]; не влезло число - кегль плитки меньше; под плитками - почему циклы прошли впустую («Впустую ×3: нет
- * подходящих основ»); затем каждая
- * стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи [made] -
- * строками с иконкой в рамке редкости, именем её цвета, видом и уровнем: первые [MADE_SHOWN], прочие - под «Ещё N». [onShow] - кнопка
- * «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
+ * подходящих основ»); затем каждая стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное
+ * красным); сделанные вещи [made] - строками с иконкой в рамке редкости, именем её цвета, видом и уровнем: первые [MADE_SHOWN], прочие -
+ * под «Ещё N». [onShow] - кнопка «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
+ *
+ * [folded] - книга плашки работы: видны только плитки со стрелкой, касание плиток раскрывает и сворачивает всё, что под ними.
  */
 @Composable
 internal fun WorkLedger(
     game: GameUi,
     sums: WorkSums,
     made: List<ItemInstance>,
-    title: String? = null,
     startedAt: Long = 0,
     offset: Long = 0,
     level: Int? = null,
+    folded: Boolean = false,
     onShow: (() -> Unit)? = null,
 ) {
     val inspect = rememberInspect()
+    var open by rememberSaveable { mutableStateOf(!folded) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        title?.let { SectionRule(it) }
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val toggle = if (folded) {
+            Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClickLabel = ui("crafts.totals_title")) { open = !open }
+        } else {
+            Modifier
+        }
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Max).heightIn(min = 44.dp).then(toggle),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             val cell = Modifier.weight(1f).fillMaxHeight()
             if (startedAt > 0) LedgerTile(ui("crafts.totals_time"), cell) { WorkTime(startedAt, offset) }
             LedgerTile(ui("crafts.totals_cycles"), cell) {
@@ -157,7 +168,9 @@ internal fun WorkLedger(
             }
             if (sums.made > 0) LedgerTile(ui("crafts.totals_made"), cell) { TileFigure(AnnotatedString(compactNumber(sums.made.toDouble())), Parchment) }
             level?.let { LedgerTile(ui("crafts.totals_profession"), cell) { TileFigure(AnnotatedString(ui("crafts.level", it)), Rune) } }
+            if (folded) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
         }
+        if (!open) return@Column
         if (sums.missed.isNotEmpty()) {
             Text(
                 sums.missed.entries.joinToString(" · ") { (miss, cycles) -> ui("crafts.missed", ui("crafts.miss.${miss.name}"), compactNumber(cycles.toDouble())) },

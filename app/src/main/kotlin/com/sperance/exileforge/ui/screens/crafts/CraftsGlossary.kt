@@ -43,12 +43,18 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
     GlossaryEntry("away") { listOf(number(it.offlineHours)) },
 )
 
-/** Кнопка ⓘ шапки ремёсел: открывает справку по показателям работ, над ней - [intro] (описание профессии); пока правила не пришли, её нет. */
-@Composable internal fun CraftsGlossaryButton(rules: CraftsRules?, intro: String = "") {
+/**
+ * Кнопка ⓘ шапки ремёсел: открывает справку по показателям работ, над ней - [intro] (описание профессии) и при [note] - как идёт работа
+ * (одна на героя, сколько часов отлучки засчитывается); пока правила не пришли, её нет.
+ */
+@Composable internal fun CraftsGlossaryButton(rules: CraftsRules?, intro: String = "", note: Boolean = false) {
     rules ?: return
     var open by remember { mutableStateOf(false) }
     ForgeIconButton(Icons.Outlined.Info, ui("crafts.help.title"), onClick = { open = true }, size = ButtonSize.Compact)
-    if (open) CraftsGlossary(rules, GLOSSARY, intro) { open = false }
+    if (open) {
+        val lead = listOfNotNull(intro.takeIf { it.isNotEmpty() }, ui("crafts.note", number(rules.offlineHours)).takeIf { note }).joinToString("\n\n")
+        CraftsGlossary(rules, GLOSSARY, lead) { open = false }
+    }
 }
 
 /** Одна статья справки [key] - по касанию показателя работы. */

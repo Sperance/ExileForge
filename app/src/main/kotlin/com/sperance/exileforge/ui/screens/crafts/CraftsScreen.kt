@@ -59,7 +59,6 @@ import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.fineNumber
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
@@ -143,9 +142,8 @@ fun CraftsScreen() {
                 item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
                 return@LazyColumn
             }
-            item { WorkPlaque(game, vm, held, offset) { CraftsGlossaryButton(crafts.rules) } }
-            sections.forEachIndexed { index, (title, rows) ->
-                if (index > 0) item { FlowMark() }
+            item { WorkPlaque(game, vm, held, offset) { CraftsGlossaryButton(crafts.rules, note = true) } }
+            sections.forEach { (title, rows) ->
                 item { SectionRule(ui(title)) }
                 items(rows, key = { it.first().code }) { row ->
                     Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -154,18 +152,18 @@ fun CraftsScreen() {
                     }
                 }
             }
-            crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
         }
     }
 }
 
 /**
- * Идущая работа - одна плашка на главном экране вкладки и в окне профессии: «Сейчас», имя работы целиком (до двух строк), профессия с
- * циклом и вариантом, квадратная «Остановить»; вещь в работе; полоса цикла, под ней одной строкой часы цикла «0:12 / 0:30» слева и выход
- * в час фишками справа ([HourChips]); строка уровня профессии ([LevelRow]); запас входа и учёт с начала работы ([WorkLedger]) - сделанное
- * с начала работы - вещи героя с меткой происхождения этой работы ([CraftsViewModel.made], вне главного потока), кнопка под ними открывает тайник с фильтром
- * «Сделано ремеслом». [help] - значок справки в строке «Сейчас» (на главном экране; в окне профессии справка - в его шапке). Нет работы -
- * строка «Сейчас» и что герой не работает.
+ * Идущая работа - одна плашка на главном экране вкладки и в окне профессии: имя работы целиком (до двух строк) с вариантом и примесями,
+ * квадратная «Остановить»; вещь в работе; полоса цикла, под ней одной строкой часы цикла «0:12 / 0:30» (длину цикла печатают только они)
+ * слева и выход в час фишками справа ([HourChips]); срок до следующего уровня профессии ([LevelEta]); запас входа и свёрнутый учёт с
+ * начала работы ([WorkLedger]) - касание итогов раскрывает стопки и сделанное с начала работы - вещи героя с меткой происхождения этой
+ * работы ([CraftsViewModel.made], вне главного потока), кнопка под ними открывает тайник с фильтром «Сделано ремеслом».
+ * [help] - значок справки в строке «Сейчас» на главном экране: там над именем работы «Сейчас», под ним - профессия; в окне профессии
+ * [help] нет, профессию и справку называет его шапка. Нет работы - строка «Сейчас» и что герой не работает.
  *
  * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт.
  */
@@ -185,15 +183,10 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         val job = profession?.job(work.job, work.choice)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Engraved(ui("crafts.now_label"))
+                if (help != null) Engraved(ui("crafts.now_label"))
                 Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(
-                    listOfNotNull(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), workDetail(work)).joinToString(" · "),
-                    color = Rune,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val detail = listOfNotNull(professionTitle(work.profession).takeIf { help != null }, workDetail(work)).joinToString(" · ")
+                if (detail.isNotEmpty()) Text(detail, color = Rune, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             help?.invoke()
             StopButton(enabled = !game.busy, onClick = vm::stop)
@@ -205,7 +198,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             val rules = crafts.state?.rules
             if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
         }
-        if (profession != null && job != null) LevelRow(profession, job, work, offset)
+        if (profession != null && job != null) LevelEta(profession, job, work, offset)
         crafts.state?.running?.let { StockRow(game, work, it) }
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
         val made by vm.made.collectAsStateWithLifecycle()
@@ -214,9 +207,9 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             game,
             sums,
             made,
-            title = ui("crafts.totals_title"),
             startedAt = work.startedAt,
             offset = offset,
+            folded = true,
             onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
         )
     }
@@ -288,15 +281,6 @@ private const val HOUR_CHIPS = 3
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Engraved(title)
         Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))
-    }
-}
-
-/** Between gathering and crafting: what the first brings is what the second spends. */
-@Composable internal fun FlowMark() {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-        Rhombus(Bronze, 6.dp)
-        Engraved(ui("crafts.flow"), accent = Bronze)
-        Rhombus(Bronze, 6.dp)
     }
 }
 

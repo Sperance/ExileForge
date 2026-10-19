@@ -176,9 +176,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** Глава, чей выбор ждёт: трон без закона раньше книги, как в [StoryChoice.pending]; нет - null. */
-private fun choiceRegion(index: ContentIndex, board: QuestBoard, laws: List<String>): String? =
-    ThroneLaws(index).pending(board.chapter, laws).firstOrNull()?.region
-        ?: StoryBooks(index).pending(board.chapter, board.books).firstOrNull()?.let { index.quests.story.getOrNull(it)?.region }
+private fun choiceRegion(index: ContentIndex, board: QuestBoard, laws: List<String>): String? = ThroneLaws(index).pending(board.chapter, laws).firstOrNull()?.region
+    ?: StoryBooks(index).pending(board.chapter, board.books).firstOrNull()?.let { index.quests.story.getOrNull(it)?.region }
 
 /**
  * Выбор, что ждёт героя за пройденную главу: закон трона ([LAW]) или книга умения ([BOOK]); [text] - строка плашки, [icon] - знак в

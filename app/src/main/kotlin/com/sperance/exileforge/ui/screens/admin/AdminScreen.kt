@@ -51,10 +51,10 @@ import org.koin.compose.viewmodel.koinViewModel
         if (game.isAdmin) {
             ForgePanel {
                 Engraved(ui("admin.screens"))
-                ForgeOutlinedButton(enabled = !game.busy, onClick = {
+                ForgeButton(enabled = !game.busy, onClick = {
                     vm.openRedemptions()
                     vm.loadRedemptions()
-                }, modifier = Modifier.fillMaxWidth()) {
+                }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     Text(ui("redemption.title"))
                 }
                 MutedText(ui("admin.screens_note"))

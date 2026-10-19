@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -210,7 +211,7 @@ private enum class DossierFold(val title: String) {
                             val fate = dossier.account.fate
                             if (fate == null) MutedText(DASH) else FateRibbon(FateCard(fate), ui("moderation.fate.chosen", dossier.account.fateAt?.let(::dayOf) ?: DASH), Modifier.fillMaxWidth())
                             if (dossier.rights.fate) {
-                                ForgeOutlinedButton(enabled = !account.busy, onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.fate.change"), color = Gold) }
+                                ForgeButton(enabled = !account.busy, onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("moderation.fate.change"), color = Gold) }
                             }
                         }
                     }
@@ -256,7 +257,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
                 if (item.sharedWith.isNotEmpty()) Text(ui("moderation.shared", item.sharedWith.joinToString()), color = Ember, style = MaterialTheme.typography.labelSmall)
             }
             if (dossier.rights.banDevice) {
-                ForgeTextButton(enabled = !account.busy, onClick = { onBanDevice(item) }) { Text(ui("moderation.ban_device"), color = LifeRed) }
+                ForgeButton(enabled = !account.busy, onClick = { onBanDevice(item) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(ui("moderation.ban_device")) }
             }
         }
     }
@@ -367,7 +368,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     if (actions.isEmpty()) return
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         actions.forEach { (label, act) ->
-            ForgeOutlinedButton(enabled = !account.busy, onClick = act, modifier = Modifier.weight(1f)) { Text(label, color = LifeRed, maxLines = 1) }
+            ForgeButton(enabled = !account.busy, onClick = act, modifier = Modifier.weight(1f), kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(label, maxLines = 1) }
         }
     }
 }
@@ -385,7 +386,11 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(spacing = 8.dp),
-        footer = { HoldButton(ui("moderation.fate.hold"), Gold, Modifier.weight(1f), enabled = !account.busy && ready) { picked?.let { onPick(it, reason) } } },
+        footer = {
+            ForgeButton(onClick = { picked?.let { onPick(it, reason) } }, modifier = Modifier.weight(1f), enabled = !account.busy && ready, hold = Hold(fate = true)) {
+                Text(ui("moderation.fate.hold"))
+            }
+        },
     ) {
         Text(other?.let { ui("moderation.fate.change_for", it) } ?: ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
         MutedText(ui("moderation.fate.change_note"))
@@ -453,7 +458,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
             if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
         }
         if (sanction.active) {
-            ForgeTextButton(enabled = !busy, onClick = onLift) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift"), color = Gold) }
+            ForgeButton(enabled = !busy, onClick = onLift, kind = ButtonKind.Text) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift"), color = Gold) }
         } else {
             Text(ui(if (sanction.purgedAt != null) "moderation.purged" else "moderation.inactive"), color = Muted, style = MaterialTheme.typography.labelSmall)
         }

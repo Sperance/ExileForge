@@ -249,7 +249,7 @@ internal enum class SettingsPage(val title: String) {
     val found = state.update
     SettingRow(Icons.Outlined.SystemUpdate, ui("settings.updates"), listOfNotNull(ui("app.version", BuildConfig.VERSION_NAME), updateNote(state)).joinToString(" · ")) {
         if (found != null) {
-            ForgeOutlinedButton(enabled = !state.installing, onClick = updates::install, contentPadding = PaddingValues(horizontal = 10.dp)) {
+            ForgeButton(enabled = !state.installing, onClick = updates::install, contentPadding = PaddingValues(horizontal = 10.dp), kind = ButtonKind.Secondary) {
                 Text(ui("update.install"), style = MaterialTheme.typography.labelMedium)
             }
         }

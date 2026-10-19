@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -166,7 +167,7 @@ private fun AdminReport.matches(query: String): Boolean {
 
 /** Чип фильтра: подпись, счёт (null - без счёта), выбран ли. */
 @Composable private fun CountChip(title: String, count: Int?, chosen: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = chosen, onClick = onClick, label = { Text(listOfNotNull(title, count?.toString()).joinToString(" ")) })
+    ForgeChip(title, chosen, onClick, count = count)
 }
 
 /**
@@ -249,7 +250,7 @@ private fun AdminReport.matches(query: String): Boolean {
             ModerationNote(account, vm, report)
             if (report.issueError.isNotBlank() && issue == null) {
                 Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }) { Text(ui("feedback.issue_retry")) }
+                ForgeButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }, kind = ButtonKind.Secondary) { Text(ui("feedback.issue_retry")) }
             }
             if (fresh) {
                 OutlinedTextField(
@@ -270,8 +271,8 @@ private fun AdminReport.matches(query: String): Boolean {
             when {
                 fresh -> {
                     if (ReportStatus.REJECTED in entry.moves) {
-                        ForgeOutlinedButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }) {
-                            Text(ui("feedback.admin.reject"), color = LifeRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        ForgeButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) {
+                            Text(ui("feedback.admin.reject"), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (ReportStatus.SENT in entry.moves) {
@@ -282,16 +283,14 @@ private fun AdminReport.matches(query: String): Boolean {
                 }
 
                 issue != null -> {
-                    if (issue.state.open) ForgeOutlinedButton(enabled = !account.busy, onClick = { steering = !steering }) { Text(ui("feedback.admin.steer"), maxLines = 1) }
-                    ForgeOutlinedButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }) {
+                    if (issue.state.open) ForgeButton(enabled = !account.busy, onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
+                    ForgeButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary) {
                         Text(ui("feedback.admin.issue_link", issue.number), color = Gold, maxLines = 1, softWrap = false)
                     }
                 }
             }
             if (entry.deletable) {
-                IconButton(enabled = !account.busy, onClick = { deleting = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Outlined.Delete, ui("feedback.delete"), tint = LifeRed, modifier = Modifier.size(18.dp))
-                }
+                ForgeIconButton(Icons.Outlined.Delete, ui("feedback.delete"), onClick = { deleting = true }, style = IconButtonStyle.Danger, compact = true, enabled = !account.busy)
             }
         }
     }
@@ -364,14 +363,14 @@ private fun AuthorLine(entry: AdminReport, onDossier: (String) -> Unit) {
     }
     OutlinedTextField(note, { note = it.take(NOTE) }, label = { Text(ui("feedback.note.title")) }, placeholder = { Text(ui("feedback.note.hint")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End)) {
-        ForgeTextButton(onClick = {
+        ForgeButton(onClick = {
             note = report.moderationNote
             editing = false
-        }) { Text(ui("common.cancel")) }
-        ForgeOutlinedButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = {
+        }, kind = ButtonKind.Text) { Text(ui("common.cancel")) }
+        ForgeButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = {
             vm.noteReport(report.id, note)
             editing = false
-        }) { Text(ui("feedback.note.save")) }
+        }, kind = ButtonKind.Secondary) { Text(ui("feedback.note.save")) }
     }
 }
 
@@ -414,7 +413,7 @@ private const val SEARCH = 60
                 IssueMove.DUPLICATE -> original.isNotBlank()
                 else -> true
             }
-            ForgeOutlinedButton(enabled = !account.busy && ready, onClick = { vm.steerIssue(id, move, note, original.toIntOrNull() ?: 0) }) {
+            ForgeButton(enabled = !account.busy && ready, onClick = { vm.steerIssue(id, move, note, original.toIntOrNull() ?: 0) }, kind = ButtonKind.Secondary) {
                 Text(ui("feedback.move.${move.name}"))
             }
         }
@@ -485,7 +484,7 @@ private const val DUPLICATE_DIGITS = 6
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
             )
-            ForgeOutlinedButton(enabled = item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0, onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }) {
+            ForgeButton(enabled = item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0, onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }, kind = ButtonKind.Secondary) {
                 Text(ui("mail.add"))
             }
         }
@@ -493,12 +492,12 @@ private const val DUPLICATE_DIGITS = 6
         var rarity by remember { mutableStateOf<Rarity?>(null) }
         Spinner(ui("mail.template"), template, index.templates.values.associate { it.code to equipmentTitle(it.code) }, !account.busy) { template = it }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = rarity == null, onClick = { rarity = null }, label = { Text(ui("mail.template_rarity")) })
+            ForgeChip(ui("mail.template_rarity"), rarity == null, { rarity = null })
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
-                FilterChip(selected = rarity == r, onClick = { rarity = r }, label = { Text(ui("enum.rarity.${r.name}")) })
+                ForgeChip(ui("enum.rarity.${r.name}"), rarity == r, { rarity = r })
             }
         }
-        ForgeOutlinedButton(enabled = template.isNotBlank(), onClick = { equipment += MailEquipment(template, rarity) }, modifier = Modifier.fillMaxWidth()) { Text(ui("mail.add")) }
+        ForgeButton(enabled = template.isNotBlank(), onClick = { equipment += MailEquipment(template, rarity) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
         items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
         equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }
@@ -515,6 +514,6 @@ private const val DUPLICATE_DIGITS = 6
 @Composable private fun AttachedLine(text: String, onRemove: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(text, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-        ForgeTextButton(onClick = onRemove) { Text(ui("mail.remove"), color = LifeRed) }
+        ForgeButton(onClick = onRemove, kind = ButtonKind.Danger, icon = Icons.Outlined.Delete) { Text(ui("mail.remove")) }
     }
 }

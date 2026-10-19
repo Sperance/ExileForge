@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
@@ -19,13 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -136,24 +135,14 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Кнопка фильтров у поиска: значок отбора, на нём - число активных фильтров [active] (без него - отбор обычный). */
 @Composable private fun FilterButton(active: Int, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Box(
-        Modifier.size(48.dp).border(1.dp, if (active > 0) Gold.copy(alpha = .6f) else Bronze, shape).clip(shape)
-            .clickable(enabled = enabled, onClickLabel = ui("moderation.filters"), onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(Icons.Outlined.Tune, ui("moderation.filters"), tint = if (active > 0) GoldBright else Muted, modifier = Modifier.size(22.dp))
-        if (active > 0) {
-            Text(
-                active.toString(),
-                color = Ink,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).widthIn(min = 16.dp).background(Gold, RoundedCornerShape(8.dp)).padding(horizontal = 4.dp),
-            )
-        }
-    }
+    ForgeIconButton(
+        Icons.Outlined.Tune,
+        ui("moderation.filters"),
+        onClick = onClick,
+        style = if (active > 0) IconButtonStyle.Tonal else IconButtonStyle.Ghost,
+        enabled = enabled,
+        badge = active,
+    )
 }
 
 /** Подписи активных фильтров над списком: порядок, если не обычный, и дар, если выбран. */
@@ -184,7 +173,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
-            ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
+            ForgeButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("moderation.filters.reset")) }
             ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
         },
     ) {
@@ -253,9 +242,9 @@ private const val FATE_COLUMNS = 2
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
     if (pages <= 1 && page == 0) return
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        ForgeTextButton(onClick = { onPage(page - 1) }, enabled = !busy && page > 0) { Text("‹") }
+        ForgeButton(onClick = { onPage(page - 1) }, enabled = !busy && page > 0, kind = ButtonKind.Text) { Text("‹") }
         Text(ui("moderation.page", page + 1, pages), color = Muted, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-        ForgeTextButton(onClick = { onPage(page + 1) }, enabled = !busy && page + 1 < pages) { Text("›") }
+        ForgeButton(onClick = { onPage(page + 1) }, enabled = !busy && page + 1 < pages, kind = ButtonKind.Text) { Text("›") }
     }
 }
 
@@ -306,7 +295,7 @@ private const val FATE_COLUMNS = 2
             Text(ui("moderation.purge_in", left ?: 0), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         if (!row.protected) {
-            IconButton(enabled = !account.busy, onClick = onRestore) { Icon(Icons.Outlined.Restore, ui("moderation.restore"), tint = Gold) }
+            ForgeIconButton(Icons.Outlined.Restore, ui("moderation.restore"), onClick = onRestore, enabled = !account.busy, tint = Gold)
         }
     }
 }
@@ -415,12 +404,14 @@ private const val FATE_COLUMNS = 2
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            HoldButton(
-                ui("moderation.hold_delete"),
-                LifeRed,
+            ForgeButton(
+                onClick = { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) },
                 modifier = Modifier.weight(1f),
+                kind = ButtonKind.Danger,
                 enabled = !account.busy && comment.isNotBlank(),
-            ) { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) }
+                icon = Icons.Outlined.DeleteOutline,
+                hold = Hold(),
+            ) { Text(ui("moderation.hold_delete")) }
         },
     ) {
         Text(ui("moderation.delete_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
@@ -465,11 +456,10 @@ private const val FATE_COLUMNS = 2
 internal fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
 
 @Composable internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = LifeRed.copy(alpha = .15f), selectedLabelColor = Color(0xFFFF8A83)),
+    ForgeChip(
+        label,
+        selected,
+        onClick,
     )
 }
 
@@ -600,7 +590,7 @@ internal val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
                         Label(label)
                         Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
-                    ForgeOutlinedButton(onClick = { clipboard.setText(AnnotatedString(value)) }) { Text(ui("tester.copy")) }
+                    ForgeButton(onClick = { clipboard.setText(AnnotatedString(value)) }, kind = ButtonKind.Secondary) { Text(ui("tester.copy")) }
                 }
             }
         }

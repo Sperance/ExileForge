@@ -33,7 +33,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
-import com.sperance.exileforge.ui.theme.Muted
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -90,7 +89,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Engraved(code.code)
             Spacer(Modifier.weight(1f))
-            IconButton(enabled = !game.busy, onClick = onDelete) { Icon(Icons.Outlined.Delete, null, tint = Muted) }
+            ForgeIconButton(Icons.Outlined.Delete, ui("common.delete"), onClick = onDelete, enabled = !game.busy)
         }
         code.description?.takeIf { it.isNotBlank() }?.let {
             MutedText(it)
@@ -192,7 +191,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
             modifier = Modifier.fillMaxWidth(),
         )
 
-        ForgeOutlinedButton(
+        ForgeButton(
             enabled = !game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
             modifier = Modifier.fillMaxWidth(),
             onClick = {
@@ -200,6 +199,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
                 item = ""
                 amount = "1"
             },
+            kind = ButtonKind.Secondary,
         ) {
             Icon(Icons.Outlined.Add, null)
             Text(ui("redemption.add_reward"))
@@ -209,9 +209,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
         rewards.forEachIndexed { index, reward ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(rewardLine(reward), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                IconButton(onClick = { rewards = rewards.filterIndexed { at, _ -> at != index } }) {
-                    Icon(Icons.Outlined.Delete, null, tint = Muted)
-                }
+                ForgeIconButton(Icons.Outlined.Delete, ui("common.delete"), onClick = { rewards = rewards.filterIndexed { at, _ -> at != index } })
             }
         }
 

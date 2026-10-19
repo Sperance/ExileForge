@@ -226,7 +226,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         } else {
             PropertyRow(ui("account.server_address"), session.server, Glyph.TEXT)
         }
-        ForgeOutlinedButton(enabled = !account.busy, onClick = sessionModel::health, modifier = Modifier.fillMaxWidth()) { Text(ui("account.check_health")) }
+        ForgeButton(enabled = !account.busy, onClick = sessionModel::health, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("account.check_health")) }
     }
     InfoCard(ui("account.server_state"), session.health)
     if (session.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
@@ -272,10 +272,10 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         } else {
             MutedText(ui("account.content_missing"))
         }
-        ForgeOutlinedButton(enabled = !account.busy, onClick = {
+        ForgeButton(enabled = !account.busy, onClick = {
             sessionModel.refreshLocale()
             sessionModel.refreshIcons()
-        }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
+        }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("account.reread_bundles")) }
     }
     UpdateCard()
     val live = if (world.serverVersion.isNotBlank()) {
@@ -322,10 +322,10 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             }
         },
         confirmButton = {
-            ForgeTextButton(enabled = !account.busy && code.isNotBlank(), onClick = { onRedeem(code) }) {
+            ForgeButton(enabled = !account.busy && code.isNotBlank(), onClick = { onRedeem(code) }, kind = ButtonKind.Text) {
                 Text(ui("account.claim"))
             }
         },
-        dismissButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.cancel")) } },
+        dismissButton = { ForgeButton(onClick = onDismiss, kind = ButtonKind.Text) { Text(ui("common.cancel")) } },
     )
 }

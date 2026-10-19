@@ -9,9 +9,8 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.AccountBinding
+import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -32,17 +31,17 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         if (account.session.profile?.login.isNullOrBlank()) {
             BindForm(account, sessionModel)
-            ForgeOutlinedButton(enabled = !account.busy, onClick = sessionModel::logout) { Text(ui("account.sign_out")) }
+            ForgeButton(enabled = !account.busy, onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
             return
         }
         var change by remember { mutableStateOf(false) }
         var oldPassword by remember { mutableStateOf("") }
         var newPassword by remember { mutableStateOf("") }
-        ForgeTextButton(onClick = {
+        ForgeButton(onClick = {
             change = !change
             oldPassword = ""
             newPassword = ""
-        }) { Text(ui("account.change_password")) }
+        }, kind = ButtonKind.Text) { Text(ui("account.change_password")) }
         if (change) {
             OutlinedTextField(oldPassword, { oldPassword = it.take(account.inputs.password) }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(newPassword, { newPassword = it.take(account.inputs.password) }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -53,7 +52,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 change = false
             }) { Text(ui("account.do_change_password")) }
         }
-        ForgeOutlinedButton(enabled = !account.busy, onClick = sessionModel::logout) { Text(ui("account.sign_out")) }
+        ForgeButton(enabled = !account.busy, onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
     } else {
         OutlinedTextField(login, { login = it.take(account.inputs.login) }, enabled = !account.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(password, { password = it.take(account.inputs.password) }, enabled = !account.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())

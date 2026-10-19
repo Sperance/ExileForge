@@ -37,14 +37,12 @@ import com.sperance.exileforge.core.campaign.run.reportContext
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.ReportTopic
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.nav.reportPlace
 import com.sperance.exileforge.ui.theme.*
-
-/** Кто открывает лист отчёта: его отдаёт приложение - пункт «Сообщить об ошибке» меню шапки ([ReportMenu]) зовёт его; кнопок-жуков на экранах нет. */
-val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /** Аккорд громкости приложения: его держит Activity; окна диалогов и попапов цепляются к нему сами ([ChordOverWindow]). */
 val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
@@ -74,7 +72,8 @@ val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
  * no context of the device and the hero, no tail of the request journal; снимков экрана нет. Под формой -
  * «Мои отчёты» и «Известные» ([onReports]); подсказки «Похожее уже известно» во время набора нет.
  *
- * Только отчёт об ошибке; черновик возвращается с устройства и пишется по мере набора.
+ * Только отчёт об ошибке; черновик возвращается с устройства и пишется по мере набора. У администратора сверху - таблетки темы
+ * «Ошибка | Улучшение» ([ReportTopic]), черновик у тем общий.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +89,7 @@ fun BugSheet(
     val screen = remember { bugScreen(route, run) }
     val kind = FeedbackKind.BUG
     var text by remember { mutableStateOf("") }
+    var topic by remember { mutableStateOf(ReportTopic.ERROR) }
     LaunchedEffect(Unit) {
         if (text.isEmpty()) text = drafts.read().texts[kind].orEmpty()
     }
@@ -103,13 +103,14 @@ fun BugSheet(
                 enabled = text.isNotBlank(),
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))
+                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind, topic = topic))
                     onDismiss()
                 },
             ) { Text(ui("bug.send")) }
         },
     ) {
-        Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        if (game.isAdmin) PillTabs(ReportTopic.entries.map { ui("bug.topic.${it.name}") }, ReportTopic.entries.indexOf(topic), { topic = ReportTopic.entries[it] }, segmented = true)
+        Text(ui("bug.title.${topic.name}"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
         Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
         OutlinedTextField(
             text,

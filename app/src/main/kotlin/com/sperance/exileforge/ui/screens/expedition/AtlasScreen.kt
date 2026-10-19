@@ -219,17 +219,15 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     )
 }
 
-/** The header's ⋮: the totals, the reset and the bug report, so the title keeps the bar. */
+/** «⋮» шапки атласа: итоги и сброс узлов - заголовок остаётся на полосе. */
 @Composable internal fun AtlasMenu(summary: Boolean, reset: Boolean, onSummary: () -> Unit, onReset: () -> Unit) {
-    val bug = LocalBugReport.current
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = Sky.text) }
         ForgeMenu(expanded = open, onDismissRequest = { open = false }) {
-            val entries = listOfNotNull(
+            val entries = listOf(
                 Triple(ui("atlas.summary"), summary, onSummary),
                 Triple(ui("atlas.reset"), reset, onReset),
-                bug?.let { Triple(ui("bug.open"), true, it) },
             )
             entries.forEach { (label, enabled, action) ->
                 DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = {

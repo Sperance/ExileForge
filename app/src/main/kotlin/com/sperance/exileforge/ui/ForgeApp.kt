@@ -35,7 +35,6 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.StallWatchdog
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.HeaderCollapse
-import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalHeaderCollapse
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
@@ -163,32 +162,32 @@ import org.koin.compose.viewmodel.koinViewModel
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
     ToastLayer(game, shell::dismissMessage, shell::dismissNotice) {
-        key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
-            CompositionLocalProvider(
-                LocalBugReport provides { sheets.bug = true },
-                LocalMailOpen provides { mailOpen = true },
-                com.sperance.exileforge.ui.components.LocalContentIndex provides game.index,
-                com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
-                com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
-                com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
-            ) {
-                com.sperance.exileforge.ui.components.FateSightHost(game) {
-                    com.sperance.exileforge.ui.components.LoreHost(game) {
-                        com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                            com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
-                                com.sperance.exileforge.ui.components.PlayerCardHost(game) {
-                                    Box(Modifier.fillMaxSize()) {
-                                        val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                                        val run = expedition
-                                        val arena = trial
-                                        val notice = game.session.notice
-                                        when {
-                                            notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
-                                            warming != null -> Box(Modifier.fillMaxSize().background(Ink))
-                                            run != null -> ExpeditionPlay(run)
-                                            arena != null -> TrialScreen(arena)
-                                            rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
-                                            else -> Shell(game, route, navigator) { sheets.bug = true }
+        CompositionLocalProvider(com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets) {
+            key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
+                CompositionLocalProvider(
+                    LocalMailOpen provides { mailOpen = true },
+                    com.sperance.exileforge.ui.components.LocalContentIndex provides game.index,
+                    com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
+                    com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
+                ) {
+                    com.sperance.exileforge.ui.components.FateSightHost(game) {
+                        com.sperance.exileforge.ui.components.LoreHost(game) {
+                            com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
+                                com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                                    com.sperance.exileforge.ui.components.PlayerCardHost(game) {
+                                        Box(Modifier.fillMaxSize()) {
+                                            val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                                            val run = expedition
+                                            val arena = trial
+                                            val notice = game.session.notice
+                                            when {
+                                                notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+                                                warming != null -> Box(Modifier.fillMaxSize().background(Ink))
+                                                run != null -> ExpeditionPlay(run)
+                                                arena != null -> TrialScreen(arena)
+                                                rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
+                                                else -> Shell(game, route, navigator)
+                                            }
                                         }
                                     }
                                 }
@@ -197,24 +196,24 @@ import org.koin.compose.viewmodel.koinViewModel
                     }
                 }
             }
+            if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
+            if (sheets.bug) {
+                BugSheet(
+                    game,
+                    route,
+                    expedition,
+                    drafts,
+                    onDismiss = { sheets.bug = false },
+                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
+                    onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
+                )
+            }
+            if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+            sheets.reports?.let { view -> ReportsSheet(view) { sheets.reports = null } }
+            if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
+            if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
+            if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
         }
-        if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
-        if (sheets.bug) {
-            BugSheet(
-                game,
-                route,
-                expedition,
-                drafts,
-                onDismiss = { sheets.bug = false },
-                onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
-                onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
-            )
-        }
-        if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-        sheets.reports?.let { view -> ReportsSheet(view) { sheets.reports = null } }
-        if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
-        if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
-        if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
     }
 }
 
@@ -228,7 +227,7 @@ private val BANNER_TOAST_TOP = 60.dp
  * Корень вкладки хранит прокрутку до возвращения; смена вкладки сдвигает экран и меняющуюся шапку в сторону порядка. Сворачиваемые шапки -
  * одно состояние на вкладку, шапка игры не сворачивается.
  */
-@Composable internal fun Shell(game: GameUi, route: Route, navigator: Navigator, onBug: () -> Unit) {
+@Composable internal fun Shell(game: GameUi, route: Route, navigator: Navigator) {
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
     val tabs = rememberTabMemory(game.heroId)
@@ -279,7 +278,7 @@ private val BANNER_TOAST_TOP = 60.dp
     Scaffold(containerColor = Ink, bottomBar = { GameBar(game, route) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
-                TabShifted(route, look = { it.tab == TAB_HERO }) { ForgeBanner(game, it, onBug) }
+                TabShifted(route, look = { it.tab == TAB_HERO }) { ForgeBanner(game, it) }
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
                     TabShifted(route, look = { it.root?.tab }) { shown ->

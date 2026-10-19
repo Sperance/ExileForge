@@ -10,9 +10,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Animation
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
+import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
@@ -33,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -153,6 +156,7 @@ internal enum class SettingsPage(val title: String) {
         }
         UpdateRow()
         AccountRow(Icons.Outlined.History, ui("settings.whats_new")) { onPage(SettingsPage.WHATS_NEW) }
+        ReportRows()
     }
     RowGroup(ui("settings.fight")) {
         ChoiceRow(Icons.Outlined.FastForward, ui("settings.speed"), settingsModel.speeds, set.fightSpeed, { "×$it" }) { change { copy(fightSpeed = it) } }
@@ -226,6 +230,18 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
+/**
+ * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - лист «Мои /
+ * Известные»; без системных листов приложения ([LocalSystemSheets]) строк нет.
+ */
+@Composable private fun ReportRows() {
+    val sheets = LocalSystemSheets.current ?: return
+    SettingRow(Icons.Outlined.BugReport, ui("bug.open"), ui("settings.bug_chord"), onClick = { sheets.bug = true }) {
+        Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+    }
+    AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { sheets.reports = ReportsView(ReportsTab.MINE) }
+}
+
 /** Версия сборки: проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */
 @Composable private fun UpdateRow() {
     val updates = LocalUpdates.current ?: return
@@ -240,10 +256,10 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-/** A row of the settings: the glyph, the name with a line under it, and what sets it on the right. */
-@Composable internal fun SettingRow(icon: ImageVector, label: String, note: String? = null, trailing: @Composable RowScope.() -> Unit) {
+/** A row of the settings: the glyph, the name with a line under it, and what sets it on the right; [onClick] - касание всей строки. */
+@Composable internal fun SettingRow(icon: ImageVector, label: String, note: String? = null, onClick: (() -> Unit)? = null, trailing: @Composable RowScope.() -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier).padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

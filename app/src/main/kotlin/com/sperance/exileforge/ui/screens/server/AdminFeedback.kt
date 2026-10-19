@@ -25,26 +25,17 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.feedback.DetailLoad
 import com.sperance.exileforge.core.feedback.FeedbackModel
-import com.sperance.exileforge.core.feedback.ReportSection
-import com.sperance.exileforge.core.feedback.clientVersions
-import com.sperance.exileforge.core.feedback.crashHead
-import com.sperance.exileforge.core.feedback.environment
-import com.sperance.exileforge.core.feedback.line
-import com.sperance.exileforge.core.feedback.trailFault
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -53,7 +44,6 @@ import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
-import com.sperance.exileforge.core.model.feedback.ReportDetail
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.content.Rarity
@@ -63,29 +53,24 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, в строке порядка - выбор версии
- * клиента «Все версии ▾» и порядок чипами ([Order]: новые, рейтинг, номер Issue); отбор по версии и порядок - на клиенте, список вида
- * приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
- * ([AdminTicket] над [ReportTicket]) с техническим отчёта свёрнутыми секциями ([DetailSections]), касание его шапки сворачивает;
+ * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, порядок чипами ([Order]: новые,
+ * рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
+ * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
  * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
- * отчёту отправляет его в GitHub сразу. Любой чип очереди и вида, и уже выбранный, и потягивание страницы перечитывают список с сервера;
- * техническое читается раз на отчёт, пока страница открыта.
+ * отчёту отправляет его в GitHub сразу. Любой чип очереди и вида, и уже выбранный, и потягивание страницы перечитывают список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>().model
     val moderation = koinViewModel<ModerationViewModel>().model
     val feedback by vm.feedback.collectAsStateWithLifecycle()
-    val details by vm.details.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     var queue by remember { mutableStateOf(Queue.NEW) }
     var order by remember { mutableStateOf(Order.NEWEST) }
-    var version by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var open by remember { mutableStateOf<String?>(null) }
     var dossier by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.loadReports(kind, null) }
-    DisposableEffect(vm) { onDispose { vm.forgetDetails() } }
     if (dossier) {
         val state by moderation.state.collectAsStateWithLifecycle()
         TrailLevel(ui("moderation.dossier"), onBack = {
@@ -95,8 +80,7 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
-    val versions = clientVersions(feedback.reports)
-    val found = feedback.reports.filter { it.matches(query) && (version == null || it.report.clientVersion == version) }
+    val found = feedback.reports.filter { it.matches(query) }
     OutlinedTextField(
         query,
         { query = it.take(SEARCH) },
@@ -122,27 +106,16 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Picker(version?.let { ui("feedback.versions.one", it) } ?: ui("feedback.versions.all"), versions.isNotEmpty(), listOf<Pair<String, () -> Unit>>(ui("feedback.versions.all") to { version = null }) + versions.map { v -> ui("feedback.versions.one", v) to { version = v } })
         MutedText(ui("feedback.order"), style = MaterialTheme.typography.labelMedium)
         Order.entries.forEach { o -> CountChip(ui(o.key), null, order == o) { order = o } }
     }
     val shown = found.filter { queue.holds(it) }.sortedWith(order.comparator)
-    val chosen = version
-    when {
-        shown.isNotEmpty() -> Unit
-
-        chosen != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MutedText(ui("feedback.none_version", chosen), modifier = Modifier.weight(1f))
-            ForgeTextButton(onClick = { version = null }) { Text(ui("feedback.versions.show_all"), color = Gold) }
-        }
-
-        else -> MutedText(ui("feedback.none"))
-    }
+    if (shown.isEmpty()) MutedText(ui("feedback.none"))
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         shown.forEach { entry ->
             key(entry.report.id) {
                 if (entry.report.id == open) {
-                    AdminTicket(account, vm, entry, details[entry.report.id], onCollapse = { open = null }) { userId ->
+                    AdminTicket(account, vm, entry, onCollapse = { open = null }) { userId ->
                         moderation.open(entry.report.heroId.orEmpty(), userId)
                         dossier = true
                     }
@@ -245,12 +218,11 @@ private fun AdminReport.matches(query: String): Boolean {
 
 /**
  * Раскрытый отчёт модерации - тикет игрока ([ReportTicket]) с версией клиента в шапке и слотами модерации: строка автора ([AuthorLine],
- * касание логина - [onDossier] с аккаунтом автора), обстоятельства дела (у апелляции и жалобы), техническое [detail] ([DetailSections]),
- * «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса (если есть) и действия
+ * касание логина - [onDossier] с аккаунтом автора), обстоятельства дела (у апелляции и жалобы), «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса (если есть) и действия
  * очереди: у нового «Отклонить» (со словом - причиной автору) и «В GitHub» (апелляция и жалоба не уходят наружу - «Принять»), у
  * отправленного - «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
  */
-@Composable internal fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, detail: DetailLoad?, onCollapse: () -> Unit, onDossier: (String) -> Unit) {
+@Composable internal fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit, onDossier: (String) -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
     val fresh = report.status == ReportStatus.CREATED
@@ -270,10 +242,10 @@ private fun AdminReport.matches(query: String): Boolean {
         version = report.clientVersion,
         focused = true,
         onHeader = onCollapse,
+        topic = report.topic,
         author = { AuthorLine(entry, onDossier) },
         extra = {
             if (!report.kind.exported) Circumstances(report.context)
-            DetailSections(report, detail) { vm.loadDetail(report.id) }
             ModerationNote(account, vm, report)
             if (report.issueError.isNotBlank() && issue == null) {
                 Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -359,141 +331,6 @@ private fun AuthorLine(entry: AdminReport, onDossier: (String) -> Unit) {
         }
     }
 }
-
-/**
- * Техническое отчёта - то же, что в теле Issue, - свёрнутыми секциями по образцу досье ([ReportSection]: падения, ошибки запросов,
- * последние действия, устройство и среда, снимок героя): итог справа, раскрыта одна, секция без данных - «нет» и не раскрывается.
- * [load] null - ещё не читалось: [onLoad] читает его при первом раскрытии отчёта; пока идёт - строка загрузки, не вышло - строка с
- * «Повторить» (тот же [onLoad]).
- */
-@Composable private fun DetailSections(report: FullReport, load: DetailLoad?, onLoad: () -> Unit) {
-    LaunchedEffect(report.id, load == null) { if (load == null) onLoad() }
-    val shape = RoundedCornerShape(10.dp)
-    when (load) {
-        null, DetailLoad.Loading -> Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CircularProgressIndicator(color = Gold, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
-            MutedText(ui("feedback.detail.loading"), style = MaterialTheme.typography.labelSmall)
-        }
-
-        DetailLoad.Failed -> Row(
-            Modifier.fillMaxWidth().clip(shape).border(1.dp, LifeRed.copy(alpha = .5f), shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(ui("feedback.detail.failed"), color = LossText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-            ForgeOutlinedButton(onClick = onLoad) { Text(ui("feedback.detail.retry"), maxLines = 1) }
-        }
-
-        is DetailLoad.Ready -> DetailFolds(report, load.detail)
-    }
-}
-
-/** Секции готового технического [detail]: строка секции - «▸ название» и итог, касание раскрывает её и сворачивает прежнюю. */
-@Composable private fun DetailFolds(report: FullReport, detail: ReportDetail) {
-    var open by remember(report.id) { mutableStateOf<ReportSection?>(null) }
-    val shape = RoundedCornerShape(10.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape)) {
-        ReportSection.entries.forEachIndexed { i, section ->
-            if (i > 0) HorizontalDivider(color = Bronze)
-            val summary = section.summary(report, detail)
-            val opened = summary != null && open == section
-            Row(
-                Modifier.fillMaxWidth().then(if (summary != null) Modifier.clickable { open = if (opened) null else section } else Modifier).padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Text(
-                    (
-                        if (summary == null) {
-                            "   "
-                        } else if (opened) {
-                            "▾ "
-                        } else {
-                            "▸ "
-                        }
-                        ) + ui(section.title),
-                    color = if (summary == null) Muted else Parchment,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    summary ?: ui("feedback.section.none"),
-                    color = if (summary != null && section.alarming) LossText else Muted,
-                    style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 220.dp),
-                )
-            }
-            if (opened) {
-                Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    when (section) {
-                        ReportSection.CRASHES -> detail.crashes.forEach { crash ->
-                            CrashBlock(crash.stack, if (report.kind == FeedbackKind.CRASH) ReportSection.CRASHES.summary(report, detail).orEmpty() else crash.buildVersion)
-                        }
-
-                        ReportSection.FAILURES -> detail.failures.forEach { LogLine(it.line, LossText) }
-
-                        ReportSection.TRAIL -> detail.trail.forEach { LogLine(it, if (trailFault(it)) LossText else Parchment) }
-
-                        ReportSection.ENVIRONMENT -> detail.environment(report).forEach { (label, value) -> FactLine(label, value) }
-
-                        ReportSection.HERO -> detail.heroSheet.forEach { LogLine(it, Parchment) }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Падение секции: класс исключения, версии ([versions]) и стек моноширинным: свёрнутый - первые [STACK_LINES] строк, раскрытый - целиком
- * без переноса, с прокруткой вбок; «Весь стек, N строк» / «Свернуть стек».
- */
-@Composable private fun CrashBlock(stack: String, versions: String) {
-    var full by remember(stack) { mutableStateOf(false) }
-    val lines = remember(stack) { stack.lines().filter { it.isNotBlank() } }
-    val shape = RoundedCornerShape(8.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, LifeRed.copy(alpha = .4f), shape)) {
-        Column(Modifier.padding(start = 10.dp, end = 10.dp, top = 6.dp)) {
-            Text(crashHead(stack), color = LossText, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-            if (versions.isNotBlank()) MutedText(versions, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"))
-        }
-        Text(
-            (if (full) lines else lines.take(STACK_LINES)).joinToString("\n"),
-            color = Parchment,
-            fontSize = 11.sp,
-            lineHeight = 16.sp,
-            fontFamily = FontFamily.Monospace,
-            softWrap = false,
-            maxLines = if (full) Int.MAX_VALUE else STACK_LINES,
-            overflow = if (full) TextOverflow.Clip else TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 6.dp).fillMaxWidth().background(Ink.copy(alpha = .6f)).then(if (full) Modifier.horizontalScroll(rememberScrollState()) else Modifier).padding(horizontal = 10.dp, vertical = 8.dp),
-        )
-        if (lines.size > STACK_LINES) {
-            ForgeTextButton(onClick = { full = !full }) {
-                Text(if (full) ui("feedback.stack.fold") else ui("feedback.stack.all", lines.size), color = Gold, style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-}
-
-/** Строка журнала секции: действие, запрос или строка снимка героя цветом [tint]. */
-@Composable private fun LogLine(text: String, tint: Color) {
-    Text(text, color = tint, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"))
-}
-
-/** Строка «подпись - значение» среды: подпись приглушена слева, значение переносится справа. */
-@Composable private fun FactLine(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(.4f))
-        Text(value, color = Parchment, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), modifier = Modifier.weight(.6f))
-    }
-}
-
-/** Стек падения в свёрнутом виде - строк. */
-private const val STACK_LINES = 4
 
 /** Обстоятельства дела апелляции и жалобы строками «ключ: значение»; пусто - ничего. */
 @Composable private fun Circumstances(context: Map<String, String>) {

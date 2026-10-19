@@ -1,13 +1,11 @@
 package com.sperance.exileforge.core.model.feedback
 
-import com.sperance.exileforge.core.model.command.CrashTrace
-import com.sperance.exileforge.core.model.command.RequestFailure
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** What a report is: a bug or a player's suggestion; жалоба на письмо героя - [COMPLAINT]. */
+/** Вид отчёта: ошибка, апелляция, жалоба на письмо героя - [COMPLAINT]; улучшение - тема ошибки ([ReportTopic]). */
 @Serializable enum class FeedbackKind {
     BUG,
     APPEAL,
@@ -99,6 +97,8 @@ import kotlinx.serialization.Serializable
     val deletable: Boolean = false,
     /** Issue отчёта; null - ещё не отправлен. */
     val issue: IssueView? = null,
+    /** Тема ошибки: у улучшения карточка несёт «Идея». */
+    val topic: ReportTopic = ReportTopic.ERROR,
 ) {
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
@@ -108,8 +108,14 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Отчёт целиком глазами модерации - строка списка: из системного только версия клиента и счёт падений и ошибок запросов, само
- * техническое - [ReportDetail] по запросу раскрытого отчёта. [place] - где был игрок, [screen] - раздел; [context] - обстоятельства
+ * Тема отчёта об ошибке: починить ([ERROR]) или улучшить ([IMPROVEMENT]). Улучшение подаёт только администратор: от прочих сервер
+ * принимает его ошибкой.
+ */
+@Serializable enum class ReportTopic { ERROR, IMPROVEMENT }
+
+/**
+ * Отчёт целиком глазами модерации - строка списка: из системного только версия клиента и счёт падений и ошибок запросов, остальное
+ * техническое - только в теле Issue. [place] - где был игрок, [screen] - раздел; [context] - обстоятельства
  * дела, только у апелляции и жалобы.
  */
 @Serializable data class FullReport(
@@ -143,27 +149,11 @@ import kotlinx.serialization.Serializable
     val moderationNote: String = "",
     /** Версия клиента, с которой пришёл отчёт; пусто - клиент её не прислал. */
     val clientVersion: String = "",
-    /** Сколько падений клиента и неудачных запросов несёт отчёт: сами они - в [ReportDetail]. */
+    /** Сколько падений клиента и неудачных запросов несёт отчёт: сами они - в теле Issue. */
     val crashCount: Int = 0,
     val failureCount: Int = 0,
-)
-
-/**
- * Техническое отчёта [id] для модерации (сервер `GET admin/feedback/detail`) - то же, что уходит в тело Issue, без личного: [area] -
- * раздел игры (пусто - не из известных), [context] - открытые ключи контекста клиента по порядку (устройство, Android, экран, язык,
- * сеть, память, время с запуска, энергосбережение, забег с семенем), [failures] - неудачные запросы, новые первыми, [trail] - последние
- * действия, старые первыми, [heroSheet] - снимок героя строками, [crashes] - падения со стеками в исходных именах и версией сборки;
- * [sentAt] - когда отчёт отправлен (мс), 0 - ещё нет.
- */
-@Serializable data class ReportDetail(
-    @SerialName("_id") val id: String,
-    val area: String = "",
-    val context: Map<String, String> = emptyMap(),
-    val failures: List<RequestFailure> = emptyList(),
-    val trail: List<String> = emptyList(),
-    val heroSheet: List<String> = emptyList(),
-    val crashes: List<CrashTrace> = emptyList(),
-    val sentAt: Long = 0,
+    /** Тема ошибки: у улучшения карточка несёт «Идея». */
+    val topic: ReportTopic = ReportTopic.ERROR,
 )
 
 /**

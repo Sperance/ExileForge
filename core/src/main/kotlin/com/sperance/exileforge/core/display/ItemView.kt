@@ -230,8 +230,11 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
         .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier, areaLevel ?: level) else name }
 
-    /** Уровень района карты: уровень её зоны, поднятый тиром (`MapRule.areaLevel` правил); у не-карты - null. */
-    val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier) }
+    /**
+     * Уровень района карты: с тиром - от тира, без тира - не ниже её зоны и её уровня (`MapRule.areaLevel` правил); у не-карты - null.
+     * Карточка зовёт его уровнем карты.
+     */
+    val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier, item.itemLevel) }
 
     val trade: String? get() = tradeName(code, equipment = true)
     val requirements: List<ItemNeed> get() = itemRequirements(template)

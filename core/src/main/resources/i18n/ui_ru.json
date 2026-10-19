@@ -25,7 +25,7 @@
   "challenge.lair": "Логово · {0}",
   "challenge.vaal_lair": "Прореха Изнанки · {0}",
   "expedition.launch_boss": "Сразу к стражу (тест)",
-  "tester.mechanics": "Механики тестировщика",
+  "tester.mechanics_count": "Механики · выбрано {0}",
   "tester.mechanics_hint": "Отмеченное встанет на новый заход наверняка: Скверна — все точки и Матерь, ловушки и узлы — наибольшим числом.",
   "tester.mechanics_all": "Все",
   "tester.mechanic.VAAL": "Портал Изнанки",

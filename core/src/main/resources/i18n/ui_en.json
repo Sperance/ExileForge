@@ -25,7 +25,7 @@
   "challenge.lair": "Lair · {0}",
   "challenge.vaal_lair": "Underside breach · {0}",
   "expedition.launch_boss": "Straight to the guardian (test)",
-  "tester.mechanics": "Tester mechanics",
+  "tester.mechanics_count": "Mechanics · {0} picked",
   "tester.mechanics_hint": "What is marked is sure to appear on a new run: the Blight with all its points and the Mother, traps and nodes at their most.",
   "tester.mechanics_all": "All",
   "tester.mechanic.VAAL": "Underside portal",

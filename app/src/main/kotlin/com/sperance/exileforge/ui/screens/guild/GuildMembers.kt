@@ -68,7 +68,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 order,
                 onQuery = { query = it },
                 onOrder = { order = it },
-                action = if (recruits) {
+                trailing = if (recruits) {
                     {
                         ToolButton(Icons.Outlined.Add, ui("guild.invite"), Gold, enabled = !game.busy) {
                             vm.openInvite()

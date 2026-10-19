@@ -100,19 +100,19 @@ internal enum class RosterFilter(private val key: String, val keeps: (GuildMembe
 /** Подходит ли участник под поиск [query] - часть имени без учёта регистра; пустой поиск пропускает всех. */
 internal fun GuildMember.named(query: String): Boolean = name.contains(query.trim(), ignoreCase = true)
 
-/** Поиск по имени над составом - плотное поле; справа - кнопка порядка ([RosterSort]) и, если есть, действие [action]. */
+/** Поиск по имени над составом - плотное поле; справа - кнопка порядка ([RosterSort]) и, если есть, хвост [trailing] в том же ряду. */
 @Composable internal fun RosterSearch(
     game: GameUi,
     query: String,
     order: RosterOrder?,
     onQuery: (String) -> Unit,
     onOrder: (RosterOrder?) -> Unit,
-    action: (@Composable () -> Unit)? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         CompactSearchField(query, { onQuery(it.take(game.inputs.heroName)) }, ui("guild.roster_search"), Modifier.weight(1f))
         RosterSort(order, onOrder)
-        action?.invoke()
+        trailing?.invoke(this)
     }
 }
 

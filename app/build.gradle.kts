@@ -184,5 +184,4 @@ val forgeButtonsOnly by tasks.registering(ForgeButtonsCheck::class) {
     root.set(layout.projectDirectory)
 }
 
-/** Оба сторожа - и в локальном `check`. */
 tasks.named("check") { dependsOn(androidOnly, forgeButtonsOnly) }

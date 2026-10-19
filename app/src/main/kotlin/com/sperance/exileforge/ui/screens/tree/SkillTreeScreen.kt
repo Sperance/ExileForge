@@ -328,5 +328,3 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
         ) { onReset() }
     }
 }
-
-/** Сколько держать кнопку сброса всего дерева, мс: дольше обычного подтверждения. */

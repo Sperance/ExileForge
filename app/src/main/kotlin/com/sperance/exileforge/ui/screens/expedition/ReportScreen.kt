@@ -179,7 +179,7 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
     }
 }
 
-/** «#5»: место первой победы над стражем; касание - «Вы 5-й герой, победивший …» в подсказке. */
+/** Место первой победы над стражем значком «#N»; касание - «Вы N-й герой, победивший …» в подсказке. */
 @Composable private fun RankMark(place: Long, guardian: String) {
     val shape = RoundedCornerShape(6.dp)
     Tipped(

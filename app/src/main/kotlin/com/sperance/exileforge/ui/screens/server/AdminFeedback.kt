@@ -36,7 +36,6 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.FeedbackModel
-import com.sperance.exileforge.core.feedback.clientVersions
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -54,9 +53,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, в строке порядка - выбор версии
- * клиента «Все версии ▾» и порядок чипами ([Order]: новые, рейтинг, номер Issue); отбор по версии и порядок - на клиенте, список вида
- * приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
+ * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, порядок чипами ([Order]: новые,
+ * рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
  * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
  * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
  * отчёту отправляет его в GitHub сразу. Любой чип очереди и вида, и уже выбранный, и потягивание страницы перечитывают список с сервера.
@@ -69,7 +67,6 @@ import org.koin.compose.viewmodel.koinViewModel
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     var queue by remember { mutableStateOf(Queue.NEW) }
     var order by remember { mutableStateOf(Order.NEWEST) }
-    var version by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var open by remember { mutableStateOf<String?>(null) }
     var dossier by remember { mutableStateOf(false) }
@@ -83,8 +80,7 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
-    val versions = clientVersions(feedback.reports)
-    val found = feedback.reports.filter { it.matches(query) && (version == null || it.report.clientVersion == version) }
+    val found = feedback.reports.filter { it.matches(query) }
     OutlinedTextField(
         query,
         { query = it.take(SEARCH) },
@@ -110,22 +106,11 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Picker(version?.let { ui("feedback.versions.one", it) } ?: ui("feedback.versions.all"), versions.isNotEmpty(), listOf<Pair<String, () -> Unit>>(ui("feedback.versions.all") to { version = null }) + versions.map { v -> ui("feedback.versions.one", v) to { version = v } })
         MutedText(ui("feedback.order"), style = MaterialTheme.typography.labelMedium)
         Order.entries.forEach { o -> CountChip(ui(o.key), null, order == o) { order = o } }
     }
     val shown = found.filter { queue.holds(it) }.sortedWith(order.comparator)
-    val chosen = version
-    when {
-        shown.isNotEmpty() -> Unit
-
-        chosen != null -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MutedText(ui("feedback.none_version", chosen), modifier = Modifier.weight(1f))
-            ForgeTextButton(onClick = { version = null }) { Text(ui("feedback.versions.show_all"), color = Gold) }
-        }
-
-        else -> MutedText(ui("feedback.none"))
-    }
+    if (shown.isEmpty()) MutedText(ui("feedback.none"))
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         shown.forEach { entry ->
             key(entry.report.id) {

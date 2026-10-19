@@ -22,7 +22,6 @@ import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -36,7 +35,7 @@ internal fun ScenePainter.standFeature(queue: Standing, spot: FeatureSpot, world
     when (spot) {
         is AltarSpot, is MerchantSpot, is NodeSpot -> queue.add(depth(spot.cell.x, spot.cell.y), Standing.FEATURE, spot)
 
-        is TrapSpot -> queue.add(depth(spot.cell.x, spot.cell.y) - .4, Standing.FEATURE, spot)
+        is TrapSpot -> standTrap(queue, spot, world.clock)
 
         is RoomSpot -> {
             val (ex, ey) = spot.entrance
@@ -61,7 +60,7 @@ internal fun ScenePainter.drawFeature(spot: FeatureSpot, part: Int, world: Exped
             if (!spot.spent) materials[spot.node.job.output]?.let { drawMaterial(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
         }
 
-        is TrapSpot -> drawTrap(spot, glow(spot.cell.x, spot.cell.y))
+        is TrapSpot -> drawTrapPart(spot, part, world.clock)
 
         is RoomSpot -> when (part) {
             ROOM_ENTRANCE -> {
@@ -145,58 +144,6 @@ internal fun ScenePainter.drawNode(x: Double, y: Double, look: NodeLook?, spent:
     look ?: return
     nodes.draw(pen.scope, look, spent, isoX(x, y), isoY(x, y), unit, light)
 }
-
-/**
- * Ловушка, замеченная светом (крупнее и опаснее с виду): тёмная плита, знак стихии - шипы стали, решётка огня, лужа
- * яда - и ореол угрозы, что дышит, пока она взведена. Сработавшая вспыхивает, затем тускнеет и разгорается к новому взводу.
- */
-internal fun ScenePainter.drawTrap(spot: TrapSpot, light: Float) {
-    val x = spot.cell.x + .5
-    val y = spot.cell.y + .5
-    val cx = isoX(x, y)
-    val cy = isoY(x, y)
-    val hue = when (spot.trap.element) {
-        "FIRE" -> Color(0xFFFF7A30)
-        "CHAOS" -> Color(0xFF7CD050)
-        else -> Color(0xFFE0E6EE)
-    }
-    val charge = when {
-        spot.rearm > 0 -> (1 - spot.rearming / spot.rearm).toFloat().coerceIn(0f, 1f)
-        spot.armed -> 1f
-        else -> 0f
-    }
-    val pulse = .5f + .5f * sin(time * 3f + x.toFloat())
-    if (spot.armed) {
-        pen.color = hue.copy(alpha = (.18f + .22f * pulse) * light)
-        diamond(cx, cy, unit * (.62f + .06f * pulse), unit * (.31f + .03f * pulse))
-    }
-    pen.color = Color(0xFF15120F).copy(alpha = .75f * light)
-    diamond(cx, cy, unit * .5f, unit * .25f)
-    pen.color = Color(0xFF6A2A20).copy(alpha = (.35f + .4f * charge) * light)
-    pen.ring(cx - unit * .5f, cy - unit * .25f, unit, unit * .5f, unit * .03f)
-    val alpha = (.3f + .65f * charge) * light
-    pen.color = hue.copy(alpha = alpha)
-    if (spot.trap.element == "PHYSICAL") {
-        for (i in -2..2) {
-            val at = cx + i * unit * .14f
-            val tall = unit * (.3f - abs(i) * .04f) * (.4f + .6f * charge)
-            pen.triangle(at - unit * .055f, cy, at + unit * .055f, cy, at, cy + tall)
-        }
-    } else {
-        pen.ring(cx - unit * .36f, cy - unit * .13f, unit * .72f, unit * .26f, unit * .05f)
-        pen.color = hue.copy(alpha = (.2f + .3f * pulse) * charge * light)
-        pen.circle(cx, cy + unit * .12f, unit * .3f)
-    }
-    val since = if (spot.rearm > 0) spot.rearm - spot.rearming else Double.MAX_VALUE
-    if (since < FLASH_SECONDS) {
-        val fade = (1 - since / FLASH_SECONDS).toFloat()
-        pen.color = hue.copy(alpha = .55f * fade * light)
-        pen.circle(cx, cy + unit * .2f, unit * (.4f + .5f * (1 - fade)))
-    }
-}
-
-/** Сколько секунд горит вспышка сработавшей ловушки. */
-private const val FLASH_SECONDS = .45
 
 /** Тайный вход - светлая трещина в скале, что ярче, пока герой стоит рядом. */
 internal fun ScenePainter.drawCrack(x: Double, y: Double, progress: Float, light: Float) {

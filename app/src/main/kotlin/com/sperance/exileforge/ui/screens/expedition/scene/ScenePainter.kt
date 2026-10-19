@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.campaign.run.FeatureSpot
 import com.sperance.exileforge.core.campaign.run.Fountain
 import com.sperance.exileforge.core.campaign.run.IsoGrid
 import com.sperance.exileforge.core.campaign.run.MonsterAgent
+import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.core.campaign.run.waiting
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -126,7 +127,7 @@ internal class ScenePainter {
     /**
      * Узор вод и пропастей - декор, без `LocalMotion` стоит. Герой чуть ниже середины: впереди больше карты, чем позади. Земля и скала -
      * слоями, гладь течёт вживую поверх пола. Всё стоящее - сзади вперёд по x + y; выход и портал Ваал стоят по глубине, как всё стоящее.
-     * Объекты появляются, когда увидены; ловушка - только замеченная светом. Жетон - круг портрета; монстр виден лишь в свете героя или
+     * Объекты появляются, когда увидены; плиты ловушек лежат на полу под всем стоящим. Жетон - круг портрета; монстр виден лишь в свете героя или
      * сквозь туман по Предначертанию. Очередь глубины одна на сцену, без копии на кадр; воздух (туман, искры, светлячки) - на часах декора.
      */
     internal fun map(scope: DrawScope, run: ExpeditionRun, palette: Palette) {
@@ -162,6 +163,7 @@ internal class ScenePainter {
                 scale(warm, warm, Offset.Zero)
             }) { drawCircle(TorchWarmth, 1f, Offset.Zero) }
 
+            for (spot in world.features) if (spot is TrapSpot && spot.shown(world)) drawTrapFloor(spot, world.clock)
             standing.clear()
             for (i in 0 until layers.wallCount) standing.add(layers.wallDepth(i), Standing.WALLS, null, i)
             if (world.explored(map.exit.x, map.exit.y)) standing.add(map.exit.x + map.exit.y + 1.0, Standing.EXIT)

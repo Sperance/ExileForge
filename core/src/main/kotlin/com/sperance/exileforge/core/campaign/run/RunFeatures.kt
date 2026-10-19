@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
@@ -67,15 +68,24 @@ data class HazardView(
 
 /**
  * Состояние, что ловушка оставляет на герое: выводится из типа её урона ([Ailment.of]: огонь - горение, хаос - яд,
- * физический - кровотечение), если оно тикает уроном; [lifeShare] - процент максимума здоровья героя в секунду до сопротивления,
- * [seconds] - сколько длится.
+ * физический - кровотечение, холод - охлаждение, молния - шок). [strength] - у ранящих процент максимума здоровья героя в секунду
+ * до сопротивления, у холода и шока - сила недуга в процентах; [seconds] - сколько длится.
  */
-data class HazardAilment(val ailment: Ailment, val type: DamageType, val lifeShare: Double, val seconds: Double) {
+data class HazardAilment(val ailment: Ailment, val type: DamageType, val strength: Double, val seconds: Double) {
     companion object {
-        /** Состояние ловушки [trap] урона [type] силой [share]; null - ловушка без тика или вовсе не ранит. */
-        fun of(trap: TrapKind, type: DamageType, share: Double): HazardAilment? = Ailment.of(type).takeIf { it.hurts && trap.dot > 0 && share > 0 }?.let { HazardAilment(it, type, trap.dot * share, trap.seconds) }
+        /** Состояние ловушки [trap] урона [type] силой [share]; null - ловушка без недуга или вовсе не ранит. */
+        fun of(trap: TrapKind, type: DamageType, share: Double): HazardAilment? {
+            val strength = Ailment.of(type).let { if (it.hurts) trap.dot else trap.hold } * share
+            return HazardAilment(Ailment.of(type), type, strength, trap.seconds).takeIf { strength > 0 && trap.seconds > 0 }
+        }
     }
 }
+
+/**
+ * Что ловушка сделает с героем сейчас - подсказка по касанию и сам удар: вид [kind], тип урона [type], сколько снимет удар до щита
+ * [damage] (защиты героя, потолок удара правил) и недуг [ailment]; [every] - раз в сколько секунд бьёт.
+ */
+data class TrapThreat(val kind: TrapKind, val type: DamageType, val damage: Double, val ailment: HazardAilment?, val every: Double)
 
 /** Число урона карты на экране и сколько секунд ему ещё висеть. */
 internal class ShownHazard(val view: HazardView, var left: Double)
@@ -93,7 +103,7 @@ internal fun ExpeditionRun.feature(action: FeatureAction) {
     when (action) {
         is FeatureAction.Offer -> offer = action.spot
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
-        is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
+        is FeatureAction.Strike -> strike(action.spot, action.kind)
         is FeatureAction.Rouse -> action.spot.rouse(this, action.group)
     }
 }
@@ -101,7 +111,7 @@ internal fun ExpeditionRun.feature(action: FeatureAction) {
 /**
  * Выбор [choice] объекта [spot] - в журнал (объект помнит его сразу, даже если журнал уже закрыт); событие или null.
  *
- * Строки выбора (сделка, редкость за ловушку, скорость за комнату, сила за узел) ложатся на героя и бои сразу.
+ * Строки выбора (сделка, скорость за комнату, сила за узел) ложатся на героя и бои сразу.
  */
 internal fun ExpeditionRun.recordFeature(spot: FeatureSpot, choice: Int): RunEvent? {
     spot.take(choice)
@@ -155,7 +165,7 @@ internal fun ExpeditionRun.refuseFeature(n: Int) {
 }
 
 /**
- * Строки объектов карты (сделки алтарей, редкость за ловушки, скорость за комнаты, сила за узлы) пересчитаны по журналу
+ * Строки объектов карты (сделки алтарей, скорость за комнаты, сила за узлы) пересчитаны по журналу
  * объектов мира: герой несёт их до конца карты, стаи подкрепления встают у своих алтарей. Строки боя монстров ложатся при
  * каждом бое ([pactFoe]).
  */
@@ -213,25 +223,63 @@ internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
 }
 
 /**
- * Ловушка сработала: удар - доля максимума здоровья её стихией, броня режет физический, сопротивление - стихийный; горение, яд и
- * кровотечение ложатся недугом на героя ([HeroCarry], та же система, что недуги из боя) - тикают на карте и входят в следующий
- * бой. Ловушка может убить.
- *
- * Сила ловушек карты и защита героя от её стихии: 100% защиты - ловушка не ранит. Состояние ловушки - из типа её урона; основа до защит
- * (яд) - сопротивление режет тик, а не наложение.
+ * Удар ловушки [feature] видом [kind] по герою сейчас, не нанесённый: доля максимума здоровья её стихией с силой ловушек карты
+ * ([MapFeature.Trap.power]: тир и сила механики), не больше потолка удара правил (`traps.maxHit`) - одним срабатыванием не убивает;
+ * броня режет физический, сопротивление - стихийный. Защита героя от ловушек - общая (`TRAP_WARD`) и стихии (`TRAP_WARD_<стихия>`),
+ * 100% - ловушка не ранит. Состояние - из типа урона; основа до защит (яд) - сопротивление режет тик, а не наложение.
  */
-internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
-    val trap = feature.trap
-    val type = DamageType.element(trap.element) ?: DamageType.PHYSICAL
-    val ward = FeatureStat.ward(trap.element)?.let { run.context.feature(it) } ?: 0.0
+internal fun ExpeditionRun.threat(feature: MapFeature.Trap, kind: TrapKind = feature.trap): TrapThreat {
+    val type = DamageType.element(kind.element) ?: DamageType.PHYSICAL
+    val ward = (FeatureStat.ward(kind.element)?.let { run.context.feature(it) } ?: 0.0) + run.context.feature(FeatureStat.TRAP_WARD)
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
-    val raw = hero.maxLife * trap.hit / 100 * share
+    val raw = hero.maxLife * minOf(kind.hit * share, traps?.maxHit ?: 100.0) / 100
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    val ailment = HazardAilment.of(trap, type, share)
-    ailment?.let { afflict(CarriedAilment(it.ailment, it.seconds, hero.maxLife * it.lifeShare / 100 * (if (law.raw(it.ailment)) 1.0 else 1 - hero.resist(type)), it.seconds, chaos = type == DamageType.CHAOS)) }
-    val wound = hurt(dealt * hero.damageTaken(type), type)
-    showHazard(HazardView(nextHazard++, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment))
+    return TrapThreat(kind, type, dealt * hero.damageTaken(type), HazardAilment.of(kind, type, share), kind.every)
 }
+
+/** Что ловушка [spot] сделает с героем сейчас - подсказка по касанию: её вид этого мига (у пульсирующей зоны - стихия цикла). */
+fun ExpeditionRun.trapThreat(spot: TrapSpot): TrapThreat = threat(spot.trap, spot.kindAt(world.clock))
+
+/**
+ * Ловушка [feature] ударила видом [kind] ([threat]): горение, яд, кровотечение, охлаждение и шок ложатся недугом на героя
+ * ([HeroCarry], та же система, что недуги из боя) - тикают на карте и входят в следующий бой; жернов отбрасывает героя от себя
+ * поперёк жёлоба ([spot]). Ловушка может добить раненого.
+ */
+internal fun ExpeditionRun.spring(feature: MapFeature.Trap, kind: TrapKind = feature.trap, spot: TrapSpot? = null) {
+    val threat = threat(feature, kind)
+    threat.ailment?.let { afflict(carried(it)) }
+    val wound = hurt(threat.damage, threat.type)
+    showHazard(HazardView(nextHazard++, threat.type, wound.life.roundToInt(), wound.shield.roundToInt(), threat.ailment))
+    if (kind.knock > 0 && spot != null && phase == RunPhase.MAP) knockBack(spot, kind.knock)
+}
+
+/** Удар ловушки [spot] видом [kind] на карте. */
+internal fun ExpeditionRun.strike(spot: TrapSpot, kind: TrapKind) = spring(spot.trap, kind, spot)
+
+/** Недуг ловушки на герое: ранящий - урон в секунду от максимума здоровья под сопротивлением (кроме основы до защит), прочие - своей силой. */
+private fun ExpeditionRun.carried(ailment: HazardAilment): CarriedAilment {
+    val magnitude = if (ailment.ailment.hurts) hero.maxLife * ailment.strength / 100 * (if (law.raw(ailment.ailment)) 1.0 else 1 - hero.resist(ailment.type)) else ailment.strength
+    return CarriedAilment(ailment.ailment, ailment.seconds, magnitude, ailment.seconds, chaos = ailment.type == DamageType.CHAOS)
+}
+
+/** Отброс от тела ловушки [spot] на [cells] клеток: от середины тела к герою; герой на теле - вбок от оси ловушки. */
+private fun ExpeditionRun.knockBack(spot: TrapSpot, cells: Double) {
+    val (bx, by) = spot.body(world.clock) ?: (spot.layout.centreX to spot.layout.centreY)
+    var dx = world.heroX - bx
+    var dy = world.heroY - by
+    val length = hypot(dx, dy)
+    if (length < KNOCK_EPSILON) {
+        dx = -spot.layout.axis.dy.toDouble()
+        dy = spot.layout.axis.dx.toDouble()
+    } else {
+        dx /= length
+        dy /= length
+    }
+    world.knock(dx * cells, dy * cells)
+}
+
+/** Ближе этого к середине тела ловушки отброс идёт вбок от её оси, клеток. */
+private const val KNOCK_EPSILON = .05
 
 /** Число урона карты над героем на [TrapRules.shown] секунд. */
 internal fun ExpeditionRun.showHazard(view: HazardView) {

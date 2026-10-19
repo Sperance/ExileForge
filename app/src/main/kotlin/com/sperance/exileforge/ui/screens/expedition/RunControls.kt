@@ -211,11 +211,11 @@ private val ManaDeep = Color(0xFF3F86D6)
  * The stick: wherever the thumb lands in the lower part of the screen (below [STICK_FROM] of its height), dragging from there walks.
  * Касание выше низа шапки карты [barBottom] (пиксели от верха экрана) ход не начинает: полосы и кнопки шапки - не стик.
  * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
- * drag lands on the map: on a fountain still full, it names it to [onFountain].
+ * drag lands on the map: on a fountain still full, it names it to [onFountain]; на ловушке - отдаёт её подсказке [onTrap].
  *
  * Бой может начаться под пальцем на стекле: герой не уходит после него.
  */
-@Composable internal fun Stick(run: ExpeditionRun, barBottom: () -> Int = { 0 }, onFountain: (Int) -> Unit) {
+@Composable internal fun Stick(run: ExpeditionRun, barBottom: () -> Int = { 0 }, onTrap: (TrapSpot) -> Unit = {}, onFountain: (Int) -> Unit) {
     var centre by remember { mutableStateOf<Offset?>(null) }
     var knob by remember { mutableStateOf(Offset.Zero) }
     var area by remember { mutableStateOf(IntSize.Zero) }
@@ -224,7 +224,12 @@ private val ManaDeep = Color(0xFF3F86D6)
     val bar by rememberUpdatedState(barBottom)
     val tap by rememberUpdatedState { at: Offset ->
         val (x, y) = SceneCamera.toWorld(run.world.heroX, run.world.heroY, at, area.toSize(), unit)
-        run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
+        val fountain = run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }
+        if (fountain != null) {
+            onFountain(fountain.id)
+        } else {
+            run.world.features.firstOrNull { it is TrapSpot && it.shown(run.world) && it.covers(x, y) }?.let { onTrap(it as TrapSpot) }
+        }
     }
     DisposableEffect(run) {
         onDispose {

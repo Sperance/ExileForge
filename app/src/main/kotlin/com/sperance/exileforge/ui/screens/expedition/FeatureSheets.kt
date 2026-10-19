@@ -36,9 +36,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.campaign.run.TrapSpot
+import com.sperance.exileforge.core.campaign.run.trapThreat
 import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -75,6 +78,8 @@ import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
 import com.sperance.exileforge.ui.screens.expedition.arena.tickTint
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 /**
  * Лист объекта карты, по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
@@ -331,12 +336,46 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
     }
 }
 
-/** Удар ловушки одной строкой: сколько снял и чем, затем её состояние - сколько здоровья в секунду и сколько секунд. */
+/**
+ * Удар ловушки одной строкой: сколько снял и чем, затем её состояние - у ранящего сколько здоровья в секунду, у холода и шока -
+ * сила, и сколько секунд.
+ */
 private fun hazardLine(hazard: HazardView): String {
     val type = ui(hazard.type.key())
     val ailment = hazard.ailment ?: return ui("trap.hit", hazard.total, type)
-    return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), Rate.of(number(ailment.lifeShare) + "%"), number(ailment.seconds))
+    if (!ailment.ailment.hurts) return ui("trap.hit_hold", hazard.total, type, ui(ailment.ailment.key()), number(ailment.strength), number(ailment.seconds))
+    return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), Rate.of(number(ailment.strength) + "%"), number(ailment.seconds))
 }
+
+/**
+ * Подсказка по касанию ловушки [spot]: имя вида, «стихия · недуг · урон» - что удар снимет с героя сейчас ([trapThreat]; у
+ * пульсирующей зоны - стихия этого цикла, у жернова вместо недуга - отброс) и «Бьёт раз в N с, пока стоишь в зоне». Висит
+ * [TRAP_TIP_MS] над низом экрана и уходит сама; касание другой ловушки сменяет её.
+ */
+@Composable internal fun TrapTip(run: ExpeditionRun, spot: TrapSpot, onDone: () -> Unit) {
+    LaunchedEffect(spot) {
+        delay(TRAP_TIP_MS)
+        onDone()
+    }
+    val threat = remember(spot) { run.trapThreat(spot) }
+    val type = ui(threat.type.key())
+    val effect = threat.ailment?.let { ui(it.ailment.key()) } ?: ui("trap.knock").takeIf { threat.kind.knock > 0 }
+    val damage = threat.damage.roundToInt()
+    Box(Modifier.fillMaxSize().padding(bottom = 120.dp), contentAlignment = Alignment.BottomCenter) {
+        Column(
+            Modifier.padding(horizontal = 16.dp).background(Panel.copy(alpha = .95f), RoundedCornerShape(12.dp))
+                .border(1.dp, tickTint(null, threat.type, onHero = true).copy(alpha = .7f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(ui("trap.${spot.trap.trap.code}"), color = Parchment, style = MaterialTheme.typography.titleSmall)
+            Text(if (effect != null) ui("trap.tip", type, effect, damage) else ui("trap.tip_plain", type, damage), color = tickTint(null, threat.type, onHero = true), style = MaterialTheme.typography.bodySmall)
+            MutedText(ui("trap.every", number(threat.every)))
+        }
+    }
+}
+
+private const val TRAP_TIP_MS = 3500L
 
 private const val HAZARD_TICK_MS = 1100
 private const val HAZARD_FLOAT_MS = 1500

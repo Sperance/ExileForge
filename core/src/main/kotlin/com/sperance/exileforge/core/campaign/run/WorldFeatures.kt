@@ -5,11 +5,18 @@ import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.rules.content.FeatureRules
 import com.sperance.exileforge.rules.content.TrapKind
+import com.sperance.exileforge.rules.content.TrapRules
+import com.sperance.exileforge.rules.content.TrapShape
 import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.rules.run.FeatureState
 import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Run
+import com.sperance.exileforge.rules.run.TrapAxis
+import com.sperance.exileforge.rules.run.TrapLayout
+import com.sperance.exileforge.rules.run.TrapRhythm
+import com.sperance.exileforge.rules.run.at
+import com.sperance.exileforge.rules.run.rhythm
 import kotlin.math.hypot
 import kotlin.random.Random
 
@@ -20,11 +27,11 @@ sealed interface FeatureAction {
     /** Герой подошёл к объекту с выбором: забег ждёт ответа игрока на листе объекта. */
     data class Offer(override val spot: FeatureSpot) : FeatureAction
 
-    /** Объект сработал сам - ловушка, открытая стена, рычаг, сундук: выбор [choice] уходит в журнал сразу. */
+    /** Объект сработал сам - открытая стена, рычаг, сундук: выбор [choice] уходит в журнал сразу. */
     data class Trigger(override val spot: FeatureSpot, val choice: Int) : FeatureAction
 
-    /** Взведённая снова ловушка ударила: только урон - журнал её не пишет, награда была за первый раз. */
-    data class Spring(override val spot: TrapSpot) : FeatureAction
+    /** Ловушка ударила видом [kind] (у пульсирующей зоны - стихией этого цикла): только урон, журнал её не пишет. */
+    data class Strike(override val spot: TrapSpot, val kind: TrapKind) : FeatureAction
 
     /** Объект поднял своих монстров - группу [group] (точка очага Скверны): журнал молчит, жетоны встают на карте. */
     data class Rouse(override val spot: FeatureSpot, val group: Int) : FeatureAction
@@ -59,12 +66,12 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     /** Клетки, где объект можно увидеть: хоть одна исследована - объект на карте ([shown]). */
     protected open val sites: List<Cell> get() = listOf(cell)
 
-    /** Заметил ли герой объект сверх исследованной клетки: ловушку замечает лишь свет; прочие - сразу. */
+    /** Заметил ли герой объект сверх исследованной клетки: все объекты - сразу. */
     protected open fun noticed(world: ExpeditionWorld): Boolean = true
 
     /**
      * Виден ли объект герою - одно правило для всех объектов карты: только на исследованной клетке ([sites]) и только
-     * замеченный ([noticed]). Восстановленный из журнала забег не рисует сработавшую ловушку в неувиденной пустоте.
+     * замеченный ([noticed]). Восстановленный из журнала забег не рисует объект в неувиденной пустоте.
      */
     fun shown(world: ExpeditionWorld): Boolean = sites.any { world.explored(it.x, it.y) } && noticed(world)
 
@@ -144,43 +151,46 @@ class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) 
 }
 
 /**
- * Ловушка: видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
- * остаётся на карте. Срабатывает, когда герой наступил ближе [reach] к центру клетки; первый раз - в журнал (награда за
- * ловушку), затем взводится снова через [rearm] секунд и бьёт опять - только уроном. [rearm] 0 - срабатывает раз.
+ * Ловушка: форма своего вида на клетках [layout] (место - по семени, [placeTrap]), видна всегда - на исследованной клетке.
+ * Бьёт своим ритмом по часам карты ([ExpeditionWorld.clock], [rhythm]): неподвижная - раз в [TrapKind.every] секунд, пока герой
+ * в зоне, с вспышкой перед ударом; жернов и маятник - касанием тела ([TrapRules.reach]) с той же перезарядкой. Журнал её не пишет.
  */
-class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, val rearm: Double = 0.0) : FeatureSpot(feature, cell) {
-    val trap: TrapKind get() = (feature as MapFeature.Trap).trap
-    var seen = false
+class TrapSpot(feature: MapFeature.Trap, val layout: TrapLayout, private val rules: TrapRules) : FeatureSpot(feature, Cell(layout.x, layout.y)) {
+    val trap: MapFeature.Trap get() = feature as MapFeature.Trap
+    val rhythm: TrapRhythm = trap.rhythm(rules.warn)
+
+    /** Клетки формы и столбов на карте. */
+    val cells: List<Cell> = layout.needs.map { Cell(it.x, it.y) }
+
+    /** Миг карты последнего удара; до первого - минус бесконечность. */
+    var struckAt = Double.NEGATIVE_INFINITY
         private set
 
-    /** Замеченная ловушка в свете героя: скала перед ней прозрачна, пока герой рядом. */
-    override fun landmarks(world: ExpeditionWorld): List<Cell> = if (noticed(world) && world.lit(cell.x, cell.y)) listOf(cell) else emptyList()
+    override val sites: List<Cell> get() = cells
 
-    /** Секунды до нового взвода; ноль - ловушка взведена. */
-    var rearming = 0.0
-        private set
+    /** Ловушку в свете видно сквозь скалу перед ней: её якорь. */
+    override fun landmarks(world: ExpeditionWorld): List<Cell> = if (world.lit(cell.x, cell.y)) listOf(cell) else emptyList()
 
-    /** Взведена ли: сработавшая без повторного взвода стоит разряженной до конца карты. */
-    val armed: Boolean get() = rearming <= 0 && (!spent || rearm > 0)
+    /** Вид, которым ловушка бьёт в миг [t]: пульсирующая зона - стихией цикла, прочие - своим. */
+    fun kindAt(t: Double): TrapKind = trap.at(rhythm.turn(t))
 
-    override fun noticed(world: ExpeditionWorld): Boolean = seen || spent
+    /** Тело подвижной ловушки в миг [t]: середина колеса или лезвия; у неподвижных - null. */
+    fun body(t: Double): Pair<Double, Double>? = layout.body(t, trap.offset)
+
+    /** Касается ли точка [x], [y] ловушки: неподвижной - зона, подвижной - её путь; для касания экрана. */
+    fun covers(x: Double, y: Double): Boolean = layout.covers(x, y) || cells.any { hypot(it.x + .5 - x, it.y + .5 - y) < .5 }
 
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
-        if (!seen && world.lit(cell.x, cell.y)) seen = true
-        if (rearming > 0) rearming = (rearming - dt).coerceAtLeast(0.0)
-        if (!armed || !near(world, cell, reach)) return null
-        rearming = rearm
-        return if (spent) FeatureAction.Spring(this) else FeatureAction.Trigger(this, MapFeature.TRIGGER)
+        val now = world.clock
+        val hit = if (trap.trap.shape.moving) {
+            now - struckAt >= trap.trap.every && body(now)?.let { (bx, by) -> hypot(bx - world.heroX, by - world.heroY) < rules.reach } == true
+        } else {
+            rhythm.struck(now - dt, now) && layout.covers(world.heroX, world.heroY)
+        }
+        if (!hit) return null
+        struckAt = now
+        return FeatureAction.Strike(this, kindAt(now))
     }
-
-    /** Уникалка ловушек приходит ответом сервера - в итог карты, без панели сундука. */
-    override fun resolve(run: ExpeditionRun, choice: Int) {
-        run.rewarding(run.recordFeature(this, choice))
-        run.spring(feature as MapFeature.Trap)
-    }
-
-    /** Сработавшая ловушка остаётся сработавшей: удар уже нанесён. */
-    override fun refused(run: ExpeditionRun, choice: Int) = Unit
 }
 
 /**
@@ -268,7 +278,7 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
     fun claim(pool: MutableList<Cell>, spacing: Double): Cell? = pool.firstOrNull { it !in taken && apart(it, spacing) }?.also { taken += it }
     features.forEach { feature ->
         val spot = when (feature) {
-            is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, traps?.reach ?: 0.0, traps?.rearm ?: 0.0) }
+            is MapFeature.Trap -> traps?.let { rule -> placeTrap(feature, anywhere, open, taken, placing, ::apart)?.let { TrapSpot(feature, it, rule) } }
 
             is MapFeature.Room -> {
                 val vault = feature.kind == FeatureKind.VAULT
@@ -320,8 +330,33 @@ fun ExpeditionWorld.openRoom(spot: RoomSpot) {
     light()
 }
 
-/** Ловушки стоят не ближе стольких клеток друг к другу. */
-private const val TRAP_SPACING = 3.0
+/**
+ * Место ловушки [feature]: первый якорь из [pool] по семени, где вся форма ([TrapLayout.needs]) ложится на свободную землю [open]
+ * вне занятого [taken] и поодаль от прочих объектов ([apart]). Ось - по семени, у линии шипов - сперва та, где проход уже (поперёк
+ * прохода). Клетки формы занимаются; null - места нет.
+ */
+private fun placeTrap(feature: MapFeature.Trap, pool: List<Cell>, open: Set<Cell>, taken: MutableSet<Cell>, random: Random, apart: (Cell, Double) -> Boolean): TrapLayout? {
+    val kind = feature.trap
+    val fits = { layout: TrapLayout -> layout.needs.all { Cell(it.x, it.y).let { cell -> cell in open && cell !in taken } } }
+    val layout = pool.asSequence().filter { it !in taken && apart(it, TRAP_SPACING) }.take(TRAP_TRIES).firstNotNullOfOrNull { anchor ->
+        val axes = if (kind.shape == TrapShape.LINE) listOf(TrapAxis.EAST, TrapAxis.SOUTH).sortedBy { width(anchor, it, open) } else TrapAxis.entries.shuffled(random)
+        axes.asSequence().map { TrapLayout(kind, feature.size, anchor.x, anchor.y, it) }.firstOrNull(fits)
+    } ?: return null
+    layout.needs.forEach { taken += Cell(it.x, it.y) }
+    return layout
+}
+
+/** Сколько клеток пола [open] подряд через [from] вдоль оси [axis]: ширина прохода по ней. */
+private fun width(from: Cell, axis: TrapAxis, open: Set<Cell>): Int {
+    fun reach(sign: Int) = generateSequence(1) { it + 1 }.takeWhile { Cell(from.x + axis.dx * it * sign, from.y + axis.dy * it * sign) in open }.count()
+    return 1 + reach(1) + reach(-1)
+}
+
+/** Ловушки стоят не ближе стольких клеток друг к другу и к прочим объектам. */
+private const val TRAP_SPACING = 4.0
+
+/** Сколько якорей пробует одна ловушка, прежде чем остаться без места. */
+private const val TRAP_TRIES = 400
 
 /**
  * Комната в скале: вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,

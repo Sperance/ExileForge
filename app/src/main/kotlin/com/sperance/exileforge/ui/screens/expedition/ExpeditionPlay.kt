@@ -115,7 +115,8 @@ import kotlin.math.roundToInt
                 RunPhase.MAP -> {
                     val flight = rememberBagFlight(hud.drops)
                     var barBottom by remember { mutableIntStateOf(0) }
-                    Stick(run, { barBottom }) { model.runCommand(RunCommand.OfferFountain(it)) }
+                    var trapTip by remember(run) { mutableStateOf<TrapSpot?>(null) }
+                    Stick(run, { barBottom }, onTrap = { trapTip = it }) { model.runCommand(RunCommand.OfferFountain(it)) }
                     MapBar(
                         game,
                         run,
@@ -131,6 +132,7 @@ import kotlin.math.roundToInt
                         onQuests = { questsOpen = true },
                     )
                     BagFan(flight)
+                    trapTip?.let { TrapTip(run, it) { trapTip = null } }
                     if (questsOpen) {
                         HoldsRun(run)
                         RunQuestsSheet(board, hud.questTally) { questsOpen = false }

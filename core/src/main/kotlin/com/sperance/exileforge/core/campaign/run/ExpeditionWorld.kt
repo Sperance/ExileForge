@@ -15,6 +15,7 @@ import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.run.Run
+import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -256,6 +257,10 @@ class ExpeditionWorld(
     var facingY = 0.0
     var moving = false
 
+    /** Часы карты, секунд шагов мира: по ним бьют и ходят ловушки ([TrapSpot]). */
+    var clock = 0.0
+        private set
+
     /** Every cell the hero has ever seen, floor and rock alike. */
     val explored = BooleanArray(map.width * map.height)
 
@@ -376,9 +381,10 @@ class ExpeditionWorld(
      * Шаг героя за [dt] секунд по шагу стика в осях карты ([paceX], [paceY] - доли скорости героя, [IsoGrid.pace]): длина шага
      * больше 1 не срезается - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках.
      *
-     * Каждый объект карты слышит шаг (ловушка замечается светом, трещина считает простой); отвечает первый, кому есть что сказать.
+     * Каждый объект карты слышит шаг (ловушка бьёт своим ритмом, трещина считает простой); отвечает первый, кому есть что сказать.
      */
     fun step(dt: Double, paceX: Double, paceY: Double): WorldEvent? {
+        clock += dt
         val length = hypot(paceX, paceY)
         moving = length > 0.1
         if (moving) {
@@ -431,6 +437,20 @@ class ExpeditionWorld(
         }
         if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < rules.exitReach) return WorldEvent.Exit
         return null
+    }
+
+    /**
+     * Удар отбросил героя на [dx], [dy] клеток: скольжением вдоль стен, по долям не длиннее радиуса героя - сквозь скалу
+     * отброс не проходит.
+     */
+    internal fun knock(dx: Double, dy: Double) {
+        val parts = ceil(hypot(dx, dy) / rules.heroRadius).toInt().coerceAtLeast(1)
+        repeat(parts) {
+            val (nx, ny) = slide(heroX, heroY, dx / parts, dy / parts, rules.heroRadius)
+            heroX = nx
+            heroY = ny
+        }
+        light()
     }
 
     /** Monsters still standing, the boss apart: it is counted as the exit's seal, not as one of them. */

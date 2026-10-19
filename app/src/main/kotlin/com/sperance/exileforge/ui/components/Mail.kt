@@ -22,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -282,15 +284,24 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     var reporting by remember { mutableStateOf(false) }
     val from = mail.from
     val ignored = from != null && feedback.ignored.any { it.heroId == from.heroId }
+    val menu: (@Composable RowScope.() -> Unit)? = if (from != null && mail.answerable) {
+        {
+            LetterMenu(
+                name = from.name,
+                ignored = ignored,
+                reported = mail.reported,
+                enabled = !busy,
+                onIgnore = { model.letters.ignore(from.heroId, from.name, on = !ignored) },
+                onReport = { reporting = true },
+            )
+        }
+    } else {
+        null
+    }
     ForgeSheet(
         onDismissRequest = onClose,
-        header = {
-            SenderPlate(game, mail) {
-                if (from != null && mail.answerable) {
-                    LetterMenu(from.name, ignored, mail.reported, busy, onIgnore = { model.letters.ignore(from.heroId, from.name, on = !ignored) }, onReport = { reporting = true })
-                }
-            }
-        },
+        body = SheetBody.Scroll(spacing = 12.dp),
+        header = { SenderPlate(game, mail, menu) },
         footer = {
             if (mail.answerable) {
                 ForgeButton(onClick = {
@@ -301,15 +312,13 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
             ForgeOutlinedButton(onClick = {
                 model.deleteMail(mail.id)
                 onClose()
-            }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.Outlined.Delete, ui("mail.delete")) }
+            }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.Outlined.Delete, ui("mail.delete"), tint = if (busy) Color.Unspecified else Parchment) }
         },
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright, lineHeight = 21.sp))
-            Text(mailBody(mail), color = Parchment, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp)
-            if (mail.quote.isNotBlank()) Quote(ui("mail.quote_of_mine"), mail.quote)
-            Attachment(game, model, busy, mail)
-        }
+        Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright, lineHeight = 21.sp))
+        Text(mailBody(mail), color = Parchment, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp)
+        if (mail.quote.isNotBlank()) Quote(ui("mail.quote_of_mine"), mail.quote)
+        Attachment(game, model, busy, mail)
     }
     if (reporting) {
         ConfirmSheet(ui("mail.report.title"), ui("mail.report"), onDismiss = { reporting = false }, note = ui("mail.report.note"), danger = true) {
@@ -319,18 +328,20 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     }
 }
 
-/** Значок и подпись кнопки подвала письма: подпись в одну строку, длинная обрезается. */
-@Composable private fun IconLabel(icon: ImageVector, label: String) {
-    Icon(icon, null, Modifier.size(18.dp))
+/** Значок и подпись кнопки подвала письма: подпись в одну строку, длинная обрезается; [tint] - цвет обоих, не задан - цвет кнопки. */
+@Composable private fun RowScope.IconLabel(icon: ImageVector, label: String, tint: Color = Color.Unspecified) {
+    val color = tint.takeOrElse { LocalContentColor.current }
+    Icon(icon, null, Modifier.size(18.dp), tint = color)
     Spacer(Modifier.width(6.dp))
-    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(label, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
 }
 
 /**
  * Плашка отправителя письма: знак, имя (длинное переносится, не режется), «класс · уровень · время · срок» - срок `Caution`, невзятое
- * вложение «хранится, пока не заберёшь» `Vital`; справа [actions].
+ * вложение «хранится, пока не заберёшь» `Vital`; справа [actions], если есть.
  */
-@Composable private fun SenderPlate(game: GameUi, mail: Mail, actions: @Composable () -> Unit) {
+@Composable private fun SenderPlate(game: GameUi, mail: Mail, actions: (@Composable RowScope.() -> Unit)? = null) {
+    val about = remember(mail) { senderAbout(mail) }
     val shape = RoundedCornerShape(14.dp)
     Row(
         Modifier.fillMaxWidth()
@@ -343,9 +354,9 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
         SenderMark(game, mail, PLATE_MARK)
         Column(Modifier.weight(1f).padding(top = 2.dp)) {
             Text(senderLine(mail), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Text(senderAbout(mail), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Text(about, color = Muted, style = MaterialTheme.typography.labelSmall)
         }
-        actions()
+        actions?.invoke(this)
     }
 }
 
@@ -363,7 +374,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
  * «⋯» письма героя: «Игнорировать» / «Не игнорировать» отправителя [name] с пояснением и «Пожаловаться» / «Жалоба подана». Меню -
  * [ForgeMenu]: окна у закрытого меню нет, оно появляется на касание и уходит с анимацией закрытия.
  */
-@Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, busy: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
+@Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, enabled: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(
@@ -379,7 +390,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
                     }
                 },
                 leadingIcon = { Icon(Icons.Outlined.Block, null, tint = Parchment) },
-                enabled = !busy,
+                enabled = enabled,
                 onClick = {
                     open = false
                     onIgnore()
@@ -390,7 +401,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
             DropdownMenuItem(
                 text = { Text(ui(if (reported) "mail.report.done" else "mail.report"), color = tint) },
                 leadingIcon = { Icon(if (reported) Icons.Outlined.Check else Icons.Outlined.Flag, null, tint = tint) },
-                enabled = !busy && !reported,
+                enabled = enabled && !reported,
                 onClick = {
                     open = false
                     onReport()
@@ -456,9 +467,10 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 
 /**
  * Хозяин окна нового письма: черновик в почте ([Feedback.letter]) открывает лист поверх всего - из карточки игрока,
- * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии рядом с подписью, не ввод; тема и текст со счётчиками - текст растёт
- * до [BODY_LINES] строк и дальше листается внутри поля; цитата ответа, квота «Сегодня X из N · этому герою Y из M»; немота - причина и
- * срок сверху. «Отправить» - в подвале листа, над клавиатурой; нельзя - погашена.
+ * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии рядом с подписью, не ввод; тема и текст со счётчиками - поле текста
+ * растёт вместе с листающимся телом листа, курсор оно держит на виду само; цитата ответа, квота «Сегодня X из N · этому герою Y из M»;
+ * немота - причина и срок сверху. «Отправить» - в подвале листа, над клавиатурой; нельзя - погашена. Паузу до следующего письма
+ * читают только подпись и кнопка ([cooldownSeconds]) - её такт не перекомпоновывает весь лист.
  */
 @Composable
 fun LetterHost(game: GameUi) {
@@ -470,50 +482,71 @@ fun LetterHost(game: GameUi) {
     var subject by remember(draft) { mutableStateOf(draft.subject) }
     var body by remember(draft) { mutableStateOf("") }
     val quota = feedback.quota
-    val now = rememberNow(TICK_MS)
-    val wait by remember(quota) { derivedStateOf { quota?.let { ((it.readyAt - now.value + SECOND_MS - 1) / SECOND_MS).coerceAtLeast(0L) } ?: 0L } }
+    val readyAt = quota?.readyAt ?: 0L
     val gate = quota?.let { effectiveGate(it, draft) }
     val guildFull = draft.kind == MailKind.GUILD && quota?.guild?.let { it.sent >= it.perDay } != false
     ForgeSheet(
         onDismissRequest = model.letters::close,
+        body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
-            ForgeButton(
-                onClick = { model.letters.send(subject, body) },
-                enabled = !activity.busy && gate == MailGate.OPEN && wait == 0L && !guildFull && subject.isNotBlank() && body.isNotBlank(),
-                modifier = Modifier.weight(1f),
-            ) { Text(ui("mail.send")) }
+            SendButton(
+                ready = !activity.busy && gate == MailGate.OPEN && !guildFull && subject.isNotBlank() && body.isNotBlank(),
+                readyAt = readyAt,
+            ) { model.letters.send(subject, body) }
         },
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui(if (draft.kind == MailKind.GUILD) "mail.letter.broadcast_title" else "mail.letter.title"), style = relicName(19).copy(color = GoldBright))
-            quota?.mute?.let { MuteNote(it) }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(ui("mail.letter.to"), color = Muted, style = MaterialTheme.typography.labelMedium)
-                Addressee(game, draft, quota, Modifier.weight(1f, fill = false))
-            }
-            OutlinedTextField(
-                subject,
-                { subject = it.take(rules.subject) },
-                label = { Text(ui("mail.subject")) },
-                singleLine = true,
-                supportingText = { LengthCounter(subject, rules.subject) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                body,
-                { body = it.take(rules.body) },
-                label = { Text(ui("mail.body")) },
-                minLines = 4,
-                maxLines = BODY_LINES,
-                supportingText = { LengthCounter(body, rules.body) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (draft.quote.isNotBlank()) Quote(draft.quoteBy, draft.quote.take(rules.quote))
-            quota?.let { QuotaBar(it, draft) }
-            gate?.takeIf { it != MailGate.OPEN && it != MailGate.MUTED }?.let { Text(gateText(it, quota, rules), color = Caution, style = MaterialTheme.typography.labelMedium) }
-            if (wait > 0) MutedText(ui("mail.letter.cooldown", wait))
+        Text(ui(if (draft.kind == MailKind.GUILD) "mail.letter.broadcast_title" else "mail.letter.title"), style = relicName(19).copy(color = GoldBright))
+        quota?.mute?.let { MuteNote(it) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(ui("mail.letter.to"), color = Muted, style = MaterialTheme.typography.labelMedium)
+            Addressee(game, draft, quota, Modifier.weight(1f, fill = false))
         }
+        OutlinedTextField(
+            subject,
+            { subject = it.take(rules.subject) },
+            label = { Text(ui("mail.subject")) },
+            singleLine = true,
+            supportingText = { LengthCounter(subject, rules.subject) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            body,
+            { body = it.take(rules.body) },
+            label = { Text(ui("mail.body")) },
+            minLines = 4,
+            supportingText = { LengthCounter(body, rules.body) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (draft.quote.isNotBlank()) Quote(draft.quoteBy, draft.quote.take(rules.quote))
+        quota?.let { QuotaBar(it, draft) }
+        gate?.takeIf { it != MailGate.OPEN && it != MailGate.MUTED }?.let { Text(gateText(it, quota, rules), color = Caution, style = MaterialTheme.typography.labelMedium) }
+        CooldownNote(readyAt)
     }
+}
+
+/**
+ * Секунды до следующего письма - до [readyAt] по часам [rememberNow]. Часы читаются, только пока срок впереди: дождались - такт
+ * останавливается.
+ */
+@Composable private fun cooldownSeconds(readyAt: Long): Long {
+    var ticking by remember(readyAt) { mutableStateOf(readyAt > 0L) }
+    if (!ticking) return 0L
+    val now by rememberNow(TICK_MS)
+    val wait = ((readyAt - now + SECOND_MS - 1) / SECOND_MS).coerceAtLeast(0L)
+    if (wait == 0L) SideEffect { ticking = false }
+    return wait
+}
+
+/** «Отправить» подвала: погашена, пока письмо не готово [ready] или не прошла пауза до [readyAt]. */
+@Composable private fun RowScope.SendButton(ready: Boolean, readyAt: Long, onSend: () -> Unit) {
+    val wait = cooldownSeconds(readyAt)
+    ForgeButton(onClick = onSend, enabled = ready && wait == 0L, modifier = Modifier.weight(1f)) { Text(ui("mail.send")) }
+}
+
+/** Пауза до следующего письма словами - пока она идёт. */
+@Composable private fun CooldownNote(readyAt: Long) {
+    val wait = cooldownSeconds(readyAt)
+    if (wait > 0) MutedText(ui("mail.letter.cooldown", wait))
 }
 
 /** Ответ на рассылку гильдии пишут и до уровня права писать (как сервер): уровень ему не помеха. */
@@ -581,7 +614,6 @@ private val ATTACHMENT_LINE = 44.dp
 private val TAG = 22.dp
 private const val SHORT_STAMP = 5
 private const val QUOTE_LINES = 3
-private const val BODY_LINES = 8
 private const val DAY_MS = 86_400_000L
 private const val SECOND_MS = 1_000L
 private const val TICK_MS = 1_000L

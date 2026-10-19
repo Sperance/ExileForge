@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -113,12 +114,14 @@ import kotlin.math.roundToInt
             when (hud.phase) {
                 RunPhase.MAP -> {
                     val flight = rememberBagFlight(hud.drops)
-                    Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
+                    var barBottom by remember { mutableIntStateOf(0) }
+                    Stick(run, { barBottom }) { model.runCommand(RunCommand.OfferFountain(it)) }
                     MapBar(
                         game,
                         run,
                         hud,
                         live,
+                        onHeight = { barBottom = it },
                         bag = { MapBag(flight, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces(), MINIMAP_SIDE) { bagOpen = true } },
                         onLeave = if (zone) null else ({ leaving = true }),
                         onGear = { gear = true },
@@ -255,7 +258,8 @@ private val BELT_FLASK = 40.dp
  * Шапка карты - пульт и сведения на одной вуали, что гаснет к карте; низ экрана целиком под стик ([Stick]). Первый ряд - пульт:
  * меню захода (выход), имя карты, снаряжение, герой, задания. Ниже слева - метки состояния ([MapMarks]: страж, печать, ворота,
  * Скверна, журнал), призыв павшего стража за золото ([GuardianSummon]), полосы героя с итогом здоровья в секунду, пояс и плитки
- * несомого; справа - мини-карта со своим масштабом и кнопка сумки ([bag]). Нижние панели карты шапку не прячут.
+ * несомого; справа - мини-карта со своим масштабом и кнопка сумки ([bag]). Нижние панели карты шапку не прячут. Высоту шапки - её низ
+ * от верха экрана, в пикселях, - она отдаёт [onHeight]: стик под ней не начинается.
  */
 @Composable internal fun MapBar(
     game: GameUi,
@@ -269,11 +273,13 @@ private val BELT_FLASK = 40.dp
     onDrink: (Int) -> Unit,
     onRetry: () -> Unit,
     onQuests: () -> Unit,
+    onHeight: (Int) -> Unit = {},
 ) {
     val zone = VaalZones.isZone(run.zone)
     val expedition: ExpeditionViewModel = koinViewModel()
     Column(
-        Modifier.fillMaxWidth().background(Brush.verticalGradient(0f to VeilTop, .72f to VeilMid, 1f to Color.Transparent))
+        Modifier.fillMaxWidth().onSizeChanged { onHeight(it.height) }
+            .background(Brush.verticalGradient(0f to VeilTop, .72f to VeilMid, 1f to Color.Transparent))
             .statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 22.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -46,7 +46,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PLAYER_TABS
-import com.sperance.exileforge.core.app.TAB_ADMIN
 import com.sperance.exileforge.core.app.TAB_CITY
 import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
@@ -72,7 +71,6 @@ private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector
     EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
     CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil),
-    ADMIN(TAB_ADMIN, "nav.admin", ForgeGlyphs.Scroll),
     ;
 
     companion object {
@@ -86,7 +84,7 @@ private const val CAPSULE_GROW = 2.4f
 /**
  * Нижняя панель: парящая плита «Глубины»; у выбранной вкладки
  * кнопка раскрывается в капсулу - иконка заливается и растёт, рядом выезжает подпись; прочие - одни значки. Всё за 220 мс
- * той же кривой, что и сдвиг экрана. Пять вкладок - игра, администратор получает ровно ещё одну. Вкладка, нажатая снова
+ * той же кривой, что и сдвиг экрана. Пять вкладок у всех. Вкладка, нажатая снова
  * изнутри, возвращает к своему корню.
  *
  * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие»; досчёт ремёсел после отлучки, ещё не показанный
@@ -96,14 +94,13 @@ private const val CAPSULE_GROW = 2.4f
     val shell: ShellViewModel = koinViewModel()
     val craftsAway by shell.craftsAway.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
-    val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { game.isModerator })
     Row(
         Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(plate, elevation = 16.dp).clip(plate)
             .fillMaxWidth().height(68.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        destinations.forEach { index ->
+        PLAYER_TABS.forEach { index ->
             val free = when (index) {
                 TAB_EXPEDITION -> game.freeAtlasPoints
                 TAB_PROGRESS -> game.freeTreePoints

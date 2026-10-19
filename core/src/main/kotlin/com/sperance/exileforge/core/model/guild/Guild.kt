@@ -117,8 +117,8 @@ import kotlinx.serialization.Serializable
     val at: Long = 0,
 )
 
-/** A stash tab: the rank (an index of the rules' ranks) a member needs to take from it. */
-@Serializable data class GuildStashTab(val minRank: Int = 0)
+/** A stash tab: the rank (an index of the rules' ranks) a member needs to take from it; [name] - имя от главы, пусто - по номеру. */
+@Serializable data class GuildStashTab(val minRank: Int = 0, val name: String = "")
 
 /**
  * The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count);

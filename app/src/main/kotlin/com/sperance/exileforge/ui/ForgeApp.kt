@@ -52,7 +52,6 @@ import com.sperance.exileforge.ui.components.UpdateHost
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
-import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
 import com.sperance.exileforge.ui.screens.city.UniquesScreen
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
@@ -269,7 +268,6 @@ private val BANNER_TOAST_TOP = 60.dp
                 entry<Route.Chronicle> { com.sperance.exileforge.ui.screens.city.HistoryChronicleScreen() }
                 entry<Route.Hall> { CityScreen(Building.HALL) }
                 entry<Route.Uniques> { UniquesScreen() }
-                entry<Route.Admin>(metadata = TabMemory.ROOT) { AdminScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }
             },
         )

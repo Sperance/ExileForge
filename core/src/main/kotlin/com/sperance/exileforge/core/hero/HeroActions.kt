@@ -76,7 +76,7 @@ class HeroActions(
     }
 
     /**
-     * Админу: случайный шаблон выбранной редкости и слота - выбран здесь из контента, брошен сервером.
+     * Тестеру или админу: случайный шаблон выбранной редкости и слота - выбран здесь из контента, брошен сервером.
      *
      * Редкость - только та, что выдача даёт шаблону: уникальный и мифический - своя, база - обычная, волшебная, редкая.
      */
@@ -91,7 +91,7 @@ class HeroActions(
         api.hero.grantEquipment(id, Dice.system().pick(candidates).code, rarity)
     }
 
-    /** Админу: стопка в сумку. */
+    /** Тестеру или админу: стопка в сумку. */
     fun grantItem(code: String, amount: Long) = heroCommand { id ->
         check(sessions.state.value.grants(heroes.state.value)) { ui("hero.bag_admin_only") }
         api.hero.grantItem(id, code, amount)
@@ -169,9 +169,9 @@ class HeroActions(
     /** Правило автопродажи «всё, что герой не может носить». */
     fun autoSellUnwearable(on: Boolean) = heroCommand { id -> api.hero.autoSellUnwearable(id, on) }
 
-    /** Админу: опыт герою, уровень решает сервер. */
+    /** Тестеру или админу: опыт герою, уровень решает сервер. */
     fun addExperience(amount: Double) = heroCommand { id ->
-        check(sessions.state.value.isAdmin) { ui("hero.xp_admin_only") }
+        check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         api.hero.grantExperience(id, amount)
     }
 

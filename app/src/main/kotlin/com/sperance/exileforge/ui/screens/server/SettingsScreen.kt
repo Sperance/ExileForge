@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.Redeem
 import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.TouchApp
@@ -185,9 +186,10 @@ internal enum class SettingsPage(val title: String) {
 
 /**
  * Разделы персонала: модерация модератору и администратору, инструменты разработчика тестировщику и администратору.
- * Живут на экране «Аккаунт», а не в настройках; каждая строка открывает свою страницу настроек напрямую.
+ * Живут на экране «Аккаунт», а не в настройках; каждая строка открывает свою страницу настроек напрямую, коды наград
+ * администратора - свой экран ([onRedemptions]).
  */
-@Composable internal fun StaffGroups(account: AccountUi, onPage: (SettingsPage) -> Unit) {
+@Composable internal fun StaffGroups(account: AccountUi, onRedemptions: () -> Unit, onPage: (SettingsPage) -> Unit) {
     if (account.isModerator) {
         RowGroup(ui("moderation.group")) {
             AccountRow(Icons.Outlined.Gavel, ui("moderation.title"), enabled = !account.busy) { onPage(SettingsPage.MODERATION) }
@@ -205,6 +207,7 @@ internal enum class SettingsPage(val title: String) {
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
             if (account.grants) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
+            if (account.isAdmin) AccountRow(Icons.Outlined.Redeem, ui("redemption.title"), enabled = !account.busy, onClick = onRedemptions)
         }
     }
 }

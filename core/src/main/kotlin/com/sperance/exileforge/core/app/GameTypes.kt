@@ -44,7 +44,6 @@ const val TAB_TREE = 5
 /** The City: the merchant, the auction and the guild. */
 const val TAB_CITY = 6
 const val TAB_CRAFT = 7
-const val TAB_ADMIN = 8
 const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
 const val TAB_CRAFTS = 11
@@ -57,11 +56,5 @@ const val TAB_TRIALS = 15
 /** «Настройки»: from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17
 
-/** Кнопки игрока в нижней панели слева направо: Герой, Развитие, Поход, Город, Ремёсла. */
+/** Кнопки нижней панели слева направо: Герой, Развитие, Поход, Город, Ремёсла - по ним считается сторона перехода. */
 val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_CRAFTS)
-
-/** Все кнопки нижней панели слева направо: вкладки игрока и вкладка администратора последней - по ним считается сторона перехода. */
-val BAR_TABS = PLAYER_TABS + TAB_ADMIN
-
-/** Screens only an administrator may open, whichever button leads to them. */
-val ADMIN_TABS = setOf(TAB_ADMIN, TAB_REDEMPTION)

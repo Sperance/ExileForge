@@ -2,7 +2,7 @@ package com.sperance.exileforge.ui.nav
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.sperance.exileforge.core.app.BAR_TABS
+import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.Landing
 import com.sperance.exileforge.core.app.Screens
@@ -122,5 +122,5 @@ private val Landing.route: Route
         Landing.MODERATION -> Route.Settings(SettingsPage.MODERATION.name)
     }
 
-/** Место экрана в нижней панели слева направо ([BAR_TABS]): по его корню; экран без панели или не вкладка панели - null. */
-val Route.barSlot: Int? get() = takeIf { it.bars }?.root?.let { BAR_TABS.indexOf(it.tab) }?.takeIf { it >= 0 }
+/** Место экрана в нижней панели слева направо ([PLAYER_TABS]): по его корню; экран без панели или не вкладка панели - null. */
+val Route.barSlot: Int? get() = takeIf { it.bars }?.root?.let { PLAYER_TABS.indexOf(it.tab) }?.takeIf { it >= 0 }

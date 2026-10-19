@@ -110,8 +110,6 @@ import com.sperance.exileforge.ui.components.LocalWallClock
 import com.sperance.exileforge.ui.components.StillClock
 import com.sperance.exileforge.ui.components.UpdateDialog
 import com.sperance.exileforge.ui.components.rememberItemFilter
-import com.sperance.exileforge.ui.screens.admin.AdminPanels
-import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.craft.TargetRail
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
 import com.sperance.exileforge.ui.screens.crafts.WorkPlaque
@@ -263,14 +261,6 @@ class KeyScreensShotTest {
             FeatureSheet(game(level), FeatureView(node, emptyList())) {}
             ObjectActionPanel(ObjectAction(node, .4f), { null }, { .4f })
         }
-    }
-
-    /** Админка с ролью администратора: промокоды, выдачи, режим. */
-    @Test fun admin() = shot("admin", scroll = false) {
-        val vm: AdminViewModel = GlobalContext.get().get()
-        val plain = game(40)
-        val game = plain.copy(session = plain.session.copy(profile = UserProfile("owner", role = "ADMIN")))
-        Box(Modifier.height(1400.dp)) { AdminPanels(game, vm) }
     }
 
     /** Редкий амулет со строкой каждого особого источника: плашки особого блока, основные строки и счётчик сторон под ними. */

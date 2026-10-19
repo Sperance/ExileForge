@@ -4,7 +4,6 @@ import androidx.navigation3.runtime.NavKey
 import com.sperance.exileforge.core.app.AppPhase
 import com.sperance.exileforge.core.app.Building
 import com.sperance.exileforge.core.app.TAB_ACCOUNT
-import com.sperance.exileforge.core.app.TAB_ADMIN
 import com.sperance.exileforge.core.app.TAB_CITY
 import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.app.TAB_CRAFTS
@@ -165,17 +164,14 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_SETTINGS
     }
 
-    @Serializable data object Admin : Route {
-        override val tab get() = TAB_ADMIN
-    }
-
+    /** Коды наград администратора: из «Для разработчиков» экрана «Аккаунт», ложатся поверх открытой вкладки. */
     @Serializable data object Redemption : Route {
-        override val root: Route get() = Admin
+        override val root: Route? get() = null
         override val tab get() = TAB_REDEMPTION
     }
 
     companion object {
-        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Trials, City, Account, Settings(), Admin, Redemption)
+        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Trials, City, Account, Settings(), Redemption)
 
         /** Экран по прежнему номеру вкладки; неизвестный номер - герой. */
         fun ofTab(tab: Int): Route = GAME.firstOrNull { it.tab == tab } ?: Hero
@@ -206,7 +202,6 @@ private fun barKey(tab: Int): String? = when (tab) {
     TAB_EXPEDITION -> "nav.expedition"
     TAB_CITY -> "nav.city"
     TAB_CRAFTS -> "nav.crafts"
-    TAB_ADMIN -> "nav.admin"
     else -> null
 }
 
@@ -230,8 +225,6 @@ fun reportPlace(route: Route): ReportPlace {
         }
 
         TAB_CRAFTS -> "crafts"
-
-        TAB_ADMIN -> "admin"
 
         TAB_SETTINGS -> "settings"
 

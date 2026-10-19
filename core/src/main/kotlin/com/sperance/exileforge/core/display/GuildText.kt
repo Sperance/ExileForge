@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.model.guild.GuildLogEntry
+import com.sperance.exileforge.core.model.guild.GuildStashTab
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
 
@@ -45,6 +46,9 @@ object GuildText {
     private const val INVITE_NAME = 14
 
     /** `Name [TAG]`, the way a guild is named everywhere. */
+    /** Имя вкладки хранилища [at] (с нуля): данное главой или «Вкладка N». */
+    fun stashTab(tab: GuildStashTab?, at: Int): String = tab?.name?.takeIf { it.isNotBlank() } ?: ui("guild.stash_tab", at + 1)
+
     fun title(name: String, tag: String): String = if (tag.isBlank()) name else "$name [$tag]"
 
     /**

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.model.command
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.ReportTopic
 import kotlinx.serialization.Serializable
 
 /** The showcase is paged by the server, so this is what the client asks it for. */
@@ -96,8 +97,10 @@ data class ApiCapabilities(val routes: Set<String>) {
     val text: String,
     val screen: String,
     val context: Map<String, String>,
-    /** A bug or a player's suggestion. */
+    /** Вид отчёта: из листа - ошибка, падение шлёт клиент сам. */
     val kind: FeedbackKind = FeedbackKind.BUG,
+    /** Тема ошибки: улучшение сервер принимает только от администратора. */
+    val topic: ReportTopic = ReportTopic.ERROR,
     /** Герой отправителя, отпечаток устройства и версия клиента: ставит [ClientIdentity]. */
     val heroId: String? = null,
     val device: String = "",

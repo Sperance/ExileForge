@@ -3451,6 +3451,8 @@
   "bug.open": "Report a bug",
   "bug.title": "Report a bug",
   "bug.where": "Where: {0}",
+  "bug.topic.ERROR": "Bug",
+  "bug.topic.IMPROVEMENT": "Improvement",
   "bug.text": "What went wrong?",
   "bug.count": "{0} / {1}",
   "bug.send": "Send the report",

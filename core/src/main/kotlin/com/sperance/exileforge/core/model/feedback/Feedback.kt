@@ -5,7 +5,7 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** What a report is: a bug or a player's suggestion; жалоба на письмо героя - [COMPLAINT]. */
+/** Вид отчёта: ошибка, апелляция, жалоба на письмо героя - [COMPLAINT]; улучшение - тема ошибки ([ReportTopic]). */
 @Serializable enum class FeedbackKind {
     BUG,
     APPEAL,
@@ -104,6 +104,12 @@ import kotlinx.serialization.Serializable
     /** Отпечаток последнего ответа: сменился - ответ новый; null - ответа нет. */
     val replyPrint: String? get() = reply.takeIf { it.isNotBlank() }?.hashCode()?.toString()
 }
+
+/**
+ * Тема отчёта об ошибке: починить ([ERROR]) или улучшить ([IMPROVEMENT]). Улучшение подаёт только администратор: от прочих сервер
+ * принимает его ошибкой.
+ */
+@Serializable enum class ReportTopic { ERROR, IMPROVEMENT }
 
 /**
  * Отчёт целиком глазами модерации - строка списка: из системного только версия клиента и счёт падений и ошибок запросов, остальное

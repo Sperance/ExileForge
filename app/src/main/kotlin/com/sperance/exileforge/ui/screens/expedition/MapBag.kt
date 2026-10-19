@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -115,7 +116,8 @@ import kotlin.math.sin
         val target = bag?.let { with(density) { (it.x - origin.x).toDp() to (it.y - origin.y).toDp() } }
         if (target != null) flying?.let { drop -> Fan(drop, from = maxWidth / 2 to maxHeight * SceneCamera.HERO_DOWN, to = target, progress = fan.value) }
         Column(
-            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = TRAY_END, bottom = TRAY_BOTTOM),
+            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = TRAY_END, bottom = TRAY_BOTTOM)
+                .widthIn(max = (maxWidth - TRAY_END - HANDS_RESERVE).coerceAtLeast(TRAY_MIN)),
             horizontalAlignment = Alignment.End,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -164,8 +166,17 @@ import kotlin.math.sin
                 if (waiting > 0) ui("run.bag_waiting", waiting, plural("run.chest", waiting)) else ui("run.bag"),
                 color = Muted,
                 style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Text(ui("run.bag_gathered", gathered), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(
+                ui("run.bag_gathered", gathered),
+                color = Parchment,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -229,5 +240,11 @@ private const val NEWS_MS = 2_600L
 /** Плашка сумки: отступы от края экрана, размер значка и фишки веера. */
 private val TRAY_END = 12.dp
 private val TRAY_BOTTOM = 24.dp
+
+/** Место слева под рамку «рук» (пояс и четыре кнопки, ≈222 dp) с зазором: сумка и новость не заходят на кнопки. */
+private val HANDS_RESERVE = 232.dp
+
+/** Наименьшая ширина сумки, если экран уже рамки «рук». */
+private val TRAY_MIN = 96.dp
 private val BAG = 30.dp
 private val CHIP = 24.dp

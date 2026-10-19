@@ -5,6 +5,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -327,7 +329,14 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
 /** Число базы у гнезда «Медальона»: крупно цветом [ink], под ним подпись [label] цветом `muted`, по правому краю. */
 @Composable private fun MedallionFigure(value: String, label: String, ink: Color, look: RelicLook) {
     Column(horizontalAlignment = Alignment.End) {
-        Text(value, color = ink, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        val figure = MaterialTheme.typography.titleMedium
+        BasicText(
+            value,
+            style = figure.copy(color = ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = TextAutoSize.StepBased(minFontSize = FIGURE_MIN, maxFontSize = figure.fontSize, stepSize = FIGURE_STEP),
+        )
         Text(label, color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .8.sp, textAlign = TextAlign.End, maxLines = 2)
     }
 }
@@ -542,3 +551,7 @@ val LocalFlaskBonuses = compositionLocalOf<FlaskBonuses?> { null }
 /** Отступ значков шапки легенды от верха и края - мимо завитков рамки. */
 private val LEGEND_CORNER_TOP = 14.dp
 private val LEGEND_CORNER_SIDE = 22.dp
+
+/** Наименьший кегль числа базы у гнезда и шаг его уменьшения: длинный диапазон («120–245») сжимается, а не обрезается. */
+private val FIGURE_MIN = 10.sp
+private val FIGURE_STEP = 0.5.sp

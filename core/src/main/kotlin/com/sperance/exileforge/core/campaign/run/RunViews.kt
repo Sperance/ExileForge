@@ -7,6 +7,8 @@ import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.FightStats
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
+import com.sperance.exileforge.core.campaign.NoteKind
+import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
@@ -324,9 +326,20 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
 
+    /** Урон героя в секунду за весь бой; бой без времени - ноль. */
+    val perSecond: Int get() = if (duration > 0) (dealt / duration).roundToInt() else 0
+
+    /** Пройденные пороги фаз по журналу боя, в порядке срабатывания: шаблон фаз и порог в процентах здоровья. */
+    val phases: List<PhaseMark> by lazy {
+        events.mapNotNull { event -> (event.trace as? NoteTrace)?.takeIf { it.kind == NoteKind.PHASE }?.let { PhaseMark(it.ref, it.value) } }
+    }
+
     /** Разбор этого боя: лист «Разбор» итога боя, считается один раз. */
     val stats: FightStats by lazy { FightStats.of(pack, duration) }
 }
+
+/** Сработавший порог фаз босса: шаблон фаз [phase] и порог [at] в процентах здоровья. */
+data class PhaseMark(val phase: String, val at: Double)
 
 /** Everything the overlay draws, as one value: it changes only when something on it does. */
 data class RunHud(

@@ -10,6 +10,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,12 +30,15 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.run.FightReport
+import com.sperance.exileforge.core.campaign.run.PhaseMark
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.displayName
+import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.expedition.presentLoot
@@ -53,27 +58,27 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 import java.util.Locale
+import kotlin.math.roundToInt
+
+/** Вкладки отчёта боя: что бой принёс (при гибели - что стоил), ход боя и журнал. */
+private enum class ReportTab { SPOILS, FIGHT, LOG }
 
 /**
- * After the fight — «Поле боя», the owner's pick of five mockups. On top the scene: the
- * fallen monster's token in the half-dark with the outcome over it. Under it what the fight brought,
- * in engraved sections — «Снаряжение», a line per piece with its price, a tap opening its card;
- * «Сферы» as chips; «Награда», gold and experience — or, after a defeat, what the death cost and
- * what the run had gathered. The fight itself is a row of figures at the foot, and its log unfolds
- * from there. The spoils are the server's roll: the screen opens at once, says the loot is on its way,
- * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
- * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
+ * After the fight — вариант «Вкладки»: шапка в строку (жетон монстра, исход, стая и время боя, место первой победы) и вкладки
+ * «Добыча · Бой · Журнал»; при гибели первая - «Потери», а экран открывается на «Журнале» рокового боя. У каждой вкладки вся высота:
+ * добыча и потери листаются, «Бой» - основные показатели, пройденные пороги фаз и вход в разбор боя, журнал - во всю высоту.
+ * В подвале одна кнопка: «Дальше», при гибели - опасная «К итогам захода».
  *
- * Гибель открывается на журнале рокового боя. Награды в пути спрашиваются сразу; жест «назад» держит только копилка Бездны при гибели.
- * Первая победа над стражем - место героя среди всех победивших. Гибель ведёт к итогам карты, а не в лагерь. Над отчётом - карточка строки
- * журнала, разбор боя, рецепт с убийства и экран нового уровня. Очки Атласа боя - строкой в экране уровня, если бой поднял уровень,
- * иначе плиткой отчёта.
+ * The spoils are the server's roll: the screen opens at once, says the loot is on its way, and fills in as the answers arrive — offline,
+ * when the connection is back. Until they have, there is no way on: neither the button nor the system back leaves, so nothing the fight
+ * brought is walked past unseen. Награды в пути спрашиваются сразу; жест «назад» держит только копилка Бездны при гибели.
+ * Гибель ведёт к итогам карты, а не в лагерь. Над отчётом - карточка строки журнала, разбор боя, рецепт с убийства и экран нового уровня.
+ * Очки Атласа боя - строкой в экране уровня, если бой поднял уровень, иначе плиткой во вкладке «Добыча».
  */
 @Composable internal fun ReportScreen(game: GameUi, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
-    val expedition: ExpeditionViewModel = koinViewModel()
     val won = report.outcome == Outcome.WIN
-    var logOpen by remember { mutableStateOf(!won) }
+    var tab by remember(report) { mutableStateOf(if (won) ReportTab.SPOILS else ReportTab.LOG) }
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
@@ -89,32 +94,43 @@ import java.util.Locale
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        FieldHead(report, won)
-        if (won) hud.rank?.let { place -> FirstWin(place, monsterTitle(report.monster.code)) }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(game, hud, onStack = { inspect(Inspect.Stack(it)) }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
-            if (won && hud.levelUp == null && !levelled) AtlasBlock(hud.atlas)
-            if (logOpen) {
-                Box(
-                    Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
-                        .border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 8.dp),
+        ReportHead(report, won, hud.rank.takeIf { won })
+        ReportTabs(report, hud, won, tab) { tab = it }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (tab) {
+                ReportTab.SPOILS -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (won) Spoils(game, hud, onStack = { inspect(Inspect.Stack(it)) }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
+                    if (won && hud.levelUp == null && !levelled) AtlasBlock(hud.atlas)
+                }
+
+                ReportTab.FIGHT -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FightTab(report) { breakdown = true }
+                }
+
+                ReportTab.LOG -> Column(
+                    Modifier.fillMaxSize().background(Panel, RoundedCornerShape(8.dp)).border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                 ) {
-                    Column {
-                        LogShelves(game.logFilter, shell::logFilter)
-                        FightLog(report.pack, Modifier.fillMaxSize(), game.logFilter, toDeath = !won) { event, name -> line = event to name }
-                    }
+                    LogShelves(game.logFilter, shell::logFilter)
+                    FightLog(report.pack, Modifier.fillMaxWidth().weight(1f), game.logFilter, toDeath = !won) { event, name -> line = event to name }
                 }
             }
         }
-        FightFigures(report, logOpen, onBreakdown = { breakdown = true }) { logOpen = !logOpen }
-        ForgeButton(
-            state = ButtonState.of(!holding),
-            onClick = onContinue,
-            modifier = Modifier.fillMaxWidth(),
-            size = ButtonSize.Wide,
-            accent = if (won) null else LifeRed,
-        ) {
-            Text(ui(if (won) "expedition.continue" else "expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
+        if (won) {
+            ForgeButton(state = ButtonState.of(!holding), onClick = onContinue, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+                Text(ui("expedition.continue"), style = MaterialTheme.typography.titleMedium)
+            }
+        } else {
+            ForgeButton(
+                state = ButtonState.of(!holding),
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                kind = ButtonKind.Danger,
+                size = ButtonSize.Wide,
+                icon = ForgeGlyphs.Skull,
+            ) {
+                Text(ui("expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
     line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
@@ -125,36 +141,118 @@ import java.util.Locale
 }
 
 /**
- * The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words.
+ * Шапка в строку 44 dp: жетон монстра в кольце редкости, исход и под ним стая и время боя, справа - место первой победы над стражем
+ * [rank], его слова - в подсказке по касанию.
  *
  * Дыхание портрета - декор: общие часы декора, при выключенных анимациях - покой.
  */
-@Composable private fun FieldHead(report: FightReport, won: Boolean) {
-    val expedition: ExpeditionViewModel = koinViewModel()
+@Composable private fun ReportHead(report: FightReport, won: Boolean, rank: Long?) {
     val monster = report.monster
     val time = decorTime()
-    val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
-    Box(
-        Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Box(
-                Modifier.size(68.dp).clip(CircleShape).background(Color.Black).border(3.dp, rarityTint(monster.rarity), CircleShape),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                Canvas(Modifier.requiredSize(68.dp, 91.dp).offset(y = 12.dp)) {
-                    Portraits.monster(this, monster.code.value, monster.form, time.value)
-                    if (won) drawRect(Ink.copy(alpha = .35f))
-                }
+    Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(Color.Black).border(2.dp, rarityTint(monster.rarity), CircleShape),
+            contentAlignment = Alignment.TopCenter,
+        ) {
+            Canvas(Modifier.requiredSize(40.dp, 54.dp).offset(y = 7.dp)) {
+                Portraits.monster(this, monster.code.value, monster.form, time.value)
+                if (won) drawRect(Ink.copy(alpha = .35f))
             }
+        }
+        Column(Modifier.weight(1f)) {
             Text(
                 if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
                 color = outcomeColour(report.outcome),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
+            val seconds = ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration))
+            Text(
+                if (report.packSize > 1) "${ui("expedition.report_pack", report.packSize)} · $seconds" else seconds,
+                color = Muted,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
         }
+        rank?.let { place -> RankMark(place, monsterTitle(monster.code)) }
+    }
+}
+
+/** «#5»: место первой победы над стражем; касание - «Вы 5-й герой, победивший …» в подсказке. */
+@Composable private fun RankMark(place: Long, guardian: String) {
+    val shape = RoundedCornerShape(6.dp)
+    Tipped(
+        { Tip(ui("expedition.first_win", place, guardian), if (place == 1L) ui("expedition.first_win_world") else "") },
+        Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            "#$place",
+            color = GoldBright,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.background(Gold.copy(alpha = .16f), shape).border(1.dp, GoldBright.copy(alpha = .4f), shape).padding(horizontal = 7.dp, vertical = 3.dp),
+        )
+    }
+}
+
+/** Ряд вкладок долями одной дорожки; у «Добычи» - число находок, у «Журнала» - число строк боя. */
+@Composable private fun ReportTabs(report: FightReport, hud: RunHud, won: Boolean, tab: ReportTab, onSelect: (ReportTab) -> Unit) {
+    val found = hud.reward?.let { it.equipment.size + it.items.size + (if (it.recipe != null) 1 else 0) } ?: 0
+    val labels = ReportTab.entries.map { entry ->
+        when (entry) {
+            ReportTab.SPOILS -> if (won) counted(ui("expedition.report_tab_spoils"), found) else ui("expedition.report_tab_losses")
+            ReportTab.FIGHT -> ui("expedition.report_tab_fight")
+            ReportTab.LOG -> counted(ui("expedition.report_tab_log"), report.events.size)
+        }
+    }
+    PillTabs(labels, tab.ordinal, { onSelect(ReportTab.entries[it]) }, segmented = true)
+}
+
+private fun counted(label: String, count: Int) = if (count > 0) "$label · $count" else label
+
+/**
+ * Вкладка «Бой»: основные показатели плитками по две - нанесено, получено, урон в секунду, криты; пройденные пороги фаз из журнала
+ * боя; внизу - вход в лист «Разбор боя».
+ */
+@Composable private fun FightTab(report: FightReport, onBreakdown: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Kpi(groupedNumber(report.dealt.toLong()), ui("expedition.report_kpi_dealt"), Modifier.weight(1f))
+        Kpi(groupedNumber(report.taken.toLong()), ui("expedition.report_kpi_taken"), Modifier.weight(1f), LossText)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Kpi(groupedNumber(report.perSecond.toLong()), ui("breakdown.kpi.per_second"), Modifier.weight(1f))
+        Kpi(groupedNumber(report.crits.toLong()), ui("breakdown.kpi.crits"), Modifier.weight(1f))
+    }
+    if (report.phases.isNotEmpty()) {
+        Caption(ui("expedition.report_phases"), Boon)
+        report.phases.forEach { mark -> PhaseRow(mark) }
+    }
+    ForgeButton(onClick = onBreakdown, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = Icons.Outlined.BarChart) {
+        Text(ui("breakdown.title"))
+    }
+}
+
+@Composable private fun Kpi(value: String, label: String, modifier: Modifier = Modifier, tone: Color = GoldBright) {
+    val shape = RoundedCornerShape(8.dp)
+    Column(modifier.background(Panel, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp, vertical = 7.dp)) {
+        Text(value, color = tone, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Строка пройденного порога фазы: порог, имя шаблона фаз и «пройден». */
+@Composable private fun PhaseRow(mark: PhaseMark) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text("${mark.at.roundToInt()}%", color = Boon, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(40.dp))
+        Text(phaseTitle(mark.phase), color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(ui("fight.phase_passed"), color = Vital, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -233,7 +331,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
  * A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it.
  *
  * Гибель в зоне Ваал опыта не стоит; гибель, что журнал не записал, оценивается при чтении героя; ниже уровня штрафа - даром; в Бездне
- * сгорает копилка, кроме доли атласа.
+ * сгорает копилка, кроме доли атласа. Что сохранилось и что дальше - в подсказке ⓘ, не сноской.
  */
 @Composable private fun DeathPrice(game: GameUi, hud: RunHud) {
     val expedition: ExpeditionViewModel = koinViewModel()
@@ -255,7 +353,10 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
 
                 else -> MutedText(hud.fallFrom?.let { ui("expedition.fall_from", it) } ?: ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
-            MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
+        }
+        val hint = ui("expedition.report_hint")
+        Tipped({ Tip(hint, ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), Muted) }, Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Info, hint, tint = Muted, modifier = Modifier.size(18.dp))
         }
     }
     hud.abyss?.takeIf { it.fallen }?.let { abyss ->
@@ -277,45 +378,4 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
     }
     if (hud.awaiting > 0) Receiving()
-}
-
-/** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log; «Разбор» - лист разбора боя. */
-@Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onBreakdown: () -> Unit, onLog: () -> Unit) {
-    val expedition: ExpeditionViewModel = koinViewModel()
-    Row(
-        Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 7.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Figure(ForgeGlyphs.Swords, report.dealt.toString())
-        Figure(ForgeGlyphs.Helm, report.taken.toString())
-        Figure(ForgeGlyphs.Portal, ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)))
-        Figure(ForgeGlyphs.Sigil, report.crits.toString())
-        ForgeButton(onClick = onBreakdown, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui("breakdown.open")) }
-        ForgeButton(onClick = onLog, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui(if (logOpen) "expedition.log_less" else "expedition.log")) }
-    }
-}
-
-@Composable private fun Figure(icon: ImageVector, value: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(icon, null, tint = Muted, modifier = Modifier.size(13.dp))
-        Text(value, color = Parchment, style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-/** «Вы 5-й герой, победивший …»: a gilt band under the scene, the place large. */
-@Composable private fun FirstWin(place: Long, guardian: String) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .22f), Panel)), shape).border(1.dp, GoldBright.copy(alpha = .6f), shape)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Text("#$place", color = GoldBright, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Column(Modifier.weight(1f)) {
-            Text(ui("expedition.first_win", place, guardian), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            if (place == 1L) Text(ui("expedition.first_win_world"), color = GoldBright, style = MaterialTheme.typography.labelMedium)
-        }
-    }
 }

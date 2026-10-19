@@ -16,4 +16,7 @@ class CraftsClient internal constructor(private val http: Transport) {
     suspend fun start(heroId: String, job: String, choice: String = "", additives: List<String> = emptyList()): CraftsState = http.post("$CRAFTS/start", heroQuery(heroId, "job" to job, "choice" to choice.ifEmpty { null }, "additives" to additives.takeIf { it.isNotEmpty() }?.joinToString(",")))
 
     suspend fun stop(heroId: String): CraftsState = http.post("$CRAFTS/stop", heroQuery(heroId))
+
+    /** Продолжает работу, что встала по отлучке: циклы идут заново от сейчас. */
+    suspend fun resume(heroId: String): CraftsState = http.post("$CRAFTS/resume", heroQuery(heroId))
 }

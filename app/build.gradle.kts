@@ -124,3 +124,53 @@ val androidOnly by tasks.registering(AndroidOnlyCheck::class) {
     sources.from(fileTree("src/main") { include("**/*.kt") })
     root.set(layout.projectDirectory)
 }
+
+/**
+ * Сторож кнопок (`RULES.md` → «Вёрстка»): кнопки и чипы Material 3 зовёт только `ui/components` - экраны берут `ForgeButton`,
+ * `ForgeIconButton` и `ForgeChip`. Вне `ui/components` нарушение - импорт запрещённого имени или его вызов при `material3.*`
+ * и полным именем. Падение перечисляет нарушителей с именами.
+ */
+abstract class ForgeButtonsCheck : DefaultTask() {
+    /** Исходники Kotlin приложения. */
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    /** Корень модуля: пути в отчёте - от него. */
+    @get:Internal
+    abstract val root: DirectoryProperty
+
+    @TaskAction
+    fun check() {
+        val base = root.get().asFile
+        val banned = listOf(
+            "Button", "TextButton", "OutlinedButton", "ElevatedButton", "FilledTonalButton",
+            "IconButton", "FilledIconButton", "FilledTonalIconButton", "OutlinedIconButton",
+            "FilterChip", "AssistChip", "InputChip", "SuggestionChip", "ElevatedFilterChip", "ElevatedAssistChip", "ElevatedSuggestionChip",
+        ).joinToString("|")
+        val named = Regex("""^import androidx\.compose\.material3\.($banned)\b""", RegexOption.MULTILINE)
+        val wildcard = Regex("""^import androidx\.compose\.material3\.\*$""", RegexOption.MULTILINE)
+        val call = Regex("""(?<![\w.])($banned)\s*[({]""")
+        val qualified = Regex("""androidx\.compose\.material3\.($banned)\s*[({]""")
+        val offenders = sources.files.filter { it.extension == "kt" && "/ui/components/" !in it.invariantSeparatorsPath }
+            .mapNotNull { file ->
+                val text = file.readText()
+                val found = named.findAll(text).map { it.groupValues[1] } +
+                    qualified.findAll(text).map { it.groupValues[1] } +
+                    (if (wildcard.containsMatchIn(text)) call.findAll(text).map { it.groupValues[1] } else emptySequence())
+                found.toSortedSet().takeIf { it.isNotEmpty() }?.let { "${file.relativeTo(base).path}: ${it.joinToString()}" }
+            }
+            .sorted()
+        if (offenders.isNotEmpty()) {
+            throw GradleException("Material buttons and chips outside ui/components - use ForgeButton, ForgeIconButton, ForgeChip (RULES.md, «Вёрстка»): ${offenders.size}\n" + offenders.joinToString("\n"))
+        }
+    }
+}
+
+/** Сторож кнопок рядом с `:app:androidOnly` в job `app` CI. */
+val forgeButtonsOnly by tasks.registering(ForgeButtonsCheck::class) {
+    group = "verification"
+    description = "Fails if a file outside ui/components uses Material 3 buttons or chips."
+    sources.from(fileTree("src/main") { include("**/*.kt") })
+    root.set(layout.projectDirectory)
+}

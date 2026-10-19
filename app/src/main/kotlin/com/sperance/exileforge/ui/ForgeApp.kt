@@ -186,7 +186,7 @@ import org.koin.compose.viewmodel.koinViewModel
                                                 run != null -> ExpeditionPlay(run)
                                                 arena != null -> TrialScreen(arena)
                                                 rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
-                                                else -> Shell(game, route, navigator)
+                                                else -> Shell(game, navigator)
                                             }
                                         }
                                     }
@@ -224,10 +224,14 @@ private val BANNER_TOAST_TOP = 60.dp
  * Стек экранов: `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
  *
+ * `NavDisplay` один и стоит на одном месте под `Scaffold`, что есть всегда: экран без оболочки лишь гасит её части. Есть ли оболочка и
+ * какая - по верху стека навигатора в том же кадре, что и сам стек: память вкладок ([rememberTabMemory]) - одна на `NavDisplay`, и
+ * второй `NavDisplay` на смене оболочки (вход → экран героя) взял бы ключ экрана, пока его держит первый.
+ *
  * Корень вкладки хранит прокрутку до возвращения; смена вкладки сдвигает экран и меняющуюся шапку в сторону порядка. Сворачиваемые шапки -
  * одно состояние на вкладку, шапка игры не сворачивается.
  */
-@Composable internal fun Shell(game: GameUi, route: Route, navigator: Navigator) {
+@Composable internal fun Shell(game: GameUi, navigator: Navigator) {
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
     val tabs = rememberTabMemory(game.heroId)
@@ -270,27 +274,33 @@ private val BANNER_TOAST_TOP = 60.dp
             },
         )
     }
-    if (!route.bars) {
-        screens(Modifier.fillMaxSize())
-        return
-    }
+    val route = navigator.stack.lastOrNull() ?: Route.Auth
+    val bars = route.bars
     val collapse = remember(route.tab) { HeaderCollapse() }
-    Scaffold(containerColor = Ink, bottomBar = { GameBar(game, route) }) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
-            Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
-                TabShifted(route, look = { it.tab == TAB_HERO }) { ForgeBanner(game, it) }
-                if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+    Scaffold(
+        containerColor = Ink,
+        bottomBar = { if (bars) GameBar(game, route) },
+        contentWindowInsets = if (bars) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
+    ) { padding ->
+        Box(Modifier.fillMaxSize().padding(padding).then(if (bars) Modifier.imePadding() else Modifier)) {
+            Column(Modifier.fillMaxSize().then(if (bars) Modifier.voidBackdrop().nestedScroll(collapse.connection) else Modifier)) {
+                if (bars) {
+                    TabShifted(route, look = { it.tab == TAB_HERO }) { ForgeBanner(game, it) }
+                    if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
+                }
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
-                    TabShifted(route, look = { it.root?.tab }) { shown ->
-                        Column {
-                            HeroChrome(shown.tab)
-                            com.sperance.exileforge.ui.screens.expedition.ExpeditionChrome(shown)
+                    if (bars) {
+                        TabShifted(route, look = { it.root?.tab }) { shown ->
+                            Column {
+                                HeroChrome(shown.tab)
+                                com.sperance.exileforge.ui.screens.expedition.ExpeditionChrome(shown)
+                            }
                         }
                     }
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }
-            ToastBelow(BANNER_TOAST_TOP)
+            if (bars) ToastBelow(BANNER_TOAST_TOP)
         }
     }
 }

@@ -972,7 +972,7 @@
   "feature.merchant.title": "Странствующий торговец",
   "feature.merchant.note": "Купленное уходит в тайник.",
   "feature.merchant.gold": "золото {0}",
-  "feature.merchant.buy": "Купить · {0}",
+  "feature.merchant.buy": "Купить",
   "feature.merchant.sold": "Куплено",
   "feature.node.tool": "Нужен инструмент: {0}",
   "feature.guarded": "Сперва одолей стражей сокровищ",

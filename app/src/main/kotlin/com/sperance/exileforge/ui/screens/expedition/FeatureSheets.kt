@@ -62,6 +62,8 @@ import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.RowActions
+import com.sperance.exileforge.ui.components.RowButton
 import com.sperance.exileforge.ui.components.payLabel
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -203,7 +205,8 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
 
 /**
  * Странствующий торговец (шаблон объекта карты): в сводке - золото героя, сколько товаров осталось, куплено и скидка; под шапкой -
- * вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка не нажимается. Нажатие на товар открывает полную
+ * вещи плитами, в правом нижнем углу плиты - цена и под ней малая «Купить»; купленное помечено, золота не хватает - кнопка
+ * погашена и пишет недостачу. Нажатие на товар открывает полную
  * карточку со сравнением с надетым - ту же, что у лавки Города.
  *
  * Скидка против витрины Города - множитель цены торговца из правил меньше единицы; цена против кошелька - чип «цена / есть».
@@ -236,11 +239,8 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
                             Text(ui("feature.merchant.sold"), color = Vital, style = MaterialTheme.typography.labelMedium)
                         } else {
                             val bill = game.goldBill(offer.price)
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                bill?.let { GoldCost(it) }
-                                ForgeButton(state = ButtonState.of(bill?.affordable == true), onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.weight(1f)) {
-                                    Text(bill?.payLabel(ui("feature.merchant.buy", number(offer.price.toDouble()))) ?: ui("feature.merchant.buy", number(offer.price.toDouble())))
-                                }
+                            RowActions(Modifier.fillMaxWidth(), value = { bill?.let { GoldCost(it) } }) {
+                                RowButton(bill?.payLabel(ui("feature.merchant.buy")) ?: ui("feature.merchant.buy"), onClick = { onCommand(RunCommand.Choose(i)) }, state = ButtonState.of(bill?.affordable == true))
                             }
                         }
                     },

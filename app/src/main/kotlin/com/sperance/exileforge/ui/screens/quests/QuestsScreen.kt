@@ -179,7 +179,7 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
             QuestRow(offer, Modifier.pinned()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BoardIcon(Icons.Outlined.Refresh, ui("quest.reset"), Muted, !busy) { vm.reset(offer.id) }
-                    if (!full) ForgeButton(onClick = { vm.take(offer.id) }, size = ButtonSize.Compact, state = ButtonState.of(!busy)) { Text(ui("quest.take"), maxLines = 1) }
+                    if (!full) RowButton(ui("quest.take"), onClick = { vm.take(offer.id) }, state = ButtonState.of(!busy))
                 }
             }
         }
@@ -240,9 +240,9 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     }
 }
 
-/** «Сдать»: компактная главная кнопка с галочкой справа в строке задания. */
+/** «Сдать»: малая главная кнопка строки с галочкой справа в строке задания. */
 @Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
-    if (quest.done && !quest.claimed) ForgeButton(onClick = { vm.claim(quest.id) }, size = ButtonSize.Compact, icon = Icons.Outlined.Check, state = ButtonState.of(!busy)) { Text(ui("quest.claim"), maxLines = 1) }
+    if (quest.done && !quest.claimed) RowButton(ui("quest.claim"), onClick = { vm.claim(quest.id) }, icon = Icons.Outlined.Check, state = ButtonState.of(!busy))
 }
 
 /** Значок действия строки задания (компактная иконка-кнопка): отказаться, сбросить листок. */

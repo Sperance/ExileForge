@@ -201,8 +201,8 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                 )
             }
         }
-        ForgeIconButton(Icons.Outlined.Close, ui("guild.decline"), onClick = { vm.declineInvite(card.id) }, size = ButtonSize.Compact, state = ButtonState.of(!game.busy), accent = DECLINE_TINT)
-        ForgeButton(state = ButtonState.of(!game.busy), onClick = { vm.acceptInvite(card.id) }) { Text(ui("guild.accept")) }
+        ForgeIconButton(Icons.Outlined.Close, ui("guild.decline"), onClick = { vm.declineInvite(card.id) }, size = ButtonSize.Small, state = ButtonState.of(!game.busy), accent = DECLINE_TINT)
+        RowButton(ui("guild.accept"), onClick = { vm.acceptInvite(card.id) }, state = ButtonState.of(!game.busy))
     }
 }
 
@@ -253,7 +253,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 
 /**
  * Гильдия строкой (~62dp): черта цвета фракции слева, герб с уровнем гильдии плашкой в углу; имя [ТЕГ] и «с N ур.»; фракция и состав.
- * Справа - путь внутрь по режиму: «Вступить», «Заявка» с ценой под ней или причина отказа ([block]). Цена заявки ([price]) спишется,
+ * Справа - путь внутрь по режиму малой главной кнопкой строки: «Вступить», «Заявка» под своей ценой или причина отказа ([block]). Цена заявки ([price]) спишется,
  * когда заявку примут: подать её можно и без золота; [until] - конец паузы после выхода.
  */
 @Composable private fun GuildRow(game: GameUi, card: GuildCard, block: JoinBlock?, until: Long?, price: Long, onJoin: () -> Unit) {
@@ -299,11 +299,10 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
                     Text(block.text(card, until), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 84.dp))
                 }
 
-                card.mode == GuildMode.OPEN -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onJoin) { Text(ui("guild.join")) }
+                card.mode == GuildMode.OPEN -> RowButton(ui("guild.join"), onClick = onJoin, state = ButtonState.of(!game.busy))
 
-                else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    ForgeButton(state = ButtonState.of(!game.busy), onClick = onJoin, kind = ButtonKind.Secondary, accent = Gold) { Text(ui("guild.apply")) }
-                    if (price > 0) GoldPrice(price)
+                else -> RowActions(value = { if (price > 0) GoldPrice(price) }) {
+                    RowButton(ui("guild.apply"), onClick = onJoin, state = ButtonState.of(!game.busy))
                 }
             }
         }

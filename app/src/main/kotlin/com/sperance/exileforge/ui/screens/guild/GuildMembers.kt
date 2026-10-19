@@ -228,9 +228,9 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
             ForgePanel {
                 Text(applicant.name, color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.opensPlayer(applicant.heroId))
                 MutedText(ui("guild.applicant_line", applicant.level, classTitle(applicant.heroClass), clockText(applicant.at)))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ForgeButton(state = ButtonState.of(!game.busy), onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("guild.decline")) }
-                    ForgeButton(state = ButtonState.of(!game.busy), onClick = { vm.acceptApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
+                RowActions(Modifier.fillMaxWidth()) {
+                    RowButton(ui("guild.decline"), onClick = { vm.declineApplicant(applicant.heroId) }, kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy))
+                    RowButton(ui("guild.accept"), onClick = { vm.acceptApplicant(applicant.heroId) }, state = ButtonState.of(!game.busy))
                 }
             }
         }

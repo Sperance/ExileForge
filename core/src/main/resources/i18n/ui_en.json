@@ -972,7 +972,7 @@
   "feature.merchant.title": "Wandering Merchant",
   "feature.merchant.note": "Purchases go to the stash.",
   "feature.merchant.gold": "gold {0}",
-  "feature.merchant.buy": "Buy · {0}",
+  "feature.merchant.buy": "Buy",
   "feature.merchant.sold": "Sold",
   "feature.node.tool": "Tool needed: {0}",
   "feature.guarded": "Defeat the treasure guards first",

@@ -147,7 +147,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней с подписью «Сложность» - все пройденные
  * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - цифры
- * выбранной ступени с подписями ([RushTierFacts]), её имя и «Войти» с числом ключей. Тестировщику (`ProgressGate`) лента показывает все ступени.
+ * выбранной ступени с подписями ([RushTierFacts]), её имя и в правом углу ключи героя над малой «Войти». Тестировщику (`ProgressGate`) лента показывает все ступени.
  *
  * Следующая ступень - первая непройденная, её и выбирают по умолчанию.
  */
@@ -189,19 +189,30 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         RushTierFacts(rules.rush.tier(tier))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("trials.rush_tier", roman(tier + 1)), color = Parchment, fontFamily = RelicSerif, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            ForgeButton(onClick = { vm.enterRush(region.code, tier) }, state = ButtonState.of(idle && keys >= 1 && trials.run == null), contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
-                Text(ui("trials.rush_enter"))
-                Spacer(Modifier.width(6.dp))
-                BagIcon(TrialRules.KEY, Modifier.size(16.dp))
-                Text(compactCount(keys))
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                ui("trials.rush_tier", roman(tier + 1)),
+                color = Parchment,
+                fontFamily = RelicSerif,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).padding(bottom = 12.dp),
+            )
+            RowActions(value = { KeyCount(keys) }) {
+                RowButton(ui("trials.rush_enter"), onClick = { vm.enterRush(region.code, tier) }, state = ButtonState.of(idle && keys >= 1 && trials.run == null))
             }
         }
         when {
             trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
             keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
         }
+    }
+}
+
+/** Ключи раша у героя над «Войти»: значок ключа и короткое число. */
+@Composable private fun KeyCount(keys: Long) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        BagIcon(TrialRules.KEY, Modifier.size(16.dp))
+        Text(compactCount(keys), color = Muted, style = MaterialTheme.typography.labelMedium)
     }
 }
 

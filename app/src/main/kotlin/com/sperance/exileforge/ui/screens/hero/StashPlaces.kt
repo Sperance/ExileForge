@@ -89,9 +89,9 @@ import com.sperance.exileforge.ui.theme.*
         hero.overflow.forEach { item ->
             game.view(item)?.let { piece ->
                 ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ForgeButton(onClick = { vm.claimOverflow(item.id) }, state = ButtonState.of(!full && !game.busy), kind = ButtonKind.Text) { Text(ui("stash.claim")) }
-                        ForgeButton(onClick = { vm.sellOverflow(item.id) }, state = ButtonState.of(!game.busy && !item.locked), kind = ButtonKind.Text) { Text(ui("hero.sell_do")) }
+                    RowActions(Modifier.fillMaxWidth()) {
+                        RowButton(ui("hero.sell_do"), onClick = { vm.sellOverflow(item.id) }, kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && !item.locked))
+                        RowButton(ui("stash.claim"), onClick = { vm.claimOverflow(item.id) }, state = ButtonState.of(!full && !game.busy))
                     }
                 }) { inspect(Inspect.Copy(item)) }
             }

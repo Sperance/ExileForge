@@ -45,10 +45,10 @@ object GuildText {
     /** Наибольшая длина имени в подписи кнопки приглашения, в кодовых точках. */
     private const val INVITE_NAME = 14
 
-    /** `Name [TAG]`, the way a guild is named everywhere. */
     /** Имя вкладки хранилища [at] (с нуля): данное главой или «Вкладка N». */
     fun stashTab(tab: GuildStashTab?, at: Int): String = tab?.name?.takeIf { it.isNotBlank() } ?: ui("guild.stash_tab", at + 1)
 
+    /** `Name [TAG]`, the way a guild is named everywhere. */
     fun title(name: String, tag: String): String = if (tag.isBlank()) name else "$name [$tag]"
 
     /**

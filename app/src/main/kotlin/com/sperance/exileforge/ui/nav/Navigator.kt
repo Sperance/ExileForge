@@ -2,9 +2,9 @@ package com.sperance.exileforge.ui.nav
 
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.Landing
+import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.Screens
 import com.sperance.exileforge.core.app.Spot
 import com.sperance.exileforge.core.app.level

@@ -169,7 +169,9 @@ internal val Shelved.lastingGroup: LastingGroup get() = when (this) {
     }
 
     is Shelved.Mod -> LastingGroup.WORLD
+
     is Shelved.Fate -> LastingGroup.FATE
+
     else -> LastingGroup.ITEMS
 }
 
@@ -513,7 +515,8 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
  * группы) и группы [LastingGroup] строками с полными текстами - у силы уникалки источник - имя вещи. Читается вживую, бой не стоит.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
+@Composable
+internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
     val groups = remember(items) { items.groupBy { it.lastingGroup }.toSortedMap() }
     var only by remember { mutableStateOf<LastingGroup?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {

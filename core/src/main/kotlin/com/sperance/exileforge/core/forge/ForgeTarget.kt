@@ -51,9 +51,6 @@ sealed interface ForgeTarget {
     /** Ключ словаря: в сумке нет сфер, что лягут на цель. */
     val noOrbsKey: String
 
-    /** Ключ словаря: подпись гнезда цели на наковальне. */
-    val socketKey: String
-
     /** Ключ словаря: кнопка карточки цели, что открывает выбор другой. */
     val changeKey: String
 
@@ -91,7 +88,6 @@ sealed interface ForgeTarget {
         override val corrupted: Boolean get() = view.corrupted
         override val noOrbsKey: String get() = "forge.no_orbs_fit"
         override val changeKey: String get() = "forge.change_target"
-        override val socketKey: String get() = "forge.socket_item"
         override val itemLevel: Int get() = view.item.level(view.template)
 
         override val sections: List<ForgeSection>

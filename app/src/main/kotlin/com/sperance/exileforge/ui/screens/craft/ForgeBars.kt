@@ -13,20 +13,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.ItemVisualKind
-import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.rangedLine
-import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
-import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.forge.EngraveLine
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
@@ -36,34 +28,17 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.BagIcon
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
-/** Полосы кузницы над навигацией: выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
-/**
- * The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. Под именем - что гарантия даст именно этой вещи: «Даст T5 из 6: +(12–18)% к урону огнём» (`OrbApplier.essenceGuarantee`).
- */
+/** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
 @Composable internal fun EssenceBar(game: GameUi, code: String, view: ItemView, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val owned = game.bagAmount(code) ?: 0L
-    val index = game.index
-    val essence = index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
+    val index = game.index ?: return
+    if (index.essence(code) == null || owned <= 0 || !accepted(code)) return
     ForgeBar {
-        if (index == null || essence == null) {
-            Text(ui("forge.pick_essence"), color = Muted)
-            return@ForgeBar
-        }
-        BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(code, owned, 1))
-        val gives = remember(essence, view.item, index) {
-            OrbApplier(index).essenceGuarantee(essence, view.item, view.template)?.let { roll ->
-                index.modifier(roll.code)?.let { def -> def.tier(roll.tier)?.let { tier -> ui("forge.essence_gives", tierOf(roll.tier, def.tiers.size), rangedLine(index, def.code, tier.values)) } }
-            }
-        }
-        gives?.let { Text(it, color = Elder, style = MaterialTheme.typography.bodySmall) }
         val fee = game.goldBill(index.rules.craftFee.essence(view.item.level(view.template)))
-        FeeChip(fee)
+        BarFacts(stock(code, owned, 1), fee)
         ForgeButton(onClick = { onApply(view.item.id, code) }, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled && !view.item.corrupted && fee.covered), accent = Elder, hold = Hold()) {
             Text(fee.paying(ui("confirm.hold", ui("forge.apply_essence"))))
         }
@@ -71,11 +46,10 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. Над любой целью
- * кузницы ([ForgeTarget]): [chosen] - сфера лотка, что ляжет на цель; нет её - полоса просит выбрать.
+ * The chosen orb over the navigation: what the bag keeps, the fee and the button that is held. Над любой целью
+ * кузницы ([ForgeTarget]): [chosen] - сфера лотка, что ляжет на цель; нет её - полосы нет.
  *
- * Сфера качества, что сбросит качество другого вида, сперва спрашивает подтверждение; Очищение предупреждает строкой, что снимет качество,
- * катализатор и закалку ([ForgeTarget.scoured]). Сфера, что идёт только со знамением, ждёт его. Сбор
+ * Сфера качества, что сбросит качество другого вида ([lost]), сперва спрашивает подтверждение. Сфера, что идёт только со знамением, ждёт его. Сбор
  * золотом - по уровню предмета копии, одна функция правил. Сфера гравёра тратится в листе выбора строки ([EngraveSheet]).
  */
 @Composable internal fun OrbBar(
@@ -85,37 +59,17 @@ import com.sperance.exileforge.ui.theme.*
     chosen: OrbChoice?,
     enabled: Boolean,
     lost: Int,
-    chanceUniques: List<String>,
     onPickLine: () -> Unit,
     onApply: (String) -> Unit,
 ) {
     var confirming by remember(target.id, chosen, smithy.omen) { mutableStateOf(false) }
+    if (chosen == null) return
     ForgeBar {
-        if (chosen == null) {
-            Text(ui("forge.pick_orb"), color = Muted)
-            return@ForgeBar
-        }
         val code = chosen.code
-        val owned = game.bagAmount(code) ?: 0L
         val waiting = chosen.needsOmen && smithy.omen.isBlank()
-        BarTitle(
-            ForgeGlyphs.Orb,
-            Gold,
-            itemTitle(code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
-            if (waiting) ui("forge.needs_omen") to true else stock(code, owned, 1),
-            code = code,
-        )
         val resets = code == Orb.QUALITY_ORB.name && lost > 0
-        if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        val scoured = Orb.of(code)?.let(target::scoured).orEmpty()
-        if (scoured.isNotEmpty()) {
-            Text(ui("forge.scour_strips", scoured.joinToString(", ") { ui("forge.scoured.${it.name}") }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        }
-        if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
-            Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
-        }
         val fee = game.index?.let { index -> Orb.of(code)?.let { game.goldBill(index.rules.craftFee.orb(it, target.itemLevel)) } }
-        FeeChip(fee)
+        BarFacts(stock(code, game.bagAmount(code) ?: 0L, 1), fee)
         if (code == Orb.ENGRAVERS_ORB.name) {
             ForgeButton(onPickLine, Modifier.fillMaxWidth(), state = ButtonState.of(enabled && !target.corrupted && fee.covered)) { Text(fee.paying(ui("forge.engrave_pick"))) }
             return@ForgeBar
@@ -127,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
             hold = Hold(),
         ) { Text(fee.paying(ui("confirm.hold", ui("forge.apply_orb")))) }
     }
-    if (confirming && chosen != null) {
+    if (confirming) {
         AlertDialog(
             onDismissRequest = { confirming = false },
             containerColor = PanelRaised,
@@ -150,24 +104,15 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Выбранная печать Атласа над навигацией: что она, сколько в сумке и удерживаемая кнопка; печать, что ляжет только со
- * знамением, ждёт его - одна она сервером отвергнута.
+ * Выбранная печать Атласа над навигацией: сколько в сумке и удерживаемая кнопка; печать, что ляжет только со
+ * знамением, ждёт его - одна она сервером отвергнута. Нет выбранной - полосы нет.
  */
 @Composable internal fun SealBar(game: GameUi, smithy: Smithy, target: ForgeTarget, chosen: OrbChoice?, enabled: Boolean, onApply: (String) -> Unit) {
+    if (chosen == null) return
     ForgeBar {
-        if (chosen == null) {
-            Text(ui("forge.pick_seal"), color = Muted)
-            return@ForgeBar
-        }
         val code = chosen.code
         val waiting = chosen.needsOmen && smithy.omen.isBlank()
-        BarTitle(
-            ForgeGlyphs.Sigil,
-            Gold,
-            itemTitle(code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
-            if (waiting) ui("forge.needs_omen") to true else stock(code, game.bagAmount(code) ?: 0L, 1),
-            code = code,
-        )
+        BarFacts(stock(code, game.bagAmount(code) ?: 0L, 1), null)
         ForgeButton(onClick = { onApply(code) }, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled && !target.corrupted && !waiting), hold = Hold()) {
             Text(ui("confirm.hold", ui("forge.apply_seal")))
         }
@@ -181,40 +126,30 @@ import com.sperance.exileforge.ui.theme.*
     val instance = item.item
     val refusals = benchRefusals(index, hero, item)
     val recipe = game.bench.firstOrNull { it.code == chosen && it.code !in refusals }
+    if (chosen != UNCRAFT && recipe == null) return
     ForgeBar {
         when {
             chosen == UNCRAFT -> {
                 val scouring = index.rules.bench.uncraftOrb
                 val owned = game.bagAmount(scouring.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(scouring.name, owned, 1))
                 val fee = game.goldBill(index.rules.craftFee.uncraft(instance.level(item.template)))
-                FeeChip(fee)
+                BarFacts(stock(scouring.name, owned, 1), fee)
                 ForgeButton(onClick = { vm.uncraft(instance.id) }, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled && owned >= 1 && fee.covered), accent = Crafted, hold = Hold()) {
                     Text(fee.paying(ui("confirm.hold", ui("forge.remove_bench"))))
                 }
             }
 
-            recipe != null -> {
-                val owned = game.bagAmount(recipe.orb.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(recipe.orb.name, owned, recipe.amount))
+            else -> {
+                val line = recipe ?: return@ForgeBar
+                val owned = game.bagAmount(line.orb.name) ?: 0L
                 val fee = game.goldBill(index.rules.craftFee.bench(instance.level(item.template)))
-                FeeChip(fee)
-                ForgeButton(onClick = { vm.craft(instance.id, recipe.code) }, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled && owned >= recipe.amount && fee.covered), accent = Crafted, hold = Hold()) {
+                BarFacts(stock(line.orb.name, owned, line.amount), fee)
+                ForgeButton(onClick = { vm.craft(instance.id, line.code) }, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled && owned >= line.amount && fee.covered), accent = Crafted, hold = Hold()) {
                     Text(fee.paying(ui("confirm.hold", ui("forge.apply_bench"))))
                 }
             }
-
-            else -> Text(ui("forge.pick_line"), color = Muted)
         }
     }
-}
-
-/**
- * Сбор золотом за действие кузницы: чип «цена / есть» ([GoldCost]) - цена считается функцией правил
- * `CraftFeeRules` по уровню предмета копии; сбора нет (печати, нулевой вес) - чипа нет.
- */
-@Composable private fun FeeChip(fee: GoldBill?) {
-    fee?.takeIf { it.price > 0 }?.let { GoldCost(it) }
 }
 
 /** Сбор покрыт: золота хватает или сбора нет. */
@@ -230,6 +165,10 @@ private fun GoldBill?.paying(ready: String): String = this?.payLabel(ready) ?: r
  */
 internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> = Cost.item(code, need).shortfall({ have }, 0).text()?.let { it to true } ?: (ui("forge.orb_left", have, have - need) to false)
 
+/**
+ * Полоса кузницы над навигацией: только остаток в сумке, сбор золотом и удерживаемая кнопка. Что ляжет на вещь и что выйдет,
+ * называет рецепт наковальни ([Recipe]); пока ничего не выбрано, полосы нет.
+ */
 @Composable internal fun ForgeBar(content: @Composable ColumnScope.() -> Unit) {
     HorizontalDivider(color = Bronze)
     Column(
@@ -239,18 +178,14 @@ internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> 
     )
 }
 
-/** Заголовок полосы: рисунок стопки [code] (сфера - своим стеклом), иначе значок [icon]; имя и что останется в сумке. */
-@Composable internal fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>, code: String? = null) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (code != null) {
-            BagIcon(code, Modifier.size(34.dp), kind = ItemVisualKind.CURRENCY)
-        } else {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text(stock.first, color = if (stock.second) LifeRed else Muted, style = MaterialTheme.typography.labelMedium)
-        }
+/**
+ * Строка фактов полосы: слева что останется в сумке ([stock], нехватка - красным), справа сбор золотом ([GoldCost]) - цена считается
+ * функцией правил `CraftFeeRules` по уровню предмета копии; сбора нет (печати, нулевой вес) - чипа нет.
+ */
+@Composable private fun BarFacts(stock: Pair<String, Boolean>, fee: GoldBill?) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stock.first, color = if (stock.second) LifeRed else Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        fee?.takeIf { it.price > 0 }?.let { GoldCost(it) }
     }
 }
 

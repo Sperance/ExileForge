@@ -92,6 +92,14 @@ object ForgeGlyphs {
     /** Currency orb with an inner sigil. */
     val Orb = glyph("Orb", { ring(12f, 12f, 8f) }, { poly(12f to 6f, 17f to 12f, 12f to 18f, 7f to 12f) }, { ring(12f, 12f, 2.2f) })
 
+    /** Кубок на ножке: трофеи боссов. */
+    val Trophy = glyph("Trophy", { poly(7f to 3f, 17f to 3f, 17f to 8f, 15f to 12f, 9f to 12f, 7f to 8f) }, {
+        line(7f, 5f, 4f, 5f)
+        line(4f, 5f, 5f, 9f)
+        line(17f, 5f, 20f, 5f)
+        line(20f, 5f, 19f, 9f)
+    }, { line(12f, 12f, 12f, 17f) }, { poly(8f to 21f, 9f to 17f, 15f to 17f, 16f to 21f) })
+
     /** Cut skill gem. */
     val Gem = glyph("Gem", { poly(12f to 2f, 20f to 9f, 16f to 21f, 8f to 21f, 4f to 9f) }, {
         line(4f, 9f, 20f, 9f)

@@ -2,17 +2,31 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.FateKit
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.display.BodyPlace
+import com.sperance.exileforge.core.display.FateCounter
+import com.sperance.exileforge.core.display.FateSource
+import com.sperance.exileforge.core.display.FateTally
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ClassesFile
+import com.sperance.exileforge.rules.content.FateEffects
+import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.ui.components.accountRole
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /**
  * Who the hero is, as the header draws it: the purse and the experience move here and nowhere else.
@@ -65,6 +79,32 @@ import com.sperance.exileforge.ui.components.accountRole
     return remember(hero.info, game.world.portraits, tree, index, role) {
         val info = hero.info
         HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes, accountRole(role))
+    }
+}
+
+/** Предначертание аккаунта героя карточкой; не выбрано или нет в контенте - null. */
+internal fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
+
+/** Дар героя на его силе и с действующими строками надетого - тем же резолвером правил, что бой; нет дара - null. */
+@Composable internal fun rememberFateEffects(game: GameUi): FateEffects? {
+    val hero = game.hero ?: return null
+    val index = game.index ?: return null
+    return remember(hero, index) { FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.takeIf { it.fate != null } }
+}
+
+/**
+ * Счёт дара героя ([FateCounter]) - чип шапки и подпись ленты; дар без счёта - null. Вне захода - рычаги героя [effects] и
+ * счета сервера; в идущем заходе [runs] с Разгоном - рычаги захода и его выигранные бои, и счёт пересчитывается, только когда
+ * меняется их число, а не на каждый снимок захода.
+ */
+@Composable internal fun rememberFateTally(game: GameUi, effects: FateEffects?, runs: StateFlow<ExpeditionRun?>): FateTally? {
+    val info = game.heroInfo ?: return null
+    val run by runs.collectAsStateWithLifecycle()
+    val streak = run?.takeIf { it.run.fate.has(FateLever.WIN_STREAK) }
+    val won by remember(streak) { streak?.let { r -> r.hud.map { r.fateRun.won }.distinctUntilChanged() } ?: flowOf(0) }.collectAsStateWithLifecycle(streak?.fateRun?.won ?: 0)
+    return remember(info, effects, streak, won, game.lang) {
+        val source = streak?.let { FateSource(info, it.run.fate, won) } ?: effects?.let { FateSource.idle(info, it) }
+        source?.let(FateCounter::of)
     }
 }
 

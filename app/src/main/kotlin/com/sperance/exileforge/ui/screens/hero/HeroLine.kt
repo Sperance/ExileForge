@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -20,16 +21,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.Building
+import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.unlocked
+import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
+import com.sperance.exileforge.ui.components.FateChip
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.RoleMark
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.flow.StateFlow
 
 /** Строка героя над текущим состоянием игры; до прочтения героя её нет. */
 @Composable fun HeroLine(game: GameUi, modifier: Modifier = Modifier) {
@@ -40,8 +47,8 @@ import com.sperance.exileforge.ui.theme.*
  * Герой одной строкой: портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
  * опыта, без нажатия. Это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
  * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты и меню. Золото
- * - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не
- * выталкивает ни значки, ни число золота.
+ * - справа под полосой опыта, в строке её подписи, слева от него [counter] (чип счёта дара `FateChip`): длинное имя
+ * сокращается многоточием и не выталкивает ни значки, ни число золота, длинная подпись опыта - тоже.
  *
  * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается.
  */
@@ -49,6 +56,7 @@ import com.sperance.exileforge.ui.theme.*
     hero: HeroHeaderState,
     modifier: Modifier = Modifier,
     onPortrait: (() -> Unit)? = null,
+    counter: @Composable RowScope.() -> Unit = {},
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val xp = experienceOf(hero.classes, hero.level, hero.experience)
@@ -81,9 +89,21 @@ import com.sperance.exileforge.ui.theme.*
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            counter()
             GoldPrice(hero.money)
         }
     }
+}
+
+/**
+ * Чип счёта дара героя в шапке ([FateChip]): только у дара со счётом; [runs] - идущий заход (счёт Разгона). Кнопка подсказки
+ * ведёт в здание, где счёт тратят ([onVisit]), если оно герою уже открыто.
+ */
+@Composable internal fun HeroFateChip(game: GameUi, runs: StateFlow<ExpeditionRun?>, onVisit: (Building) -> Unit) {
+    val card = remember(game.index, game.heroInfo?.fate) { heroFate(game) } ?: return
+    val tally = rememberFateTally(game, rememberFateEffects(game), runs) ?: return
+    val visit = tally.counter.visit?.takeIf { game.unlocked(Feature.ofBuilding(it)) }
+    FateChip(tally, card, visit?.let { { onVisit(it) } })
 }
 
 /** Опыт внутри уровня: доля полосы и подпись. */

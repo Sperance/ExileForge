@@ -11,21 +11,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.ForgeSection
-import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_SKILLS
-import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.fate.fateNow
 import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.rules.content.FateEffects
-import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
@@ -94,9 +89,9 @@ fun HeroScreen() {
                     else -> {
                         heroFate(game)?.let { fate ->
                             item(key = "fate") {
-                                val effects = remember(game.hero, game.index) { heroFateEffects(game) }
+                                val effects = rememberFateEffects(game)
                                 val now = remember(effects, game.lang) { effects?.let { e -> game.index?.let { fateNow(it, e) } }.orEmpty() }
-                                val caption = fateProgress(game, effects) ?: ui("fate.ribbon.caption")
+                                val caption = rememberFateTally(game, effects, shell.run)?.caption ?: ui("fate.ribbon.caption")
                                 FateRibbon(
                                     fate,
                                     effects?.power?.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
@@ -161,24 +156,4 @@ fun HeroScreen() {
         }
     }
     pickPlace?.let { place -> SlotPicker(game, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
-}
-
-/** Предначертание аккаунта героя карточкой; не выбрано или нет в контенте - null. */
-private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
-
-/** Дар героя на его силе и с действующими строками надетого - тем же резолвером правил, что бой; нет дара - null. */
-private fun heroFateEffects(game: GameUi): FateEffects? {
-    val hero = game.hero ?: return null
-    val index = game.index ?: return null
-    return FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.takeIf { it.fate != null }
-}
-
-/**
- * Боёв до сферы Щедрости судьбы (`FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`) - с судьбоносными строками надетого
- * (строка «раньше» сокращает счёт); у дара без рычага - null.
- */
-private fun fateProgress(game: GameUi, effects: FateEffects?): String? {
-    val info = game.hero?.info ?: return null
-    val every = effects?.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
-    return ui("fate.bounty_next", every - (info.fateFights % every).toInt())
 }

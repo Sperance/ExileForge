@@ -185,6 +185,7 @@ class UiStringsTest {
                 add("enum.orb.${it.name}.rule")
             }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
+            com.sperance.exileforge.core.display.FateCounter.entries.mapNotNull { it.visit }.forEach { add("fate.visit.${it.name}") }
             com.sperance.exileforge.core.display.LoreTerm.entries.forEach {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")

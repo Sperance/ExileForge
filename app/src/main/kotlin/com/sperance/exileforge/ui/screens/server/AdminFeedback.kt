@@ -522,7 +522,7 @@ private const val DUPLICATE_DIGITS = 6
     }
     ForgeButton(state = ButtonState.of(!account.busy && subject.isNotBlank()), modifier = Modifier.fillMaxWidth(), onClick = {
         val attachment = MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())
-        vm.sendMail(addressee?.let { MailRequest(it.name, subject, body, attachment, userId = it.userId) } ?: MailRequest(login, subject, body, attachment))
+        vm.sendMail(addressee?.let { MailRequest(it.login, subject, body, attachment, userId = it.userId) } ?: MailRequest(login, subject, body, attachment))
         subject = ""
         body = ""
         gold = ""

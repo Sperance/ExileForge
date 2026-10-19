@@ -96,7 +96,7 @@ class PlayerCardModel(
     fun writeAdmin(card: PlayerCard) {
         val owner = card.rights.moderation?.takeIf { it.userId.isNotBlank() } ?: return
         leave {
-            feedback.update { it.copy(mailTo = MailAddressee(owner.userId, owner.login.ifBlank { card.name })) }
+            feedback.update { it.copy(mailTo = MailAddressee.of(owner.userId, owner.login, card.name)) }
             screens.open(Landing.MAIL)
         }
     }

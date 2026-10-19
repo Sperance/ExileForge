@@ -286,5 +286,14 @@ import kotlinx.serialization.Serializable
     val userId: String = "",
 )
 
-/** Адресат письма администратора из карточки игрока: аккаунт [userId], [name] - как его видит модерация (логин или имя гостя). */
-data class MailAddressee(val userId: String, val name: String)
+/**
+ * Адресат письма администратора из карточки игрока: аккаунт [userId], [name] - как его видит модерация (логин или имя гостя).
+ * [login] - логин для письма ([MailRequest.login]): у аккаунта без логина - заведомо несуществующий ([of]), чтобы сервер, что адресует
+ * только по логину, отказал, а не нашёл чужой аккаунт с логином - именем героя или разослал письмо всем.
+ */
+data class MailAddressee(val userId: String, val name: String, val login: String) {
+    companion object {
+        /** Логина нет - «#» и id аккаунта: в логине такого знака не бывает. */
+        fun of(userId: String, login: String, heroName: String) = MailAddressee(userId, login.ifBlank { heroName }, login.ifBlank { "#$userId" })
+    }
+}

@@ -246,10 +246,11 @@ class Battle(
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 
         /**
-         * Chill slows every action; the strongest chill counts. Единая скорость действий: холод и замедление аур
-         * врагов ([Combatant.pace]) одним множителем растягивают и замах, и перезарядку всех умений.
+         * Chill slows every action; the strongest chill counts. Единая скорость действий: холод, замедление аур
+         * врагов ([Combatant.pace]) и темп боя правил (`combat.tempo`) одним множителем растягивают и замах, и применение, и
+         * перезарядку всех умений - героя и монстров.
          */
-        fun slow() = (1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100) / body.pace
+        fun slow() = (1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100) / (body.pace * rules.tempo)
 
         /** Shock makes every hit heavier; a curse can make it heavier still. */
         fun weakness() = 1 + held(Ailment.SHOCKED) / 100
@@ -668,7 +669,7 @@ class Battle(
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
         outcome != null || !fighter.alive -> 0f
-        else -> (1 - (fighter.nextAttack - time) / fighter.attackInterval).toFloat().coerceIn(0f, 1f)
+        else -> (1 - (fighter.nextAttack - time) / (fighter.attackInterval * fighter.slow())).toFloat().coerceIn(0f, 1f)
     }
 
     /** The log as a test or a report reads it, once the fight is over. */

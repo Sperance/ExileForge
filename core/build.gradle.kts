@@ -24,7 +24,7 @@ kotlin { jvmToolchain(17) }
  *
  * Тестам виден набор sim: тесты зовут эталонных героев и прохождение. Задача `mobBal` - баланс монстров (отчёт, не тест):
  * эталонные герои против монстров и боссов кампании и карт настоящим боем клиента; `./gradlew :core:mobBal [-Pcontent=<папка>]
- * -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|spread|trials|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
+ * -Pmode=<campaign|guard|tempo|probe|maps|sweep|runtime|bossmight|spread|trials|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
  */
 val sim: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
@@ -65,7 +65,7 @@ tasks.register<JavaExec>("mobBal") {
     systemProperty("content", content.get())
     systemProperty("heroCache", providers.gradleProperty("heroCache").getOrElse(layout.buildDirectory.dir("mobbal-heroes").get().asFile.path))
     jvmArgumentProviders += objects.newInstance<CodePrint>().apply { files.from(sim.runtimeClasspath) }
-    listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales", "retune", "source", "gearSeeds", "k").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
+    listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales", "retune", "source", "gearSeeds", "k", "offsets").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
     args(providers.gradleProperty("out").getOrElse(layout.buildDirectory.file("reports/mobbal.tsv").get().asFile.path))
     outputs.upToDateWhen { false }
 }

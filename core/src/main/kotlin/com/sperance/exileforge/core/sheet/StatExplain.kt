@@ -35,6 +35,7 @@ import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
 import com.sperance.exileforge.rules.sheet.StatOperation
+import com.sperance.exileforge.rules.sheet.StatPart
 import com.sperance.exileforge.rules.sheet.StatSource
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.abs
@@ -81,6 +82,9 @@ data class StatExplanation(
     val formula: String,
     val grants: List<ShareRow>,
 )
+
+/** Разбор условной строки сводки: её вклад [total], карточки источников и доли видов для полосы. */
+data class ConditionalExplanation(val total: String, val cards: List<ShareCard>, val weights: Map<ShareKind, Double>)
 
 /**
  * Takes a [StatBreakdown] apart into what the window prints: sources named from the hero — a class,
@@ -144,18 +148,37 @@ class StatExplainer(private val game: GameUi) {
         )
     }
 
-    private fun kindOf(share: Share): ShareKind = when {
-        share.perStat != null -> ShareKind.ATTRIBUTE
-
-        else -> when (share.source?.kind) {
-            SourceKind.CLASS -> ShareKind.CLASS
-            SourceKind.NODE -> ShareKind.NODE
-            SourceKind.ITEM -> ShareKind.ITEM
-            SourceKind.LAW -> ShareKind.LAW
-            SourceKind.SKILL -> ShareKind.SKILL
-            SourceKind.FATE -> ShareKind.FATE
-            else -> ShareKind.OTHER
+    /**
+     * Разбор условной строки сводки [row] ([ConditionalStat]): карточка на вид источника, одноимённые источники - одной строкой;
+     * доли полосы - вклад вида по модулю. Условная строка в итог своей характеристики не входит, поэтому формулы и «даёт» нет.
+     */
+    fun conditional(row: ConditionalStat): ConditionalExplanation {
+        val percent = index?.stats?.isPercent(row.stat) == true
+        val sheet = hero?.stats.orEmpty()
+        fun sum(ops: List<StatOperation>): Double = StatPart.of(row.part, ops.map { it.resolve(it.perStat?.let { s -> sheet[s] } ?: 0.0) })?.value ?: 0.0
+        val byKind = row.sources.groupBy { if (it.perStat != null) ShareKind.ATTRIBUTE else kindOf(it.source) }.toSortedMap()
+        val cards = byKind.map { (kind, ops) ->
+            val rows = ops.groupBy { sourceTitle(it.source) }.map { (title, same) ->
+                val value = sum(same)
+                ShareRow(title, fmt(row.stat, value, row.op, percent), link = same.mapTo(HashSet()) { it.source }.singleOrNull()?.let(::itemLink), better = judge(row.stat, value, row.op))
+            }
+            ShareCard(kind, rows, fmt(row.stat, sum(ops), row.op, percent), cardTitle(kind, ops.first().source))
         }
+        val weights = byKind.mapValues { (_, ops) -> abs(sum(ops)) }.filterValues { it > 0 }
+        return ConditionalExplanation(fmt(row.stat, row.value, row.op, percent), cards, weights)
+    }
+
+    private fun kindOf(share: Share): ShareKind = if (share.perStat != null) ShareKind.ATTRIBUTE else kindOf(share.source)
+
+    /** Вид карточки по источнику строки. */
+    private fun kindOf(source: StatSource?): ShareKind = when (source?.kind) {
+        SourceKind.CLASS -> ShareKind.CLASS
+        SourceKind.NODE -> ShareKind.NODE
+        SourceKind.ITEM -> ShareKind.ITEM
+        SourceKind.LAW -> ShareKind.LAW
+        SourceKind.SKILL -> ShareKind.SKILL
+        SourceKind.FATE -> ShareKind.FATE
+        else -> ShareKind.OTHER
     }
 
     /** Карточка сдвига: умение, шаг дара, чтение боя; сила уникалки, карта и Атлас - «После расчёта». */

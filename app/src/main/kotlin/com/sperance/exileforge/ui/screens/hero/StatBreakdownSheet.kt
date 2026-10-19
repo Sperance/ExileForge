@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
@@ -35,7 +36,11 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.core.sheet.ConditionalStat
+import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.core.sheet.RowLink
 import com.sperance.exileforge.core.sheet.ShareCard
 import com.sperance.exileforge.core.sheet.ShareKind
@@ -45,9 +50,12 @@ import com.sperance.exileforge.core.sheet.StatExplainer
 import com.sperance.exileforge.core.sheet.StatExplanation
 import com.sperance.exileforge.core.sheet.reserve
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatReading
+import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.rules.text.numbered
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -133,6 +141,64 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             if (view.cards.isNotEmpty()) item { Formula(view.formula) }
             if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game, follow) }
         }
+    }
+}
+
+/**
+ * Разбор строки «С условием» ([ConditionalStat]): имя с условием, вклад, цитата характеристики, карточка «Условие» - когда оно
+ * держится (числа правил подстановкой) и что строка действует только в бою, - затем полоса и карточки источников. Формулы нет:
+ * в итог своей характеристики строка не входит. Касание вещи-источника - её карточка.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConditionalBreakdownSheet(game: GameUi, row: ConditionalStat, onDismiss: () -> Unit) {
+    val view = remember(row, game.hero, game.lang) { StatExplainer(game).conditional(row) }
+    val inspect = rememberInspect()
+    val follow: (RowLink) -> Unit = { link -> if (link is RowLink.Item) game.hero?.item(link.id)?.let { inspect(Inspect.Copy(it)) } }
+    val section = game.index?.stats?.let { ConditionalStats.section(row, it) }
+    val accent = section?.accent() ?: ConditionalAccent
+    val quote = uiOr(game.lang, "stat.desc.${row.stat}", "")
+    ForgeSheet(onDismissRequest = onDismiss) {
+        LazyColumn(
+            Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(),
+            contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    val shape = RoundedCornerShape(10.dp)
+                    Box(Modifier.size(40.dp).clip(shape).background(accent.copy(alpha = .13f)).border(1.dp, accent.copy(alpha = .4f), shape), contentAlignment = Alignment.Center) {
+                        StatIcon(row.stat, accent, Modifier.size(22.dp))
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text(ui("stat.conditional.group").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+                        Text(conditionalTitle(row, game), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
+                    Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+            if (quote.isNotBlank()) item { Text("«$quote»", color = Muted, style = MaterialTheme.typography.bodyLarge, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic) }
+            item { ConditionCard(row.condition, game) }
+            if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
+            items(view.cards.size, key = { "${view.cards[it].kind}|${view.cards[it].title}" }) { i -> SourceCard(view.cards[i], game, follow) }
+        }
+    }
+}
+
+/** Карточка «Условие: …»: когда условие держится - числа правил подстановкой - и что строка действует только в бою. */
+@Composable private fun ConditionCard(condition: Condition, game: GameUi) {
+    val shape = RoundedCornerShape(12.dp)
+    val about = remember(condition, game.index, game.lang) { game.index.numbered(ui(game.lang, "stat.condition.${condition.name}")) }
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ConditionalAccent.copy(alpha = .55f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(16.dp))
+            Text(ui("stat.condition.title", loc(LocaleKey.condition(condition))), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        }
+        about?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        Text(ui(if (condition.target) "stat.condition.fight_target" else "stat.condition.fight"), color = Muted, style = MaterialTheme.typography.bodySmall)
     }
 }
 

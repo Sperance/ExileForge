@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
@@ -16,6 +17,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,14 +35,19 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.sheet.ConditionalStat
+import com.sperance.exileforge.core.sheet.ConditionalStats
+import com.sperance.exileforge.core.sheet.StatExplainer
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.MightPlaceMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
@@ -62,7 +71,8 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable fun HeroSummary(game: GameUi) {
     val hero = game.hero ?: return
-    StatSheet(game, hero.figures)
+    val conditional = remember(hero, game.index) { game.index?.let { ConditionalStats.of(hero, it) }.orEmpty() }
+    StatSheet(game, hero.figures, conditional = conditional)
 }
 
 /**
@@ -89,14 +99,71 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Цифра открывает своё окно. Разделы и порядок - реестр контента.
  */
-@Composable fun StatSheet(game: GameUi, figures: StatFigures, before: Map<String, Double>? = null, shifts: Map<String, List<Shift>> = emptyMap()) {
+@Composable fun StatSheet(
+    game: GameUi,
+    figures: StatFigures,
+    before: Map<String, Double>? = null,
+    shifts: Map<String, List<Shift>> = emptyMap(),
+    conditional: List<ConditionalStat> = emptyList(),
+) {
     var open by remember { mutableStateOf<String?>(null) }
+    var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
     val show: (String) -> Unit = { open = it }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, show) } }
+        if (conditional.isNotEmpty()) ConditionalCard(conditional, game) { openConditional = it }
     }
     open?.let { StatBreakdownSheet(game, it, figures.stats, shifts) { open = null } }
+    openConditional?.let { ConditionalBreakdownSheet(game, it) { openConditional = null } }
+}
+
+/** Цвет раздела «С условием» и условия в имени строки - латунь. */
+internal val ConditionalAccent: Color get() = Brass
+
+/** Имя условной строки одной фразой: характеристика и условие, условие - цветом раздела ([ConditionalAccent]). */
+internal fun conditionalTitle(row: ConditionalStat, game: GameUi): AnnotatedString = buildAnnotatedString {
+    append(statTitle(row.stat, game.lang))
+    append(' ')
+    withStyle(SpanStyle(color = ConditionalAccent)) { append(loc(LocaleKey.condition(row.condition))) }
+}
+
+/**
+ * Последний раздел сводки - «С условием»: строки листа, что бой кладёт, пока держится условие ([ConditionalStats]); в итог своей
+ * характеристики они не входят и печатаются один раз - здесь. Строка - характеристика с условием одной фразой и вклад справа;
+ * касание - разбор ([ConditionalBreakdownSheet]). Пустой раздел не рисуется.
+ */
+@Composable private fun ConditionalCard(rows: List<ConditionalStat>, game: GameUi, open: (ConditionalStat) -> Unit) {
+    val explainer = remember(game) { StatExplainer(game) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(18.dp))
+            Text(ui("stat.conditional.group"), color = ConditionalAccent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        }
+        rows.forEach { row ->
+            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+            Row(
+                Modifier.fillMaxWidth().clickable { open(row) }.padding(horizontal = 12.dp, vertical = 6.dp).heightIn(min = 36.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                StatIcon(row.stat, ConditionalAccent, Modifier.size(18.dp))
+                Text(conditionalTitle(row, game), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(
+                    explainer.fmt(row.stat, row.value, row.op, game.index?.stats?.isPercent(row.stat) == true),
+                    color = Parchment,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
 }
 
 internal fun StatSection.accent(): Color = when (this) {

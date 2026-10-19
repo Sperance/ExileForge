@@ -54,10 +54,10 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     }
 }
 
-/** The window itself, anchored to whatever holds it. Под строками - [footer] (действие подсказки), если есть. */
+/** The window itself, anchored to whatever holds it. Пустой заголовок не печатается; под строками - [footer] (действие подсказки), если есть. */
 @Composable fun TipCallout(tip: Tip, footer: (@Composable ColumnScope.() -> Unit)? = null, onClose: () -> Unit) {
     TipCallout(tip.tint, onClose) {
-        Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        if (tip.title.isNotBlank()) Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)
         tip.facts.forEach { (label, value) ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

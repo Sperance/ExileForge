@@ -6,8 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,17 +19,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
@@ -39,14 +33,11 @@ import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.itemDescription
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapDescription
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.sheet.view
@@ -57,12 +48,9 @@ import com.sperance.exileforge.rules.content.Monster
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.ItemInstance
-import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
@@ -86,22 +74,21 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> game.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
 
 /**
- * A zone's card on the world map (in place of the launch window): it rises over the map's
- * foot when a token is tapped. It names the zone, its level, biome and region and whether it is
- * passed; for a zone the hero may enter, its guardian — waiting, or slain until its time — the atlas
- * points the zone has given, the stash's maps of it with what the picked one pays, line by line, and
- * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
- * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
+ * Карточка зоны на карте мира (вместо окна входа): поднимается над низом карты по касанию жетона. Каждая часть - одной строкой: имя
+ * (касание - описание зоны) и состояние; уровень, биом, финал, регион и прохождения; страж - ждёт или убит до срока - и три точки
+ * Атласа; лента снаряжения (карты, зелья, скарабеи); плита выбранной карты; «Войти в портал». Зона «???» говорит только, чей страж её
+ * открывает. Правила и контент - индекса; сроки зоны - возвращение стража - кампании героя.
  *
  * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик начинает заход сразу боем со стражем. Новое семя раньше
- * правил не даётся: кнопка погашена и считает секунды.
+ * правил не даётся: кнопка погашена и считает секунды; погашенная без карты объясняет причину по касанию.
  */
 @Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
+    val maps = zoneMaps(game, zone, launch)
     var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
-    val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(game).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
+    val launchGuarded: (() -> Unit) -> Unit = { go -> if (maps.picked?.item?.locked == true) askLocked = go else go() }
     askLocked?.let { go ->
         ConfirmSheet(
             title = ui("expedition.launch_locked_q"),
@@ -125,31 +112,33 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Box(Modifier.align(Alignment.Center).size(38.dp, 4.dp).background(Color(0xFF3A414B), RoundedCornerShape(2.dp)))
                 ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd), size = ButtonSize.Compact)
             }
-            Header(token, world.campaign.regions.firstOrNull { region -> region.zones.any { it.code == zone.code } }?.code)
+            val region = world.campaign.regions.firstOrNull { region -> region.zones.any { it.code == zone.code } }?.code
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Header(token)
+                ZoneMeta(game, index, token, region, maps.picked)
+            }
             if (token.state == TokenState.LOCKED) {
                 val keys = world.keysTo(zone.code).joinToString(ui("expedition.or")) { "«${mapTitle(it.code)}»" }
                 Text(if (keys.isEmpty()) ui("expedition.opens_after_any") else ui("expedition.opens_after", keys), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 return@Column
             }
-            MutedText(mapDescription(zone.code.value), style = MaterialTheme.typography.bodySmall)
-            val passed = game.hero?.campaign?.completions?.get(zone.code.value) ?: 0
-            Text(if (passed > 0) ui("expedition.completions", passed) else ui("expedition.completions_none"), color = Parchment, style = MaterialTheme.typography.labelMedium)
-            index.monster(zone.boss)?.let { Guardian(game, zone, it) }
-            AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code.value)
-            Maps(game, vm, index, zone, launch)
-            Brews(game, vm, launch)
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                index.monster(zone.boss)?.let { Guardian(game, zone, it, Modifier.weight(1f).fillMaxHeight()) } ?: Spacer(Modifier.weight(1f))
+                AtlasPips(game.atlasState?.earned.orEmpty(), zone.code.value, Modifier.fillMaxHeight())
+            }
+            KitRibbon(game, vm, zone, maps, launch)
+            maps.picked?.let { MapPlate(game, index, zone, it, launch) }
             val wait = seedWait(seedReadyAt(game, zone.code, launch, forced))
             val mapless = launch.picked == null && !continues(game, zone.code, launch, forced) && zone.needsMap(game.hero?.campaign?.cleared.orEmpty())
-            ForgeButton(
+            LaunchButton(
+                label = when {
+                    mapless -> ui("expedition.launch_need_map")
+                    wait > 0 -> ui("expedition.launch_wait", wait)
+                    else -> ui("expedition.launch_go")
+                },
                 state = ButtonState.of(game.hero != null && !game.busy && wait == 0L && !mapless),
-                onClick = { launchGuarded { vm.startRun(zone.code.value) } },
-                modifier = Modifier.fillMaxWidth().height(44.dp),
-            ) {
-                Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(10.dp))
-                Text(if (wait > 0) ui("expedition.launch_wait", wait) else ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
-            }
-            if (mapless) MutedText(ui("expedition.launch_needs_map"), style = MaterialTheme.typography.bodySmall)
+                why = ui("expedition.launch_needs_map").takeIf { mapless },
+            ) { launchGuarded { vm.startRun(zone.code.value) } }
             if (game.isTester) TesterMechanics(vm, forced)
             if (game.isTester) {
                 ForgeButton(
@@ -160,6 +149,22 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 ) { Text(ui("expedition.launch_boss")) }
             }
         }
+    }
+}
+
+/** «Войти в портал» во всю ширину: подпись [label] несёт и ожидание, и причину запрета; погашенная с причиной [why] - касание её объясняет. */
+@Composable private fun LaunchButton(label: String, state: ButtonState, why: String?, onClick: () -> Unit) {
+    var explain by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        ForgeButton(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            size = ButtonSize.Wide,
+            state = state,
+            icon = ForgeGlyphs.Portal,
+            onDisabledClick = why?.let { { explain = true } },
+        ) { Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        if (explain && why != null) TipCallout(Tip("", why, Muted)) { explain = false }
     }
 }
 
@@ -212,20 +217,17 @@ private const val SEED_TICK_MS = 1000L
     }
 }
 
-/** The zone's level, biome and region over its name, and its state as a chip. */
-@Composable internal fun Header(token: WorldToken, region: String?) {
+/** Имя зоны (касание - её описание) и её состояние плашкой; у неизведанной - «Неизведанная зона» погашенно. */
+@Composable internal fun Header(token: WorldToken) {
     val zone = token.zone
     val locked = token.state == TokenState.LOCKED
-    val kicker = listOfNotNull(
-        ui("expedition.map_level", zone.level),
-        zone.biome.takeUnless { locked || it.isBlank() }?.let { ui("expedition.biome.$it") },
-        ui("expedition.finale").takeIf { zone.finale && !locked },
-        region?.let(::regionTitle),
-    ).joinToString(" · ")
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(kicker, color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(if (locked) ui("expedition.unknown_zone") else mapTitle(zone.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        val style = MaterialTheme.typography.titleLarge
+        if (locked) {
+            Text(ui("expedition.unknown_zone"), color = Muted, style = style, modifier = Modifier.weight(1f))
+        } else {
+            val name = mapTitle(zone.code)
+            Box(Modifier.weight(1f)) { TapText(name, GoldBright, style, { Tip("", mapDescription(zone.code.value)) }, maxLines = 2) }
         }
         val (label, tint) = when (token.state) {
             TokenState.PASSED -> ui("expedition.token_passed") to Gold
@@ -244,25 +246,55 @@ private const val SEED_TICK_MS = 1000L
 }
 
 /**
+ * Строка под именем: уровень, биом, финал, регион и прохождения через «·»; у неизведанной - только уровень и регион. Выбранная карта
+ * с уровнем района - «Ур. 63 → 80», касание объясняет тир или уровень карты и ворота тиров героя.
+ */
+@Composable private fun ZoneMeta(game: GameUi, index: ContentIndex, token: WorldToken, region: String?, picked: StashMap?) {
+    val zone = token.zone
+    val locked = token.state == TokenState.LOCKED
+    val passed = game.hero?.campaign?.completions?.get(zone.code.value) ?: 0
+    val rest = listOfNotNull(
+        zone.biome.takeUnless { locked || it.isBlank() }?.let { ui("expedition.biome.$it") },
+        ui("expedition.finale").takeIf { zone.finale && !locked },
+        region?.let(::regionTitle),
+        (if (passed > 0) ui(pluralKey("expedition.completions", passed), passed) else ui("expedition.completions_none")).takeUnless { locked },
+    )
+    val style = MaterialTheme.typography.labelMedium
+    val map = picked?.takeUnless { locked }?.let { stash -> stash.view.areaLevel?.let { stash to it } }
+    Row(verticalAlignment = Alignment.Top) {
+        if (map == null) {
+            Text(ui("expedition.map_level", zone.level), color = Muted, style = style)
+        } else {
+            val (stash, area) = map
+            val tier = stash.item.mapTier
+            val line = if (tier > 0) ui("expedition.launch_area", tier, area, zone.level) else ui("expedition.launch_map_level", area)
+            val gate = tierGate(index, game.hero?.level)
+            TapText(ui("expedition.zone_level_to", zone.level, area), GoldBright, style, { Tip(line, gate.orEmpty()) })
+        }
+        if (rest.isNotEmpty()) Text(rest.joinToString(" · ", prefix = " · "), color = Muted, style = style, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
  * The zone's guardian: its bust and name, and whether it waits by the exit or lies slain until its
  * time — the hero's campaign says when it is back; summoning it early is the map's own bar's.
  *
  * Страж открывает свой лист: умения и фазы, каждое своей справкой.
  */
-@Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster) {
+@Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster, modifier: Modifier = Modifier) {
     val campaign = game.hero?.campaign
     val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
     var open by remember { mutableStateOf(false) }
     if (open) GuardianSheet(game, zone, boss) { open = false }
     Row(
-        Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, PanelRaised, shape).clip(shape).clickable { open = true }.padding(horizontal = 10.dp, vertical = 7.dp),
+        modifier.background(Abyss, shape).border(1.dp, PanelRaised, shape).clip(shape).clickable { open = true }.padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Canvas(Modifier.size(34.dp, 42.dp).clip(RoundedCornerShape(6.dp))) { Portraits.monster(this, boss.code.value, boss.form, 0f) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(monsterTitle(boss.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
+            Text(monsterTitle(boss.code), color = Parchment, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 back?.let { ui("expedition.guardian_slain", untilText(it)) } ?: ui("expedition.guardian_waits"),
                 color = if (back != null) Muted else Color(0xFFE0907F),
@@ -307,23 +339,18 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: ()
     }
 }
 
-/** The three atlas points a zone gives — its guardian, its guardian with a rare map, its Vaal guardian — lit once earned. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun AtlasKeys(earned: List<String>, zone: String) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(ui("atlas.open").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterVertically))
-        listOf(AtlasPoints.BOSS, AtlasPoints.RARE, AtlasPoints.VAAL).forEach { kind ->
-            val on = AtlasPoints.key(kind, zone) in earned
-            val tint = if (on) GoldBright else Muted
-            Row(
-                Modifier.border(1.dp, if (on) Gold.copy(alpha = .45f) else PanelRaised, CircleShape).padding(horizontal = 9.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Box(Modifier.size(7.dp).border(1.dp, if (on) Gold else Muted, CircleShape).background(if (on) Gold else Color.Transparent, CircleShape))
-                Text(ui("expedition.key_$kind"), color = tint, style = MaterialTheme.typography.labelMedium)
-            }
+/**
+ * Три очка Атласа зоны - страж, страж с редкой картой, страж Изнанки - точками рядом со стражем, зажжённые, когда взяты; касание
+ * называет каждое.
+ */
+@Composable internal fun AtlasPips(earned: List<String>, zone: String, modifier: Modifier = Modifier) {
+    val kinds = listOf(AtlasPoints.BOSS, AtlasPoints.RARE, AtlasPoints.VAAL).map { it to (AtlasPoints.key(it, zone) in earned) }
+    val tip = { Tip(ui("atlas.open"), facts = kinds.map { (kind, on) -> ui("expedition.key_$kind") to if (on) "✓" else "—" }) }
+    val shape = RoundedCornerShape(12.dp)
+    Tipped(tip, modifier.background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(ui("atlas.open"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.dottedUnderline(Muted).padding(end = 2.dp))
+            kinds.forEach { (_, on) -> Box(Modifier.size(8.dp).border(1.dp, if (on) Gold else Muted, CircleShape).background(if (on) Gold else Color.Transparent, CircleShape)) }
         }
     }
 }

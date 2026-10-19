@@ -68,12 +68,16 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
 
     /** The player's settings as one document; an unreadable one falls back to the defaults. */
     private val gameSettingsKey = stringPreferencesKey("game_settings")
-    override val gameSettings = context.settings.data.map { prefs ->
+    override val gameSettings = context.settings.data.map(::gameSettingsOf)
+    override suspend fun editGameSettings(edit: (GameSettings) -> GameSettings) {
+        context.settings.edit { prefs ->
+            val stored = gameSettingsOf(prefs)
+            val next = edit(stored)
+            if (next != stored) prefs[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), next)
+        }
+    }
+    private fun gameSettingsOf(prefs: Preferences): GameSettings =
         prefs[gameSettingsKey]?.let { runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull() } ?: GameSettings()
-    }
-    override suspend fun saveGameSettings(value: GameSettings) {
-        context.settings.edit { it[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), value) }
-    }
 
     /** Which shelves of the fight's log are shown, by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")

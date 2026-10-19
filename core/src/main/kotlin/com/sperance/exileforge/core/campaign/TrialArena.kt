@@ -314,7 +314,7 @@ class TrialArena(
         val stream = fought++
         return Battle(
             hero,
-            phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
+            phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream)), run::bound),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
             percent = gear.percent, cleared = wonLast, kind = trial.kind.fight, rage = rules.enrage(trial.kind.fight).sooner(sooner),
             fateRun = fateRun, muster = Muster.Reinforcements,

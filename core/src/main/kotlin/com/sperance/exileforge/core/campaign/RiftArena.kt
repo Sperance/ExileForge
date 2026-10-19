@@ -272,7 +272,7 @@ class RiftArena(
         if (monsters.isEmpty()) return
         val phases = PhaseFoes(index, combat)
         val dice = Dice(Streams.mix(arenaRun.seed, RETINUE_STREAM, 0))
-        var foes: List<Foe> = phases.withRetinue(monsters.map { phases.foe(it, fight.level) }, dice)
+        var foes: List<Foe> = phases.withRetinue(monsters.map { phases.foe(it, fight.level) }, dice, arenaRun::bound)
         val devourer = rules.guardians.devourer.takeIf { fight.guardian == 1 }
         if (devourer != null) {
             index.monster(devourer.shade)?.let { shade ->

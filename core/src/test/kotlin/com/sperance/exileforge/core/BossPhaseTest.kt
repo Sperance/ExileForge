@@ -37,7 +37,7 @@ class BossPhaseTest {
         val phases = PhaseFoes(index, rules)
         val steps = index.campaign.phasesByCode.getValue("SUMMON").steps.sortedByDescending { it.at }
         val foe = phases.foe(boss, zone.level).copy(phase = "SUMMON", phases = steps.map { FoePhase(it) }, slots = index.campaign.totems.slots)
-        val foes = phases.withRetinue(listOf(foe), Dice(3L))
+        val foes = phases.withRetinue(listOf(foe), Dice(3L)) { it }
         assertEquals(1 + steps.sumOf { it.summon }, foes.size)
         val battle = Battle(hero, foes, rules, index.rules.fight, hero.maxLife, Random(11L))
         var guard = 0

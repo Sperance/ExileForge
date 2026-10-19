@@ -5220,6 +5220,7 @@
   "summary.source.VAAL": "Underside breach",
   "summary.source.PACT": "Altar pacts",
   "summary.source.POTION": "Potion",
+  "summary.source.LEVEL": "Monsters grown by the hero level",
   "summary.source.ATLAS": "Atlas and guild",
   "summary.quests_total": "Total for quests",
   "summary.quests_run": "For this map",

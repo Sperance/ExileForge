@@ -223,7 +223,7 @@ fun ItemCard(
             verticalArrangement = Arrangement.spacedBy(6.dp),
             itemVerticalAlignment = Alignment.CenterVertically,
         ) {
-            RelicChip { Text(item.areaLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+            RelicChip { Text(item.mapLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
             QualityBadge(item)
             (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
         }

@@ -86,11 +86,11 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
             var mods = dice.between(ruleOf.modifiers)
             if (rarity == MonsterRarity.RARE && mods > 0) mods += extraRareMods
             val monster = index.monster(dice.pick(rule.monsters))!!
-            spawns.skilled(spawns.buffed(spawns.sworn(monsters.build(monster, level, ruleOf, monsters.draw(pool, level, ruleOf, mods, dice))), buffs), dice)
+            spawns.skilled(spawns.buffed(run.bound(monsters.build(monster, level, ruleOf, monsters.draw(pool, level, ruleOf, mods, dice))), buffs), dice)
         }
         val leader = floor.leader?.takeIf { index.monster(it) != null }?.let { code ->
             val power = leaderPower?.power ?: rule.leaderAt(level)
-            spawns.skilled(spawns.buffed(spawns.sworn(monsters.boss(monsters.guardian(code, level, power), leaderBuffs(effects))), buffs), dice)
+            spawns.skilled(spawns.buffed(run.bound(monsters.boss(monsters.guardian(code, level, power), leaderBuffs(effects))), buffs), dice)
         }
         return foes + listOfNotNull(leader)
     }

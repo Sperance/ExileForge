@@ -159,6 +159,7 @@ private fun sourceTone(source: BoostSource): Color = when (source) {
     BoostSource.VAAL -> Color(0xFFFF8A78)
     BoostSource.PACT -> Color(0xFFC9A0FF)
     BoostSource.POTION -> Vital
+    BoostSource.LEVEL -> Brass
 }
 
 private fun amount(value: Double): String = number(value.roundToLong().toDouble())

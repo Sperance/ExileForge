@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,8 +26,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
@@ -53,8 +57,10 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
 internal data class StashMap(val item: ItemInstance, val view: ItemView)
@@ -201,11 +207,22 @@ private const val SEED_TICK_MS = 1000L
 
 /**
  * Механики тестировщика: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
- * между зонами; открытый заход с другим выбором начинается заново.
+ * между зонами; открытый заход с другим выбором начинается заново. Панель свёрнута заголовком «Механики · выбрано N»;
+ * раскрытость помнит устройство ([com.sperance.exileforge.core.app.GameSettings.testerMechanicsOpen]).
  */
 @Composable private fun TesterMechanics(vm: ExpeditionViewModel, forced: Set<MapMechanic>) {
+    val settings = koinViewModel<SettingsViewModel>()
+    val open = settings.settings.collectAsStateWithLifecycle().value.testerMechanicsOpen
     ForgePanel {
-        Engraved(ui("tester.mechanics"))
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) { settings.change { copy(testerMechanicsOpen = !testerMechanicsOpen) } },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(Modifier.weight(1f)) { Engraved(ui("tester.mechanics_count", forced.size)) }
+            Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+        }
+        if (!open) return@ForgePanel
         MutedText(ui("tester.mechanics_hint"), style = MaterialTheme.typography.bodySmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val all = forced.size == MapMechanic.entries.size

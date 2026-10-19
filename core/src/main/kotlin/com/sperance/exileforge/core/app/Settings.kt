@@ -40,6 +40,8 @@ data class GameSettings(
     val legendsOpen: Boolean = false,
     /** Чипы требований в карточке предмета раскрыты: свёртку «Можно / Нельзя надеть» игрок раскрыл, и она помнится на устройстве. */
     val requirementsOpen: Boolean = false,
+    /** Панель механик тестировщика в карточке зоны раскрыта; по умолчанию свёрнута заголовком. */
+    val testerMechanicsOpen: Boolean = false,
     /** Ключ строки, что окно загрузки показало последней ([com.sperance.exileforge.core.i18n.LaunchLines]): следующая будет другой. */
     val lastLaunchLine: String = "",
 ) {

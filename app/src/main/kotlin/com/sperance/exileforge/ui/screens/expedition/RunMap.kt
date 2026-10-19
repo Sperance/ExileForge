@@ -67,7 +67,7 @@ import kotlin.math.roundToInt
 /**
  * The map in small: round, framed in bronze, the hero at its centre and the explored ground moving
  * under them — rock darker than floor, the exit once seen, the chests and fountains still
- * standing. Two small buttons under it zoom in and out, and a tap opens the whole map.
+ * standing. Two small buttons on its lower corners zoom in and out, and a tap opens the whole map.
  * It redraws a few times a second on its own tick — the scene's clock is the scene's.
  *
  * Изометрия сцены своим масштабом: «вверх» на мини-карте - «вверх» на сцене.
@@ -83,8 +83,8 @@ import kotlin.math.roundToInt
             tick++
         }
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Canvas(Modifier.size(MINIMAP_SIDE).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
+    Box(Modifier.size(MINIMAP_SIDE)) {
+        Canvas(Modifier.fillMaxSize().clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
             if (tick < 0) return@Canvas
             drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
             val centre = Offset(size.width / 2, size.height / 2)
@@ -93,9 +93,11 @@ import kotlin.math.roundToInt
             drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
             drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            ZoomButton(ForgeGlyphs.Minus, ui("expedition.zoom_out")) { cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX) }
-            ZoomButton(ForgeGlyphs.Plus, ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
+        ZoomButton(ForgeGlyphs.Minus, ui("expedition.zoom_out"), Modifier.align(Alignment.BottomStart).offset(x = -ZOOM_OUT, y = ZOOM_OUT)) {
+            cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX)
+        }
+        ZoomButton(ForgeGlyphs.Plus, ui("expedition.zoom_in"), Modifier.align(Alignment.BottomEnd).offset(x = ZOOM_OUT, y = ZOOM_OUT)) {
+            cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN)
         }
     }
     if (full) {
@@ -105,11 +107,14 @@ import kotlin.math.roundToInt
 }
 
 /** Поперечник мини-карты в углу полосы карты. */
-private val MINIMAP_SIDE = 112.dp
+internal val MINIMAP_SIDE = 96.dp
 
-/** «+»/«−» мини-карты: компактная круглая тональная иконка-кнопка. */
-@Composable internal fun ZoomButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
+/** Насколько кнопки «−»/«+» выходят за нижние углы мини-карты: зона касания 44 dp вокруг кнопки 30 dp садится на угол. */
+private val ZOOM_OUT = 12.dp
+
+/** «−»/«+» мини-карты: малая тональная иконка-кнопка 30 dp на её нижнем углу. */
+@Composable private fun ZoomButton(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    ForgeIconButton(icon, label, onClick = onClick, modifier = modifier, kind = ButtonKind.Secondary, size = ButtonSize.Small)
 }
 
 /**

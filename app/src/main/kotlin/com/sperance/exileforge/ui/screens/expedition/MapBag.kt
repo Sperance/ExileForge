@@ -5,25 +5,25 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,147 +38,158 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.DropChip
 import com.sperance.exileforge.core.campaign.run.MapDrop
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
-import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.OnPrimary
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Сумка на карте: плашка внизу справа - «Сумка» и сколько добычи
- * легло за карту; ответ сервера на сундук выпускает веер фишек редкостей от героя в плашку, и у неё на миг встают «+N» и лучшая
- * вещь. Ждущие ответа сундуки - «ждёт N сундук». Веер и пульс - декор: без `LocalMotion` их нет, «+N» и строка встают сразу.
- * Нажатие открывает «Сумку захода» ([onOpen]) - всю добычу захода; плашка встаёт с первой добычей ([looted]) или
- * первым сундуком. [gathered] - штук добычи за всю карту.
- *
- * Добыча, что легла до этого экрана, не вылетает снова: веер - только для ответов при нём; новый ответ обрывает веер. Фишки летят к значку
- * сумки; веер раскрывается над героем.
+ * Полёт добычи в сумку на карте: ответ сервера на сундук выпускает веер фишек редкостей от героя в кнопку сумки ([BagFan]), кнопка
+ * пульсирует, и на ней на миг встаёт «+N» ([MapBag]). Веер и пульс - декор: без `LocalMotion` их нет, «+N» встаёт сразу.
+ * Добыча, что легла до этого экрана, не вылетает снова: веер - только для ответов при нём; новый ответ обрывает веер.
  */
-@Composable internal fun MapBag(game: GameUi, drops: List<MapDrop>, looted: Boolean, gathered: Long, onOpen: () -> Unit) {
-    if (drops.isEmpty() && !looted) return
+@Stable internal class BagFlight {
+    /** Ответ, чей веер летит сейчас. */
+    var flying by mutableStateOf<MapDrop?>(null)
+        private set
+
+    /** Последний принятый ответ: его «+N» висит на кнопке [NEWS_MS]. */
+    var news by mutableStateOf<MapDrop?>(null)
+        private set
+
+    /** Середина кнопки сумки в мере корня: туда летят фишки; пока кнопки нет - некуда. */
+    var target by mutableStateOf<Offset?>(null)
+        internal set
+
+    internal val fan = Animatable(0f)
+    internal val pulse = Animatable(1f)
+
+    /** Проводит принятый ответ [drop]: веер, пульс и «+N»; [moving] - движение разрешено. */
+    internal suspend fun land(drop: MapDrop, moving: Boolean) {
+        if (drop.chips.isEmpty()) return
+        try {
+            if (moving) {
+                flying = drop
+                fan.snapTo(0f)
+                fan.animateTo(1f, tween(FAN_MS, easing = LinearEasing))
+                flying = null
+                pulse.snapTo(PULSE_SCALE)
+                pulse.animateTo(1f, tween(PULSE_MS))
+            }
+        } finally {
+            flying = null
+            news = drop
+        }
+    }
+
+    /** Снимает «+N», если на кнопке всё ещё [drop]. */
+    internal fun settle(drop: MapDrop) {
+        if (news == drop) news = null
+    }
+}
+
+/** Полёт добычи экрана карты по ответам [drops]: живёт, пока стоит экран, - ответы до него не летят. */
+@Composable internal fun rememberBagFlight(drops: List<MapDrop>): BagFlight {
     val moving = LocalMotion.current
+    val flight = remember { BagFlight() }
     val told = remember { drops.filterNot { it.waiting }.mapTo(HashSet()) { it.n } }
-    var flying by remember { mutableStateOf<MapDrop?>(null) }
-    var news by remember { mutableStateOf<MapDrop?>(null) }
-    val fan = remember { Animatable(0f) }
-    val pulse = remember { Animatable(1f) }
     LaunchedEffect(drops) {
         drops.filter { !it.waiting && it.n !in told }.forEach { drop ->
             told += drop.n
-            if (drop.chips.isEmpty()) return@forEach
-            try {
-                if (moving) {
-                    flying = drop
-                    fan.snapTo(0f)
-                    fan.animateTo(1f, tween(FAN_MS, easing = LinearEasing))
-                    flying = null
-                    pulse.snapTo(PULSE_SCALE)
-                    pulse.animateTo(1f, tween(PULSE_MS))
-                }
-            } finally {
-                flying = null
-                news = drop
-            }
+            flight.land(drop, moving)
         }
     }
+    val news = flight.news
     LaunchedEffect(news) {
         if (news == null) return@LaunchedEffect
         delay(NEWS_MS)
-        news = null
+        flight.settle(news)
     }
+    return flight
+}
+
+/** Веер добычи над всем экраном: от героя ([SceneCamera.HERO_DOWN]) к кнопке сумки. */
+@Composable internal fun BagFan(flight: BagFlight) {
+    val drop = flight.flying ?: return
     val density = LocalDensity.current
-    var origin by remember { mutableStateOf(Offset.Zero) }
-    var bag by remember { mutableStateOf<Offset?>(null) }
+    var origin by remember { mutableStateOf<Offset?>(null) }
     BoxWithConstraints(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        val target = bag?.let { with(density) { (it.x - origin.x).toDp() to (it.y - origin.y).toDp() } }
-        if (target != null) flying?.let { drop -> Fan(drop, from = maxWidth / 2 to maxHeight * SceneCamera.HERO_DOWN, to = target, progress = fan.value) }
-        Column(
-            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = TRAY_END, bottom = TRAY_BOTTOM)
-                .widthIn(max = (maxWidth - TRAY_END - HANDS_RESERVE).coerceAtLeast(TRAY_MIN)),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            news?.let { drop -> News(game, drop) }
-            Tray(drops, gathered, pulse.value, onBag = { bag = it }, onClick = onOpen)
-        }
+        val from = origin ?: return@BoxWithConstraints
+        val to = flight.target ?: return@BoxWithConstraints
+        val target = with(density) { (to.x - from.x).toDp() to (to.y - from.y).toDp() }
+        Fan(drop, from = maxWidth / 2 to maxHeight * SceneCamera.HERO_DOWN, to = target, progress = flight.fan.value)
     }
 }
 
-/** «+N» и лучшая вещь последнего ответа: «◆ Кольцо Ветра и ещё 4». */
-@Composable private fun News(game: GameUi, drop: MapDrop) {
-    Text("+${drop.pieces}", color = Gold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-    val best = drop.best
-    val others = drop.chips.size - 1
-    val name = best?.let { game.view(it)?.title } ?: drop.reward?.gold?.takeIf { it > 0 }?.let { ui("quest.toast.gold", number(it.toDouble())) }
-    name?.let {
-        Text(
-            listOf("◆ $it", ui("run.bag_more", others).takeIf { others > 0 }).filterNotNull().joinToString(" "),
-            color = best?.let { item -> rarityColor(item.rarity.name) } ?: GoldBright,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.background(Abyss.copy(alpha = .85f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 3.dp),
-        )
-    }
-}
-
-/** Плашка сумки: значок в кольце, «Сумка» с ожиданием и счёт за карту; [scale] - пульс принятого ответа. */
-@Composable private fun Tray(drops: List<MapDrop>, gathered: Long, scale: Float, onBag: (Offset) -> Unit, onClick: () -> Unit) {
+/**
+ * Кнопка сумки под мини-картой: «Сумка · N» - сколько добычи легло за карту ([gathered]), «+N» последнего ответа в углу ([BagFlight]);
+ * ждущие ответа сундуки - строкой «ждёт N сундук» под ней. Нажатие открывает «Сумку захода» ([onOpen]) - всю добычу захода;
+ * кнопка встаёт с первой добычей ([looted]) или первым сундуком. Ширина - не уже мини-карты [width].
+ */
+@Composable internal fun MapBag(flight: BagFlight, drops: List<MapDrop>, looted: Boolean, gathered: Long, width: Dp, onOpen: () -> Unit) {
+    if (drops.isEmpty() && !looted) return
     val waiting = drops.count { it.waiting }
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.background(Abyss.copy(alpha = .9f), shape).border(1.dp, Bronze, shape).clickable(role = Role.Button, onClick = onClick)
-            .padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier.size(BAG).onGloballyPositioned { onBag(it.boundsInRoot().center) }.scale(scale).background(Abyss, CircleShape).border(1.dp, if (scale > 1f) Gold else Bronze, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(ForgeGlyphs.Stash, null, tint = Brass, modifier = Modifier.size(18.dp))
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box {
+            ForgeButton(
+                onClick = onOpen,
+                modifier = Modifier.widthIn(min = width).onGloballyPositioned { flight.target = it.boundsInRoot().center }.scale(flight.pulse.value),
+                kind = ButtonKind.Secondary,
+                size = ButtonSize.Small,
+            ) { Text(ui("run.bag_count", gathered), maxLines = 1) }
+            flight.news?.let { drop -> NewsBadge(drop.pieces, Modifier.align(Alignment.TopStart).offset(x = (-8).dp, y = (-9).dp)) }
         }
-        Column {
+        if (waiting > 0) {
             Text(
-                if (waiting > 0) ui("run.bag_waiting", waiting, plural("run.chest", waiting)) else ui("run.bag"),
+                ui("run.bag_wait", waiting, plural("run.chest", waiting)),
                 color = Muted,
                 style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                ui("run.bag_gathered", gathered),
-                color = Parchment,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(width),
             )
         }
     }
+}
+
+/** «+N» принятого ответа в углу кнопки сумки: золотая плашка; число - в «Сумке захода», поэтому для чтения с экрана её нет. */
+@Composable private fun NewsBadge(pieces: Long, modifier: Modifier) {
+    val shape = RoundedCornerShape(9.dp)
+    Text(
+        "+$pieces",
+        color = OnPrimary,
+        fontSize = 11.sp,
+        lineHeight = 18.sp,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        modifier = modifier.clearAndSetSemantics {}.defaultMinSize(minWidth = 18.dp).height(18.dp)
+            .border(2.dp, Abyss, shape).background(Gold, shape).padding(horizontal = 5.dp),
+    )
 }
 
 /**
@@ -232,19 +243,10 @@ private const val FAN_HOLD = .5f
 private const val FAN_CHIPS = 7
 private val FAN_RADIUS = 80.dp
 
-/** Пульс сумки при ответе: размах и длительность; сколько висят «+N» и строка лучшей вещи. */
+/** Пульс сумки при ответе: размах и длительность; сколько висит «+N». */
 private const val PULSE_SCALE = 1.18f
 private const val PULSE_MS = 300
 private const val NEWS_MS = 2_600L
 
-/** Плашка сумки: отступы от края экрана, размер значка и фишки веера. */
-private val TRAY_END = 12.dp
-private val TRAY_BOTTOM = 24.dp
-
-/** Место слева под рамку «рук» (пояс и четыре кнопки, ≈222 dp) с зазором: сумка и новость не заходят на кнопки. */
-private val HANDS_RESERVE = 232.dp
-
-/** Наименьшая ширина сумки, если экран уже рамки «рук». */
-private val TRAY_MIN = 96.dp
-private val BAG = 30.dp
+/** Фишка веера. */
 private val CHIP = 24.dp

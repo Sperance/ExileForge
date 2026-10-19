@@ -4070,6 +4070,7 @@
   "fight.sheet_no_influence": "A boss has no modifiers of its own: its strength is in its stats, skills and phases.",
   "fight.influence": "Map influence · {0}",
   "trace.src.guardian_power": "Guardian power ×{0}",
+  "trace.src.hero_scale": "Hero level: health ×{0}, damage ×{1}",
   "fight.sheet_pools": "Pools",
   "fight.sheet_attack": "Attack",
   "fight.sheet_defence": "Defence",

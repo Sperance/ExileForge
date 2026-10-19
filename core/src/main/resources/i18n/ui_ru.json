@@ -4070,6 +4070,7 @@
   "fight.sheet_no_influence": "У босса нет своих модификаторов: его сила - в характеристиках, умениях и фазах.",
   "fight.influence": "Влияние карты · {0}",
   "trace.src.guardian_power": "Сила стража ×{0}",
+  "trace.src.hero_scale": "От уровня героя: здоровье ×{0}, урон ×{1}",
   "fight.sheet_pools": "Запасы",
   "fight.sheet_attack": "Атака",
   "fight.sheet_defence": "Защита",

@@ -49,6 +49,9 @@ object HeroCacheKey {
     /** Длина ключа папки, знаков отпечатка. */
     private const val KEY = 24
 
-    /** Разделы `campaign.json`, которых постройка эталона не читает: боссы и их фазы, режимы, карты, объекты и услуги. */
-    private val IDLE = setOf("bosses", "services", "fountains", "features", "corruption", "vaal", "maps", "abyss", "trials", "lootChests", "chests")
+    /**
+     * Разделы `campaign.json`, которых постройка эталона не читает: боссы и их фазы, режимы, карты, объекты и услуги, сила монстров от
+     * уровня героя (эталон дерётся на своём уровне).
+     */
+    private val IDLE = setOf("bosses", "services", "fountains", "features", "corruption", "vaal", "maps", "heroScale", "abyss", "trials", "lootChests", "chests")
 }

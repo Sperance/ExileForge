@@ -60,10 +60,10 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /**
-     * Цена законов тронов героя ([Run.lawEffects]): зеркала тронов ниже региона зоны, на карте Атласа - всех, - в статах монстра
-     * как его собственные строки, до баффов карты. Ложится один раз, при постановке монстра.
+     * Цена законов тронов героя ([Run.lawEffects]: зеркала тронов ниже региона зоны, на карте Атласа - всех) и сила от уровня героя над
+     * районом ([Run.heroScale]) - в статах монстра как его собственные строки, до баффов карты ([Run.bound]). Ложится один раз, при постановке монстра.
      */
-    fun sworn(monster: RolledMonster): RolledMonster = if (run.lawEffects.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, run.lawEffects))
+    fun sworn(monster: RolledMonster): RolledMonster = run.bound(monster)
 
     /** The map's [buffs] folded into the monster's stats and kept apart, so the arena can say which is which. */
     fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster = if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)

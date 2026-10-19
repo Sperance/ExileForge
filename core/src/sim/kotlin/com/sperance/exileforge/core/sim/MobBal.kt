@@ -458,10 +458,13 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         listOf(sorted.first(), sorted[sorted.size / 2], sorted.last()).distinct()
     }.mapNotNull { com.sperance.exileforge.core.campaign.VaalZones.zone(it, index.campaign.vaal) }
 
-    /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня. */
-    fun mapZones(): List<Zone> {
+    /**
+     * Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня; [low] - зоны ниже порога тиров, карты без
+     * тира своего уровня (уровень карты - уровень зоны).
+     */
+    fun mapZones(low: Boolean = false): List<Zone> {
         val from = index.campaign.maps.tiers?.fromLevel ?: return emptyList()
-        return index.campaign.zones.filter { it.level >= from && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+        return index.campaign.zones.filter { (it.level >= from) != low && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
     }
 
     /**
@@ -482,8 +485,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /** Карта-предмет тира [tier] редкости [rarity] зоны [zone]: настоящие строки, тир и угрозы - правилами добычи. */
-    fun mapEffects(zone: Zone, tier: Int, rarity: Rarity, seed: Long, heroLevel: Int): Pair<Map<String, Double>, com.sperance.exileforge.rules.roll.ActiveMap?> {
-        if (tier <= 0) return emptyMap<String, Double>() to null
+    fun mapEffects(zone: Zone, tier: Int, rarity: Rarity, seed: Long, heroLevel: Int, onMap: Boolean = tier > 0): Pair<Map<String, Double>, com.sperance.exileforge.rules.roll.ActiveMap?> {
+        if (!onMap) return emptyMap<String, Double>() to null
         val loot = LootRoller(index, heroLevel)
         val dice = Dice(seed)
         val area = index.campaign.maps.areaLevel(zone.level, tier)
@@ -494,7 +497,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         }
         loot.mapPerils(map, dice)
         val effects = loot.mapEffects(map)
-        return effects to loot.activeMap(zone.code, effects, rarity, tier)
+        return effects to loot.activeMap(zone.code, effects, rarity, tier).copy(level = area)
     }
 
     private fun run(zone: Zone, hero: Hero, seed: Long, active: com.sperance.exileforge.rules.roll.ActiveMap?) = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level, active = active))
@@ -507,11 +510,11 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /**
-     * Босс зоны [zone] (на карте тира [tier], [rarity] - редкость карты): [rolls] бросков босса (каждый - своя карта при тире) ×
+     * Босс зоны [zone] (на карте тира [tier], [rarity] - редкость карты; [onMap] - на карте и без тира): [rolls] бросков босса (каждый - своя карта при тире) ×
      * fights/rolls боёв. Время - секунды; урон по герою - доля пула в секунду; два последних столбца - сколько здоровья реген и
      * вампиризм вернули боссу и сколько урона нанёс ему герой, в среднем за бой.
      */
-    fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
+    fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap(), onMap: Boolean = tier > 0): Row {
         var wins = 0
         var n = 0
         var winTime = 0.0
@@ -525,7 +528,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         var restored = 0.0
         var dealt = 0.0
         repeat(rolls) { r ->
-            val (rolled, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+            val (rolled, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level, onMap)
             val effects = MapEffects.sum(rolled, extra)
             val run = run(zone, hero, SimKit.SEED + r, active)
             val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
@@ -870,15 +873,16 @@ fun main(args: Array<String>) {
         }
 
         "maps" -> {
-            val tiers = (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
+            val low = System.getProperty("low") == "1"
+            val tiers = if (low) listOf(0) else (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
             val mapRarities = (System.getProperty("mapRarities") ?: "COMMON").split(',').map { Rarity.valueOf(it.trim()) }
-            sim.mapZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
+            sim.mapZones(low).filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
                 tiers.forEach { tier ->
                     classes.forEach { c ->
                         mapRarities.forEach { mr ->
                             tasks += Task {
                                 val hero = sim.mapHero(c, zone, tier)
-                                listOf(sim.boss(zone, hero, tier, mr, cap)) + (if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, tier, mr, r, 120.0) } else emptyList())
+                                listOf(sim.boss(zone, hero, tier, mr, cap, onMap = true)) + (if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, tier, mr, r, 120.0) } else emptyList())
                             }
                         }
                     }
@@ -1258,14 +1262,20 @@ object GuardianTarget {
 
 /**
  * Цель режимов, что тяжелеют с ростом (RULES «Общее», цели баланса): доля побед эталона своего уровня падает линейно от [EASY] в начале
- * отрезка до [HARD] в его конце - карты по тиру, Разлом недели по уровню героя.
+ * отрезка до [HARD] в его конце - карты по тиру, Разлом недели по уровню героя; карты своего уровня ниже порога тиров - от [EASY] на
+ * первом уровне до [LOW] на [LOW_TO]-м ([below], отчёт `-Pmode=maps -Plow=1`).
  */
 object FallingTarget {
     const val EASY = 0.60
     const val HARD = 0.30
+    const val LOW = 0.45
+    const val LOW_TO = 59
 
     /** Цель на месте [at] отрезка [from]..[to]: вне отрезка - как на его краю. */
     fun at(at: Double, from: Double, to: Double): Double = EASY + (HARD - EASY) * ((at - from) / (to - from)).coerceIn(0.0, 1.0)
+
+    /** Цель карты своего уровня [level] ниже порога тиров: линейно от [EASY] на 1-м до [LOW] на [LOW_TO]-м. */
+    fun below(level: Int): Double = EASY + (LOW - EASY) * ((level - 1).toDouble() / (LOW_TO - 1)).coerceIn(0.0, 1.0)
 }
 
 /**

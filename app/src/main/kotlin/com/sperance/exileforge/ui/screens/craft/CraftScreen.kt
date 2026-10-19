@@ -11,7 +11,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.QualityForecast
+import com.sperance.exileforge.core.display.Term
+import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.itemDescription
+import com.sperance.exileforge.core.display.itemRule
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.rangedLine
+import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
@@ -24,6 +31,7 @@ import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.Dice
@@ -106,6 +114,14 @@ internal const val UNCRAFT = "-"
                     target,
                     toolSocket(game, smithy, section, index, benchLine, if (section == ForgeSection.SEALS) sealChosen else chosen, essenceRefusals),
                     omenSocket(game, smithy, section, vm::selectOmen),
+                    remember(section, target, smithy, choices, seals, quality, chanceUniques, essenceRefusals, benchLine, hero.bag, game.bench) {
+                        when (section) {
+                            ForgeSection.ORBS -> orbRecipe(game, index, smithy, target, chosen, choices.isEmpty(), quality, chanceUniques)
+                            ForgeSection.SEALS -> sealRecipe(game, index, smithy, sealChosen, seals.isEmpty())
+                            ForgeSection.ESSENCES -> gear?.let { essenceRecipe(game, index, hero, it, smithy.essence, essenceRefusals) } ?: Recipe(null, null)
+                            ForgeSection.BENCH -> benchRecipe(game, benchLine)
+                        }
+                    },
                     onPick = { picking = true },
                     modifier = Modifier.weight(1f),
                 )
@@ -114,7 +130,7 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ORBS -> target?.let {
                     LineChoices(game, it, enabled, vm)
                     OmenLedger(game, smithy.orb, smithy.omen, it.orbTarget, omens, vm::selectOmen)
-                    OrbTray(game, smithy, choices, hidden, ui(it.noOrbsKey), quality) { code ->
+                    OrbTray(game, smithy, choices, hidden) { code ->
                         vm.selectOrb(code)
                         engraving = code == Orb.ENGRAVERS_ORB.name
                     }
@@ -122,7 +138,7 @@ internal const val UNCRAFT = "-"
 
                 ForgeSection.SEALS -> gear?.let {
                     LineChoices(game, it, enabled, vm)
-                    OmenList(game, it.sealOmens(index, smithy.seal, omens), smithy.omen, vm::selectOmen)
+                    OmenTray(game, ui("forge.tray_seal_omens"), it.sealOmens(index, smithy.seal, omens), smithy.omen, vm::selectOmen)
                     SealTray(game, smithy, seals, vm::selectSeal)
                 }
 
@@ -133,7 +149,7 @@ internal const val UNCRAFT = "-"
         }
         if (hero != null && target != null) {
             when (section) {
-                ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, chanceUniques, { engraving = true }) { vm.applyOrb(target, it) }
+                ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, { engraving = true }) { vm.applyOrb(target, it) }
                 ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, sealChosen, enabled) { code -> vm.applySeal(it.id, code) } }
                 ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, it.view, benchLine, enabled) }
                 ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
@@ -188,12 +204,12 @@ internal val ForgeSection.title get() = when (this) {
 internal fun toolSocket(game: GameUi, smithy: Smithy, section: ForgeSection, index: ContentIndex, benchLine: String, chosen: OrbChoice?, essenceRefusals: Map<String, String>): Socket = when (section) {
     ForgeSection.ORBS -> {
         val glyph: (@Composable () -> Unit)? = chosen?.let { { BagIcon(it.code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY) } }
-        Socket(chosen?.let { itemTitle(it.code) } ?: ui("forge.socket_orb"), Gold, glyph)
+        Socket(Gold, glyph)
     }
 
     ForgeSection.SEALS -> {
         val glyph: (@Composable () -> Unit)? = chosen?.let { { BagIcon(it.code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY) } }
-        Socket(chosen?.let { itemTitle(it.code) } ?: ui("forge.socket_seal"), Gold, glyph)
+        Socket(Gold, glyph)
     }
 
     ForgeSection.ESSENCES -> {
@@ -203,7 +219,7 @@ internal fun toolSocket(game: GameUi, smithy: Smithy, section: ForgeSection, ind
         } else {
             { BagIcon(code, Modifier.fillMaxSize(), tint = Elder) }
         }
-        Socket(code?.let(::itemTitle) ?: ui("forge.socket_essence"), Elder, glyph)
+        Socket(Elder, glyph)
     }
 
     ForgeSection.BENCH -> {
@@ -212,7 +228,7 @@ internal fun toolSocket(game: GameUi, smithy: Smithy, section: ForgeSection, ind
         } else {
             { Icon(ForgeGlyphs.Anvil, null, tint = Crafted, modifier = Modifier.fillMaxSize()) }
         }
-        Socket(ui(if (benchLine == UNCRAFT) "bench.remove" else "forge.section_bench"), Crafted, glyph)
+        Socket(Crafted, glyph)
     }
 }
 
@@ -226,7 +242,6 @@ internal fun omenSocket(game: GameUi, smithy: Smithy, section: ForgeSection, onS
         { Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.fillMaxSize()) }
     }
     return Socket(
-        omen?.let(::itemTitle) ?: ui("forge.omen"),
         Rune,
         glyph,
         if (omen == null) {
@@ -235,4 +250,101 @@ internal fun omenSocket(game: GameUi, smithy: Smithy, section: ForgeSection, onS
             { onSelect("") }
         },
     )
+}
+
+/** Знамение [code], что лежит рядом со сферой или оттиском: выбрано и есть в сумке, иначе null. */
+private fun laidOmen(game: GameUi, code: String): String? = code.takeIf { it.isNotBlank() && (game.bagAmount(it) ?: 0L) > 0 }
+
+/**
+ * Описание правил для подсказки итога: [parts] без пустых и без того, что уже напечатано итогом ([effect]); у знамения-катализатора
+ * ([omen]) - ещё общее правило катализаторов термином.
+ */
+private fun recipeDetail(index: ContentIndex, effect: String?, omen: String?, vararg parts: String?): String {
+    val catalyst = Omen.of(omen.orEmpty())?.catalyst?.let { "${Term.CATALYST.title}: ${Term.CATALYST.text(index.campaign.combat)}" }
+    return (parts.toList() + catalyst).filterNotNull().filter { it.isNotBlank() && it != effect }.distinct().joinToString("\n\n")
+}
+
+/**
+ * Рецепт сферы: имя сферы, знамение и итог - ждёт знамения; у сферы качества - что она поднимет на вещи (или отказ правил);
+ * со знамением - что оно меняет; иначе действие сферы одной фразой. В подсказке - полное описание сферы и, у сферы удачи, какие
+ * уникалки может дать вещь; красным - что сбросит качество и что снимет Очищение ([ForgeTarget.scoured]).
+ */
+internal fun orbRecipe(
+    game: GameUi,
+    index: ContentIndex,
+    smithy: Smithy,
+    target: ForgeTarget?,
+    chosen: OrbChoice?,
+    empty: Boolean,
+    quality: QualityForecast?,
+    chanceUniques: List<String>,
+): Recipe {
+    if (target == null) return Recipe(null, null)
+    if (chosen == null) return Recipe(null, ui(if (empty) target.noOrbsKey else "forge.pick_orb"))
+    val code = chosen.code
+    val omen = laidOmen(game, smithy.omen)
+    val forecast = quality?.takeIf { code == Orb.QUALITY_ORB.name }
+    val (effect, tone) = when {
+        chosen.needsOmen && smithy.omen.isBlank() -> ui("forge.needs_omen") to Rune
+        else -> forecast?.refusal?.let { it to LifeRed }
+            ?: forecast?.raises?.takeIf { it.isNotBlank() }?.let { it to Vital }
+            ?: (omen?.let { itemDescription(it, index) } ?: itemRule(code)) to Vital
+    }
+    val uniques = ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }).takeIf { code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty() }
+    val scoured = Orb.of(code)?.let(target::scoured).orEmpty()
+    return Recipe(
+        tool = itemTitle(code),
+        effect = effect,
+        tone = tone,
+        omen = omen?.let(::itemTitle),
+        detail = recipeDetail(index, effect, omen, itemDescription(code, index), uniques),
+        warnings = listOfNotNull(
+            forecast?.lost?.takeIf { it > 0 }?.let { ui("forge.quality_reset", it) },
+            scoured.takeIf { it.isNotEmpty() }?.let { strips -> ui("forge.scour_strips", strips.joinToString(", ") { ui("forge.scoured.${it.name}") }) },
+        ),
+    )
+}
+
+/** Рецепт оттиска Атласа: имя, знамение и итог - ждёт знамения, что меняет знамение или действие оттиска одной фразой. */
+internal fun sealRecipe(game: GameUi, index: ContentIndex, smithy: Smithy, chosen: OrbChoice?, empty: Boolean): Recipe {
+    if (chosen == null) return Recipe(null, ui(if (empty) "forge.no_seals" else "forge.pick_seal"))
+    val omen = laidOmen(game, smithy.omen)
+    val (effect, tone) = when {
+        chosen.needsOmen && smithy.omen.isBlank() -> ui("forge.needs_omen") to Rune
+        else -> (omen?.let { itemDescription(it, index) } ?: itemRule(chosen.code)) to Vital
+    }
+    return Recipe(itemTitle(chosen.code), effect, tone, omen?.let(::itemTitle), recipeDetail(index, effect, omen, itemDescription(chosen.code, index)))
+}
+
+/**
+ * Рецепт эссенции: имя и что гарантия даст именно этой вещи - «Даст T5 из 6: +(12–18)% к урону огнём» (`OrbApplier.essenceGuarantee`);
+ * не ляжет - отказ правил красным. В подсказке - описание эссенции и общее правило эссенций.
+ */
+internal fun essenceRecipe(game: GameUi, index: ContentIndex, hero: HeroView, gear: ForgeTarget.Gear, code: String, refusals: Map<String, String>): Recipe {
+    val essence = index.essence(code)?.takeIf { (game.bagAmount(code) ?: 0L) > 0 }
+    if (essence == null) {
+        val any = index.itemsByCategory[Item.ESSENCE].orEmpty().any { hero.count(it.code.value) > 0 }
+        return Recipe(null, ui(if (any) "forge.pick_essence" else "forge.no_essences"))
+    }
+    val refusal = refusals[code]
+    val view = gear.view
+    val gives = if (refusal != null) {
+        null
+    } else {
+        OrbApplier(index).essenceGuarantee(essence, view.item, view.template)?.let { roll ->
+            index.modifier(roll.code)?.let { def -> def.tier(roll.tier)?.let { tier -> ui("forge.essence_gives", tierOf(roll.tier, def.tiers.size), rangedLine(index, def.code, tier.values)) } }
+        }
+    }
+    val (effect, tone) = refusal?.let { it to LifeRed } ?: ((gives ?: itemDescription(code, index)) to Elder)
+    return Recipe(itemTitle(code), effect, tone, detail = recipeDetail(index, effect, null, itemDescription(code, index), ui("essence.note")))
+}
+
+/**
+ * Рецепт верстака: строку называет сам выбранный ряд верстака, поэтому рецепт лишь просит выбрать; снятие ремесленного
+ * модификатора называет себя.
+ */
+internal fun benchRecipe(game: GameUi, benchLine: String): Recipe = when {
+    benchLine == UNCRAFT -> Recipe(ui("bench.remove"), null)
+    benchLine.isNotBlank() && game.bench.any { it.code == benchLine } -> Recipe(null, null)
+    else -> Recipe(null, ui("forge.pick_line"))
 }

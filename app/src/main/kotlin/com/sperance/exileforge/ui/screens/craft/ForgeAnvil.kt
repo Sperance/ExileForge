@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Search
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,14 +42,30 @@ import com.sperance.exileforge.ui.components.HoldHint
 import com.sperance.exileforge.ui.components.HoldSubject
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
-/** What lies in one round socket of the anvil: its drawing (null - the socket is empty), its name and its colour. */
-internal class Socket(val label: String, val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
+/** Что лежит в круглом гнезде наковальни: рисунок (null - гнездо пусто) и цвет; имя лежащего называет рецепт ([Recipe]). */
+internal class Socket(val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
+
+/**
+ * Рецепт наковальни - строка под гнёздами, единственное место, что называет связку: что ляжет на цель ([tool]), знамение к нему
+ * ([omen]) и итог одной фразой ([effect] цветом [tone]). Нажатие итога открывает подсказку с описанием правил ([detail]); пустое
+ * описание - итог не нажимается. Нет инструмента - [effect] просит выбрать или говорит, что выбирать нечего. [warnings] - красные
+ * строки того, что действие снимет или сбросит.
+ */
+internal class Recipe(
+    val tool: String?,
+    val effect: String?,
+    val tone: Color = Vital,
+    val omen: String? = null,
+    val detail: String = "",
+    val warnings: List<String> = emptyList(),
+)
 
 /** Значок раздела на полке у наковальни. */
 private val ItemSection.glyph: ImageVector get() = when (this) {
@@ -113,11 +131,21 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 }
 
 /**
- * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen] — then the target itself as it
- * stands and the server's last word about it. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её
+ * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen]; под гнёздами - [recipe] (имена
+ * связки и итог), then the target itself as it stands and the server's last word about it. Осквернённая цель вместо рецепта
+ * получает причину отказа. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её
  * карточку ([ForgeCards]): выбор другой - «Сменить», рядом - надеть или снять, в «⋯» - продажа и аукцион; пустая открывает выбор.
  */
-@Composable internal fun Anvil(game: GameUi, cards: ForgeCards, target: ForgeTarget?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
+@Composable internal fun Anvil(
+    game: GameUi,
+    cards: ForgeCards,
+    target: ForgeTarget?,
+    tool: Socket,
+    omen: Socket?,
+    recipe: Recipe,
+    onPick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val shape = RoundedCornerShape(14.dp)
     val inspect = rememberInspect()
     val open = {
@@ -139,6 +167,11 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
                 Plus()
                 RoundSocket(it)
             }
+        }
+        when {
+            target == null -> Unit
+            target.corrupted -> Refusal(ui("orb.corrupted"))
+            else -> RecipeLine(recipe)
         }
         when (target) {
             null -> Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onPick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -194,7 +227,6 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
                 Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if (item.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         if (item.lines.any { it.marks.kind != null }) HoldHint(HoldSubject.INFO)
     }
 }
@@ -208,7 +240,7 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
         is ForgeTarget.Gear -> rarityColor(target.view.rarity.name)
     }
     val frame = RoundedCornerShape(14.dp)
-    SocketColumn(ui(target?.socketKey ?: "forge.socket_item")) {
+    Box(Modifier.width(62.dp), contentAlignment = Alignment.Center) {
         Box(
             Modifier.size(60.dp).clip(frame).background(PanelRaised, frame).border(2.dp, color, frame).clickable(role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
@@ -224,7 +256,7 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
 /** A round socket: the orb, essence or bench line laid on the item, or the omen paired with the orb; dim while empty. */
 @Composable private fun RoundSocket(socket: Socket) {
     val filled = socket.glyph != null
-    SocketColumn(socket.label) {
+    Box(Modifier.width(62.dp), contentAlignment = Alignment.Center) {
         Box(
             Modifier.padding(top = 6.dp).size(48.dp).clip(CircleShape)
                 .background(if (filled) socket.accent.copy(alpha = .12f).compositeOver(PanelRaised) else PanelRaised, CircleShape)
@@ -237,9 +269,43 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
     }
 }
 
-@Composable private fun SocketColumn(label: String, content: @Composable () -> Unit) {
-    Column(Modifier.width(62.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        content()
-        Text(label, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+/**
+ * Строка рецепта: имя инструмента, «+ знамение» и итог - по центру под гнёздами; итог с описанием подчёркнут и по нажатию открывает
+ * подсказку ([TipCallout]). Под ним - красные предупреждения рецепта.
+ */
+@Composable private fun RecipeLine(recipe: Recipe) {
+    var open by remember(recipe.detail) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        recipe.tool?.let { Text(it, color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center) }
+        recipe.omen?.let { Text("+ $it", color = Rune, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
+        recipe.effect?.takeIf { it.isNotBlank() }?.let { effect ->
+            val tappable = recipe.detail.isNotBlank()
+            Box {
+                Text(
+                    effect,
+                    color = if (recipe.tool == null) Muted else recipe.tone,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    textDecoration = if (tappable) TextDecoration.Underline else null,
+                    modifier = Modifier.padding(top = 2.dp).then(if (tappable) Modifier.clickable(role = Role.Button) { open = true } else Modifier),
+                )
+                if (open) {
+                    TipCallout(recipe.tone, { open = false }) { Text(recipe.detail, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+        }
+        recipe.warnings.forEach { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
+    }
+}
+
+/** Отказ кузницы над целью вместо рецепта: значок запрета и причина в красной рамке. */
+@Composable private fun Refusal(text: String) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        Modifier.fillMaxWidth().background(LifeRed.copy(alpha = .08f), shape).border(1.dp, LifeRed.copy(alpha = .35f), shape).padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Icons.Outlined.Block, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
+        Text(text, color = LifeRed, style = MaterialTheme.typography.bodySmall)
     }
 }

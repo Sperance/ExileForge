@@ -55,6 +55,9 @@ fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else
  */
 fun itemDescription(code: String, index: ContentIndex?): String = index.numbered(locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))).orEmpty()
 
+/** Действие сферы или оттиска [code] одной фразой (`enum.orb.<код>.rule`) - итог рецепта наковальни; у прочих стопок пусто. */
+fun itemRule(code: String): String = uiOr(uiLanguage, "enum.orb.$code.rule", "")
+
 /**
  * Что делает дар Предначертания [card], словами сервера: числа записи дара `{r:fates.<код>.…}` подставляет [index]
  * ([com.sperance.exileforge.rules.text.numbered]); без контента или без числа - пусто.

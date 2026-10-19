@@ -45,6 +45,9 @@ val Bronze = Color(0xFF1F2C35)
 val Parchment = Color(0xFFD5E0E6)
 val Muted = Color(0xFF7A8D99)
 
+/** Тихие цифры-метки (качество роллов): тише [Parchment], но не ниже 4.5:1 на фоне карточки, где [Muted] тускнеет. */
+val Quiet = Color(0xFFA9B8C2)
+
 /** Frost: a second, cooler light for secondary marks. */
 val Rune = Color(0xFF8FD3FF)
 

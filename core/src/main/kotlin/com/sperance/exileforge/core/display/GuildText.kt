@@ -29,16 +29,19 @@ object GuildText {
     fun role(role: GuildRole): String = locOr("guild.role.${role.name}", ui("guild.role.${role.name}"))
 
     /**
-     * Подпись кнопки приглашения: «Пригласить «Имя…»» - имя до первого пробела и не длиннее [INVITE_NAME] знаков, обрезанное -
-     * с «…»; героя нет - просто «Пригласить».
+     * Подпись кнопки приглашения: «Пригласить «Имя»» - имя целиком, если в нём не больше [INVITE_NAME] знаков; длинное -
+     * до первого пробела и не длиннее [INVITE_NAME] знаков, с «…». Знак - кодовая точка, суррогатная пара не режется.
+     * Героя нет - просто «Пригласить».
      */
     fun invite(name: String?): String {
         if (name == null) return ui("guild.invite")
-        val head = name.substringBefore(' ').take(INVITE_NAME)
-        return ui("guild.invite_named", if (head.length < name.length) "$head…" else name)
+        if (name.codePointCount(0, name.length) <= INVITE_NAME) return ui("guild.invite_named", name)
+        val word = name.substringBefore(' ')
+        val head = word.substring(0, word.offsetByCodePoints(0, minOf(INVITE_NAME, word.codePointCount(0, word.length))))
+        return ui("guild.invite_named", "$head…")
     }
 
-    /** Наибольшая длина имени в подписи кнопки приглашения. */
+    /** Наибольшая длина имени в подписи кнопки приглашения, в кодовых точках. */
     private const val INVITE_NAME = 14
 
     /** `Name [TAG]`, the way a guild is named everywhere. */

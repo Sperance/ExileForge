@@ -76,8 +76,10 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
             if (next != stored) prefs[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), next)
         }
     }
-    private fun gameSettingsOf(prefs: Preferences): GameSettings =
-        prefs[gameSettingsKey]?.let { runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull() } ?: GameSettings()
+
+    private fun gameSettingsOf(prefs: Preferences): GameSettings = prefs[gameSettingsKey]?.let {
+        runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull()
+    } ?: GameSettings()
 
     /** Which shelves of the fight's log are shown, by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")

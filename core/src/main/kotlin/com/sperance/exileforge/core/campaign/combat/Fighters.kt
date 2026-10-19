@@ -181,7 +181,8 @@ data class FlaskView(
  * силы слотов, строки «пока держится условие»): плитка на рельсе «на весь бой». Сила-событие - на временной полке: [flash] - доля
  * вспышки срабатывания (1 - только что, 0 - нет), [fired] - сколько раз сработала за бой, [every] - «каждое N-е» (0 - без счёта) и
  * [count] - счёт к нему, [cooldown] - перезарядка в секундах (0 - нет), [ready] - сколько секунд до готовности, [spent] - раз на бой и
- * уже сработала.
+ * уже сработала. [holders] - источник силы: id надетых вещей, что её несут (лист эффектов называет вещь по имени); пусто - носитель
+ * не найден.
  */
 data class PowerView(
     val stat: String,
@@ -194,6 +195,7 @@ data class PowerView(
     val cooldown: Double = 0.0,
     val ready: Double = 0.0,
     val spent: Boolean = false,
+    val holders: List<String> = emptyList(),
 ) {
     /** Счёт «каждое N-е» парой (сколько набрано до следующего, N); у силы без такого счёта - null. */
     val nth: Pair<Int, Int>? get() = if (every > 1) count % every to every else null

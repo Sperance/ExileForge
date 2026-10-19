@@ -44,6 +44,8 @@ import com.sperance.exileforge.rules.content.PowerLine
 import com.sperance.exileforge.rules.content.PowerScale
 import com.sperance.exileforge.rules.content.PowerTarget
 import com.sperance.exileforge.rules.content.RecoveryPool
+import com.sperance.exileforge.rules.sheet.SheetExplainer
+import com.sperance.exileforge.rules.sheet.SourceKind
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -270,7 +272,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
      */
     fun views(): List<PowerView> = carried.map { power ->
         if (power.lasting) {
-            PowerView(power.stat, value(power), standing = true)
+            PowerView(power.stat, value(power), standing = true, holders = holders(power.stat))
         } else {
             val ready = readyAt[power.stat] ?: -1.0
             val since = firedAt[power.stat]?.let { battle.time - it }
@@ -285,9 +287,17 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
                 cooldown = power.cooldown.coerceAtLeast(0.0),
                 ready = if (ready == Double.MAX_VALUE) 0.0 else (ready - battle.time).coerceAtLeast(0.0),
                 spent = ready == Double.MAX_VALUE,
+                holders = holders(power.stat),
             )
         }
     }
+
+    /** Надетые вещи, что несут силу [stat], по id: операции листа героя с её статом ([SheetExplainer.holders]); один раз на бой. */
+    private fun holders(stat: String): List<String> = holderIds.getOrPut(stat) {
+        battle.model.explainer?.holders(stat)?.filter { it.kind == SourceKind.ITEM }?.map { it.ref }?.distinct().orEmpty()
+    }
+
+    private val holderIds = HashMap<String, List<String>>()
 
     /**
      * Сила глотка на уникальной фляге отвечает только на глоток своей фляги: пока её строки лежат на герое,

@@ -108,8 +108,11 @@ internal sealed interface Shelved {
         override val bearing: Bearing get() = Bearing.of(mod.harm)
     }
 
-    /** Сила уникального предмета героя: постоянная - на рельсе, сила-событие - на временной полке. */
-    data class Power(val view: PowerView) : Shelved {
+    /**
+     * Сила уникального предмета героя: постоянная - в листе «на весь бой», сила-событие - на временной полке; [holders] - имена вещей,
+     * что её несут ([PowerView.holders]).
+     */
+    data class Power(val view: PowerView, val holders: List<String> = emptyList()) : Shelved {
         override val bearing: Bearing get() = Bearing.BENEFIT
     }
 }
@@ -123,28 +126,51 @@ internal data class ShelfRow(val title: String, val tint: Color, val source: Str
 /** Оглушение героя или врага: держится и это не заморозка. */
 internal fun stunned(held: Boolean, ailments: List<AilmentView>): Boolean = held && ailments.none { it.ailment == Ailment.FROZEN }
 
-/** Временная полка бойца: оглушение, недуги, эффекты с таймером, заряды, силы-события героя - последними. */
+/**
+ * Временная полка бойца: оглушение, недуги, эффекты с таймером, заряды, силы-события героя - последними; [holder] - имя надетой вещи
+ * по id (носитель силы), не найдена - null.
+ */
 internal fun timedShelf(
     held: Boolean,
     ailments: List<AilmentView>,
     effects: List<EffectView>,
     charges: List<ChargeView> = emptyList(),
     powers: List<PowerView> = emptyList(),
+    holder: (String) -> String? = { null },
 ): List<Shelved> = buildList {
     if (stunned(held, ailments)) add(Shelved.Stun)
     ailments.forEach { add(Shelved.Sick(it)) }
     effects.forEach { if (!it.lasting) add(Shelved.Effect(it)) }
     charges.forEach { add(Shelved.Charge(it)) }
-    powers.forEach { if (!it.standing) add(Shelved.Power(it)) }
+    powers.forEach { if (!it.standing) add(Shelved.Power(it, it.holders.mapNotNull(holder))) }
 }
 
-/** Полка «на весь бой» героя: пассивные умения, постоянные силы уникалок, носимые с начала баффы, строки карты и дары Предначертания. */
-internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved> = buildList {
+/**
+ * Эффекты героя «на весь бой» - лист за кнопкой «≡ N» у портрета ([LastingSheet]): пассивные умения, постоянные силы уникалок
+ * (с именем вещи - [holder]), носимые с начала баффы, строки карты и дары Предначертания.
+ */
+internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>, holder: (String) -> String? = { null }): List<Shelved> = buildList {
     fight.heroPassives.forEach { add(Shelved.Effect(it)) }
-    fight.heroPowers.forEach { if (it.standing) add(Shelved.Power(it)) }
+    fight.heroPowers.forEach { if (it.standing) add(Shelved.Power(it, it.holders.mapNotNull(holder))) }
     fight.heroEffects.forEach { if (it.lasting) add(Shelved.Effect(it)) }
     mods.forEach { add(Shelved.Mod(it)) }
     fight.heroFate.forEach { add(Shelved.Fate(it)) }
+}
+
+/** Группа листа «на весь бой» по источнику эффекта: она же - чип-фильтр листа. */
+internal enum class LastingGroup { SKILLS, ITEMS, WORLD, FATE }
+
+/** Группа эффекта «на весь бой»: умения, предметы (силы уникалок и носимые баффы), карта с гильдией и зельем, дары Судьбы. */
+internal val Shelved.lastingGroup: LastingGroup get() = when (this) {
+    is Shelved.Effect -> when {
+        view.passive -> LastingGroup.SKILLS
+        fateSourced(view.source) -> LastingGroup.FATE
+        else -> LastingGroup.ITEMS
+    }
+
+    is Shelved.Mod -> LastingGroup.WORLD
+    is Shelved.Fate -> LastingGroup.FATE
+    else -> LastingGroup.ITEMS
 }
 
 @Composable internal fun ShelfTile(item: Shelved, side: Dp) {
@@ -230,7 +256,7 @@ internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
     is Shelved.Power -> ShelfRow(
         statTitle(view.stat),
         UniqueTint,
-        ui("fight.src.power"),
+        holders.distinct().joinToString(", ").ifEmpty { ui("fight.src.power") },
         listOf(SkillText.statLine(view.stat, Op.ADD, view.value, index)) + powerFacts(view),
         null,
         powerState(view),
@@ -437,7 +463,8 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
 
 /**
  * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
- * разбор. Читается вживую: таймеры идут, бой не стоит.
+ * разбор (один раз - своей строкой в группе он не повторяется). Эффекты героя на весь бой - свой лист [LastingSheet].
+ * Читается вживую: таймеры идут, бой не стоит.
  */
 @Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -452,10 +479,8 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
                 ShelfGroup(ui("fight.shelf.timed", timed.size))
                 timed.forEach { SheetRow(it) }
             }
-            val standing = lasting.size + (if (flow != null) 1 else 0)
-            if (standing > 0) {
-                ShelfGroup(ui("fight.shelf.lasting", standing))
-                flow?.let { FlowRow(it) }
+            if (lasting.isNotEmpty()) {
+                ShelfGroup(ui("fight.shelf.lasting", lasting.size))
                 lasting.forEach { SheetRow(it) }
             }
         }
@@ -483,17 +508,34 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
     }
 }
 
-@Composable private fun FlowRow(flow: LifeFlow) = EffectRow(
-    { FlowTile(flow, Modifier.size(30.dp)) },
-    ShelfRow(
-        ui("fight.flow.row"),
-        flowTint(flow.net),
-        ui("fight.flow.row_source"),
-        listOf(flowParts(flow).ifEmpty { ui("fight.flow.quiet") }),
-        null,
-    ),
-    ui("fight.shelf.now"),
-)
+/**
+ * Лист эффектов героя «на весь бой» (кнопка «≡ N» у портрета): «На весь бой · N», чипы-фильтры по источнику со счётом (больше одной
+ * группы) и группы [LastingGroup] строками с полными текстами - у силы уникалки источник - имя вещи. Читается вживую, бой не стоит.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
+    val groups = remember(items) { items.groupBy { it.lastingGroup }.toSortedMap() }
+    var only by remember { mutableStateOf<LastingGroup?>(null) }
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(ui("fight.shelf.lasting", items.size), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            if (groups.size > 1) {
+                FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ForgeChip(ui("fight.lasting.all"), only == null, { only = null }, count = items.size)
+                    groups.forEach { (group, list) -> ForgeChip(ui("fight.lasting.group.${group.name}"), only == group, { only = if (only == group) null else group }, count = list.size) }
+                }
+            }
+            if (items.isEmpty()) MutedText(ui("fight.no_states"))
+            groups.filterKeys { only == null || it == only }.forEach { (group, list) ->
+                ShelfGroup(ui("fight.lasting.group.${group.name}"))
+                list.forEach { SheetRow(it) }
+            }
+        }
+    }
+}
 
 @Composable private fun SheetRow(item: Shelved) {
     val row = item.row(LocalContentIndex.current)

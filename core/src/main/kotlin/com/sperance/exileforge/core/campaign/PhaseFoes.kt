@@ -55,15 +55,18 @@ class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules
     /** Тотемы правил по кодам [codes], с проклятием-умением монстров. */
     private fun totems(codes: List<String>): List<FoeTotem> = codes.mapNotNull(rules.byCode::get).map { totem -> FoeTotem(totem, totem.curse?.let(index.skills.monsterByCode::get)) }
 
-    /** Стая [foes] со свитой каждого босса с фазами в конце - на костях [dice], чтобы бой без фаз не менял своих. */
-    fun withRetinue(foes: List<Foe>, dice: Dice): List<Foe> {
+    /**
+     * Стая [foes] со свитой каждого босса с фазами в конце - на костях [dice], чтобы бой без фаз не менял своих; свита встаёт, как любой
+     * монстр захода, через [bound] (`Run.bound`: законы тронов и сила от уровня героя).
+     */
+    fun withRetinue(foes: List<Foe>, dice: Dice, bound: (RolledMonster) -> RolledMonster): List<Foe> {
         val retinue = foes.flatMapIndexed { boss, foe ->
             val count = foe.phases.sumOf { it.step.summon }
             val template = foe.origin?.code?.let(index::monster)
             val pool = template?.let(::pool).orEmpty()
             if (count <= 0 || pool.isEmpty()) return@flatMapIndexed emptyList()
             val seals = template?.retinue?.seals.orEmpty()
-            List(count) { pool[dice.nextInt(pool.size)] }.mapNotNull { code -> normal(code, foe.level, seals, dice)?.let { foe(it, foe.level).copy(summonOf = boss) } }
+            List(count) { pool[dice.nextInt(pool.size)] }.mapNotNull { code -> normal(code, foe.level, seals, dice)?.let { foe(bound(it), foe.level).copy(summonOf = boss) } }
         }
         return foes + retinue
     }

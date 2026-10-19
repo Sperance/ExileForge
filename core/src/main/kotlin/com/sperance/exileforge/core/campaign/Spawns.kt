@@ -23,10 +23,10 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     private val campaign get() = index.campaign
     private val book get() = index.skills
 
-    /** Every token of the zone — or of its Vaal zone — as the seed rolls it, with [buffs] of the map on each. */
+    /** Every token of the zone — or of its Vaal zone — as the seed rolls it and the rules bind it ([Run.foes]), with [buffs] of the map on each. */
     fun packs(vaal: Boolean, buffs: List<MonsterEffect>): List<List<RolledMonster>> {
         val casting = run.streams.of(if (vaal) "vaalCasting" else "casting")
-        return List(if (vaal) run.vaalCount else run.count) { i -> run.spawn(i, vaal).pack.map { skilled(buffed(sworn(it), buffs), casting) } }
+        return List(if (vaal) run.vaalCount else run.count) { i -> run.foes(i, vaal).map { skilled(buffed(it, buffs), casting) } }
     }
 
     /**
@@ -34,7 +34,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
      */
     fun summoned(token: Int, buffs: List<MonsterEffect>): List<RolledMonster> {
         val casting = run.streams.of("summonedCasting", token)
-        return run.spawn(token).pack.map { skilled(buffed(sworn(it), buffs), casting) }
+        return run.foes(token).map { skilled(buffed(it, buffs), casting) }
     }
 
     /** Босс зоны при встрече: без своих строк; [buffs] - строки карты на всех монстрах, [extra] - что карта и режим делают с ним одним. */
@@ -46,24 +46,18 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /** Босс [code] с силой захода ([Run.guardianPower]: на карте - своя по тиру); [dice] - кости его умений. */
     private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
-        return skilled(buffed(sworn(monsters.boss(monsters.guardian(code, level, run.guardianPower(level)), extra)), buffs), dice)
+        return skilled(buffed(run.bound(monsters.boss(monsters.guardian(code, level, run.guardianPower(level)), extra)), buffs), dice)
     }
 
     /**
      * A crystal's guardian: the zone's monster standing up rare — its rule's lines drawn as any rare's — with
      * the line of every kind of essence it guards, and [extra], what a Vaal orb and the atlas add to it. Сам страж - функция правил
-     * [Run.crystalGuardian] (по ней же сервер мерит темп боя), здесь - законы, баффы карты и навыки.
+     * [Run.crystalGuardian] (по ней же сервер мерит темп боя), здесь - законы и сила от уровня героя ([Run.bound]), баффы карты и навыки.
      */
     fun crystalGuardian(crystal: Crystal, place: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? {
         val dice = run.crystalDice(place)
-        return run.crystalGuardian(crystal, dice, extra)?.let { skilled(buffed(sworn(it), buffs), dice) }
+        return run.crystalGuardian(crystal, dice, extra)?.let { skilled(buffed(run.bound(it), buffs), dice) }
     }
-
-    /**
-     * Цена законов тронов героя ([Run.lawEffects]): зеркала тронов ниже региона зоны, на карте Атласа - всех, - в статах монстра
-     * как его собственные строки, до баффов карты. Ложится один раз, при постановке монстра.
-     */
-    fun sworn(monster: RolledMonster): RolledMonster = if (run.lawEffects.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, run.lawEffects))
 
     /** The map's [buffs] folded into the monster's stats and kept apart, so the arena can say which is which. */
     fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster = if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)

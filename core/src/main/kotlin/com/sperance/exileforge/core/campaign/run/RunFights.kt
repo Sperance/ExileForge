@@ -107,7 +107,7 @@ internal fun ExpeditionRun.battle(): Battle {
     }
     return Battle(
         hero,
-        phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
+        phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream)), run::bound),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit.copy(fate = FateKit.of(run.fate)), model = build, pools = pools,
         percent = build.gear.percent, cleared = wonLast, fateRun = fateRun,
     )

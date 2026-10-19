@@ -77,7 +77,7 @@ import com.sperance.exileforge.ui.theme.*
  * picked map's rarity, the three figures it pays and its lines marked by kind — red a harm with the
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
  *
- * Тир карты поднимает уровень района: по нему монстры, добыча и мифические захода. Захваченная карта - сильнее монстры и влияние на добычу.
+ * Тир карты, а без тира - уровень карты ставит уровень района: по нему монстры, добыча и мифические захода. Захваченная карта - сильнее монстры и влияние на добычу.
  * Атлас и взятые скарабеи усиливают действующие числа карты, как их сложит сервер на входе.
  */
 @Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunch) {
@@ -102,14 +102,15 @@ import com.sperance.exileforge.ui.theme.*
         color = rarityColor(rarity.name),
         style = MaterialTheme.typography.labelMedium,
     )
-    picked.view.areaLevel?.takeIf { picked.item.mapTier > 0 }?.let { area ->
-        Text(ui("expedition.launch_area", picked.item.mapTier, area, zone.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+    picked.view.areaLevel?.let { area ->
+        val line = if (picked.item.mapTier > 0) ui("expedition.launch_area", picked.item.mapTier, area, zone.level) else ui("expedition.launch_map_level", area)
+        Text(line, color = GoldBright, style = MaterialTheme.typography.labelMedium)
     }
     val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }
     val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
     val loot = LootRoller(index)
     val scarabs = launch.scarabs.mapNotNull(index.rules.brews::scarab)
-    val bonus = loot.activeMap(zone.code, loot.mapSources(picked.item, atlas.mapEffect, atlas.effects, scarabs), rarity, picked.item.mapTier, influence, atlas.effects)
+    val bonus = loot.activeMap(zone.code, loot.mapSources(picked.item, atlas.mapEffect, atlas.effects, scarabs), rarity, picked.item.mapTier, influence, atlas.effects, picked.item.itemLevel)
     MapCapture.of(index.campaign.maps.influence, influence) { stat -> atlas.effects[stat] ?: 0.0 }?.let { Captured(it) }
     Row(Modifier.fillMaxWidth().background(Abyss).border(1.dp, PanelRaised).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceAround) {
         Figure(bonus.quantity, ui("expedition.launch_quantity"))

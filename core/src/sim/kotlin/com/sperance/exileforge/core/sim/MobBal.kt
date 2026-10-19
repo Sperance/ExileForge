@@ -47,6 +47,7 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.LootRoller
+import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
@@ -365,14 +366,15 @@ class Arena(private val index: ContentIndex, private val hero: Hero, effects: Ma
 
     val damage: Double get() = CombatProfile.of(index, body.stats, hero.level).total
 
-    fun battle(foes: List<Foe>, seed: Long, retinue: Boolean): Battle {
-        val all = if (retinue) phases.withRetinue(foes, Dice(seed)) else foes
+    /** Бой против [foes] на костях [seed]; с [retinue] - со свитой фаз боссов, что встаёт через [bound] захода (`Run.bound`). */
+    fun battle(foes: List<Foe>, seed: Long, retinue: Boolean, bound: (RolledMonster) -> RolledMonster = { it }): Battle {
+        val all = if (retinue) phases.withRetinue(foes, Dice(seed), bound) else foes
         return Battle(body, all, rules, index.rules.fight, pools.life, Random(seed), gear.stance, kit = loadout, model = build, pools = pools, percent = gear.percent, cleared = false, kind = FightKinds.expedition(all))
     }
 
     /** Один бой против [foes] до [cap] секунд на костях [seed]. */
-    fun fight(foes: List<Foe>, seed: Long, cap: Double, retinue: Boolean): Fought {
-        val battle = battle(foes, seed, retinue)
+    fun fight(foes: List<Foe>, seed: Long, cap: Double, retinue: Boolean, bound: (RolledMonster) -> RolledMonster = { it }): Fought {
+        val battle = battle(foes, seed, retinue, bound)
         var firstKill = -1.0
         while (battle.outcome == null && battle.time < cap) {
             battle.advance(0.25)
@@ -458,18 +460,21 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         listOf(sorted.first(), sorted[sorted.size / 2], sorted.last()).distinct()
     }.mapNotNull { com.sperance.exileforge.core.campaign.VaalZones.zone(it, index.campaign.vaal) }
 
-    /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня. */
-    fun mapZones(): List<Zone> {
+    /**
+     * Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня; [low] - зоны ниже порога тиров, карты без
+     * тира (свой уровень карты - [SimMap.level]).
+     */
+    fun mapZones(low: Boolean = false): List<Zone> {
         val from = index.campaign.maps.tiers?.fromLevel ?: return emptyList()
-        return index.campaign.zones.filter { it.level >= from && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+        return index.campaign.zones.filter { (it.level >= from) != low && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
     }
 
     /**
-     * Эталон своего уровня на карте тира [tier] зоны [zone]: уровень героя - уровень района карты, вещи полосы
+     * Эталон своего уровня на карте [map] зоны [zone]: уровень героя - уровень района карты, вещи полосы
      * этого уровня ([campaignBand]), штраф сопротивлений карты.
      */
-    fun mapHero(heroClass: HeroClass, zone: Zone, tier: Int): Hero {
-        val level = index.campaign.maps.areaLevel(zone.level, tier)
+    fun mapHero(heroClass: HeroClass, zone: Zone, map: SimMap): Hero {
+        val level = areaOf(zone, map)
         return hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, true))
     }
 
@@ -481,20 +486,22 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         return listOfNotNull(Style.ATTACK.takeIf { attack }, Style.SPELL.takeIf { spell })
     }
 
-    /** Карта-предмет тира [tier] редкости [rarity] зоны [zone]: настоящие строки, тир и угрозы - правилами добычи. */
-    fun mapEffects(zone: Zone, tier: Int, rarity: Rarity, seed: Long, heroLevel: Int): Pair<Map<String, Double>, com.sperance.exileforge.rules.roll.ActiveMap?> {
-        if (tier <= 0) return emptyMap<String, Double>() to null
+    /** Уровень района зоны [zone] на карте [map] (без карты - зона): правилами, как в заходе. */
+    private fun areaOf(zone: Zone, map: SimMap?): Int = index.campaign.maps.areaLevel(zone.level, map?.tier ?: 0, map?.level ?: 0)
+
+    /** Карта-предмет [map] редкости [rarity] зоны [zone]: настоящие строки, тир, свой уровень и угрозы - правилами добычи; без карты - ничего. */
+    fun mapEffects(zone: Zone, map: SimMap?, rarity: Rarity, seed: Long, heroLevel: Int): Pair<Map<String, Double>, com.sperance.exileforge.rules.roll.ActiveMap?> {
+        if (map == null) return emptyMap<String, Double>() to null
         val loot = LootRoller(index, heroLevel)
         val dice = Dice(seed)
-        val area = index.campaign.maps.areaLevel(zone.level, tier)
         val base = index.template(MAP_TEMPLATE) ?: error("no map template")
-        val map = ItemFactory(index).create("map", base, rarity, dice, level = area).also {
+        val item = ItemFactory(index).create("map", base, rarity, dice, level = areaOf(zone, map)).also {
             it.mapZone = zone.code
-            it.mapTier = tier
+            it.mapTier = map.tier
         }
-        loot.mapPerils(map, dice)
-        val effects = loot.mapEffects(map)
-        return effects to loot.activeMap(zone.code, effects, rarity, tier)
+        loot.mapPerils(item, dice)
+        val effects = loot.mapEffects(item)
+        return effects to loot.activeMap(zone.code, effects, rarity, map.tier, level = map.level)
     }
 
     private fun run(zone: Zone, hero: Hero, seed: Long, active: com.sperance.exileforge.rules.roll.ActiveMap?) = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level, active = active))
@@ -507,11 +514,11 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /**
-     * Босс зоны [zone] (на карте тира [tier], [rarity] - редкость карты): [rolls] бросков босса (каждый - своя карта при тире) ×
+     * Босс зоны [zone] (на карте [map], без неё - по региону; [rarity] - редкость карты): [rolls] бросков босса (каждый - своя карта) ×
      * fights/rolls боёв. Время - секунды; урон по герою - доля пула в секунду; два последних столбца - сколько здоровья реген и
      * вампиризм вернули боссу и сколько урона нанёс ему герой, в среднем за бой.
      */
-    fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
+    fun boss(zone: Zone, hero: Hero, map: SimMap?, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
         var wins = 0
         var n = 0
         var winTime = 0.0
@@ -525,7 +532,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         var restored = 0.0
         var dealt = 0.0
         repeat(rolls) { r ->
-            val (rolled, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+            val (rolled, active) = mapEffects(zone, map, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
             val effects = MapEffects.sum(rolled, extra)
             val run = run(zone, hero, SimKit.SEED + r, active)
             val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
@@ -538,7 +545,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
             heroPool += arena.body.maxLife + arena.body.maxShield
             heroDmg += arena.damage
             repeat(fights / rolls) { i ->
-                val f = arena.fight(listOf(foe), 9_173L + i + 1000L * r, cap, retinue = true)
+                val f = arena.fight(listOf(foe), 9_173L + i + 1000L * r, cap, retinue = true, bound = run::bound)
                 n++
                 allTime += f.time
                 taken += f.taken / (arena.body.maxLife + arena.body.maxShield).coerceAtLeast(1.0) / f.time.coerceAtLeast(0.1)
@@ -554,7 +561,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val k = rolls.toDouble()
         return Row(
             listOf(
-                "boss", zone.code.value, zone.boss.value, zone.level, index.campaign.maps.areaLevel(zone.level, tier), tier, rarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
+                "boss", zone.code.value, zone.boss.value, zone.level, areaOf(zone, map), map?.tier ?: 0, rarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
                 wins.toDouble() / n.coerceAtLeast(1), if (wins > 0) winTime / wins else -1.0, allTime / n.coerceAtLeast(1), timeouts, taken / n.coerceAtLeast(1),
                 bossLife / k, might / k, heroPool / k, heroDmg / k, n, hero.note, restored / n.coerceAtLeast(1), dealt / n.coerceAtLeast(1),
             ),
@@ -636,9 +643,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         }
         cells += bfs(at)[layout.exit.y * layout.width + layout.exit.x].let { if (it < 0) 0 else it }
         val speed = rules.heroSpeed * (1 + (sheet.stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
-        val loot = LootRoller(index, hero.level)
-        val mobsXp = (0 until run.count).sumOf { i -> run.spawn(i).pack.sumOf { m -> loot.experience(index.monster(m.code)!!, run.areaLevel, index.campaign.rarity(m.rarity), 0.0, hero.level) } }
-        val bossXp = index.monster(zone.boss)?.let { loot.experience(it, run.areaLevel, index.campaign.rarity(MonsterRarity.UNIQUE), 0.0, hero.level) } ?: 0.0
+        val mobsXp = (0 until run.count).sumOf { i -> run.spawn(i).pack.sumOf { m -> run.experienceOf(index.monster(m.code)!!, m.rarity) } }
+        val bossXp = index.monster(zone.boss)?.let { run.experienceOf(it, MonsterRarity.UNIQUE) } ?: 0.0
         val monsters = (0 until run.count).sumOf { run.spawn(it).pack.size }
         return Row(
             listOf(
@@ -649,13 +655,13 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /** Зонд героя против целей зоны: обычные/волшебные/редкие ([monsterSamples] кодов) и босс ([rolls] бросков). */
-    fun probe(zone: Zone, hero: Hero, tier: Int, mapRarity: Rarity): List<Row> {
-        val (run, arena, probes) = probes(zone, hero, tier, mapRarity)
+    fun probe(zone: Zone, hero: Hero, map: SimMap?, mapRarity: Rarity): List<Row> {
+        val (run, arena, probes) = probes(zone, hero, map, mapRarity)
         return probes.map { (kind, list) ->
             fun med(f: (Probe) -> Double) = list.map(f).sorted().let { it[it.size / 2] }
             Row(
                 listOf(
-                    "probe", zone.code.value, kind, zone.level, run.areaLevel, tier, mapRarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
+                    "probe", zone.code.value, kind, zone.level, run.areaLevel, map?.tier ?: 0, mapRarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
                     med { it.life }, med { it.dps }, med { it.perAction }, med { it.ttd }, med { it.actionsPerSecond }, arena.body.maxLife + arena.body.maxShield, list.size, med { it.seconds }, med { it.lifeShare }, med { it.actions }, med { it.regen }, hero.note,
                 ),
             )
@@ -664,13 +670,13 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
 
     /** Темп зоны: медианы действий героя на обычного монстра, секунд на редкого и на стража. */
     fun tempo(zone: Zone, hero: Hero): Tempo {
-        val probes = probes(zone, hero, 0, Rarity.COMMON).third
+        val probes = probes(zone, hero, null, Rarity.COMMON).third
         fun med(kind: String, f: (Probe) -> Double) = probes.getValue(kind).map(f).sorted().let { it[it.size / 2] }
         return Tempo(med(MonsterRarity.NORMAL.name) { it.actions }, med(MonsterRarity.RARE.name) { it.seconds }, med(BOSS) { it.seconds })
     }
 
-    private fun probes(zone: Zone, hero: Hero, tier: Int, mapRarity: Rarity): Triple<Run, Arena, Map<String, List<Probe>>> {
-        val (effects, active) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
+    private fun probes(zone: Zone, hero: Hero, map: SimMap?, mapRarity: Rarity): Triple<Run, Arena, Map<String, List<Probe>>> {
+        val (effects, active) = mapEffects(zone, map, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
         val run = run(zone, hero, SimKit.SEED + 3, active)
         val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
         val spawns = Spawns(index, run)
@@ -685,13 +691,13 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
                 Prober.probe(index, arena, m, run.areaLevel, 7_000L + s)
             }
         }
-        out[BOSS] = bossProbes(zone, hero, tier, mapRarity)
+        out[BOSS] = bossProbes(zone, hero, map, mapRarity)
         return Triple(run, arena, out)
     }
 
-    /** Зонды стража зоны [zone] ([rolls] бросков босса со строками карты тира [tier]): урон героя по нему и время до смерти героя. */
-    fun bossProbes(zone: Zone, hero: Hero, tier: Int = 0, mapRarity: Rarity = Rarity.COMMON): List<Probe> = List(rolls) { r ->
-        val (fx, act) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+    /** Зонды стража зоны [zone] ([rolls] бросков босса со строками карты [map]): урон героя по нему и время до смерти героя. */
+    fun bossProbes(zone: Zone, hero: Hero, map: SimMap? = null, mapRarity: Rarity = Rarity.COMMON): List<Probe> = List(rolls) { r ->
+        val (fx, act) = mapEffects(zone, map, mapRarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
         val rr = run(zone, hero, SimKit.SEED + r, act)
         val a = Arena(index, hero, heroEffects(zone, fx, act != null))
         val boss = Spawns(index, rr).boss(zone, MapEffects.buffs(fx), MapEffects.bossBuffs(fx))!!
@@ -702,8 +708,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
      * Монстры зоны по редкости [rarity] 1 на 1: [monsterSamples] монстров (код и строки - кости), бой до смерти одной из сторон.
      * Время убийства, действий героя до убийства, урон по герою (доля пула в секунду), смерти героя.
      */
-    fun monsters(zone: Zone, hero: Hero, tier: Int, mapRarity: Rarity, rarity: MonsterRarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
-        val (rolled, active) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
+    fun monsters(zone: Zone, hero: Hero, map: SimMap?, mapRarity: Rarity, rarity: MonsterRarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
+        val (rolled, active) = mapEffects(zone, map, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
         val effects = MapEffects.sum(rolled, extra)
         val run = run(zone, hero, SimKit.SEED + 3, active)
         val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
@@ -737,7 +743,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         fun med(list: List<Double>) = if (list.isEmpty()) -1.0 else list.sorted()[list.size / 2]
         return Row(
             listOf(
-                "mob", zone.code.value, rarity.name, zone.level, run.areaLevel, tier, mapRarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
+                "mob", zone.code.value, rarity.name, zone.level, run.areaLevel, map?.tier ?: 0, mapRarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
                 med(kills), if (actions.isEmpty()) -1.0 else actions.sorted()[actions.size / 2].toDouble(), kills.average().takeIf { !it.isNaN() } ?: -1.0,
                 deaths.toDouble() / n, taken / n, lifeLost / n, life / n, arena.body.maxLife + arena.body.maxShield, arena.damage, monsterSamples, hero.note,
             ),
@@ -838,8 +844,8 @@ fun main(args: Array<String>) {
                 tasks += Task {
                     val band = if (mode == "guard" || System.getProperty("ladder") == "1") campaignBand(zone.level) else GearBand.TYPICAL
                     val hero = sim.hero(c, zone.level, Archetype(band), penalty(zone, false))
-                    val rows = mutableListOf(sim.boss(zone, hero, 0, Rarity.COMMON, cap))
-                    if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.forEach { r -> rows += sim.monsters(zone, hero, 0, Rarity.COMMON, r, 120.0) }
+                    val rows = mutableListOf(sim.boss(zone, hero, null, Rarity.COMMON, cap))
+                    if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.forEach { r -> rows += sim.monsters(zone, hero, null, Rarity.COMMON, r, 120.0) }
                     rows
                 }
             }
@@ -857,7 +863,7 @@ fun main(args: Array<String>) {
                 archetypes.forEach { a ->
                     tasks += Task {
                         val hero = sim.hero(c, zone.level, a, penalty(zone, false))
-                        listOf(sim.boss(zone, hero, 0, Rarity.COMMON, cap)) + MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, 0, Rarity.COMMON, r, 120.0) }
+                        listOf(sim.boss(zone, hero, null, Rarity.COMMON, cap)) + MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, null, Rarity.COMMON, r, 120.0) }
                     }
                 }
             }
@@ -865,20 +871,25 @@ fun main(args: Array<String>) {
 
         "vaal" -> sim.vaalZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
             classes.forEach { c ->
-                tasks += Task { listOf(sim.boss(zone, sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false)), 0, Rarity.COMMON, cap)) }
+                tasks += Task { listOf(sim.boss(zone, sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false)), null, Rarity.COMMON, cap)) }
             }
         }
 
         "maps" -> {
-            val tiers = (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
+            val low = System.getProperty("low") == "1"
+            val maps = if (low) {
+                listOf(SimMap(0, System.getProperty("mapLevel")?.toIntOrNull()?.coerceAtMost(index.campaign.maps.ownLevelCap ?: 0) ?: 0))
+            } else {
+                (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { SimMap(it.trim().toInt()) }
+            }
             val mapRarities = (System.getProperty("mapRarities") ?: "COMMON").split(',').map { Rarity.valueOf(it.trim()) }
-            sim.mapZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
-                tiers.forEach { tier ->
+            sim.mapZones(low).filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
+                maps.forEach { map ->
                     classes.forEach { c ->
                         mapRarities.forEach { mr ->
                             tasks += Task {
-                                val hero = sim.mapHero(c, zone, tier)
-                                listOf(sim.boss(zone, hero, tier, mr, cap)) + (if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, tier, mr, r, 120.0) } else emptyList())
+                                val hero = sim.mapHero(c, zone, map)
+                                listOf(sim.boss(zone, hero, map, mr, cap)) + (if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, map, mr, r, 120.0) } else emptyList())
                             }
                         }
                     }
@@ -953,7 +964,7 @@ fun main(args: Array<String>) {
                     val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to penalty(zone, false)))
                     val boss = Spawns(index, run).boss(zone, emptyList(), emptyList())!!
                     val foe = arena.phases.foe(boss, run.levelOf(zone))
-                    val battle = if (System.getProperty("dummy") == "1") arena.battle(listOf(arena.phases.foe(Prober.dummy(boss), run.levelOf(zone))), 9173L, false) else arena.battle(listOf(foe), 9173L, true)
+                    val battle = if (System.getProperty("dummy") == "1") arena.battle(listOf(arena.phases.foe(Prober.dummy(boss), run.levelOf(zone))), 9173L, false) else arena.battle(listOf(foe), 9173L, true, run::bound)
                     while (battle.outcome == null && battle.time < 60) battle.advance(0.25)
                     listOf(Row(listOf("trace", c.code, zone.code.value, "bossLife", foe.body.maxLife, "items", hero.build.items.joinToString(",") { it.template }))) +
                         battle.events.take(40).map { e -> Row(listOf("ev", String.format(Locale.ROOT, "%.2f", e.time), e.actor, e.action, e.kind, e.skill ?: "-", e.type ?: "-", e.damage, e.monsterLife, e.heroLife, e.foe)) }
@@ -971,7 +982,7 @@ fun main(args: Array<String>) {
                             tasks += Task {
                                 val level = if (tier == 0) zone.level else heroLevelOf(band)
                                 val hero = sim.hero(c, level, Archetype(band), penalty(zone, tier > 0))
-                                sim.probe(zone, hero, tier, Rarity.COMMON)
+                                sim.probe(zone, hero, SimMap.tiered(tier), Rarity.COMMON)
                             }
                         }
                     }
@@ -1036,7 +1047,7 @@ fun main(args: Array<String>) {
                         val near = sim.nearZones(level, CLASS_BOSSES)
                         val runs = sources.flatMap { source -> (0 until gearSeeds).map { source to it } }.map { (source, seed) ->
                             val (hero, damage) = sim.classDamage(c, level, source, seed)
-                            val bosses = near.map { sim.boss(it, hero, 0, Rarity.COMMON, cap) }
+                            val bosses = near.map { sim.boss(it, hero, null, Rarity.COMMON, cap) }
                             Triple(hero, damage, bosses)
                         }
                         fun geo(f: (LoadoutTuner.Damage) -> Double) = kotlin.math.exp(runs.map { kotlin.math.ln(f(it.second).coerceAtLeast(1.0)) }.average())
@@ -1180,8 +1191,8 @@ fun main(args: Array<String>) {
                         val hero = sim.hero(c, heroLevelOf(GearBand.TYPICAL), Archetype(GearBand.TYPICAL), penalty(zone, true))
                         (listOf(null) + offers).flatMap { offer ->
                             val extra = offer?.let { o -> listOfNotNull(index.modifier(com.sperance.exileforge.rules.content.ModifierCode(o.curse)), index.modifier(com.sperance.exileforge.rules.content.ModifierCode(o.boon))).flatMap { m -> m.effects.zip(m.tiers.first().values) { e, v -> e.stat to v.first() } }.toMap() }.orEmpty()
-                            val boss = sim.boss(zone, hero, 1, Rarity.COMMON, cap, extra)
-                            val rare = sim.monsters(zone, hero, 1, Rarity.COMMON, MonsterRarity.RARE, 120.0, extra)
+                            val boss = sim.boss(zone, hero, SimMap(1), Rarity.COMMON, cap, extra)
+                            val rare = sim.monsters(zone, hero, SimMap(1), Rarity.COMMON, MonsterRarity.RARE, 120.0, extra)
                             listOf(Row(listOf("altar", offer?.code ?: "-", zone.code.value, c.code, boss.values[10], boss.values[11], boss.values[12], rare.values[10], rare.values[13])))
                         }
                     }
@@ -1213,7 +1224,7 @@ fun main(args: Array<String>) {
                         classes.forEach { c ->
                             tasks += Task {
                                 val band = if (name == REFERENCE_BAND) campaignBand(level) else GearBand.valueOf(name)
-                                val boss = sim.boss(zone, sim.hero(c, level, Archetype(band), penalty(zone, false)), 0, Rarity.COMMON, cap)
+                                val boss = sim.boss(zone, sim.hero(c, level, Archetype(band), penalty(zone, false)), null, Rarity.COMMON, cap)
                                 listOf(Row(listOf("spread", zone.code.value, zone.boss.value, zone.level, level, level - zone.level, name, c.code, boss.values[10])))
                             }
                         }
@@ -1257,15 +1268,33 @@ object GuardianTarget {
 }
 
 /**
+ * Карта-предмет прогона: тир [tier] (0 - без тира) и свой уровень [level] карты без тира (0 - как зона); заход по региону - без карты (null).
+ */
+data class SimMap(val tier: Int, val level: Int = 0) {
+    companion object {
+        /** Карта тира [tier]; тир 0 - заход по региону, без карты. */
+        fun tiered(tier: Int): SimMap? = if (tier > 0) SimMap(tier) else null
+    }
+}
+
+/**
  * Цель режимов, что тяжелеют с ростом (RULES «Общее», цели баланса): доля побед эталона своего уровня падает линейно от [EASY] в начале
- * отрезка до [HARD] в его конце - карты по тиру, Разлом недели по уровню героя.
+ * отрезка до [HARD] в его конце - карты по тиру, Разлом недели по уровню героя; карты своего уровня ниже порога тиров - от [EASY] на
+ * первом уровне до [LOW] на высшем своём уровне карты ([below], отчёт `-Pmode=maps -Plow=1`, уровень карты - `-PmapLevel`).
  */
 object FallingTarget {
     const val EASY = 0.60
     const val HARD = 0.30
+    const val LOW = 0.45
 
     /** Цель на месте [at] отрезка [from]..[to]: вне отрезка - как на его краю. */
     fun at(at: Double, from: Double, to: Double): Double = EASY + (HARD - EASY) * ((at - from) / (to - from)).coerceIn(0.0, 1.0)
+
+    /**
+     * Цель карты своего уровня [level] ниже порога тиров: линейно от [EASY] на 1-м до [LOW] на высшем своём уровне карты [top]
+     * (`MapRule.ownLevelCap` контента).
+     */
+    fun below(level: Int, top: Int): Double = EASY + (LOW - EASY) * ((level - 1).toDouble() / (top - 1).coerceAtLeast(1)).coerceIn(0.0, 1.0)
 }
 
 /**

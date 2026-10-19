@@ -5,8 +5,11 @@ import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.run.Run
 
-/** Откуда прибавка к золоту или опыту захода: лист героя, карта-предмет, зона Ваал, сделки алтарей, зелье, атлас с гильдией. */
-enum class BoostSource { HERO, MAP, VAAL, PACT, POTION, ATLAS }
+/**
+ * Откуда прибавка к золоту или опыту захода: лист героя, карта-предмет, зона Ваал, сделки алтарей, зелье, сила монстров от уровня героя
+ * ([Run.heroScale], только опыт), атлас с гильдией.
+ */
+enum class BoostSource { HERO, MAP, VAAL, PACT, POTION, LEVEL, ATLAS }
 
 /** Доля источника [source] в прибавке: [percent] процентов к стоку. */
 data class BoostPart(val source: BoostSource, val percent: Double)
@@ -49,19 +52,23 @@ data class LootBreakdown(val total: Double, val parts: List<BoostPart>) {
 
         /**
          * Опыт [total] захода [run]: лист героя, [vaal] - зона Ваал захода, атлас с гильдией и зельем, сделки - как их складывает
-         * опыт за монстра на сервере; карта-предмет опыта не прибавляет.
+         * опыт за монстра на сервере; карта-предмет опыта не прибавляет. Сила монстров от уровня героя ([Run.heroScale]) множит опыт
+         * поверх прибавок: её доля - тот же множитель в процентах стока, (1 + прибавки) × (множитель − 1).
          */
         fun experience(run: Run, pacts: Map<String, Double>, potion: Map<String, Double>, total: Double, vaal: Boolean): LootBreakdown {
             val context = run.context.copy(pacts = pacts)
             val hero = context.bonus(MonsterRarity.NORMAL).experience
             val zone = if (vaal) context.vaal?.experience ?: 0.0 else 0.0
+            val added = hero + zone + context[AtlasStat.EXPERIENCE.code]
+            val level = (100 + added) * (run.heroScale.experience - 1)
             return of(
                 total,
-                hero + zone + context[AtlasStat.EXPERIENCE.code],
+                added + level,
                 BoostSource.HERO to hero,
                 BoostSource.VAAL to zone,
                 BoostSource.PACT to (pacts[AtlasStat.EXPERIENCE.code] ?: 0.0),
                 BoostSource.POTION to (potion[AtlasStat.EXPERIENCE.code] ?: 0.0),
+                BoostSource.LEVEL to level,
             )
         }
 

@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
+import com.sperance.exileforge.core.display.preciseNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
@@ -75,6 +76,8 @@ class TraceExplainer(private val game: GameUi) {
                 } ?: share.ref
 
                 MonsterShareKind.POWER -> ui("trace.src.guardian_power", fineNumber(share.ref.toDouble()))
+
+                MonsterShareKind.HERO -> monster.heroScale?.let { ui("trace.src.hero_scale", preciseNumber(it.health), preciseNumber(it.damage)) }.orEmpty()
 
                 MonsterShareKind.MAP -> ui("stat.src.map")
             }

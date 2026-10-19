@@ -9,7 +9,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -21,14 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Building
-import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.unlocked
-import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.hero.HeroFate
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
@@ -95,15 +93,11 @@ import kotlinx.coroutines.flow.StateFlow
     }
 }
 
-/**
- * Чип счёта дара героя в шапке ([FateChip]): только у дара со счётом; [runs] - идущий заход (счёт Разгона). Кнопка подсказки
- * ведёт в здание, где счёт тратят ([onVisit]), если оно герою уже открыто.
- */
-@Composable internal fun HeroFateChip(game: GameUi, runs: StateFlow<ExpeditionRun?>, onVisit: (Building) -> Unit) {
-    val card = remember(game.index, game.heroInfo?.fate) { heroFate(game) } ?: return
-    val tally = rememberFateTally(game, rememberFateEffects(game), runs) ?: return
-    val visit = tally.counter.visit?.takeIf { game.unlocked(Feature.ofBuilding(it)) }
-    FateChip(tally, card, visit?.let { { onVisit(it) } })
+/** Чип счёта дара героя в шапке ([FateChip]) из потока дара модели [fates]: только у дара со счётом; [onVisit] - в здание счёта. */
+@Composable internal fun HeroFateChip(fates: StateFlow<HeroFate?>, onVisit: (Building) -> Unit) {
+    val fate by fates.collectAsStateWithLifecycle()
+    val shown = fate ?: return
+    shown.tally?.let { FateChip(it, shown.card, shown.visit, onVisit) }
 }
 
 /** Опыт внутри уровня: доля полосы и подпись. */

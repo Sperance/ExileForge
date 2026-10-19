@@ -29,9 +29,9 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * What an icon says about itself: its name in its colour, the rule in words, and the
- * figures it carries — strength, time left, stacks — as label and value.
+ * figures it carries — strength, time left, stacks — as label and value. Числа строк - цветом [valueTint].
  */
-data class Tip(val title: String, val body: String = "", val tint: Color = GoldBright, val facts: List<Pair<String, String>> = emptyList())
+data class Tip(val title: String, val body: String = "", val tint: Color = GoldBright, val facts: List<Pair<String, String>> = emptyList(), val valueTint: Color = GoldBright)
 
 /**
  * An icon that explains itself: a tap opens [tip] as a small window growing out of the
@@ -54,17 +54,18 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     }
 }
 
-/** The window itself, anchored to whatever holds it. */
-@Composable fun TipCallout(tip: Tip, onClose: () -> Unit) {
+/** The window itself, anchored to whatever holds it. Под строками - [footer] (действие подсказки), если есть. */
+@Composable fun TipCallout(tip: Tip, footer: (@Composable ColumnScope.() -> Unit)? = null, onClose: () -> Unit) {
     TipCallout(tip.tint, onClose) {
         Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
         if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)
         tip.facts.forEach { (label, value) ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                Text(value, color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+                Text(value, color = tip.valueTint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
             }
         }
+        footer?.invoke(this)
     }
 }
 

@@ -142,10 +142,11 @@ class FateKit(val effects: FateEffects) {
         val NONE = FateKit(FateEffects.NONE)
 
         /**
-         * Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с судьбоносными строками надетого [equipped]. В
-         * заходе бой берёт замороженный дар захода ([of] от `Run.fate`).
+         * Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с судьбоносными строками надетого [equipped] и
+         * переносом Разгона [carry] (`HeroInfo.fateCarry`), как его собирает сервер. В заходе бой берёт замороженный дар захода
+         * ([of] от `Run.fate`).
          */
-        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, equipped: Collection<ItemInstance> = emptyList()): FateKit = of(index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, equipped)))
+        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, equipped: Collection<ItemInstance> = emptyList(), carry: Int = 0): FateKit = of(index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, equipped), carry))
 
         /** Готовые рычаги [effects]; без дара - [NONE]. */
         fun of(effects: FateEffects): FateKit = if (effects.fate == null) NONE else FateKit(effects)

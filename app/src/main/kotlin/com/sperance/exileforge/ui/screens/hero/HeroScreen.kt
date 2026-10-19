@@ -55,6 +55,7 @@ fun HeroScreen() {
     val model = koinViewModel<HeroViewModel>()
     val smithy = koinViewModel<SmithyViewModel>().model
     val page by model.page.collectAsStateWithLifecycle()
+    val fate by model.fate.collectAsStateWithLifecycle()
     val heroId = game.heroId
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
@@ -87,14 +88,13 @@ fun HeroScreen() {
                     }
 
                     else -> {
-                        heroFate(game)?.let { fate ->
+                        fate?.let { shown ->
                             item(key = "fate") {
-                                val effects = rememberFateEffects(game)
-                                val now = remember(effects, game.lang) { effects?.let { e -> game.index?.let { fateNow(it, e) } }.orEmpty() }
-                                val caption = rememberFateTally(game, effects, shell.run)?.caption ?: ui("fate.ribbon.caption")
+                                val now = remember(shown.effects, game.lang) { game.index?.let { fateNow(it, shown.effects) }.orEmpty() }
+                                val caption = shown.tally?.caption ?: ui("fate.ribbon.caption")
                                 FateRibbon(
-                                    fate,
-                                    effects?.power?.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
+                                    shown.card,
+                                    shown.effects.power.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
                                     Modifier.fillMaxWidth(),
                                     now = now,
                                 )

@@ -886,7 +886,7 @@ private class WinStreak(effect: FateEffect, fate: FateEffects) : LeverReaction(e
     override fun opens(battle: Battle) {
         val run = battle.fateRun
         val bonus = fate.streak(run.won)
-        if (bonus > 0) battle.fateBeat(FateBeat.STREAK, (run.won + fate.carry).toDouble(), bonus)
+        if (bonus > 0) battle.fateBeat(FateBeat.STREAK, fate.streakWins(run.won).toDouble(), bonus)
         val knob = fate.of(FateKnob.STREAK_WARD) ?: return
         val every = knob.param.toInt()
         if (every <= 0 || run.won <= 0 || run.won % every != 0 || run.warded == run.won) return
@@ -903,7 +903,7 @@ private class WinStreak(effect: FateEffect, fate: FateEffects) : LeverReaction(e
 
     override fun glow(battle: Battle, fate: String): FateGlow? {
         val bonus = this.fate.streak(battle.fateRun.won)
-        return if (bonus > 0) glowing(fate, bonus, battle.fateRun.won + this.fate.carry) else null
+        return if (bonus > 0) glowing(fate, bonus, this.fate.streakWins(battle.fateRun.won)) else null
     }
 }
 

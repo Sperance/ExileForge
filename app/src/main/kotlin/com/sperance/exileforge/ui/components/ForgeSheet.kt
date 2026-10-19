@@ -63,10 +63,11 @@ val SheetShape: Shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
  * - **Бросок остаётся в списке.** Остаток броска у верха списка съедается здесь, а не уходит листу: иначе лист дёргался к закрытию
  *   и обратно. Протяжка пальцем доходит до листа - тянуть вниз от верха списка по-прежнему закрывает его.
  *
- * Тело и подвал. [footer] - закреплённый подвал (кнопки действия во всю ширину): он не листается, стоит над клавиатурой и не
- * сжимается. Тело при [scroll] листается само; без него тело держит свои списки (`LazyColumn` с `weight`). Если клавиатура открыта и
- * над ней не остаётся телу хотя бы [MIN_BODY] рядом с подвалом, подвал прячется, пока клавиатура открыта, - поле с фокусом остаётся
- * видно. Решение принимает фаза раскладки ([SheetFrame]): клавиатура и размеры не перекомпоновывают лист.
+ * Шапка, тело и подвал. [header] - закреплённая шапка над телом (кто написал письмо), [footer] - закреплённый подвал (кнопки
+ * действия во всю ширину): они не листаются, подвал стоит над клавиатурой и не сжимается. Тело при [scroll] листается само; без него
+ * тело держит свои списки (`LazyColumn` с `weight`). Если клавиатура открыта и над ней не остаётся телу хотя бы [MIN_BODY] рядом с
+ * шапкой и подвалом, подвал прячется, пока клавиатура открыта, - поле с фокусом остаётся видно. Решение принимает фаза раскладки
+ * ([SheetFrame]): клавиатура и размеры не перекомпоновывают лист.
  *
  * Закрытие доходит до вызывающего один раз, сколько бы раз о нём ни сказали жест, затемнение и «назад».
  *
@@ -80,6 +81,7 @@ fun ForgeSheet(
     shape: Shape = SheetShape,
     containerColor: Color = PanelRaised,
     dragHandle: (@Composable () -> Unit)? = { BottomSheetDefaults.DragHandle() },
+    header: (@Composable ColumnScope.() -> Unit)? = null,
     footer: (@Composable RowScope.() -> Unit)? = null,
     scroll: Boolean = footer != null,
     content: @Composable ColumnScope.() -> Unit,
@@ -105,6 +107,7 @@ fun ForgeSheet(
         ChordOverWindow()
         SheetFrame(
             scroll = if (scroll) rememberScrollState() else null,
+            header = header,
             footer = footer,
             content = content,
             modifier = Modifier
@@ -116,13 +119,20 @@ fun ForgeSheet(
     }
 }
 
-/** Тело листа над закреплённым подвалом: тело берёт место, что подвал оставил, подвал меряется по себе и не сжимается. */
+/** Тело листа между закреплёнными шапкой и подвалом: тело берёт место, что они оставили, а они меряются по себе и не сжимаются. */
 @Composable
-private fun SheetFrame(scroll: ScrollState?, footer: (@Composable RowScope.() -> Unit)?, content: @Composable ColumnScope.() -> Unit, modifier: Modifier) {
+private fun SheetFrame(
+    scroll: ScrollState?,
+    header: (@Composable ColumnScope.() -> Unit)?,
+    footer: (@Composable RowScope.() -> Unit)?,
+    content: @Composable ColumnScope.() -> Unit,
+    modifier: Modifier,
+) {
     val ime = WindowInsets.ime
     val policy = remember(ime) { FooterPolicy(ime) }
     Layout(
         contents = listOf(
+            { header?.let { Column(Modifier.fillMaxWidth(), content = it) } },
             { Column(Modifier.fillMaxWidth().then(scroll?.let { Modifier.verticalScroll(it) } ?: Modifier), content = content) },
             { footer?.let { SheetFooter(scroll, it) } },
         ),
@@ -132,26 +142,30 @@ private fun SheetFrame(scroll: ScrollState?, footer: (@Composable RowScope.() ->
 }
 
 /**
- * Раскладка тела и подвала. Высоту клавиатуры [ime] читает только здесь, в фазе измерения: её ход двигает раскладку, не композицию.
+ * Раскладка шапки, тела и подвала. Высоту клавиатуры [ime] читает только здесь, в фазе измерения: её ход двигает раскладку, не композицию.
  */
 private class FooterPolicy(private val ime: WindowInsets) : MultiContentMeasurePolicy {
     override fun MeasureScope.measure(
         measurables: List<List<Measurable>>,
         constraints: Constraints,
     ): MeasureResult {
-        val (bodies, footers) = measurables
+        val (headers, bodies, footers) = measurables
         val loose = constraints.copy(minHeight = 0)
-        val foot = footers.firstOrNull()?.measure(loose.copy(maxHeight = Constraints.Infinity))
+        val free = loose.copy(maxHeight = Constraints.Infinity)
+        val head = headers.firstOrNull()?.measure(free)
+        val headHeight = head?.height ?: 0
+        val foot = footers.firstOrNull()?.measure(free)
         val room = constraints.maxHeight
         val keyboard = ime.getBottom(this) > 0
-        val shown = foot?.takeUnless { constraints.hasBoundedHeight && keyboard && room - it.height < MIN_BODY.roundToPx() }
-        val left = if (constraints.hasBoundedHeight) (room - (shown?.height ?: 0)).coerceAtLeast(0) else Constraints.Infinity
+        val shown = foot?.takeUnless { constraints.hasBoundedHeight && keyboard && room - headHeight - it.height < MIN_BODY.roundToPx() }
+        val footHeight = shown?.height ?: 0
+        val left = if (constraints.hasBoundedHeight) (room - headHeight - footHeight).coerceAtLeast(0) else Constraints.Infinity
         val body = bodies.firstOrNull()?.measure(loose.copy(maxHeight = left))
-        val bodyHeight = body?.height ?: 0
-        val height = (bodyHeight + (shown?.height ?: 0)).coerceIn(constraints.minHeight, room)
+        val height = (headHeight + (body?.height ?: 0) + footHeight).coerceIn(constraints.minHeight, room)
         return layout(constraints.maxWidth, height) {
-            body?.place(0, 0)
-            shown?.place(0, height - shown.height)
+            head?.place(0, 0)
+            body?.place(0, headHeight)
+            shown?.place(0, height - footHeight)
         }
     }
 }

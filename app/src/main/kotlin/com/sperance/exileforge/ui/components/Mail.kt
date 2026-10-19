@@ -8,6 +8,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Reply
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,9 +22,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -262,60 +274,42 @@ object MailLinks {
 }
 
 /**
- * Письмо листом поверх ящика: отправитель (имя, класс, уровень, время, срок), тема серифом, текст, цитата ответа, вложение.
- * «Ответить» - главная; ниже «Удалить», «Игнор» и «Жалоба» - у писем героев.
+ * Письмо листом поверх ящика («Свиток»): плашка отправителя ([SenderPlate]) закреплена сверху, у письма героя - с «⋯» ([LetterMenu]:
+ * игнор и жалоба); тема Cinzel, текст серифом, цитата ответа и вложение рамкой с «Забрать» листаются под ней. В подвале листа -
+ * «Ответить» (у писем, на которые отвечают) и «Удалить» одним рядом.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, busy: Boolean, mail: Mail, onClose: () -> Unit) {
     var reporting by remember { mutableStateOf(false) }
     val from = mail.from
     val ignored = from != null && feedback.ignored.any { it.heroId == from.heroId }
-    ForgeSheet(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val shape = RoundedCornerShape(14.dp)
-            Column(
-                Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(PanelRaised, Panel)), shape).border(1.dp, Bronze, shape).padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SenderMark(game, mail)
-                    Column(Modifier.weight(1f)) {
-                        Text(senderLine(mail), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                        val about = listOfNotNull(
-                            from?.let { classTitle(it.heroClass) },
-                            from?.level?.toString(),
-                            listedAt(mail.createdAt),
-                            burnText(mail).takeIf { mail.kind.written },
-                        )
-                        MutedText(about.joinToString(" · "), style = MaterialTheme.typography.labelSmall)
-                    }
+    ForgeSheet(
+        onDismissRequest = onClose,
+        header = {
+            SenderPlate(game, mail) {
+                if (from != null && mail.answerable) {
+                    LetterMenu(from.name, ignored, mail.reported, busy, onIgnore = { model.letters.ignore(from.heroId, from.name, on = !ignored) }, onReport = { reporting = true })
                 }
-                Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright), modifier = Modifier.padding(top = 4.dp))
-                Text(mailBody(mail), color = Parchment, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 22.sp)
-                if (mail.quote.isNotBlank()) Quote(ui("mail.quote_of_mine"), mail.quote)
-                Attachment(game, model, busy, mail)
             }
+        },
+        footer = {
             if (mail.answerable) {
                 ForgeButton(onClick = {
                     onClose()
                     model.letters.reply(mail, game.index?.rules?.mail?.subject ?: Int.MAX_VALUE)
-                }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(ui("mail.reply")) }
+                }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.AutoMirrored.Outlined.Reply, ui("mail.reply")) }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ForgeOutlinedButton(onClick = {
-                    model.deleteMail(mail.id)
-                    onClose()
-                }, enabled = !busy, modifier = Modifier.weight(1f)) { Text(ui("mail.delete"), color = Muted) }
-                if (from != null && mail.answerable) {
-                    ForgeOutlinedButton(onClick = { model.letters.ignore(from.heroId, from.name, on = !ignored) }, enabled = !busy, modifier = Modifier.weight(1f)) {
-                        Text(ui(if (ignored) "mail.ignore.off" else "mail.ignore.on"), color = Muted)
-                    }
-                    ForgeOutlinedButton(onClick = { reporting = true }, enabled = !busy && !mail.reported, modifier = Modifier.weight(1f)) {
-                        Text(ui(if (mail.reported) "mail.report.done" else "mail.report"), color = LifeRed)
-                    }
-                }
-            }
+            ForgeOutlinedButton(onClick = {
+                model.deleteMail(mail.id)
+                onClose()
+            }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.Outlined.Delete, ui("mail.delete")) }
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright, lineHeight = 21.sp))
+            Text(mailBody(mail), color = Parchment, fontFamily = FontFamily.Serif, fontSize = 16.sp, lineHeight = 24.sp)
+            if (mail.quote.isNotBlank()) Quote(ui("mail.quote_of_mine"), mail.quote)
+            Attachment(game, model, busy, mail)
         }
     }
     if (reporting) {
@@ -326,21 +320,110 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     }
 }
 
-/** Вложение письма: строки с карточкой вещи и «Забрать» героем в игре, один раз. */
+/** Значок и подпись кнопки подвала письма: подпись в одну строку, длинная обрезается. */
+@Composable private fun IconLabel(icon: ImageVector, label: String) {
+    Icon(icon, null, Modifier.size(18.dp))
+    Spacer(Modifier.width(6.dp))
+    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/**
+ * Плашка отправителя письма: знак, имя (длинное переносится, не режется), «класс · уровень · время · срок» - срок `Caution`, невзятое
+ * вложение «хранится, пока не заберёшь» `Vital`; справа [actions].
+ */
+@Composable private fun SenderPlate(game: GameUi, mail: Mail, actions: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        Modifier.fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+            .background(Brush.verticalGradient(listOf(PanelRaised, Panel)), shape)
+            .border(1.dp, Bronze, shape)
+            .padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        SenderMark(game, mail, PLATE_MARK)
+        Column(Modifier.weight(1f).padding(top = 2.dp)) {
+            Text(senderLine(mail), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(senderAbout(mail), color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+        actions()
+    }
+}
+
+/** Сведения об отправителе строкой; срок письма героя - цветом: сгорит - `Caution`, хранится ради вложения - `Vital`. */
+private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
+    val from = mail.from
+    append(listOfNotNull(from?.let { classTitle(it.heroClass) }, from?.level?.toString(), listedAt(mail.createdAt)).joinToString(" · "))
+    if (mail.kind.written) {
+        if (length > 0) append(" · ")
+        withStyle(SpanStyle(color = if (mail.claimable) Vital else Caution)) { append(burnText(mail)) }
+    }
+}
+
+/**
+ * «⋯» письма героя: «Игнорировать» / «Не игнорировать» отправителя [name] с пояснением и «Пожаловаться» / «Жалоба подана». Меню -
+ * [ForgeMenu]: окна у закрытого меню нет, оно появляется на касание и уходит с анимацией закрытия.
+ */
+@Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, busy: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(
+            onClick = { open = true },
+            modifier = Modifier.size(MORE).then(if (open) Modifier.background(PanelRaised, CircleShape).border(1.dp, Bronze, CircleShape) else Modifier),
+        ) { Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = Parchment) }
+        ForgeMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+            DropdownMenuItem(
+                text = {
+                    Column {
+                        Text(ui(if (ignored) "mail.ignore.off" else "mail.ignore.on"), color = Parchment)
+                        Text(ui(if (ignored) "mail.ignore.off_note" else "mail.ignore.on_note", name), color = Muted, style = MaterialTheme.typography.labelSmall)
+                    }
+                },
+                leadingIcon = { Icon(Icons.Outlined.Block, null, tint = Parchment) },
+                enabled = !busy,
+                onClick = {
+                    open = false
+                    onIgnore()
+                },
+            )
+            HorizontalDivider(color = Bronze.copy(alpha = .47f), thickness = 1.dp)
+            val tint = if (reported) Muted else LifeRed
+            DropdownMenuItem(
+                text = { Text(ui(if (reported) "mail.report.done" else "mail.report"), color = tint) },
+                leadingIcon = { Icon(if (reported) Icons.Outlined.Check else Icons.Outlined.Flag, null, tint = tint) },
+                enabled = !busy && !reported,
+                onClick = {
+                    open = false
+                    onReport()
+                },
+            )
+        }
+    }
+}
+
+/** Вложение письма - рамкой в конце текста: строки с карточкой вещи и «Забрать» героем в игре, один раз. */
 @Composable private fun Attachment(game: GameUi, model: FeedbackModel, busy: Boolean, mail: Mail) {
     val lines = attachmentLines(mail)
     if (lines.isEmpty()) return
-    Engraved(ui("mail.attachment"))
     val inspect = rememberInspect()
-    lines.forEach { (line, card) ->
-        Text(line, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = card?.let { Modifier.clickable { inspect(it) } } ?: Modifier)
-    }
-    if (mail.claimable) {
-        ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("mail.claim", game.heroName))
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.fillMaxWidth().padding(top = 4.dp).background(Abyss, shape).border(1.dp, Bronze, shape).padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(ui("mail.attachment"), color = Muted, style = MaterialTheme.typography.labelMedium)
+        lines.forEach { (line, card) ->
+            Box(Modifier.fillMaxWidth().heightIn(min = ATTACHMENT_LINE).then(card?.let { Modifier.clickable { inspect(it) } } ?: Modifier), contentAlignment = Alignment.CenterStart) {
+                Text(line, color = Vital, style = MaterialTheme.typography.labelLarge)
+            }
         }
-    } else {
-        MutedText(ui("mail.claimed_already"))
+        if (mail.claimable) {
+            ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                Text(ui("mail.claim", game.heroName), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        } else {
+            MutedText(ui("mail.claimed_already"))
+        }
     }
 }
 
@@ -499,6 +582,9 @@ internal fun gateText(gate: MailGate, quota: MailQuota?, rules: MailRules, unloc
 /** Знак игры и администратора. */
 private const val RUNE = "ᚱ"
 private val MARK = 34.dp
+private val PLATE_MARK = 44.dp
+private val MORE = 44.dp
+private val ATTACHMENT_LINE = 44.dp
 private val TAG = 22.dp
 private const val SHORT_STAMP = 5
 private const val QUOTE_LINES = 3

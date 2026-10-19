@@ -2876,6 +2876,8 @@
   "guild.invite_title": "Пригласить героя",
   "guild.hero_name": "Имя героя",
   "guild.invite": "Пригласить",
+  "guild.invite_named": "Пригласить «{0}»",
+  "guild.invite_find_first": "Сначала найдите героя",
   "guild.me": "{0} (вы)",
   "guild.member_line": "{0} · {1} · ур. {2} · {3}",
   "guild.member_joined": "В гильдии с {0} · вклад {1}",

@@ -3,10 +3,13 @@ package com.sperance.exileforge.ui.screens.guild
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
@@ -14,8 +17,6 @@ import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.feedback.LetterActions
-import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
@@ -26,7 +27,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.koinInject
 
 /**
  * Что [me] может сделать с [target] - по общей таблице прав [GuildPolicy]: себя целью не выбирают. Сервер решает так же;
@@ -44,34 +44,41 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
  * офицеры, участники, внутри по вкладу. Нажатие строки открывает карточку игрока; у кого есть права, тот находит в ней
  * лист званий. Офицер и глава зовут по имени.
  *
- * Места офицеров - из `guilds.json`: без прочитанного контента повышение не предлагается. Рассылка гильдии - главе и офицерам.
+ * Места офицеров - из `guilds.json`: без прочитанного контента повышение не предлагается. У ролей с приёмом справа от поиска -
+ * «+ Пригласить»: лист [InviteSheet].
  */
 @Composable internal fun MembersTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
     var pending by remember { mutableStateOf<Pair<GuildMember, MemberCommand>?>(null) }
+    var inviting by remember { mutableStateOf(false) }
     var order by remember { mutableStateOf<RosterOrder?>(null) }
     var filter by remember { mutableStateOf(RosterFilter.ALL) }
     var query by remember { mutableStateOf("") }
     val openPlayer = rememberPlayerCard()
     val officerSeat = game.index?.guilds?.officerSeat(guild.officers) == true
+    val recruits = me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)
     val scope = rememberRosterScope(game, guild.members) ?: return
     val roll = remember(guild.members, order) { order?.sort(guild.members) ?: RosterOrder.byRole(guild.members) }
     val shown = remember(roll, filter, query, scope) { roll.filter { filter.keeps(it, scope) && it.named(query) } }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)) {
-            item {
-                InviteField(game, vm, guild)
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-        if (me != null && GuildPolicy.can(me.role, GuildAction.MAIL)) {
-            item {
-                BroadcastButton(game)
-                Spacer(Modifier.height(8.dp))
-            }
-        }
         item {
-            RosterSearch(game, query, order, onQuery = { query = it }, onOrder = { order = it })
+            RosterSearch(
+                game,
+                query,
+                order,
+                onQuery = { query = it },
+                onOrder = { order = it },
+                trailing = if (recruits) {
+                    {
+                        ToolButton(Icons.Outlined.Add, ui("guild.invite"), Gold, enabled = !game.busy) {
+                            vm.openInvite()
+                            inviting = true
+                        }
+                    }
+                } else {
+                    null
+                },
+            )
             Spacer(Modifier.height(6.dp))
             RosterFilters(guild.members, filter, scope) { filter = it }
             Spacer(Modifier.height(4.dp))
@@ -84,6 +91,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
         }
         if (shown.isEmpty()) item { MutedText(ui("guild.roster_empty"), Modifier.fillMaxWidth().padding(vertical = 16.dp)) }
         item { RosterFooter(guild.members) }
+    }
+    if (inviting) {
+        InviteSheet(game, vm, guild) {
+            vm.closeInvite()
+            inviting = false
+        }
     }
     chosen?.let { member ->
         MemberSheet(game, member, commandsOn(me, member), officerSeat, onDismiss = { chosen = null }) { command ->
@@ -104,26 +117,42 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     }
 }
 
-/** «Рассылка гильдии»: окно письма всей гильдии; пределы и право решает сервер. */
-@Composable private fun BroadcastButton(game: GameUi) {
-    val letters = koinInject<LetterActions>()
-    ForgeOutlinedButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) {
-        Text(ui("guild.broadcast"))
-    }
-}
-
 /**
- * Приглашение: номер героя из шести цифр или имя; «Найти» - одно чтение превью, в нём имя, класс, уровень и номер, и
- * лишь потом «Пригласить». Над полем - код вступления гильдии с копированием и «Новый код» (только у ролей с приёмом).
+ * Лист «Пригласить героя»: код вступления гильдии с копированием и «Новый код», подсказка к нему; номер героя из шести цифр
+ * или имя и «Найти» - одно чтение превью (имя, класс, уровень, номер). Подвал - «Пригласить «Имя…»»: пока героя нет, он
+ * в чужой гильдии или ниже порога гильдии, кнопка погашена, причина под ней. Приглашение закрывает лист.
  *
- * Ниже открытия гильдий и порога гильдии кнопка погашена, причина под ней.
+ * Поле живёт с листом; найденного героя забывают [GuildViewModel.openInvite] и [GuildViewModel.closeInvite] у зовущего.
  */
-@Composable private fun InviteField(game: GameUi, vm: GuildViewModel, guild: GuildView) {
+@Composable private fun InviteSheet(game: GameUi, vm: GuildViewModel, guild: GuildView, onDismiss: () -> Unit) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     var target by remember { mutableStateOf("") }
-    val recruit = guilds.recruit
-    ForgePanel {
-        Engraved(ui("guild.invite_title"))
+    val found = guilds.recruit
+    val need = guildEntryLevel(game.index?.rules, guild.minLevel)
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
+            val reason = when {
+                found == null -> ui("guild.invite_find_first")
+                found.guild != null -> ui("guild.recruit_taken", found.guild)
+                found.level < need -> ui("guild.recruit_low", need)
+                else -> null
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ForgeButton(
+                    enabled = !game.busy && reason == null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        found?.let { hero -> vm.invite(hero.number.ifBlank { hero.name }) }
+                        onDismiss()
+                    },
+                ) { Text(GuildText.invite(found?.name), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                reason?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+            }
+        },
+    ) {
+        Text(ui("guild.invite_title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
         guild.code?.let { code ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ShortCodeChip(ui("guild.code"), code, Modifier.weight(1f, fill = false))
@@ -136,7 +165,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 target,
                 {
                     target = it.take(game.inputs.heroName)
-                    if (recruit != null) vm.clearRecruit()
+                    if (found != null) vm.clearRecruit()
                 },
                 label = { Text(ui("guild.hero_target")) },
                 singleLine = true,
@@ -144,21 +173,11 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             )
             ForgeOutlinedButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }) { Text(ui("guild.find")) }
         }
-        recruit?.let { found ->
-            val need = guildEntryLevel(game.index?.rules, guild.minLevel)
-            val low = found.level < need
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Column(Modifier.weight(1f)) {
-                    Text(found.name, color = GoldBright, style = MaterialTheme.typography.titleSmall)
-                    MutedText(ui("guild.recruit_line", classTitle(found.heroClass), found.level, found.number))
-                    found.guild?.let { Text(ui("guild.recruit_taken", it), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
-                }
-                ForgeButton(enabled = !game.busy && found.guild == null && !low, onClick = {
-                    vm.invite(found.number.ifBlank { found.name })
-                    target = ""
-                }) { Text(ui("guild.invite")) }
+        found?.let { hero ->
+            ForgePanel {
+                Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleSmall)
+                MutedText(ui("guild.recruit_line", classTitle(hero.heroClass), hero.level, hero.number))
             }
-            if (low) Text(ui("guild.recruit_low", need), color = LifeRed, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

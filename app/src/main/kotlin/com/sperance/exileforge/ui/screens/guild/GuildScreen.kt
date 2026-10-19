@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,7 +35,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -207,20 +205,6 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
             Icon(Icons.Outlined.Close, ui("guild.decline"), tint = DECLINE_TINT, modifier = Modifier.size(18.dp))
         }
         ForgeButton(enabled = !game.busy, onClick = { vm.acceptInvite(card.id) }) { Text(ui("guild.accept")) }
-    }
-}
-
-/** Кнопка строки инструментов (40dp): значок и слово цветом [tint] на его же тусклой заливке. */
-@Composable private fun ToolButton(icon: ImageVector, text: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.height(40.dp).alpha(if (enabled) 1f else .45f).clip(shape).background(tint.copy(alpha = .09f), shape).border(1.dp, tint.copy(alpha = .4f), shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
-        Text(text, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 

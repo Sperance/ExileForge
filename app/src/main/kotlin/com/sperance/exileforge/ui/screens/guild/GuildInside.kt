@@ -26,16 +26,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.feedback.LetterActions
+import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.guild.GuildTab
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.levelProgress
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.rules.content.GuildAction
+import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.koinInject
 
 /**
  * Inside a guild (variant A, «Списки и плитки»): its arms and name over everything, the level filling, the roll against
@@ -44,6 +49,7 @@ import com.sperance.exileforge.ui.theme.*
  * who may answer them.
  *
  * Разделы по праву таблицы: у каждого своё право [GuildTab.requires], раздела без права нет; раздел - уровень цепочки «назад».
+ * Главе и офицерам под шапкой - «Рассылка гильдии» во всю ширину.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +62,7 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
         PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 GuildHeader(game, guild) { GuildExitMenu(game, vm, guild, me) }
+                if (me != null && GuildPolicy.can(me.role, GuildAction.MAIL)) BroadcastButton(game)
                 tabs.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         row.forEach { each ->
@@ -86,6 +93,14 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
                 GuildTab.SETTINGS -> SettingsTab(game, vm, guild, me)
             }
         }
+    }
+}
+
+/** «Рассылка гильдии» под шапкой Зала: окно письма всей гильдии; пределы и право решает сервер. */
+@Composable private fun BroadcastButton(game: GameUi) {
+    val letters = koinInject<LetterActions>()
+    ForgeOutlinedButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) {
+        Text(ui("guild.broadcast"))
     }
 }
 

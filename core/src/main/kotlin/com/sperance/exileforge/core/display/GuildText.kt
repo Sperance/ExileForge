@@ -28,6 +28,22 @@ object GuildText {
     fun mode(mode: GuildMode): String = locOr("guild.mode.${mode.name}", ui("guild.mode.${mode.name}"))
     fun role(role: GuildRole): String = locOr("guild.role.${role.name}", ui("guild.role.${role.name}"))
 
+    /**
+     * Подпись кнопки приглашения: «Пригласить «Имя»» - имя целиком, если в нём не больше [INVITE_NAME] знаков; длинное -
+     * до первого пробела и не длиннее [INVITE_NAME] знаков, с «…». Знак - кодовая точка, суррогатная пара не режется.
+     * Героя нет - просто «Пригласить».
+     */
+    fun invite(name: String?): String {
+        if (name == null) return ui("guild.invite")
+        if (name.codePointCount(0, name.length) <= INVITE_NAME) return ui("guild.invite_named", name)
+        val word = name.substringBefore(' ')
+        val head = word.substring(0, word.offsetByCodePoints(0, minOf(INVITE_NAME, word.codePointCount(0, word.length))))
+        return ui("guild.invite_named", "$head…")
+    }
+
+    /** Наибольшая длина имени в подписи кнопки приглашения, в кодовых точках. */
+    private const val INVITE_NAME = 14
+
     /** `Name [TAG]`, the way a guild is named everywhere. */
     fun title(name: String, tag: String): String = if (tag.isBlank()) name else "$name [$tag]"
 

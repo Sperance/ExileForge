@@ -42,6 +42,7 @@ import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.FullReport
 import com.sperance.exileforge.core.model.feedback.IssueMove
+import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
@@ -426,25 +427,43 @@ private const val DUPLICATE_DIGITS = 6
 /**
  * The administrator's letter: to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
+ * Адресат из карточки игрока ([MailAddressee]) - плашкой без ввода: письмо уходит по id аккаунта, а имя адресата идёт логином, так что
+ * сервер, что id не знает, не разошлёт письмо всем; сброс плашки возвращает ввод логина.
  */
 @Composable internal fun MailComposePage(account: AccountUi) {
     val index = account.index ?: return
     val vm = koinViewModel<FeedbackViewModel>().model
-    var login by remember { mutableStateOf(vm.takeMailTo()) }
+    var addressee by remember { mutableStateOf(vm.takeMailTo()) }
+    var login by remember { mutableStateOf("") }
+    val single = addressee != null || login.isNotBlank()
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var gold by remember { mutableStateOf("") }
     val items = remember { mutableStateMapOf<String, Long>() }
     val equipment = remember { mutableStateListOf<MailEquipment>() }
     ForgePanel {
-        OutlinedTextField(
-            login,
-            { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
-            label = { Text(ui("mail.to")) },
-            supportingText = { Text(ui(if (login.isBlank()) "mail.to_all" else "mail.to_one")) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val fixed = addressee
+        if (fixed != null) {
+            OutlinedTextField(
+                fixed.name,
+                {},
+                readOnly = true,
+                label = { Text(ui("mail.to")) },
+                trailingIcon = { ForgeIconButton(Icons.Outlined.Close, ui("mail.to_clear"), onClick = { addressee = null }) },
+                supportingText = { Text(ui("mail.to_one")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            OutlinedTextField(
+                login,
+                { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
+                label = { Text(ui("mail.to")) },
+                supportingText = { Text(ui(if (single) "mail.to_one" else "mail.to_all")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         OutlinedTextField(
             subject,
             { subject = it.take(account.inputs.mailSubject) },
@@ -502,13 +521,14 @@ private const val DUPLICATE_DIGITS = 6
         equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }
     ForgeButton(state = ButtonState.of(!account.busy && subject.isNotBlank()), modifier = Modifier.fillMaxWidth(), onClick = {
-        vm.sendMail(MailRequest(login, subject, body, MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())))
+        val attachment = MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())
+        vm.sendMail(addressee?.let { MailRequest(it.name, subject, body, attachment, userId = it.userId) } ?: MailRequest(login, subject, body, attachment))
         subject = ""
         body = ""
         gold = ""
         items.clear()
         equipment.clear()
-    }) { Text(ui(if (login.isBlank()) "mail.send_all" else "mail.send")) }
+    }) { Text(ui(if (single) "mail.send" else "mail.send_all")) }
 }
 
 @Composable private fun AttachedLine(text: String, onRemove: () -> Unit) {

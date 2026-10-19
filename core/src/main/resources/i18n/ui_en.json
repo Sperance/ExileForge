@@ -3737,6 +3737,7 @@
   "mail.to": "Recipient login",
   "mail.to_all": "Blank — every account gets the letter",
   "mail.to_one": "One account gets the letter",
+  "mail.to_clear": "Clear recipient",
   "mail.subject": "Subject",
   "mail.body": "Text",
   "mail.add": "Add",

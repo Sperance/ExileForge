@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueMove
+import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
@@ -60,7 +61,7 @@ class FeedbackModel(
     private fun feedback(transform: (Feedback) -> Feedback) = repository.update(transform)
 
     /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */
-    fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
+    fun takeMailTo(): MailAddressee? = feedback.value.mailTo.also { if (it != null) feedback { f -> f.copy(mailTo = null) } }
 
     /** Свои отчёты и известные проблемы: обе вкладки листа отчётов; новый вызов сменяет идущий. */
     fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {

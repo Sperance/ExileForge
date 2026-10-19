@@ -274,5 +274,17 @@ import kotlinx.serialization.Serializable
 /** Строка списка игнора: чьи письма герой не принимает и с какого времени (мс эпохи). */
 @Serializable data class IgnoredHero(val heroId: String, val name: String, val heroClass: String = "", val at: Long = 0)
 
-/** The administrator's letter: [login] one account, blank every account. */
-@Serializable data class MailRequest(val login: String = "", val subject: String, val body: String, val attachment: MailAttachment = MailAttachment())
+/**
+ * Письмо администратора: [userId] - одному аккаунту по id (письмо из карточки игрока), он важнее [login]; иначе [login] - одному
+ * аккаунту по логину, пусто - всем.
+ */
+@Serializable data class MailRequest(
+    val login: String = "",
+    val subject: String,
+    val body: String,
+    val attachment: MailAttachment = MailAttachment(),
+    val userId: String = "",
+)
+
+/** Адресат письма администратора из карточки игрока: аккаунт [userId], [name] - как его видит модерация (логин или имя гостя). */
+data class MailAddressee(val userId: String, val name: String)

@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.market.MarketActions
+import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
@@ -91,11 +92,11 @@ class PlayerCardModel(
     /** «Написать»: окно письма герою карточки; адресат - плашкой, не вводом. */
     fun write(card: PlayerCard) = leave { letters.compose(LetterDraft.to(card.heroId, card.name, card.heroClass, card.level)) }
 
-    /** Письмо администратора аккаунту героя (только администратору): форма письма с логином владельца. */
+    /** Письмо администратора аккаунту героя (только администратору): форма письма адресована владельцу по id аккаунта. */
     fun writeAdmin(card: PlayerCard) {
-        val login = card.rights.moderation?.login?.takeIf { it.isNotBlank() } ?: return
+        val owner = card.rights.moderation?.takeIf { it.userId.isNotBlank() } ?: return
         leave {
-            feedback.update { it.copy(mailTo = login) }
+            feedback.update { it.copy(mailTo = MailAddressee(owner.userId, owner.login.ifBlank { card.name })) }
             screens.open(Landing.MAIL)
         }
     }

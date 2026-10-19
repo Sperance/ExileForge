@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.Mail
+import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,8 +22,8 @@ data class Feedback(
     val reports: List<AdminReport> = emptyList(),
     val mail: List<Mail> = emptyList(),
     val unread: Int = 0,
-    /** Кому администратор пишет письмо: логин из карточки игрока, его берёт форма письма; пусто - не задан. */
-    val mailTo: String = "",
+    /** Кому администратор пишет письмо: аккаунт из карточки игрока, его берёт форма письма; null - не задан. */
+    val mailTo: MailAddressee? = null,
     /** Письмо, что пишет герой: открыто окно письма; null - закрыто. */
     val letter: LetterDraft? = null,
     /** Почта героя сейчас: квота окна письма; null - ещё не прочитана. */

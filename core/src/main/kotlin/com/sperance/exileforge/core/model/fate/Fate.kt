@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.model.fate
 
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.rules.content.Fate
 import kotlinx.serialization.Serializable
 
@@ -17,9 +16,6 @@ data class FateCard(
 ) {
     /** Имя дара на языке игрока; нет ключа - заглушка и дыра словаря, не код. */
     val title: String get() = loc(name)
-
-    /** Что дар делает, словами сервера. */
-    val text: String get() = locOr(description, "")
 
     companion object {
         /** Карточка дара из контента - для дара, известного лишь кодом (герой, `UserProfile.fate`). */

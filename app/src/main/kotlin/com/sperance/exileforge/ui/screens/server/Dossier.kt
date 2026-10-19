@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.fateDescription
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -397,7 +398,8 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
                 items(fates, key = { it.code }) { card -> FateOption(card.title, mark = true, selected = picked == card.code) { picked = card.code } }
             }
             picked?.let { code ->
-                Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+                val description = remember(code, account.index) { fateDescription(FateCard(code), account.index) }
+                Text("«$description»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
             if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
             val ready = picked != null && picked != current && (other == null || reason.isNotBlank())

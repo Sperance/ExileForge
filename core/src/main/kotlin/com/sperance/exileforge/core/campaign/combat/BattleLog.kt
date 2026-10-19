@@ -18,7 +18,7 @@ internal fun Battle.draw(): Double = random.nextDouble()
 /** [fighter] as it stands now: its sheet — the blow's own for the striker — what the fight laid on it, ailments and pools. */
 internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {
     val lines = buildList {
-        fighter.effects.forEach { effect ->
+        fighter.actingEffects.forEach { effect ->
             val kind = when (effect.kind) {
                 EffectKind.BUFF -> LineKind.BUFF
                 EffectKind.CURSE, EffectKind.HINDER, EffectKind.MARK -> LineKind.CURSE

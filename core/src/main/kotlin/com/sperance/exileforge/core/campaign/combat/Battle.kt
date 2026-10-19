@@ -11,6 +11,9 @@ import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.skillsFree
 import com.sperance.exileforge.rules.content.AilmentRule
+import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.BuffLayer
+import com.sperance.exileforge.rules.content.BuffStack
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.EnrageRule
@@ -164,6 +167,19 @@ class Battle(
 
         /** Buffs, curses and draughts on it. */
         val effects = mutableListOf<TimedEffect>()
+
+        /**
+         * Что из [effects] действует сейчас: из слоёв баффа одного вида - только сильнейший ([BuffStack.outshines]). Пока на
+         * бойце меньше двух слоёв баффов, это сам список [effects] - без копии.
+         */
+        val actingEffects: List<TimedEffect>
+            get() {
+                if (effects.count { it.buff != null } < 2) return effects
+                return effects.filterNot { effect -> effect.buff?.let { mine -> effects.any { it.buff?.outshines(mine) == true } } == true }
+            }
+
+        /** На бойце лежит бафф [kind] - любым слоем. */
+        fun buffed(kind: BuffKind): Boolean = effects.any { it.buff?.kind == kind }
 
         /** What a barrier still soaks, and until when. */
         var barrier = 0.0
@@ -516,7 +532,10 @@ class Battle(
             heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, CarriedAilment.foe(a.origin), chaos = a.chaos, limit = a.limit)
             if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
         }
-        carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }
+        carry.effects.forEach { e ->
+            val buff = BuffKind.of(e.source)?.let { kind -> rules.buffs[kind].stack(kind, BuffLayer.TIMED, hero = true) }
+            heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks, buff = buff)
+        }
         carry.charges.forEach { heroCharges.carryIn(it) }
         carry.delayed.forEach { delayed += Delayed(it.rate, time + it.left) }
     }

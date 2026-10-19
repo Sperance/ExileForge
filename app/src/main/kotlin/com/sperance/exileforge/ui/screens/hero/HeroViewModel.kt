@@ -86,8 +86,10 @@ class HeroViewModel(
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = market.sellItem(code, amount, priceOrb, price)
 
-    /** Выдачи администратора и тестера и код награды, как их просят страницы настроек. */
+    /** Выдачи окна тестирования и код награды, как их просят страницы настроек; пустые редкость и слот случайной вещи - любые. */
     fun grant(template: String, rarity: Rarity? = null) = hero.grant(template, rarity)
+    fun grantRandom(rarity: String, slot: String) = hero.grantRandom(rarity, slot)
+    fun addExperience(amount: Double) = hero.addExperience(amount)
     fun grantItem(code: String, amount: Long) = hero.grantItem(code, amount)
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = hero.testerGrant(what, *params)
     fun redeem(code: String) = hero.redeem(code)

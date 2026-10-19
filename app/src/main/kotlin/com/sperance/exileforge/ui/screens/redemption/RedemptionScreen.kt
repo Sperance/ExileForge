@@ -38,8 +38,8 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Promo codes: what exists, and what each one pays out.
  *
- * An administrator's screen, opened by a button on the administrator's tab rather than by one of
- * its own in the bottom bar — a player never lists codes, only types one in on the Account tab.
+ * An administrator's screen, opened by a row of «Для разработчиков» on the Account screen rather than by a button
+ * of its own in the bottom bar — a player never lists codes, only types one in on the Account screen. Список читается при открытии.
  *
  * The reward is one list of mixed rows because that is how it is thought of: some experience, a
  * little gold and three Chaos Orbs is one gift, not three fields. Nothing here decides whether a
@@ -51,8 +51,9 @@ import org.koin.compose.viewmodel.koinViewModel
     val game by vm.game.collectAsStateWithLifecycle()
     val admin by vm.admin.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<RedemptionCode?>(null) }
+    LaunchedEffect(Unit) { vm.loadRedemptions() }
 
-    BackTrailHost(ui("account.administrator")) {
+    BackTrailHost(ui("account.title")) {
         TrailLevel(ui("redemption.title"), onBack = vm::back) {
             TrailData(ui("redemption.count", admin.redemptions.size))
             PullToRefreshBox(isRefreshing = game.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {

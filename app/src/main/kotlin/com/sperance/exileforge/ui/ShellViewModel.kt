@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sperance.exileforge.core.app.ADMIN_TABS
 import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.Building
 import com.sperance.exileforge.core.app.Buzz
@@ -150,6 +149,9 @@ class ShellViewModel(
         commands.dismissMessage()
         navigator.open(Route.Settings(page))
     }
+
+    /** Коды наград: строка администратора в «Для разработчиков» экрана «Аккаунт». */
+    fun openRedemptions() = navigator.open(Route.Redemption)
 
     /** Пассивное дерево с выбранным узлом [node]. */
     fun openTree(node: String) {

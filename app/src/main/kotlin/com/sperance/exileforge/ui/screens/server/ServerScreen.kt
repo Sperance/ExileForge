@@ -113,7 +113,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             ) { onPage(AccountPage.SIGN_IN) }
             AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { shell.openSettings() }
         }
-        StaffGroups(account) { shell.openSettings(it.name) }
+        StaffGroups(account, onRedemptions = shell::openRedemptions) { shell.openSettings(it.name) }
     }
 }
 

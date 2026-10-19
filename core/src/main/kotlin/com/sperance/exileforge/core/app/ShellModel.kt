@@ -9,14 +9,8 @@ import kotlinx.coroutines.flow.SharedFlow
  * отчёта и узел древа, на котором оно откроется.
  */
 class ShellModel(private val sessions: SessionRepository) {
-    /**
-     * Открыта ли аккаунту вкладка [tab]: инструменты администратора - ролям модерации, промокоды - только
-     * администратору (модератору их экран не открывается).
-     */
-    fun opens(tab: Int): Boolean {
-        if (!sessions.state.value.isModerator && tab in ADMIN_TABS) return false
-        return tab != TAB_REDEMPTION || sessions.state.value.isAdmin
-    }
+    /** Открыта ли аккаунту вкладка [tab]: промокоды - только администратору, прочие - всем. */
+    fun opens(tab: Int): Boolean = tab != TAB_REDEMPTION || sessions.state.value.isAdmin
 
     private val reselects = MutableSharedFlow<Int>(extraBufferCapacity = 1)
 

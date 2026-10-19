@@ -500,7 +500,7 @@ jobs:
           cat update.json
           gh release create "$tag" "$apk" update.json mapping.txt --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest
       # Issues, что чинит релиз (0.14.1, GH-ISSUES): коммиты с прошлого релиза, что называют «Closes #N» (fixes, resolves), - Issue
-      # получает «Закрыто в X», метку версии и закрывается выполненным; игра увидит это синхронизацией сервера (0.14.2: вебхуком).
+      # получает метку версии и закрывается выполненным, без комментария; игра увидит это синхронизацией сервера (0.14.2: вебхуком).
       # Рабочая ветка - не основная, сам GitHub по таким словам Issues не закрывает.
       - if: steps.version.outputs.exists == 'false'
         name: Close the issues this release fixes

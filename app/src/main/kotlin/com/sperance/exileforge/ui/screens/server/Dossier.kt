@@ -393,7 +393,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
         FateGrid(fates) { card -> FateOption(card.title, mark = true, selected = picked == card.code) { picked = card.code } }
         picked?.let { code ->
             val description = remember(code, account.index) { fateDescription(FateCard(code), account.index) }
-            Text("«$description»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+            if (description.isNotEmpty()) Text("«$description»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
         }
         if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
     }

@@ -105,7 +105,7 @@ enum class FateBeat(val folds: Boolean = false, val kept: Int = 0, val ref: Fate
 }
 
 /** Свёртка частого срабатывания [beat] за бой: сколько раз ещё ([repeats]) и итог его чисел ([args], по [FateBeat.kept]). */
-internal class FateTally(private val beat: FateBeat) {
+internal class FateBeatTally(private val beat: FateBeat) {
     var repeats = 0
         private set
     var args: List<Double> = emptyList()
@@ -138,7 +138,7 @@ internal fun Battle.fateBeat(beat: FateBeat, vararg args: Double, ref: String = 
             it.add(args.toList(), ref)
             return
         }
-        tallies[beat] = FateTally(beat)
+        tallies[beat] = FateBeatTally(beat)
     }
     fateLine(fate, beat, args.toList(), ref, 0)
 }

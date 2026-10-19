@@ -129,7 +129,7 @@ internal class FateFight {
     var dotShare = 0.0
 
     /** Свёртки частых срабатываний боя ([FateBeat.folds]). */
-    val tallies = LinkedHashMap<FateBeat, FateTally>()
+    val tallies = LinkedHashMap<FateBeat, FateBeatTally>()
 }
 
 /**

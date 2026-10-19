@@ -11,9 +11,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -140,3 +144,17 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
 
 /** An epoch-millisecond moment by the device's clock, «dd.MM HH:mm». */
 internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM HH:mm"))
+
+/** Кнопка строки инструментов (40dp): значок и слово цветом [tint] на его же тусклой заливке. */
+@Composable internal fun ToolButton(icon: ImageVector, text: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        Modifier.height(40.dp).alpha(if (enabled) 1f else .45f).clip(shape).background(tint.copy(alpha = .09f), shape).border(1.dp, tint.copy(alpha = .4f), shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}

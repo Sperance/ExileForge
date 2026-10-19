@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,7 +38,6 @@ import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkState
 import com.sperance.exileforge.ui.components.FeedbackViewModel
 import com.sperance.exileforge.ui.components.ForgeMenu
-import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -50,7 +47,7 @@ import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Шапка игры: сигил и аккаунт, имя героя, плашка ремесла, значок связи и меню «⋮». */
+/** Шапка игры: сигил и аккаунт, имя героя, плашка ремесла, значок связи, почта и настройки. */
 /**
  * Title banner: the sigil, the character being played, and the one switch an exile keeps at hand.
  *
@@ -61,12 +58,12 @@ import org.koin.compose.viewmodel.koinViewModel
  * it is not something a player has, and the banner is the one thing on screen every player
  * sees on every tab. The language runes live on the Account tab and on the
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
- * The account sits in its corner, apart from the bottom bar. The beetle and the account share one «⋮»: with every badge up
- * the name of the game would not fit. Почта - свой конверт ([MailBadge]).
+ * The account sits in its corner, apart from the bottom bar. Настройки - своя шестерёнка ([SettingsButton]), почта - свой конверт
+ * ([MailBadge]); отчёт об ошибке открывают аккорд громкости и строка настроек.
  *
  * На вкладке «Герой» шапка игры и строка героя - одна строка. Знак игры открывает аккаунт; загруженный герой называет себя сам.
  */
-@Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
+@Composable internal fun ForgeBanner(game: GameUi, route: Route) {
     val feedback by koinViewModel<FeedbackViewModel>().model.feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
@@ -75,7 +72,7 @@ import org.koin.compose.viewmodel.koinViewModel
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
             LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
             MailBadge(feedback.unread)
-            BannerMenu(settingsOpen = false, onBug = onBug, onSettings = shell::openSettings)
+            SettingsButton(settingsOpen = false, onSettings = shell::openSettings)
         }
         return
     }
@@ -105,41 +102,15 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
         MailBadge(feedback.unread)
-        BannerMenu(settingsOpen = route.tab == TAB_SETTINGS, onBug = onBug, onSettings = shell::openSettings)
+        SettingsButton(settingsOpen = route.tab == TAB_SETTINGS, onSettings = shell::openSettings)
     }
 }
 
-/**
- * «⋮» шапки: «Сообщить об ошибке» и настройки ([onSettings]; null - экраны до игры, где
- * настроек нет) за одной кнопкой, чтобы имя игры уместилось рядом со значками. Почта - свой конверт рядом ([MailBadge]), у «⋮»
- * поводов для отметки нет. Кнопок-жуков на экранах нет: отчёт - этот пункт, меню забега и аккорд громкости.
- */
-@Composable internal fun BannerMenu(settingsOpen: Boolean, onBug: () -> Unit, onSettings: (() -> Unit)?) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
-        }
-        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            fun pick(action: () -> Unit) {
-                open = false
-                action()
-            }
-            DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
-            onSettings?.let { settings ->
-                DropdownMenuItem(
-                    text = { Text(ui("settings.title"), color = if (settingsOpen) GoldBright else Parchment) },
-                    onClick = { pick(settings) },
-                    leadingIcon = { Icon(Icons.Outlined.Settings, null, tint = Gold) },
-                )
-            }
-        }
+/** Шестерёнка шапки: открывает настройки ([onSettings]); открытые настройки - светлее. */
+@Composable internal fun SettingsButton(settingsOpen: Boolean, onSettings: () -> Unit) {
+    IconButton(onClick = onSettings) {
+        Icon(Icons.Outlined.Settings, ui("settings.title"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
     }
-}
-
-/** «⋮» шапки экранов до игры (вход, выбор и создание героя): тот же [BannerMenu], только с «Сообщить об ошибке». */
-@Composable internal fun ReportMenu() {
-    LocalBugReport.current?.let { BannerMenu(settingsOpen = false, onBug = it, onSettings = null) }
 }
 
 /**

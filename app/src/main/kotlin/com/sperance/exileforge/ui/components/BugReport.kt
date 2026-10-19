@@ -48,9 +48,6 @@ import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.nav.reportPlace
 import com.sperance.exileforge.ui.theme.*
 
-/** Кто открывает лист отчёта: его отдаёт приложение - пункт «Сообщить об ошибке» меню шапки ([ReportMenu]) зовёт его; кнопок-жуков на экранах нет. */
-val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
-
 /** Аккорд громкости приложения: его держит Activity; окна диалогов и попапов цепляются к нему сами ([ChordOverWindow]). */
 val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 

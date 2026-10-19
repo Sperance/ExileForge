@@ -28,7 +28,6 @@ import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.text.NameCharset
-import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -79,7 +78,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
             Row(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 LanguageButton(game.lang, game.world.languages, enabled = !game.busy, onLanguage = vm::language)
-                ReportMenu()
             }
         }
     }

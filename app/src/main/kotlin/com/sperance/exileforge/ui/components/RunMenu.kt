@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Animation
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Whatshot
@@ -88,7 +87,7 @@ data class RunMenuItem(
 
 /**
  * Меню забега - одно на поход, Разлом и испытания: быстрые настройки боя, «Все
- * настройки» поверх забега, «Сообщить об ошибке», «Журнал боя» последнего боя ([LocalFightReport]) и пункты режима [items]; [extra] - свой блок режима над ними (мутаторы).
+ * настройки» поверх забега, «Журнал боя» последнего боя ([LocalFightReport]) и пункты режима [items]; [extra] - свой блок режима над ними (мутаторы).
  * Пока меню или открытый из него системный лист на экране, [hold] держит забег.
  */
 @Composable fun RunMenu(
@@ -118,7 +117,6 @@ data class RunMenuItem(
             }
             sheets?.let {
                 MenuRow(RunMenuItem(Icons.Outlined.Settings, ui("run.menu.settings"), ui("run.menu.settings_note"), onClick = closing { it.settings = true }))
-                MenuRow(RunMenuItem(Icons.Outlined.BugReport, ui("bug.open"), ui("run.menu.bug_note"), onClick = closing { it.bug = true }))
             }
             report?.let { MenuRow(RunMenuItem(Icons.AutoMirrored.Outlined.ReceiptLong, ui("run.menu.log"), ui("run.menu.log_note"), onClick = closing { journal = true })) }
             items.forEach { item -> MenuRow(item.copy(onClick = closing(item.onClick))) }

@@ -270,7 +270,7 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
 }
 
 /** Черта своей строки - 2dp `Gold` по левому краю. */
-private fun Modifier.ownMark(): Modifier = drawBehind { drawRect(Gold, size = Size(2.dp.toPx(), size.height)) }
+internal fun Modifier.ownMark(): Modifier = drawBehind { drawRect(Gold, size = Size(2.dp.toPx(), size.height)) }
 
 /** Портрет класса в кольце цвета роли; в углу - точка присутствия в ободке фона, в другом - уровень плашкой. */
 @Composable private fun MemberPortrait(game: GameUi, member: GuildMember) {

@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.display.monsterTitle
+import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
 import kotlin.math.sin
 
@@ -57,14 +58,13 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
 
 /**
  * Фон боя с боссом «Кино»: небо биома зоны, медленные частицы его погоды и свечение фазы снизу; к третьей фазе
- * свет уходит в её цвет. Без анимаций частицы стоят; на входе стража частиц нет - проступают после него.
+ * свет уходит в её цвет. Без анимаций частицы стоят; частицы разгораются по воротам эффектов [fx] - после входа стража.
  */
-@Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame) {
+@Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame, fx: ArenaFxGate) {
     val sky = SKIES[biome] ?: DEFAULT_SKY
     val phase = phaseNumber(boss)
     val tint by animateFloatAsState((phase - 1).coerceIn(0, 2) / 2f, tween(1600), label = "phaseTint")
-    val motion = LocalSettings.current.animations
-    val intro = LocalBossIntro.current
+    val motion = LocalMotion.current
     Canvas(Modifier.fillMaxSize()) {
         val t = if (motion) frame.time else 0f
         drawRect(Brush.verticalGradient(listOf(sky.top, sky.bottom)))
@@ -78,27 +78,26 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
                 Drift.FALL -> size.width * ((seed * 5.1f) % 1f) + sin(t * .5f + k) * 14.dp.toPx() to size.height * phaseOf
                 Drift.SIDE -> size.width * phaseOf to size.height * ((seed * 3.7f) % 1f) + sin(t + k) * 6.dp.toPx()
             }
-            val fade = sin(phaseOf * Math.PI).toFloat() * intro.effects
+            val fade = sin(phaseOf * Math.PI).toFloat() * fx.effects
             drawCircle(sky.mote.copy(alpha = .45f * fade), (1f + 1.6f * seed).dp.toPx(), Offset(x, y))
         }
     }
 }
 
 /**
- * Кино поверх боя: вход стража ([BossIntroStage] между рамкой стража [frameBottom] и панелью умений [fieldBottom], координаты слоя);
- * каждая новая фаза - виньетка её цвета по краям (держится до конца фазы) и короткая светлая вспышка; победа - золотая вспышка.
- * Вспышек нет при упрощённых эффектах.
+ * Кино поверх боя: сцена входа стража [intro] в границах поля [bounds]; каждая новая фаза - виньетка её цвета по краям (держится до
+ * конца фазы) и короткая светлая вспышка; победа - золотая вспышка. Вспышек нет без анимаций и при упрощённых эффектах.
  *
  * Вспышка фазы - по счёту пройденных порогов: окно журнала её не теряет.
  */
-@Composable internal fun BossCinema(fight: FightHud, boss: BossHud, intro: BossIntro, frameBottom: () -> Float, fieldBottom: () -> Float) {
-    val simple = LocalSettings.current.simpleEffects
+@Composable internal fun BossCinema(fight: FightHud, boss: BossHud, intro: BossIntro?, bounds: IntroBounds) {
+    val simple = LocalSettings.current.simpleEffects || !LocalMotion.current
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val phase = phaseNumber(boss)
     val vignette by animateFloatAsState(((phase - 1).coerceIn(0, 2)) * .18f, tween(1200), label = "vignette")
-    val flash = remember { Animatable(0f) }
+    val flash = remember(boss.index) { Animatable(0f) }
     var seen by remember(boss.index) { mutableIntStateOf(phase) }
-    LaunchedEffect(phase) {
+    LaunchedEffect(boss.index, phase) {
         if (phase <= seen) return@LaunchedEffect
         seen = phase
         if (!simple) {
@@ -123,6 +122,6 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
             flash.value.takeIf { it > 0f }?.let { drawRect(Color.White.copy(alpha = it)) }
             win.value.takeIf { it > 0f }?.let { drawRect(FrameGoldBright.copy(alpha = it)) }
         }
-        BossIntroStage(intro, monsterTitle(foe.monster.code), frameBottom, fieldBottom)
+        intro?.Stage(monsterTitle(foe.monster.code), bounds)
     }
 }

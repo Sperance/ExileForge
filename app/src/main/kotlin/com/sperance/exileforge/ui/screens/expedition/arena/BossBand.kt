@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -142,13 +143,13 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     traits: Map<Int, List<TraitView>>,
     track: (Int) -> Modifier,
     onFocus: (Int) -> Unit,
-    onFrame: (Float) -> Unit,
+    onFrame: (LayoutCoordinates) -> Unit,
     onInspect: (Int) -> Unit,
 ) {
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val name = monsterTitle(foe.monster.code)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        BossFrame(foe, name, boss, fight, frame, Modifier.onGloballyPositioned { onFrame(it.boundsInRoot().bottom) })
+        BossFrame(foe, name, boss, fight, frame, Modifier.onGloballyPositioned(onFrame))
         if (boss.slots.isEmpty()) {
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -657,11 +658,12 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
 
 /** Портал, из которого встаёт жилец ниши: кольцо раскручивается, вспыхивает и гаснет; жильцы входа стража - после входа. */
 @Composable private fun PortalBurst(tint: Color) {
-    val intro = LocalBossIntro.current
+    val gate = LocalArenaFx.current
+    val motion = LocalMotion.current
     val anim = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        intro.awaitEffects()
-        anim.animateTo(1f, tween(1100, easing = LinearEasing))
+    LaunchedEffect(gate) {
+        gate.awaitEffects()
+        if (motion) anim.animateTo(1f, tween(1100, easing = LinearEasing)) else anim.snapTo(1f)
     }
     val done by remember { derivedStateOf { anim.value >= 1f } }
     if (done) return
@@ -687,7 +689,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
  */
 @Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
-    val intro = LocalBossIntro.current
+    val gate = LocalArenaFx.current
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     val aura = phaseAura(phaseNumber(boss))
     val focused = fight.focus == foe.index
@@ -702,7 +704,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val breath = .55f + .2f * sin(frame.time * 2f)
-            drawOval(Brush.radialGradient(listOf(aura.copy(alpha = .45f * breath * (1 - gone) * intro.effects), Color.Transparent), center, size.maxDimension * .62f), Offset(-size.width * .15f, -size.height * .08f), Size(size.width * 1.3f, size.height * 1.16f))
+            drawOval(Brush.radialGradient(listOf(aura.copy(alpha = .45f * breath * (1 - gone) * gate.effects), Color.Transparent), center, size.maxDimension * .62f), Offset(-size.width * .15f, -size.height * .08f), Size(size.width * 1.3f, size.height * 1.16f))
         }
         Box(
             Modifier.fillMaxSize().padding(horizontal = 4.dp).graphicsLayer {

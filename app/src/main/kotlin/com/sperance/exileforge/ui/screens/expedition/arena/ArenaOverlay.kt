@@ -10,10 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.Buzz
 import com.sperance.exileforge.core.app.GameUi
@@ -90,11 +90,13 @@ private const val HERO_CARD = -1
     }
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     val intro = rememberBossIntro(fight.boss?.index)
-    var frameBottom by remember { mutableFloatStateOf(Float.NaN) }
-    val gap = with(LocalDensity.current) { FIELD_GAP.toPx() }
-    CompositionLocalProvider(LocalFightMight provides might, LocalBossIntro provides intro) {
-        Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }.graphicsLayer { alpha = intro.entry }) {
-            fight.boss?.let { BossBackdrop(biome, it, frame) }
+    val fx = intro ?: ArenaFxGate.OPEN
+    val introBounds = remember { IntroBounds() }
+    val onIntroFrame: (LayoutCoordinates) -> Unit = remember(intro) { { if (intro?.staged == true) introBounds.frame(it) } }
+    val introField = remember(intro) { if (intro == null) Modifier else Modifier.onGloballyPositioned { if (intro.staged) introBounds.field(it) } }
+    CompositionLocalProvider(LocalFightMight provides might, LocalArenaFx provides fx) {
+        Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }.graphicsLayer { alpha = intro?.entry ?: 1f }) {
+            fight.boss?.let { BossBackdrop(biome, it, frame, fx) }
             Spacer(Modifier.fillMaxSize().sideTint())
             Column(
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
@@ -102,7 +104,7 @@ private const val HERO_CARD = -1
             ) {
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }, { frameBottom = it }) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }, onIntroFrame) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -141,16 +143,14 @@ private const val HERO_CARD = -1
                         FightFeed(game, fight, names, onCommand, onLogFilter)
                     }
                 }
-                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD), large, mods, onCommand)
+                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD).then(introField), large, mods, onCommand)
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
                 Controls(fight, onCommand)
             }
             StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
             HitVignette(fight, frame)
             SkillFx(fight, frame, bounds[HERO_CARD], bounds::get, origin)
-            fight.boss?.let { boss ->
-                BossCinema(fight, boss, intro, { frameBottom + gap - origin.y }) { (bounds[HERO_CARD]?.bottom ?: Float.NaN) - origin.y }
-            }
+            fight.boss?.let { BossCinema(fight, it, intro, introBounds) }
             inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
                 FoeSheet(
                     foe,
@@ -174,9 +174,6 @@ private const val HERO_CARD = -1
         }
     }
 }
-
-/** Зазор между рамкой стража и верхней полосой входа. */
-private val FIELD_GAP = 8.dp
 
 /** The life share under which the phone warns of danger. */
 private const val DANGER_SHARE = .3f

@@ -20,7 +20,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -96,7 +95,7 @@ private const val CARD_TOP = .48f
     LaunchedEffect(camera, camera.viewport, world) {
         if (world == null || camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
         val kept = vm.worldView(game.heroId)?.takeIf { launch == null }
-        if (kept != null) camera.restore(kept) else camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
+        if (kept != null) camera.restore(kept) else camera.look(vm.heroPoint(world), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
     }
     LaunchedEffect(camera, game.heroId) {
         snapshotFlow { if (camera.placed) camera.view() else null }.filterNotNull().distinctUntilChanged().collectLatest { view ->
@@ -105,8 +104,7 @@ private const val CARD_TOP = .48f
         }
     }
     LaunchedEffect(launch?.mapCode, camera.placed) {
-        val zone = launch?.let { world?.token(it.mapCode) }?.zone ?: return@LaunchedEffect
-        val at = WorldPoint(zone.x, zone.y)
+        val at = launch?.let { world?.point(it.mapCode) } ?: return@LaunchedEffect
         if (camera.placed && !camera.sees(at, 48f, CARD_TOP)) camera.glide(at, maxOf(camera.scale, WorldCamera.HOME), CARD_DOWN)
     }
     Box(Modifier.fillMaxSize()) {
@@ -120,7 +118,7 @@ private const val CARD_TOP = .48f
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
             WorldBar(
                 Modifier,
-                onHero = { world?.let { scope.launch { camera.glide(it.heroSpot(vm.heroZone()), camera.scale, if (launch != null) CARD_DOWN else .5f) } } },
+                onHero = { world?.let { scope.launch { camera.glide(vm.heroPoint(it), camera.scale, if (launch != null) CARD_DOWN else .5f) } } },
             )
             Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StoryButton(game, quests.board, questModel)

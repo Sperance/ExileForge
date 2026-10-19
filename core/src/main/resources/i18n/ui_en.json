@@ -3815,6 +3815,7 @@
   "guild.stash_places": "Places in the tab",
   "guild.stash_rank": "Taking from rank",
   "guild.stash_rank_set": "Tab rank threshold",
+  "guild.stash_rename": "Rename tab",
   "guild.stash_takes": "You can take {0}/{1} today",
   "guild.stash_takes_free": "No limit on takes today",
   "guild.stash_roles": "Takes per day: {0}",

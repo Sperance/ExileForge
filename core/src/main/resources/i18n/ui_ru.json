@@ -3815,6 +3815,7 @@
   "guild.stash_places": "Места во вкладке",
   "guild.stash_rank": "Брать могут с ранга",
   "guild.stash_rank_set": "Порог ранга вкладки",
+  "guild.stash_rename": "Переименовать вкладку",
   "guild.stash_takes": "Сегодня можно взять {0}/{1}",
   "guild.stash_takes_free": "Сегодня можно брать без ограничений",
   "guild.stash_roles": "Взятий в сутки: {0}",

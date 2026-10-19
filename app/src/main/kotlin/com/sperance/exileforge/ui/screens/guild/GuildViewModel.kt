@@ -62,6 +62,7 @@ class GuildViewModel(
     fun deposit(tab: Int, itemId: String?, code: String?, amount: Long) = actions.deposit(tab, itemId, code, amount)
     fun take(entryId: String) = actions.take(entryId)
     fun tabRank(tab: Int, minRank: Int) = actions.tabRank(tab, minRank)
+    fun tabName(tab: Int, name: String) = actions.tabName(tab, name)
     fun contribute(amount: Long, onDone: () -> Unit) = actions.contribute(amount, onDone)
     fun loadLog(more: Boolean = false) = actions.loadLog(more)
 }

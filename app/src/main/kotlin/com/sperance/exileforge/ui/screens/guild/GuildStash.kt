@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -62,7 +63,9 @@ import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
+import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.ChoiceChips
+import com.sperance.exileforge.ui.components.DialogShape
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -75,6 +78,7 @@ import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
+import com.sperance.exileforge.ui.components.LengthCounter
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PropertyRow
 import com.sperance.exileforge.ui.components.RarityTiles
@@ -88,7 +92,9 @@ import com.sperance.exileforge.ui.screens.auction.ActiveFilter
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
 import com.sperance.exileforge.ui.screens.auction.TradeRow
 import com.sperance.exileforge.ui.screens.auction.templateSlots
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.rarityColor
 
@@ -99,6 +105,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
  * ([StashTakePrice]), взять и положить - удержанием.
  *
  * Участник и офицер видят «N/M» на сегодня, глава - без ограничений; под ними - пределы каждой роли одной строкой.
+ * Чипы вкладок - их имена ([GuildText.stashTab]); у кого право настраивать вкладки - порог ранга и имя открытой вкладки.
  */
 @Composable internal fun StashTab(game: GameUi, vm: GuildViewModel, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
@@ -107,6 +114,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
     val ranks = game.index?.guilds?.ranks.orEmpty()
     var tab by remember { mutableIntStateOf(0) }
     var depositing by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
     var filter by remember { mutableStateOf(StashFilter()) }
     val inTab = stash.entries.filter { it.tab == tab }
     val shown = inTab.filter { filter.matches(it.item?.let(game::view), it.code) }
@@ -114,10 +122,10 @@ import com.sperance.exileforge.ui.theme.rarityColor
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
-                if (stash.tabs.size > 1) {
+                if (stash.tabs.size > 1 || stash.tabs.any { it.name.isNotBlank() }) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(stash.tabs.indices.toList(), key = { it }) { i ->
-                            ForgeChip(ui("guild.stash_tab", i + 1), i == tab, { tab = i }, mode = ChipMode.Choice)
+                            ForgeChip(GuildText.stashTab(stash.tabs[i], i), i == tab, { tab = i }, mode = ChipMode.Choice)
                         }
                     }
                 }
@@ -129,9 +137,15 @@ import com.sperance.exileforge.ui.theme.rarityColor
                     style = MaterialTheme.typography.bodySmall,
                 )
                 roleTakesLine(stash)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-                if (me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS) && ranks.isNotEmpty()) {
+                val configures = me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS)
+                if (configures && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
                         vm.tabRank(tab, it.toInt())
+                    }
+                }
+                if (configures) {
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = { renaming = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                        Text(ui("guild.stash_rename"))
                     }
                 }
                 ForgeButton(state = ButtonState.of(!game.busy && inTab.size < stash.tabSize), onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
@@ -150,6 +164,43 @@ import com.sperance.exileforge.ui.theme.rarityColor
             vm.deposit(tab, itemId, code, amount)
         }
     }
+    if (renaming) {
+        val limit = game.index?.guilds?.stash?.tabName ?: return
+        TabNameDialog(stash.tabs.getOrNull(tab)?.name.orEmpty(), GuildText.stashTab(null, tab), limit, game.busy, onDismiss = { renaming = false }) { name ->
+            renaming = false
+            vm.tabName(tab, name)
+        }
+    }
+}
+
+/** Имя вкладки: до [limit] знаков, пустое - вкладка снова по номеру ([numbered] - подсказка в поле). */
+@Composable private fun TabNameDialog(current: String, numbered: String, limit: Int, busy: Boolean, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var name by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = PanelRaised,
+        shape = DialogShape,
+        tonalElevation = 0.dp,
+        titleContentColor = Gold,
+        title = {
+            ChordOverWindow()
+            Text(ui("guild.stash_rename"))
+        },
+        text = {
+            OutlinedTextField(
+                name,
+                { name = it.take(limit) },
+                placeholder = { Text(numbered) },
+                supportingText = { LengthCounter(name, limit) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            ForgeButton(state = ButtonState.of(!busy && name.trim() != current), onClick = { onSave(name) }, kind = ButtonKind.Text) { Text(ui("guild.save")) }
+        },
+        dismissButton = { ForgeButton(onClick = onDismiss, kind = ButtonKind.Text) { Text(ui("common.cancel")) } },
+    )
 }
 
 /** Поиск по имени и кнопка отбора, под ними - заданные поля чипами с крестиком, как у витрины аукциона. */

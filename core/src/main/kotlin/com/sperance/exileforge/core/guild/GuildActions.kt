@@ -109,6 +109,9 @@ class GuildActions(
     fun take(entryId: String) = stashCommand(ui("guild.toast.taken")) { api.guild.take(it, entryId) }
     fun tabRank(tab: Int, minRank: Int) = stashCommand(ui("guild.toast.saved")) { api.guild.tabRank(it, tab, minRank) }
 
+    /** Имя вкладки [tab]; пустое возвращает её номер. Длину и право проверяет сервер. */
+    fun tabName(tab: Int, name: String) = stashCommand(ui("guild.toast.saved")) { api.guild.tabName(it, tab, name.trim()) }
+
     /** Ответ хранилища несёт золото героя после записи: взятие за золото видно в кошельке сразу. */
     private fun stashCommand(done: String, block: suspend (String) -> GuildStashView) = command(done) { id ->
         val stash = block(id)

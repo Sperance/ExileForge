@@ -165,7 +165,8 @@ fun CraftsScreen() {
  * [help] - значок справки в строке «Сейчас» на главном экране: там над именем работы «Сейчас», под ним - профессия; в окне профессии
  * [help] нет, профессию и справку называет его шапка. Нет работы - строка «Сейчас» и что герой не работает.
  *
- * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт.
+ * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт. Работа, что встала по отлучке, вместо полосы цикла, часов и
+ * срока уровня печатает «остановлено» и «Продолжить» ([StoppedWork]).
  */
 @Composable
 internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long, help: (@Composable () -> Unit)? = null) {
@@ -192,13 +193,17 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             StopButton(enabled = !game.busy, onClick = vm::stop)
         }
         game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
-        CycleBar(work, offset, crafts.last)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            CycleClock(work, offset)
-            val rules = crafts.state?.rules
-            if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
+        if (work.stopped) {
+            StoppedWork(work, enabled = !game.busy, onResume = vm::resume)
+        } else {
+            CycleBar(work, offset, crafts.last)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                CycleClock(work, offset)
+                val rules = crafts.state?.rules
+                if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
+            }
+            if (profession != null && job != null) LevelEta(profession, job, work, offset)
         }
-        if (profession != null && job != null) LevelEta(profession, job, work, offset)
         crafts.state?.running?.let { StockRow(game, work, it) }
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
         val made by vm.made.collectAsStateWithLifecycle()
@@ -207,7 +212,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             game,
             sums,
             made,
-            startedAt = work.startedAt,
+            startedAt = work.startedAt.takeIf { !work.stopped } ?: 0,
             offset = offset,
             folded = true,
             onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
@@ -256,6 +261,15 @@ private val HourFigure: androidx.compose.ui.text.TextStyle
 
 /** Сколько фишек выхода в час видно до «+N» (вместе с ней). */
 private const val HOUR_CHIPS = 3
+
+/**
+ * Работа, что встала по отлучке игрока: вместо полосы цикла - «В работе 12 ч 00 мин · остановлено» (время в работе печатает только эта
+ * строка, плитка учёта его не повторяет) и «Продолжить» во всю ширину.
+ */
+@Composable private fun StoppedWork(work: WorkView, enabled: Boolean, onResume: () -> Unit) {
+    Text(ui("crafts.stopped_line", duration(work.ranMillis)), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+    ForgeButton(onClick = onResume, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(enabled)) { Text(ui("crafts.resume")) }
+}
 
 /** Вещь, что держит работа: строка плиты с подписью «в работе»; касание открывает её карточку. */
 @Composable internal fun HeldItem(view: ItemView) {

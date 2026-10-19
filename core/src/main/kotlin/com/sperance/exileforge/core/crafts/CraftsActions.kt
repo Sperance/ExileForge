@@ -88,7 +88,7 @@ class CraftsActions(
      */
     private fun armCycle() {
         val held = crafts
-        val work = held.state?.work?.takeIf { it.cycleMillis > 0 && watching }
+        val work = held.state?.work?.takeIf { it.cycleMillis > 0 && !it.stopped && watching }
         if (work == null) {
             cycle?.cancel()
             cycle = null
@@ -132,6 +132,12 @@ class CraftsActions(
     fun stop() = commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = heroes.heroId
         land(id, api.crafts.stop(id))
+    }
+
+    /** Работа, что встала по отлучке, идёт дальше с того же места. */
+    fun resume() = commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
+        val id = heroes.heroId
+        land(id, api.crafts.resume(id))
     }
 
     /** Инструмент в слот профессии: экипировка сервером, и ремёсла прочитаны заново ради новых чисел. */

@@ -77,7 +77,8 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
  * показа, `MightShift.shown`). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
  * Над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги итог - «ИТОГ ФЛЯГИ», у
  * инструмента - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
- * ([StatComparison]), свёрнутое целиком под заголовком, в нём же - «Теряешь» ([LostLines]): строки заменяемой вещи, которых нет на этой.
+ * ([StatComparison]), свёрнутое целиком под заголовком, в нём же - «Теряешь» ([LostLines]): строки всего, что снимет надевание,
+ * чьих характеристик эта вещь не даёт.
  *
  * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - из того же листа
  * боя, что сдвиги.
@@ -90,12 +91,12 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val outcome = remember(item, game.hero, game.index, place) { if (apart) null else game.wearing(item, place) }
     val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index, sheet = game.hero?.figures?.values, level = game.hero?.level ?: 0) } }
     val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
-    val lost = remember(item, selected?.replaced, game.index) { LostLines.of(game.index, item, selected?.replaced) }
+    val lost = remember(item, selected?.removed, game.index) { LostLines.of(game.index, item, selected?.removed.orEmpty()) }
     if (unmet.isEmpty()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (choice.choosable && selected != null) {
                 PillTabs(choice.places.map { placeTitle(it.slot) }, choice.places.indexOf(selected), { choice.pick(choice.places[it].slot) }, segmented = true)
-                MutedText(selected.replaced?.let { ui("wear.instead", equipmentTitle(it.template)) } ?: ui("wear.place_free"), style = MaterialTheme.typography.labelSmall)
+                MutedText(if (selected.free) ui("wear.place_free") else ui("wear.instead", selected.removed.joinToString { equipmentTitle(it.template) }), style = MaterialTheme.typography.labelSmall)
             }
             val verdict = selected?.verdict
             if (delta != null) {

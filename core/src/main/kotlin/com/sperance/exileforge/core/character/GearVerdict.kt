@@ -103,13 +103,17 @@ internal object Toughness {
 }
 
 /**
- * Место, куда можно надеть вещь: [slot] - место на теле (у колец и фляг их несколько), [replaced] - что там
- * надето сейчас, [verdict] - урон и защита, если надеть вещь именно сюда (null - не по требованиям).
+ * Место, куда можно надеть вещь: [slot] - место на теле (у колец и фляг их несколько), [removed] - всё, что надевание сюда
+ * снимет ([Sheets.takenOff]: вещь на этом месте и вытесненное - щит под двуручным или луком), [verdict] - урон и защита,
+ * если надеть вещь именно сюда (null - не по требованиям).
  */
-data class WearPlace(val slot: Slot, val replaced: ItemInstance?, val verdict: GearVerdict?) {
+data class WearPlace(val slot: Slot, val removed: List<ItemInstance>, val verdict: GearVerdict?) {
+    /** Надевание сюда ничего не снимает. */
+    val free: Boolean get() = removed.isEmpty()
+
     companion object {
-        /** Место по умолчанию: первое пустое, а когда пустых нет - то, где замена даёт больший прирост. */
-        fun best(places: List<WearPlace>): WearPlace? = places.firstOrNull { it.replaced == null } ?: places.maxByOrNull { it.verdict?.score ?: Double.NEGATIVE_INFINITY }
+        /** Место по умолчанию: первое, где ничего не снимется, а когда таких нет - то, где замена даёт больший прирост. */
+        fun best(places: List<WearPlace>): WearPlace? = places.firstOrNull { it.free } ?: places.maxByOrNull { it.verdict?.score ?: Double.NEGATIVE_INFINITY }
     }
 }
 
@@ -164,7 +168,7 @@ class GearVerdicts {
                 slot.isTool -> ToolVerdict.of(index, hero.stats, item, worn[place], hero.combat?.fate)
                 else -> hero.combat?.might?.let { might -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, might, place, hero.info.laws, hero.info.fate, hero.skills) }
             }
-            WearPlace(place, worn[place], verdict)
+            WearPlace(place, Sheets.takenOff(index, item, hero.items, place), verdict)
         }
     }
 

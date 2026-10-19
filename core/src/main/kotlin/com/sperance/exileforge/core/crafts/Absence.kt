@@ -6,7 +6,7 @@ import com.sperance.exileforge.rules.roll.WorkGains
 
 /**
  * Досчёт после отлучки: что принесли циклы работы [job] профессии [profession] (вариант [choice]) за [millis] мс без игрока; [running] -
- * работа идёт дальше, иначе она встала (кончился вход или одноразовая работа сделала свой цикл); [level] - уровень профессии после досчёта.
+ * работа идёт дальше, иначе она встала (кончился вход, одноразовая работа сделала свой цикл или игрока не было `offlineHours`); [level] - уровень профессии после досчёта.
  * Показывается листом «Пока вас не было» один раз, до тех пор вкладка ремёсел помечена.
  */
 data class Absence(
@@ -38,7 +38,7 @@ data class Absence(
                 profession = profession,
                 job = work?.job ?: before?.job.orEmpty(),
                 choice = work?.choice ?: before?.choice.orEmpty(),
-                running = work != null,
+                running = work != null && !work.stopped,
                 level = answer.professions.firstOrNull { it.code == profession }?.level ?: 1,
             )
         }

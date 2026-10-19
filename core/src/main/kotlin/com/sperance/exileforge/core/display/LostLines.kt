@@ -4,18 +4,21 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.roll.ItemInstance
 
 /**
- * Строки, что пропадут с заменой вещи: строки старой вещи, чьего семейства ([com.sperance.exileforge.rules.content.ModifierDef.family])
- * нет среди строк новой, - текстом, как они написаны на карточке старой вещи (с условиями), в порядке показа. Та же строка
- * другого тира или варианта не теряется: её число сравнивает итог «было → стало».
+ * Строки, что пропадут с заменой: строки всего, что снимет надевание ([com.sperance.exileforge.core.character.Sheets.takenOff]:
+ * вещь на месте и вытесненное - оружие и щит под двуручным, щит под луком), чьи характеристики после замены уходят в ноль -
+ * новая вещь не двигает ни одной из них. Текстом, как они написаны на карточках снятых вещей (с условиями), в порядке показа.
+ * Характеристика, что новая вещь тоже даёт (другим тиром, вариантом или семейством), не теряется: её число сравнивает итог «было → стало».
  */
 object LostLines {
-    /** Что теряет замена [replaced] вещью [item]; пустое гнездо (null) ничего не теряет. */
-    fun of(index: ContentIndex?, item: ItemInstance, replaced: ItemInstance?): List<String> {
-        val before = replaced?.let { index?.let { content -> ItemView.of(it, content) } } ?: return emptyList()
-        val after = ItemView.of(item, before.index) ?: return emptyList()
-        val kept = after.lines.mapTo(HashSet(), ::family)
-        return before.orderedLines.filterNot { family(it) in kept }.map { it.text }
+    /** Что теряет надевание [item] вместо [removed]; ничего не снимается - ничего не теряется. */
+    fun of(index: ContentIndex?, item: ItemInstance, removed: List<ItemInstance>): List<String> {
+        index ?: return emptyList()
+        if (removed.isEmpty()) return emptyList()
+        val after = ItemView.of(item, index) ?: return emptyList()
+        val kept = after.lines.flatMapTo(HashSet(), ::stats)
+        return removed.mapNotNull { ItemView.of(it, index) }.flatMap { it.orderedLines }.filter { line -> stats(line).none { it in kept } }.map { it.text }
     }
 
-    private fun family(line: ItemLine): String = line.definition?.family ?: line.code.value
+    /** Характеристики строки; строка без описания в контенте - сама своя характеристика. */
+    private fun stats(line: ItemLine): List<String> = line.stats.ifEmpty { listOf(line.code.value) }
 }

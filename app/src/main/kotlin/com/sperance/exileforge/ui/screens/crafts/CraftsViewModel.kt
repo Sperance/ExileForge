@@ -61,6 +61,7 @@ class CraftsViewModel(
     fun watch(on: Boolean) = actions.watch(on)
     fun start(job: String, choice: String = "", additives: List<String> = emptyList()) = actions.start(job, choice, additives)
     fun stop() = actions.stop()
+    fun resume() = actions.resume()
     fun equipTool(itemId: String) = actions.equipTool(itemId)
 
     /** Лист «Пока вас не было» закрыт. */

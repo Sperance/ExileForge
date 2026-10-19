@@ -83,12 +83,20 @@ import kotlinx.serialization.Serializable
     val totals: WorkTally = WorkTally(),
     /** The variant chosen, blank for a work without a choice. */
     val choice: String = "",
+    /** Когда работа встала: игрока не было `offlineHours` (часы сервера); 0 - идёт. Продолжает её [com.sperance.exileforge.core.network.CraftsClient.resume]. */
+    val stoppedAt: Long = 0,
 ) {
+    /** Работа встала по отлучке и ждёт, когда её продолжат: циклы не идут. */
+    val stopped: Boolean get() = stoppedAt > 0
+
+    /** Сколько работа шла до остановки по отлучке; у идущей - 0. */
+    val ranMillis: Long get() = if (stopped) (stoppedAt - startedAt).coerceAtLeast(0L) else 0L
+
     /**
      * Сколько прошло текущего цикла на часах сервера [now]: по кругу от [settledAt], так что полоса идёт
-     * дальше, даже пока сервер не пересчитал работу, а не стоит на 100%. До [settledAt] - ноль.
+     * дальше, даже пока сервер не пересчитал работу, а не стоит на 100%. До [settledAt] и у вставшей работы - ноль.
      */
-    fun phase(now: Long): Long = if (cycleMillis > 0) (now - settledAt).coerceAtLeast(0L) % cycleMillis else 0L
+    fun phase(now: Long): Long = if (cycleMillis > 0 && !stopped) (now - settledAt).coerceAtLeast(0L) % cycleMillis else 0L
 
     /** Ближайшая граница цикла позже [now] на часах сервера: на ней работа пересчитывается с сервера. */
     fun nextBoundary(now: Long): Long = maxOf(now, settledAt) - phase(now) + cycleMillis

@@ -2,7 +2,8 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,16 +17,24 @@ import androidx.compose.ui.unit.dp
 /**
  * Угол действий строки списка: справа сверху - то, к чему относятся кнопки (цена [GoldCost], ключи, срок; [value], если есть),
  * под ним - кнопки строки [RowButton] по ширине подписи, главная крайняя справа, второе действие левее. Ширину угол не тянет:
- * прижать его вправо - дело строки (`fillMaxWidth` у угла или `weight` у соседа).
+ * прижать его вправо - дело строки (`fillMaxWidth` у угла или `weight` у соседа). Кнопки, что не встают в ширину (360 dp, длинные
+ * подписи), переносятся рядом ниже, тоже прижатым вправо.
  */
-@Composable fun RowActions(
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RowActions(
     modifier: Modifier = Modifier,
     value: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit,
 ) {
     Column(modifier, horizontalAlignment = Alignment.End) {
         value?.invoke()
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically, content = actions)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+            content = actions,
+        )
     }
 }
 

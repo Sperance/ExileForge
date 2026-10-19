@@ -12,6 +12,8 @@ import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.skillsFree
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.BuffLayer
+import com.sperance.exileforge.rules.content.BuffStack
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.EnrageRule
@@ -167,22 +169,17 @@ class Battle(
         val effects = mutableListOf<TimedEffect>()
 
         /**
-         * Что из [effects] действует сейчас. Вечный бафф ([BuffKind.standing]) и временный того же вида ([BuffKind.source])
-         * не складываются - действует сильнейший: временный лежит строками правила целиком, вечный героя - долей
-         * `combat.buffs.<вид>.always` ([com.sperance.exileforge.rules.content.BuffRule.standing]), монстра - целиком; при
-         * равной силе действует временный. По концу временного снова действует вечный.
+         * Что из [effects] действует сейчас: из слоёв баффа одного вида - только сильнейший ([BuffStack.outshines]). Пока на
+         * бойце меньше двух слоёв баффов, это сам список [effects] - без копии.
          */
-        val acting: List<TimedEffect> get() = effects.filterNot { outshone(it) }
+        val actingEffects: List<TimedEffect>
+            get() {
+                if (effects.count { it.buff != null } < 2) return effects
+                return effects.filterNot { effect -> effect.buff?.let { mine -> effects.any { it.buff?.outshines(mine) == true } } == true }
+            }
 
-        /** [effect] - слой баффа, что молчит: рядом лежит не слабее его другой слой того же вида. */
-        private fun outshone(effect: TimedEffect): Boolean {
-            val kind = BuffKind.of(effect.source)?.takeIf { effect.kind == EffectKind.BUFF } ?: return false
-            val standing = effect.source == kind.standing
-            val rival = if (standing) kind.source else kind.standing
-            if (effects.none { it.kind == EffectKind.BUFF && it.source == rival }) return false
-            val standingShare = if (this === heroFighter) rules.buffs[kind].always / 100 else 1.0
-            return standing == (standingShare <= 1.0)
-        }
+        /** На бойце лежит бафф [kind] - любым слоем. */
+        fun buffed(kind: BuffKind): Boolean = effects.any { it.buff?.kind == kind }
 
         /** What a barrier still soaks, and until when. */
         var barrier = 0.0
@@ -535,7 +532,10 @@ class Battle(
             heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, CarriedAilment.foe(a.origin), chaos = a.chaos, limit = a.limit)
             if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
         }
-        carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }
+        carry.effects.forEach { e ->
+            val buff = BuffKind.of(e.source)?.let { kind -> rules.buffs[kind].stack(kind, BuffLayer.TIMED, hero = true) }
+            heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks, buff = buff)
+        }
         carry.charges.forEach { heroCharges.carryIn(it) }
         carry.delayed.forEach { delayed += Delayed(it.rate, time + it.left) }
     }

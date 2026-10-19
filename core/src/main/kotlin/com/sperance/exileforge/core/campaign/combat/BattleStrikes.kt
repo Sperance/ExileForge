@@ -76,7 +76,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     }
     val multiplier = if (kind == HitKind.CRIT) max(1.0, 1 + (body.critMultiplier(blow.spell) * keener - 1) * target.body.critTaken) else body.nonCritMore
     val doubled = if (body.doubleDamage > 0 && draw() < body.doubleDamage) 2.0 else 1.0
-    val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.acting.sumOf { it.against(states) }) } else 0.0
+    val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.actingEffects.sumOf { it.against(states) }) } else 0.0
     val versus = versus(blow, facing)
     val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target) * provokedTaken(me, target)
     val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body[CoreStat.DAMAGE_VS_CURSED.code]) / 100 else 1.0)

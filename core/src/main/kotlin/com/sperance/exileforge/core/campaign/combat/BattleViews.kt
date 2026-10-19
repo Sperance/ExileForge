@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
-import com.sperance.exileforge.rules.content.BuffKind
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -80,18 +79,18 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
 }
 
 /**
- * What lies on [fighter], for its tiles; и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
+ * What lies on [fighter], for its tiles: бафф - одной плиткой на вид, действующим слоем ([Battle.Fighter.actingEffects]); и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
  * ([FATE_STACKS]) - значок ✦ дара ([fateGlows]), не плитка эффекта. У героя - ещё глотки, прерванные полным здоровьем
  * ([Battle.halts]): плитка «прервано» без срока.
  */
-fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
+fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
     EffectView(
         it.source,
         it.kind,
         ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f),
         (it.until - time).coerceAtLeast(0.0),
         icons[it.source].orEmpty(),
-        BuffKind.of(it.source),
+        it.buff?.kind,
         it.lines,
         flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
     )

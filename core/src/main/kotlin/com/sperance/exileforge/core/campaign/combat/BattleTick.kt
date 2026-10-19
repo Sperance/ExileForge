@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.BuffLayer
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.CoreStat
@@ -248,7 +249,7 @@ internal fun Battle.remake(fighter: Fighter) {
 /** Что лежит на враге [fighter] сейчас: строки эффектов и прибавка скорости при низком здоровье. */
 internal fun Battle.foeLines(fighter: Fighter): List<StatLine> {
     val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
-    return fighter.acting.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
+    return fighter.actingEffects.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
 }
 
 /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
@@ -256,7 +257,7 @@ internal fun Battle.heroBody(extra: List<StatLine>): Combatant = model.body(hero
 
 /** What lies on the hero now: low life's lines, the standing powers', the charges', the conditions' and the effects'. */
 private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.lowLife else emptyList()) +
-    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.acting.flatMap { it.holding(conditions) }
+    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.actingEffects.flatMap { it.holding(conditions) }
 
 /**
  * The increases of [type] a hero's blow is grown by now, in percent: the sheet's own, the damage in
@@ -301,7 +302,7 @@ internal fun Battle.heroConditions(): Set<Condition> {
         if (recent(hero.lastHit)) add(Condition.RECENT_HIT_TAKEN)
         if (recent(blockedAt)) add(Condition.RECENT_BLOCK)
         if (recent(critAt)) add(Condition.RECENT_CRIT)
-        BuffKind.entries.forEach { kind -> kind.condition?.let { if (body.wears(kind) || hero.effects.any { e -> e.source == kind.source }) add(it) } }
+        BuffKind.entries.forEach { kind -> kind.condition?.let { if (hero.buffed(kind)) add(it) } }
         if (heroCharges.count(ChargeKind.FRENZY) > 0) add(Condition.FRENZY_CHARGE)
         if (heroCharges.count(ChargeKind.POWER) > 0) add(Condition.POWER_CHARGE)
         if (heroCharges.count(ChargeKind.ENDURANCE) > 0) add(Condition.ENDURANCE_CHARGE)
@@ -324,8 +325,10 @@ internal fun Battle.states(target: Fighter): Set<Condition> {
 /** [kind] laid on [fighter] for the rule's time, longer by its buff duration. */
 private fun Battle.gainBuff(fighter: Fighter, kind: BuffKind) {
     val rule = rules.buffs[kind]
-    buff(fighter, kind.source, rule.lines.map { StatLine(it.stat, it.op, it.value) }, rule.duration * fighter.body.buffDuration)
-    note(fighter, NoteKind.BUFF, kind.name, rule.duration * fighter.body.buffDuration)
+    val stack = rule.stack(kind, BuffLayer.TIMED, hero = fighter.side == Side.HERO)
+    val duration = rule.duration * fighter.body.buffDuration
+    lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, rule.lines(stack.share), time + duration, duration, buff = stack))
+    note(fighter, NoteKind.BUFF, kind.name, duration)
 }
 
 /** The hero's chance at [kind]: drawn only when there is one, so a sheet without it plays the same seed as before. */
@@ -335,13 +338,13 @@ internal fun Battle.chanceBuff(kind: BuffKind) {
 }
 
 /**
- * The buffs [fighter] wears for the whole fight. Вечный бафф героя ложится долей `combat.buffs.<вид>.always`
- * ([com.sperance.exileforge.rules.content.BuffRule.standing]), монстра - целиком.
+ * The buffs [fighter] wears for the whole fight: вечный слой ([BuffLayer.STANDING]) на силе правила
+ * ([com.sperance.exileforge.rules.content.BuffRule.share]) - у героя долей `combat.buffs.<вид>.always`, у монстра целиком.
  */
 internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.body.wears(it) }.forEach { kind ->
     val rule = rules.buffs[kind]
-    val lines = if (fighter === heroFighter) rule.standing else rule.lines
-    lay(fighter, TimedEffect(EffectKind.BUFF, kind.standing, lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
+    val stack = rule.stack(kind, BuffLayer.STANDING, hero = fighter.side == Side.HERO)
+    lay(fighter, TimedEffect(EffectKind.BUFF, kind.standing, rule.lines(stack.share), FOREVER, FOREVER, buff = stack))
 }
 
 /** What of a hit on [target] its spell suppression or deflection lets through; drawn only for a target with a chance. */

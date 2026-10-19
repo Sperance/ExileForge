@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.BuffStack
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
@@ -99,6 +100,8 @@ data class TimedEffect(
     val conditional: List<ConditionalLine> = emptyList(),
     /** Сколько стопок силы в его строках: следующая стопка растёт от них, и после переноса между боями. */
     val stacks: Int = 1,
+    /** Слой баффа, если эффект - бафф вида ([BuffStack]): вечный или временный, с силой; иначе null. */
+    val buff: BuffStack? = null,
 ) {
     /** Строки на бойце при условиях героя [active]: постоянные и условные, чьё условие держится. */
     fun holding(active: Set<Condition>): List<StatLine> = if (conditional.isEmpty()) lines else lines + conditional.filter { !it.condition.target && it.condition in active }.map { it.line }

@@ -9,9 +9,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,8 +30,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -54,7 +48,6 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -72,7 +65,6 @@ import com.sperance.exileforge.core.display.fateDescription
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.ui.theme.Muted
-import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -305,59 +297,6 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             drawCircle(FateInk.Rim, knob, Offset(x, knob))
             drawCircle(FateInk.Gold, knob * .55f, Offset(x - knob * .15f, knob * .85f))
         }
-    }
-}
-
-/**
- * Кнопка «удержи, чтобы принять»: полоса наполняется, пока палец держит кнопку, [holdMs]; отпущенная раньше - пустеет.
- * Полное удержание - [onHeld] один раз. [enabled] false - касание лишь зовёт [onRefused] (например, «сначала выбери карту»).
- */
-@Composable fun HoldToAccept(
-    text: String,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    done: Boolean = false,
-    holdMs: Int = HOLD_MS,
-    onRefused: () -> Unit = {},
-    onHeld: () -> Unit,
-) {
-    val fill = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val held by rememberUpdatedState(onHeld)
-    val refused by rememberUpdatedState(onRefused)
-    val live by rememberUpdatedState(enabled && !done)
-    val shape = RoundedCornerShape(16.dp)
-    val ground = if (done) {
-        Brush.linearGradient(listOf(FateInk.Accepted, FateInk.Accepted))
-    } else {
-        Brush.horizontalGradient(listOf(Color(0xFF7A5A20), Color(0xFFC99A3C), FateInk.Gold, Color(0xFFC99A3C)))
-    }
-    Box(
-        modifier.height(54.dp).background(ground, shape).drawWithContent {
-            drawContent()
-            if (!done) drawRect(Color.White.copy(alpha = .35f), size = size.copy(width = size.width * fill.value))
-        }.pointerInput(Unit) {
-            awaitEachGesture {
-                awaitFirstDown()
-                if (!live) {
-                    refused()
-                    waitForUpOrCancellation()
-                    return@awaitEachGesture
-                }
-                val run = scope.launch {
-                    fill.animateTo(1f, tween(((1f - fill.value) * holdMs).toInt().coerceAtLeast(1), easing = LinearEasing))
-                    held()
-                }
-                waitForUpOrCancellation()
-                if (fill.value < 1f) {
-                    run.cancel()
-                    scope.launch { fill.snapTo(0f) }
-                }
-            }
-        },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, style = relicName(13), color = if (done) Color(0xFF04120A) else Color(0xFF1B1306), letterSpacing = 1.8.sp)
     }
 }
 

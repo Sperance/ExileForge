@@ -62,7 +62,15 @@ val LossText = Color(0xFFF08580)
 val Seam = Color(0xFF6B7983)
 val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
+
+/** Тёмно-красная заливка опасной кнопки: подпись [OnDanger] на ней читается не ниже 4.5:1, в отличие от [LifeRed]. */
 val Blood = Color(0xFF8A2E2E)
+
+/** Слова на заливке главной кнопки ([Gold]). */
+val OnPrimary = Color(0xFF04210F)
+
+/** Слова на заливке опасной кнопки ([Blood]). */
+val OnDanger = Color(0xFFFFF1EF)
 
 /** Тёплая бронза: нить плашек выбора раздела и цвет Башни. */
 val Brass = Color(0xFFC9A26B)

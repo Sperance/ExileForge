@@ -285,7 +285,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             ) {
                 Text(card.title, style = relicName(15).copy(color = FateInk.GoldLight), textAlign = TextAlign.Center)
                 FateFlourish(Modifier.padding(vertical = 6.dp).fillMaxWidth(.5f).height(8.dp))
-                Text(card.text, color = FateInk.Text, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
+                Text(card.text(LocalContentIndex.current), color = FateInk.Text, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
             }
         }
         ScrollRod()
@@ -408,7 +408,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text("❧ $SIGIL ❧", color = FateInk.Gold, fontSize = 11.sp, letterSpacing = 6.sp)
-        card.text.takeIf { it.isNotBlank() }?.let { text ->
+        card.text(LocalContentIndex.current).takeIf { it.isNotBlank() }?.let { text ->
             Text(
                 ui("fate.ribbon.quote", text),
                 color = FateInk.Vellum,

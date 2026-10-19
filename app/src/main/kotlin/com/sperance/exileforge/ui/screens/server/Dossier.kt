@@ -397,7 +397,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
                 items(fates, key = { it.code }) { card -> FateOption(card.title, mark = true, selected = picked == card.code) { picked = card.code } }
             }
             picked?.let { code ->
-                Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
+                Text("«${FateCard(code).text(account.index)}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
             if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
             val ready = picked != null && picked != current && (other == null || reason.isNotBlank())

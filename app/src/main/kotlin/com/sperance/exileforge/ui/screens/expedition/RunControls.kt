@@ -40,7 +40,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
@@ -83,10 +82,11 @@ import kotlin.math.roundToInt
  * Литые полосы: объёмная полоса жизни с числами внутри, щит - светящаяся кромка по её верху со своим числом,
  * мана - тонкая полоса под ней с числами внутри; удержанная аурами часть ([reserved] сверх [maxMana]) - штриховкой.
  *
- * Цифры полос - одной ширины: тик их не дёргает. [onFlow] не null (карта) - под полосами строка итога [flow] фиксированной высоты,
- * место под неё есть всегда, и низ не прыгает: «Здоровье −14/с» цветом убыли или прибыли, «Щит −8/с» цветом щита, когда недуги едят
- * только щит ([flowLine]); покой - пусто; подчёркнута пунктиром, касание - разбор итога. Запас, что ауры держат целиком, рисуется полной штрихованной полосой;
- * [lifeReserved] - здоровье, что держат ауры сверх [maxLife], - штрихованный хвост полосы здоровья.
+ * Цифры полос - одной ширины: тик их не дёргает. [onFlow] не null (карта) - цифры полосы жизни прижаты влево, а у правого края
+ * её же - итог [flow] плашкой: «−14/с» цветом убыли или прибыли, щитовым цветом, когда недуги едят только щит ([flowLine]); покой -
+ * плашки нет, высота полос не меняется; итог подчёркнут пунктиром, касание всей полосы жизни - разбор итога. Запас, что ауры держат
+ * целиком, рисуется полной штрихованной полосой; [lifeReserved] - здоровье, что держат ауры сверх [maxLife], - штрихованный хвост
+ * полосы здоровья.
  */
 @Composable internal fun Vitals(
     life: Int,
@@ -107,7 +107,9 @@ import kotlin.math.roundToInt
     val shieldShare by animateFloatAsState(if (maxShield > 0) shield / maxShield.toFloat() else 0f, label = "shield")
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
-            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).reservedTail(reservedShare(maxLife, lifeReserved), LifeRed).border(1.dp, LifeRim, shape),
+            Modifier.fillMaxWidth().height(if (onFlow != null) MAP_LIFE_BAR else 18.dp).clip(shape).background(VitalsWell, shape)
+                .reservedTail(reservedShare(maxLife, lifeReserved), LifeRed).border(1.dp, LifeRim, shape)
+                .then(onFlow?.let { Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = it) } ?: Modifier),
         ) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight(.4f).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))))
@@ -123,7 +125,9 @@ import kotlin.math.roundToInt
                     if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
                 },
                 11.sp,
+                if (onFlow != null) Alignment.CenterStart else Alignment.Center,
             )
+            if (onFlow != null) flow?.let { flowLine(it, life.toDouble(), maxLife.toDouble()) }?.let { FlowPlate(it) }
         }
         val pooled = maxMana + reserved.coerceAtLeast(0) > 0
         if (pooled) {
@@ -135,40 +139,50 @@ import kotlin.math.roundToInt
                     Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight()
                         .background(Brush.verticalGradient(listOf(ManaTop, ManaDeep))),
                 )
-                VitalsFigure(AnnotatedString(ui("expedition.vitals_figure", number(mana.toDouble()), number(maxMana.toDouble()))), 9.sp)
+                VitalsFigure(
+                    AnnotatedString(ui("expedition.vitals_figure", number(mana.toDouble()), number(maxMana.toDouble()))),
+                    9.sp,
+                    if (onFlow != null) Alignment.CenterStart else Alignment.Center,
+                )
             }
         }
-        if (onFlow != null) FlowLineRow(flow?.let { flowLine(it, life.toDouble(), maxLife.toDouble()) }, onFlow)
     }
 }
 
-/** Строка итога под полосами: высота [FLOW_LINE] стоит и пустой; текст подчёркнут пунктиром его цвета, касание - [onFlow]. */
-@Composable private fun FlowLineRow(line: FlowLine?, onFlow: () -> Unit) {
-    Box(Modifier.fillMaxWidth().height(FLOW_LINE), contentAlignment = Alignment.CenterStart) {
-        line ?: return@Box
-        val tint = when {
-            line.subject == FlowSubject.SHIELD -> ShieldBright
-            line.tone == FlowTone.GAIN -> Vital
-            else -> FlowLoss
-        }
-        val dash = with(LocalDensity.current) { floatArrayOf(3.dp.toPx(), 2.dp.toPx()) }
+/** Итог здоровья в секунду у правого края полосы жизни: тёмная плашка, число его цвета, подчёркнутое пунктиром. */
+@Composable private fun BoxScope.FlowPlate(line: FlowLine) {
+    val tint = when {
+        line.subject == FlowSubject.SHIELD -> ShieldBright
+        line.tone == FlowTone.GAIN -> Vital
+        else -> FlowLoss
+    }
+    val dash = with(LocalDensity.current) { floatArrayOf(3.dp.toPx(), 2.dp.toPx()) }
+    Box(
+        Modifier.align(Alignment.CenterEnd).padding(3.dp).fillMaxHeight().background(FlowWell, RoundedCornerShape(4.dp)).padding(horizontal = 5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
             line.text,
             color = tint,
-            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f), fontFeatureSettings = "tnum"),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow)
-                .drawBehind { drawLine(tint.copy(alpha = .7f), Offset(0f, size.height - 1f), Offset(size.width, size.height - 1f), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(dash)) },
+            modifier = Modifier.drawBehind {
+                drawLine(tint.copy(alpha = .7f), Offset(0f, size.height - 1f), Offset(size.width, size.height - 1f), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(dash))
+            },
         )
     }
 }
 
-/** Высота строки итога под полосами героя на карте. */
-private val FLOW_LINE = 16.dp
+/** Высота полосы жизни на карте: в ней же стоит плашка итога. */
+private val MAP_LIFE_BAR = 20.dp
 
-/** Числа поверх литой полосы: по центру, с тенью - читаются и на пустой, и на полной. */
-@Composable private fun BoxScope.VitalsFigure(text: AnnotatedString, size: TextUnit) {
+/** Подложка плашки итога на полосе жизни. */
+private val FlowWell = Color(0xD105080B)
+
+/** Числа поверх литой полосы: по центру или у края [at], с тенью - читаются и на пустой, и на полной. */
+@Composable private fun BoxScope.VitalsFigure(text: AnnotatedString, size: TextUnit, at: Alignment = Alignment.Center) {
     Text(
         text,
         color = Color.White,
@@ -176,12 +190,12 @@ private val FLOW_LINE = 16.dp
         fontWeight = FontWeight.Bold,
         letterSpacing = .4.sp,
         style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f), fontFeatureSettings = "tnum"),
-        modifier = Modifier.align(Alignment.Center),
+        modifier = Modifier.align(at).padding(horizontal = if (at == Alignment.Center) 0.dp else 8.dp),
         maxLines = 1,
     )
 }
 
-/** Убыль здоровья в секунду в строке итога: светлый красный, чтобы читался на тёмной карте. */
+/** Убыль здоровья в секунду в плашке итога: светлый красный, чтобы читался на тёмной карте. */
 private val FlowLoss = Color(0xFFFFB3AD)
 
 private val VitalsWell = Color(0xCC0A0D12)

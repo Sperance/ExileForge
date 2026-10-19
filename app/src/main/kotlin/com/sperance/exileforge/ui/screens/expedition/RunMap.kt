@@ -83,8 +83,8 @@ import kotlin.math.roundToInt
             tick++
         }
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Canvas(Modifier.size(MINIMAP_SIDE).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
             if (tick < 0) return@Canvas
             drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
             val centre = Offset(size.width / 2, size.height / 2)
@@ -93,7 +93,7 @@ import kotlin.math.roundToInt
             drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
             drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ZoomButton(ForgeGlyphs.Minus, ui("expedition.zoom_out")) { cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX) }
             ZoomButton(ForgeGlyphs.Plus, ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
         }
@@ -103,6 +103,9 @@ import kotlin.math.roundToInt
         FullMap(run, hud, tick) { full = false }
     }
 }
+
+/** Поперечник мини-карты в углу полосы карты. */
+private val MINIMAP_SIDE = 112.dp
 
 /** «+»/«−» мини-карты: компактная круглая тональная иконка-кнопка. */
 @Composable internal fun ZoomButton(icon: ImageVector, label: String, onClick: () -> Unit) {

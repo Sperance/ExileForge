@@ -19,8 +19,9 @@ private val File.stamp: Long get() = name.substringBefore('-').toLongOrNull() ?:
 /**
  * Падения клиента: необработанное исключение пишет стек на диск ([CRASH_DIR]) и отдаёт падение прежнему обработчику -
  * процесс умирает как обычно. Следующий запуск шлёт каждое неотправленное падение отчётом [FeedbackKind.CRASH] ([pending] /
- * [sent]) - сервер сам заведёт Issue или посчитает повтор. Отправленные стеки живут [FRESH_MS] и только в своей версии сборки
- * ([sweep]): их прикладывает отчёт об ошибке игрока ([recent]); неотправленные срок и смена версии не трогают.
+ * [sent]) - сервер сам заведёт Issue или посчитает повтор. Отправленные стеки живут [FRESH_MS] и только в своей сборке
+ * (`versionCode`): их прикладывает отчёт об ошибке игрока ([recent]), устаревшие стирает [sweep] на старте; неотправленные срок и
+ * смена сборки не трогают. Склейка одинаковых падений - дело сервера.
  */
 class CrashKeeper(context: Context) :
     LeftReports,
@@ -41,10 +42,16 @@ class CrashKeeper(context: Context) :
         }
     }
 
+    /**
+     * Запись падения атомарно: текст - во временный файл [TMP], затем переименование в [PENDING]; процесс, умерший посреди записи,
+     * оставляет только временный файл, его не читают и стирает [sweep]. Шапка - версия сборки для карты R8, поток и `versionCode`.
+     */
     private fun write(thread: Thread, error: Throwable) {
         dir.mkdirs()
-        val at = System.currentTimeMillis()
-        File(dir, "$at-${UUID.randomUUID().toString().replace("-", "")}$PENDING").writeText("${BuildConfig.VERSION_NAME}\n${thread.name}\n---\n${error.stackTraceToString()}")
+        val name = "${System.currentTimeMillis()}-${UUID.randomUUID().toString().replace("-", "")}"
+        val draft = File(dir, name + TMP)
+        draft.writeText("${BuildConfig.VERSION_NAME}\n${thread.name}\n${BuildConfig.VERSION_CODE}$SPLIT${error.stackTraceToString()}")
+        if (!draft.renameTo(File(dir, name + PENDING))) draft.delete()
         trim()
     }
 
@@ -53,23 +60,24 @@ class CrashKeeper(context: Context) :
         files().drop(KEEP).forEach { it.delete() }
     }
 
-    /** Стеки новыми первыми. */
-    private fun files(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.stamp }.orEmpty()
+    /** Готовые записи стеков (без временных), новые первыми. */
+    private fun files(): List<File> = dir.listFiles()?.filter { it.isFile && (it.name.endsWith(PENDING) || it.name.endsWith(SENT)) }?.sortedByDescending { it.stamp }.orEmpty()
 
     /** Прочитанные записи падений, новые первыми; нечитаемая и без стека - не падение. */
     private fun kept(): List<KeptCrash> = files().mapNotNull { file -> runCatching { file.readText() }.getOrNull()?.let { KeptCrash.of(file, it) } }
 
     /**
-     * Стирает отправленные стеки старше [FRESH_MS] от [now] и прежних версий сборки - к отчёту они больше не идут; неотправленные
-     * ждут своей отправки.
+     * Раз на старте, до отправки ([pending]): стирает отправленные стеки старше [FRESH_MS] и чужих сборок (запись без `versionCode` -
+     * старая) и брошенные временные файлы; неотправленные ждут своей отправки.
      */
-    private fun sweep(now: Long) {
-        kept().filter { it.sent && (it.at < now - FRESH_MS || it.trace.buildVersion != BuildConfig.VERSION_NAME) }.forEach { it.file.delete() }
+    override suspend fun sweep() = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        dir.listFiles()?.filter { it.name.endsWith(TMP) }?.forEach { it.delete() }
+        kept().filter { it.sent && (it.at < now - FRESH_MS || !it.current) }.forEach { it.file.delete() }
     }
 
     /** Неотправленные падения: готовый отчёт и стирание его записи, старые первыми. */
     override suspend fun pending(): List<LeftReport> = withContext(Dispatchers.IO) {
-        sweep(System.currentTimeMillis())
         kept().filterNot { it.sent }.reversed().map { crash ->
             val report = BugReportRequest(
                 text = crash.trace.stack.lineSequence().first().take(TITLE),
@@ -84,33 +92,34 @@ class CrashKeeper(context: Context) :
         }
     }
 
-    /** Падение [file] ушло: стек остаётся среди последних, но больше не шлётся. */
+    /** Падение [file] ушло: стек остаётся среди последних, но больше не шлётся; не переименовался - стирается, чтобы не уйти снова. */
     private suspend fun sent(file: File) = withContext(Dispatchers.IO) {
-        file.renameTo(File(dir, file.name.removeSuffix(PENDING) + SENT))
+        if (!file.renameTo(File(dir, file.name.removeSuffix(PENDING) + SENT))) file.delete()
     }
 
-    /**
-     * Падения к отчёту игрока об ошибке: только этой версии сборки и не старше [FRESH_MS], одинаковые стеки - одним с числом повторов
-     * ([CrashTrace.count]), новые первыми; стек с версией своей сборки, без потока.
-     */
+    /** Падения к отчёту игрока об ошибке: только этой сборки и не старше [FRESH_MS], новые первыми; стек с версией своей сборки, без потока. */
     override suspend fun recent(): List<CrashTrace> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
-        sweep(now)
-        kept().filter { it.at >= now - FRESH_MS && it.trace.buildVersion == BuildConfig.VERSION_NAME }
-            .groupBy { it.trace.stack }.values.map { same -> same.first().trace.copy(count = same.size) }
+        kept().filter { it.current && it.at >= now - FRESH_MS }.map { it.trace }
     }
 
     /**
-     * Запись падения на диске: [file], время [at] из имени, отправлено ли ([sent] - `.sent`), поток [thread] и стек с версией
-     * сборки [trace].
+     * Запись падения на диске: [file], время [at] из имени, отправлено ли ([sent] - `.sent`), поток [thread], стек с версией сборки
+     * [trace] и `versionCode` сборки [code] (null - запись старого вида без него).
      */
-    private data class KeptCrash(val file: File, val at: Long, val sent: Boolean, val thread: String, val trace: CrashTrace) {
+    private data class KeptCrash(val file: File, val at: Long, val sent: Boolean, val thread: String, val trace: CrashTrace, val code: Int?) {
+        /** Падение этой сборки: тот же `versionCode`. */
+        val current: Boolean get() = code == BuildConfig.VERSION_CODE
+
         companion object {
-            /** Запись [text] файла [file]: первая строка шапки - версия сборки, вторая - поток, после [SPLIT] - стек; пустой стек - не падение. */
+            /**
+             * Запись [text] файла [file]: шапка до [SPLIT] - версия сборки, поток и `versionCode`, после - стек; пустой стек - не
+             * падение.
+             */
             fun of(file: File, text: String): KeptCrash? {
                 val stack = text.substringAfter(SPLIT, "").takeIf { it.isNotBlank() } ?: return null
                 val head = text.substringBefore(SPLIT).lines()
-                return KeptCrash(file, file.stamp, file.name.endsWith(SENT), head.getOrNull(1).orEmpty(), CrashTrace(stack, head.first()))
+                return KeptCrash(file, file.stamp, file.name.endsWith(SENT), head.getOrNull(1).orEmpty(), CrashTrace(stack, head.first()), head.getOrNull(2)?.toIntOrNull())
             }
         }
     }
@@ -119,6 +128,7 @@ class CrashKeeper(context: Context) :
         const val CRASH_DIR = "crashes"
         const val PENDING = ".pending"
         const val SENT = ".sent"
+        const val TMP = ".tmp"
         const val SPLIT = "\n---\n"
         const val KEEP = 3
         const val TITLE = 200

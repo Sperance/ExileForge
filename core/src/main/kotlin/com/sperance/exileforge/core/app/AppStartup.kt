@@ -111,13 +111,15 @@ class AppStartup(
     }
 
     /**
-     * Прошлые запуски зависали или падали ([left]): каждый неотправленный отчёт уходит баг-репортом в фоне, отправленный стирается. Ждёт
+     * Прошлые запуски зависали или падали ([left]): устаревшие записи стираются ([LeftReports.sweep]), каждый неотправленный отчёт уходит
+     * баг-репортом в фоне, отправленный стирается. Ждёт
      * входа - тогда он подписан аккаунтом и героем; вход не случился за [STALL_REPORT_WAIT_MS] - уходит без них, с устройством и
      * версией. Не ушёл - останется до следующего запуска.
      */
     private fun reportLeft(left: LeftReports) {
         scope.launch {
             try {
+                left.sweep()
                 val pending = left.pending().ifEmpty { return@launch }
                 withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
                 pending.forEach { report ->

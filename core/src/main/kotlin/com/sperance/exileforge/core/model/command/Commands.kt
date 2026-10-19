@@ -122,9 +122,9 @@ data class ApiCapabilities(val routes: Set<String>) {
 
 /**
  * Стек падения клиента и версия сборки ([buildVersion] - `versionName`), в которой оно случилось: по ней сервер берёт карту
- * R8 для расшифровки, а не по версии, что шлёт отчёт. [count] - сколько раз этот стек пришёл к отчёту: одинаковые склеены.
+ * R8 для расшифровки, а не по версии, что шлёт отчёт. Одинаковые падения склеивает сервер.
  */
-@Serializable data class CrashTrace(val stack: String, val buildVersion: String, val count: Int = 1)
+@Serializable data class CrashTrace(val stack: String, val buildVersion: String)
 
 /** Ответ на приём отчёта: [id] записанного отчёта. Снимков экрана нет. */
 @Serializable data class FiledReport(val id: String)

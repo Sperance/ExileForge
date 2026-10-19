@@ -1872,6 +1872,7 @@
   "skills.pick_active": "Active slot {0}",
   "skills.pick_passive": "Passive slot {0}",
   "skills.nothing_learned": "No learned skill of this kind — read a book.",
+  "skills.all_slotted": "Every learned skill of this kind is already in a slot.",
   "skills.empty_it": "Leave it empty",
   "skills.when_fires": "{0} — when to use it",
   "skills.when_drunk": "The flask — when to drink it",

@@ -1872,6 +1872,7 @@
   "skills.pick_active": "Активный слот {0}",
   "skills.pick_passive": "Пассивный слот {0}",
   "skills.nothing_learned": "Нет изученных умений этого вида — прочитайте книгу.",
+  "skills.all_slotted": "Все изученные умения этого вида уже в ячейках.",
   "skills.empty_it": "Оставить пустым",
   "skills.when_fires": "{0} — когда применять",
   "skills.when_drunk": "Фляга — когда пить",

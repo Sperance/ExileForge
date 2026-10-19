@@ -198,12 +198,15 @@ internal fun SkillSheet(
 /**
  * A skill for a slot: the class's learned ones of its kind, or nothing to empty it.
  *
+ * Умения, что уже стоят в ячейках ([HeroSkills.slotted]), не предлагаются: переставляют их кнопками ячеек на карточке умения.
  * Касание ставит умение в ячейку, долгое нажатие - его карточка.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, pages: List<SkillDefinition>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
-    val offered = pages.filter { it.kind == pick.kind && skills.level(it.code) > 0 }
+    val learned = pages.filter { it.kind == pick.kind && skills.level(it.code) > 0 }
+    val slotted = skills.slotted
+    val offered = learned.filter { it.code !in slotted }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -214,7 +217,11 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                 color = GoldBright,
                 style = MaterialTheme.typography.titleMedium,
             )
-            if (offered.isEmpty()) MutedText(ui("skills.nothing_learned")) else HoldHint(HoldSubject.SKILL)
+            when {
+                learned.isEmpty() -> MutedText(ui("skills.nothing_learned"))
+                offered.isEmpty() -> MutedText(ui("skills.all_slotted"))
+                else -> HoldHint(HoldSubject.SKILL)
+            }
             val inspect = rememberSkillInspect()
             offered.forEach { skill ->
                 Row(

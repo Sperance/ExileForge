@@ -19,7 +19,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Темп боя (#318): `combat.tempo` замедляет замах обеих сторон, а временные свойства - заряды, ярость, «недавно», баффы и
+ * Темп боя: `combat.tempo` замедляет замах обеих сторон, а временные свойства - заряды, ярость, «недавно», баффы и
  * недуги - растянуты под него: в замахах эталонной скорости они длятся не меньше прежнего и работают в бою.
  */
 class TempoTest {
@@ -29,8 +29,7 @@ class TempoTest {
     /** Секунды [seconds] - в замахах эталонной скорости (`combat.unarmed.speed`) под темпом боя. */
     private fun swings(seconds: Double): Double = seconds * rules.unarmed.speed * rules.tempo
 
-    private fun body(life: Double, speed: Double = 1.0, damage: Double = 0.01) =
-        Combatant(mapOf("STOCK_HEALTH" to life, "STOCK_ATTACK_SPEED" to speed, "STOCK_ATTACK_PHYSICAL" to damage), LEVEL, rules)
+    private fun body(life: Double, speed: Double = 1.0, damage: Double = 0.01) = Combatant(mapOf("STOCK_HEALTH" to life, "STOCK_ATTACK_SPEED" to speed, "STOCK_ATTACK_PHYSICAL" to damage), LEVEL, rules)
 
     private fun battle(foes: List<Foe>, kind: FightKind = FightKind.PACK, damage: Double = 0.01): Battle {
         val hero = body(HUGE, damage = damage)

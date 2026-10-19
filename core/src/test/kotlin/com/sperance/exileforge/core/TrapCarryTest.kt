@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Недуг ловушки на карте входит в следующий бой и тикает в нём (#320). */
+/** Недуг ловушки на карте входит в следующий бой и тикает в нём. */
 class TrapCarryTest {
     private val index get() = TestContent.index
     private val zone get() = index.campaign.zones.first()

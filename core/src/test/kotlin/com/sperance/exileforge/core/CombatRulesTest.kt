@@ -57,7 +57,7 @@ class CombatRulesTest {
     private fun battle(hero: Combatant, vararg foes: Foe, life: Double = hero.maxLife, kit: Loadout = Loadout()) = Battle(hero, foes.toList(), rules, index.rules.fight, life, Random(11), kit = kit)
 
     /**
-     * Холод и замедление аур - один множитель замаха и перезарядки умений.
+     * Холод, замедление аур и темп боя правил - один множитель замаха и перезарядки умений.
      *
      * Холод растягивает и применение; перезарядка идёт с его конца.
      */
@@ -67,14 +67,15 @@ class CombatRulesTest {
         val b = battle(body(), Foe(body(mapOf("AURA_SLOW" to 50.0), life = 1e9), skills = listOf(skill)))
         val foe = b.foe(0)
         b.place(foe, ActiveAilment(Ailment.CHILLED, 1e9, 30.0, 1e9, Side.HERO), null)
-        assertEquals(1.3, foe.slow(), 1e-9)
-        assertEquals(1 / 0.5, b.heroFighter.slow(), 1e-9)
+        val tempo = rules.tempo
+        assertEquals(1.3 / tempo, foe.slow(), 1e-9)
+        assertEquals(1 / 0.5 / tempo, b.heroFighter.slow(), 1e-9)
         foe.readyAt[skill.code] = 0.0
         b.monsterCast(foe)
         val cast = assertNotNull(foe.casting)
-        assertEquals(CastTime.of(skill, foe.body, rules) * 1.3, cast.until - cast.from, 1e-9)
+        assertEquals(CastTime.of(skill, foe.body, rules) * 1.3 / tempo, cast.until - cast.from, 1e-9)
         cast.finish()
-        assertEquals(skill.cooldown / foe.body.recovery * 1.3, foe.readyAt.getValue(skill.code) - b.time, 1e-9)
+        assertEquals(skill.cooldown / foe.body.recovery * 1.3 / tempo, foe.readyAt.getValue(skill.code) - b.time, 1e-9)
     }
 
     /**
@@ -99,16 +100,17 @@ class CombatRulesTest {
     }
 
     /**
-     * Умения монстров маны не тратят - босс без маны с «Ударом по земле» и «Ослаблением» за 30 с бьёт «Ударом» не раз и не
-     * немеет; держит его только перезарядка.
+     * Умения монстров маны не тратят - босс без маны с «Ударом по земле» и «Ослаблением» за 30 с при темпе 1 (дольше на темп боя)
+     * бьёт «Ударом» не раз и не немеет; держит его только перезарядка.
      */
     @Test
     fun a_boss_casts_without_mana() {
         val skills = listOf("MOB_SLAM", "MOB_ENFEEBLE").map { index.skills.monsterByCode.getValue(it) }
         val b = battle(body(life = 1e9), Foe(body(mapOf(CoreStat.MANA.code to 0.0), life = 1e9), MonsterRarity.UNIQUE, skills = skills))
-        repeat(300) { b.advance(0.1) }
+        val seconds = 30 / rules.tempo
+        repeat((seconds * 10).toInt()) { b.advance(0.1) }
         val slams = b.events.count { it.actor == Side.MONSTER && it.skill == "MOB_SLAM" && it.trace !is NoteTrace }
-        assertTrue(slams >= 3, "the boss slammed $slams times in 30 s")
+        assertTrue(slams >= 3, "the boss slammed $slams times in $seconds s")
     }
 
     /** Возврат здоровья работает и у монстра - урон по нему возвращается за срок правила. */

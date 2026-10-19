@@ -4,7 +4,6 @@
 
 ## API_REVISION (сервер `Constants.kt`, клиент `core/model/sync/Sync.kt`)
 
-- 84 - 0.14.0 - сняты урон крита, `combat.borrowedMana`, `MonsterSkill.mana`, `loot.uniqueReach`; новые `combat.cast`, общие умения, метки, `POST hero/quests/book`.
 - 85 - 0.14.1 - отчёты в GitHub Issues (`BugReport.issue*` вместо `asana*`, `bugreport/known`, `admin/feedback/issue`), без снимков экрана, `abyss.leaderPower`.
 - 86 - 0.14.2 - вид отчёта `CRASH`, `BugReportRequest.traces|trail|heroSheet`; без предложений: сняты `SUGGESTION`, `IssueState.DONE`, `Suggestion` → `KnownReport`.
 - 87 - 0.14.4 - сняты `bugreport/similar`, `feedback.similar`, `IssueState.IN_PROGRESS`; новые `feedback.exportHoldMinutes`, `SkillDefinition.sigil`.
@@ -14,10 +13,10 @@
 - 91 - 0.16.3 - `RunStart.chestStock`, `EventReward.chestStock`, `ActiveMap.sources`, `AuctionLot.returned`, `WorkGains/WorkTally.missed`, `FountainRule.flasks`.
 - 92 - 0.16.5 - `Received.overflowSold|autoSold` (`Sale`) вместо `sold/gold/shards`, `ProfessionView.layers` вместо `bonus`, `POST admin/fate?user=&reason=`, `GET admin/feedback/detail`.
 - 93 - 0.16.6 - снят `GET admin/feedback/detail` (`ReportDetail`); `BugReportRequest|OwnReport|FullReport.topic` (улучшение администратора), `CrashTrace.count` на сервере (склейка падений отчёта).
+- 94 - 0.16.8 - `MailRequest.userId`, `POST guild/stash/tab/name` (`GuildStashTab.name`), `WorkView.stoppedAt` и `POST hero/crafts/resume`, `Received.deferred` и `POST hero/campaign/settle` (`CampaignState.pendingSale`), `TrapKind.shape` вместо `reach/rearm`, `CombatRules.tempo`.
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 
-- 86 - 0.14.0 - общие умения, каталог умений вдвое, вершины открытия 60/70/80/90, метка с подрывом.
 - 87 - 0.14.1 - оборона классов строкой, своя кривая вождей Бездны, мягче бои Разлома.
 - 88 - 0.14.2 - фонтан лечит больше, классы без строки получаемого урона, здоровье обычных монстров выше.
 - 89 - 0.15.0 - мана умений по уровню умения, новые формулы и пределы боя, новые дерево и Атлас, яд и хаос, подгонка под цели баланса.
@@ -27,6 +26,7 @@
 - 93 - 0.16.4 - темп боя вдвое: здоровье монстров ниже, удары выше, ярость и тотемы раньше.
 - 94 - 0.16.6 - «Несгибаемый бастион» дороже (скорость атаки −12%), вечный бафф не вытесняется временным того же вида - действует сильнейший; у карты ниже порога тиров свой уровень (район падения, сундук или герой у картографа со сдвигом `maps.levels`), уровень района такой карты - не ниже его; монстры карт, зон кампании и арен сильнее от уровня героя над районом сверх льготы в 6 уровней (`heroScale`), опыт за них - тем же множителем здоровья.
 - 95 - 0.16.7 - фазы 44 боссам актов 2–9 и вождям Бездны, новые виды Пламя/Стужа/Кровопускатель/Сотрясатель/Тень, подгонка силы стражей.
+- 96 - 0.16.8 - темп боя ×0.55 (`combat.tempo`), здоровье редкостей ×1.6/×3.5/×10 и времена ×1.82, недуги ×1.8, скорости боя [1,2], ловушки - формы, ритм, лёд/молния/жернов/маятник/пульс, без наград, мод «Больше ловушек»; эссенций вдвое меньше, карт с монстров 0.028, остановка работы ремесла через 12 ч.
 
 ## Формы коллекций и миграции (`config/CollectionSchemas.kt`)
 

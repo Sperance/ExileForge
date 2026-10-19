@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
@@ -48,11 +47,12 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The quest board of the City: three sections — dailies, weeklies and the contract board (the story is the
- * expedition's own screen; its chapter card heads the board) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
+ * expedition's own screen; its chapter heads the board as a line) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
  *
- * Текущая глава сюжета - та же карточка, что над картой Похода, с плашкой выбора закона или книги над ней; вкладки - сегментами с
- * числом готовых к сдаче, под ними - подпись, что ежедневные засчитываются сами; «Сдать» - низкая пилюля, отказ и сброс - значки.
+ * Глава сюжета - строкой 48dp ([StoryLine]), ждущий выбор закона или книги - она же плашкой выбора; срок сброса дня и недели - справа в
+ * цепочке «Город › Доска заданий» ([TrailData]), касание - пояснение, как задания засчитываются; вкладки - сегментами с числом
+ * готовых к сдаче; готовых два и больше по всем вкладкам - внизу «Сдать всё» с их числом. «Сдать» - низкая пилюля, отказ и сброс - значки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,10 +65,9 @@ fun QuestsScreen() {
     LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.open() }
     val board = quests.board
     val busy = activity.busy
+    board?.let { ResetData(current, it) }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            StoryCard(game, board, vm, Modifier.padding(bottom = 8.dp))
-        }
+        StoryLine(game, board, Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp), onOpen = vm::openStory)
         Segments(
             QuestTab.entries,
             current,
@@ -77,7 +76,6 @@ fun QuestsScreen() {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             onPick = vm::tab,
         )
-        CountingNote(Modifier.padding(horizontal = 18.dp))
         PullToRefreshBox(isRefreshing = Reads.QUESTS in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (board == null) {
@@ -91,14 +89,30 @@ fun QuestsScreen() {
                 }
             }
         }
+        val ready = QuestTab.entries.sumOf { readyCount(it, board) }
+        if (ready >= CLAIM_ALL_FROM) ClaimAllBar(ready, busy, vm::claimAll)
     }
 }
 
-/** Подпись под вкладками: ежедневные засчитываются сами, контракты берут с доски. */
-@Composable private fun CountingNote(modifier: Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(Icons.Outlined.Info, null, tint = Rune, modifier = Modifier.size(14.dp))
-        Text(ui("quest.counting_note"), color = Muted, style = MaterialTheme.typography.labelSmall)
+/**
+ * Срок сброса открытой вкладки справа в цепочке: «↻ 5 ч 12 мин» дня или «↻ 3 д 4 ч» недели; касание - когда новые задания и как они
+ * засчитываются. У контрактов общего срока нет - у каждого места доски свой.
+ */
+@Composable private fun ResetData(tab: QuestTab, board: QuestBoard) {
+    val left = when (tab) {
+        QuestTab.DAILY -> untilText(board.dayEndsAt)
+        QuestTab.WEEKLY -> weekText(board.weekEndsAt)
+        QuestTab.CONTRACTS -> return
+    }
+    TrailData(ui("quest.trail_reset", left), Tip(ui("quest.reset_tip.${tab.name.lowercase()}", left), ui("quest.counting_note"), Rune))
+}
+
+/** Подвал «Сдать всё»: главная кнопка на всю ширину с числом готовых по всем вкладкам. */
+@Composable private fun ClaimAllBar(ready: Int, busy: Boolean, onClaim: () -> Unit) {
+    Box(Modifier.fillMaxWidth().background(Panel).padding(horizontal = 16.dp, vertical = 10.dp)) {
+        ForgeButton(onClick = onClaim, modifier = Modifier.fillMaxWidth(), icon = Icons.Outlined.Check, state = ButtonState.of(!busy)) {
+            Text(ui("quest.claim_all", ready), maxLines = 1)
+        }
     }
 }
 
@@ -111,20 +125,18 @@ private fun readyCount(tab: QuestTab, board: QuestBoard?): Int = when (tab) {
 
 /** Задания дня не меняются за золото: что выпало, то и задание дня. */
 private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    item { MutedText(ui("quest.resets", untilText(board.dayEndsAt))) }
     if (board.daily.isEmpty()) item { MutedText(ui("quest.none")) }
     items(board.daily, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
 private fun LazyListScope.weekly(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    item { MutedText(ui("quest.resets", weekText(board.weekEndsAt))) }
     if (board.weekly.isEmpty()) item { MutedText(ui("quest.none")) }
     items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
 /**
  * Контракты: «Мои контракты» с гнёздами взятых в заголовке (готовое к сдаче светится) и доска контрактов - рамка с кромкой и заклёпками,
- * листки приколоты, пустое место - пунктир с кольцом до нового листка. Руки заняты - вместо «Взять» у листков одна строка-замок в
+ * листки приколоты, пустое место - пунктир с кольцом до нового листка. Руки заняты - вместо «Взять» у листков одна фишка-замок в
  * шапке доски. Невзятый листок не истекает: срок у него появится со взятия.
  */
 private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: QuestBoard, refillHours: Int) {
@@ -144,8 +156,8 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
 }
 
 /**
- * Доска контрактов: базальтовая рамка с латунной кромкой и заклёпками по углам; шапка - «Доска контрактов», занятые места из всех и
- * фишка до нового листка; листки - строки с гвоздиком, у каждого «Сбросить» и, пока есть свободные руки, «Взять».
+ * Доска контрактов: базальтовая рамка с латунной кромкой и заклёпками по углам; шапка - «Доска контрактов» и, когда руки заняты,
+ * фишка-замок; листки - строки с гвоздиком, у каждого «Сбросить» и, пока есть свободные руки, «Взять». Срок нового листка - у пустого места.
  */
 @Composable private fun ContractBoard(vm: QuestViewModel, busy: Boolean, board: QuestBoard, refillHours: Int) {
     val shape = RoundedCornerShape(14.dp)
@@ -155,13 +167,10 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
             .border(1.dp, BOARD_EDGE, shape).boardRim().padding(horizontal = 8.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Engraved(ui("quest.board"), accent = Brass)
-            MutedText(ui("quest.progress", board.offers.size, board.offers.size + board.refills.size), style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.weight(1f))
-            if (board.nextOfferAt > 0) TimerChip(untilText(board.nextOfferAt))
+        Row(Modifier.fillMaxWidth().heightIn(min = 32.dp).padding(start = 10.dp, end = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Engraved(ui("quest.board"), accent = Brass, modifier = Modifier.weight(1f))
+            if (full && board.offers.isNotEmpty()) LockChip(board.contracts.size, board.activeLimit)
         }
-        if (full && board.offers.isNotEmpty()) LockLine(ui("quest.take_full", board.contracts.size, board.activeLimit))
         if (board.offers.isEmpty() && board.refills.isEmpty()) MutedText(ui("quest.board_empty"), Modifier.padding(horizontal = 10.dp))
         board.offers.forEach { offer ->
             QuestRow(offer, Modifier.pinned()) {
@@ -190,28 +199,23 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     }
 }
 
-/** Строка-замок шапки доски: почему у листков нет «Взять». */
-@Composable private fun LockLine(text: String) {
+/** Фишка-замок шапки доски «Руки заняты»: почему у листков нет «Взять»; касание - сколько занято и как освободить руки. */
+@Composable private fun LockChip(taken: Int, limit: Int) {
     val shape = RoundedCornerShape(8.dp)
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 2.dp).background(Abyss.copy(alpha = .65f), shape).border(1.dp, Brass.copy(alpha = .25f), shape).padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Icon(Icons.Outlined.Lock, null, tint = LOCK_TINT, modifier = Modifier.size(14.dp))
-        Text(text, color = LOCK_TINT, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-/** Фишка времени до нового листка: ↻ и срок. */
-@Composable private fun TimerChip(text: String) {
-    Row(
-        Modifier.clip(RoundedCornerShape(10.dp)).background(PanelRaised).padding(horizontal = 8.dp, vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(Icons.Outlined.Refresh, null, tint = Parchment, modifier = Modifier.size(12.dp))
-        Text(text, color = Parchment, style = MaterialTheme.typography.labelSmall)
+    Tipped({ Tip(ui("quest.hands_full"), ui("quest.take_full", taken, limit), LOCK_TINT) }) {
+        Row(
+            Modifier.heightIn(min = 44.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                Modifier.height(26.dp).background(Abyss.copy(alpha = .65f), shape).border(1.dp, Brass.copy(alpha = .25f), shape).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(Icons.Outlined.Lock, null, tint = LOCK_TINT, modifier = Modifier.size(12.dp))
+                Text(ui("quest.hands_full"), color = LOCK_TINT, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -279,13 +283,16 @@ private val BOARD_EDGE = Color(0xFF3A3326)
 private val RIVET_LIGHT = Color(0xFFF3D9A8)
 private val RIVET_DARK = Color(0xFF3A2C18)
 
-/** Песочный текст строки-замка. */
+/** Песочный текст фишки-замка. */
 private val LOCK_TINT = Color(0xFFCDB98A)
 
 /** Приглушённый красный «Отказаться». */
 private val ABANDON_TINT = Color(0xFFB06A66)
 
 private const val HOUR_MS = 3_600_000L
+
+/** С какого числа готовых к сдаче внизу встаёт «Сдать всё»: одно сдаётся своей кнопкой. */
+private const val CLAIM_ALL_FROM = 2
 
 /** Days and hours to a week's end — a week does not fit in the merchant's hours and minutes. */
 internal fun weekText(at: Long): String {

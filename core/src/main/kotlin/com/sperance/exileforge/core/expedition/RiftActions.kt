@@ -1,7 +1,5 @@
 package com.sperance.exileforge.core.expedition
 
-import com.sperance.exileforge.core.app.PreferencesRepository
-import com.sperance.exileforge.core.app.speedPresses
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.RiftStyles
 import com.sperance.exileforge.core.campaign.run.FightReport
@@ -73,14 +71,11 @@ class RiftActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val prefs: PreferencesRepository,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
     private val mutable = MutableStateFlow(RiftState())
     val state: StateFlow<RiftState> = mutable.asStateFlow()
-
-    private val speedSteps: Int get() = speedPresses(world.state.value.content, prefs.settings.value.fightSpeed)
 
     /** «Разлом недели»: экран открывается, доска читается. */
     fun open() {
@@ -209,7 +204,6 @@ class RiftActions(
         val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
         val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
         return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate) { end -> deliver(end) }
-            .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 
     private companion object {

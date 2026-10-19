@@ -50,7 +50,7 @@ fun Battle.skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSk
         val body = heroFighter.body
         val level = it.level(body)
         val cost = cost(it, level)
-        val cooldown = it.skill.cooldown / body.recovery
+        val cooldown = it.skill.cooldown / body.recovery * heroFighter.slow()
         val left = ((heroFighter.readyAt[slotKey(slot)] ?: 0.0) - time).coerceAtLeast(0.0)
         val cast = heroFighter.casting?.takeIf { c -> c.key == slotKey(slot) }
         SkillView(

@@ -85,7 +85,7 @@ class MetaCombatTest {
      * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
      * запасы, чью ауру несёт герой; здоровье и щит стаи ×[foesLife] - долгая схватка, в которой успевают сказаться медленные
      * характеристики (длительность недугов), скорость атак и чар стаи ×[foesPace] - паузы между ударами, в которые
-     * перезаряжается щит героя.
+     * перезаряжается щит героя; редкие тяжёлые удары (сильная и медленная стая) снимают щит так, что видна скорость его перезарядки.
      */
     private data class Scenario(
         val heroClass: String,
@@ -117,7 +117,7 @@ class MetaCombatTest {
             build.body, foes(scenario), rules, index.rules.fight, build.body.maxLife, Random(scenario.seed), gear.stance,
             kit = kit, model = build, percent = gear.percent, cleared = scenario.cleared,
         )
-        while (battle.outcome == null && battle.time < SECONDS) battle.advance(0.1)
+        while (battle.outcome == null && battle.time < SECONDS / rules.tempo) battle.advance(0.1)
         val print = battle.events.joinToString(";") { "${it.actor}${it.action}${it.kind}${it.skill}${it.foe}${"%.3f".format(it.damage)}${"%.3f".format(it.healed)}" }
             .plus("|${"%.3f".format(battle.heroLife)}|${"%.3f".format(battle.heroMana)}|${battle.outcome}").hashCode()
         if (extra.isEmpty()) prints[scenario] = print
@@ -222,6 +222,8 @@ class MetaCombatTest {
     private companion object {
         const val LEVEL = 60
         const val SKILL_LEVEL = 12
+
+        /** Предел схватки при темпе боя 1; темп правил растягивает его, как и все времена боя. */
         const val SECONDS = 40.0
 
         /** Уровень стаи: ниже героя - схватка длится десятки секунд, и герой успевает и бить, и терять здоровье. */
@@ -252,6 +254,7 @@ class MetaCombatTest {
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, foesLife = 3.0),
             Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13, foesLife = 3.0),
             Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13, foesLife = 3.0, foesPace = 0.1),
+            Scenario("WITCH", SkillType.SPELL, 4.0, cleared = false, seed = 13, foesLife = 3.0, foesPace = 0.1),
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 13),
             Scenario("WITCH", SkillType.SPELL, 0.8, cleared = true, seed = 17),
             Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11),

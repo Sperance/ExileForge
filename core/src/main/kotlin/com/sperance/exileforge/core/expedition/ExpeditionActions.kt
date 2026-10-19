@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.app.DeviceStore
 import com.sperance.exileforge.core.app.Landing
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.Screens
-import com.sperance.exileforge.core.app.speedPresses
 import com.sperance.exileforge.core.campaign.AtlasWindow
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Expedition
@@ -164,9 +163,6 @@ class ExpeditionActions(
 
     private fun expedition(transform: (Expedition) -> Expedition) = repository.update(transform)
 
-    /** Сколько нажатий кнопки скорости боя дают скорость из настроек: 1 → 2 → 4. */
-    private val speedSteps: Int get() = speedPresses(index, prefs.settings.value.fightSpeed)
-
     /** Прогресс кампании, как его считают правила по герою и миру. */
     private fun progress(): CampaignProgress? = index?.let { i -> hero?.let { h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) } }
 
@@ -314,10 +310,7 @@ class ExpeditionActions(
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
-        ).also { r ->
-            repeat(speedSteps) { r.send(RunCommand.Speed) }
-            if (toBoss) r.send(RunCommand.ToBoss)
-        }
+        ).also { r -> if (toBoss) r.send(RunCommand.ToBoss) }
         vaalKilled = started.vaalKilled
         persist()
     }
@@ -613,7 +606,7 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
-        ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
+        )
         parent = outer
         mutableRun.value = inner
     }

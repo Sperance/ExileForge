@@ -11,8 +11,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GameSettings(
     val keepScreen: KeepScreen = KeepScreen.EXPEDITION,
-    /** The speed every run and trial begins at: 1, 2 or 4, the steps of the fight's own button. */
-    val fightSpeed: Int = 1,
     val damageNumbers: DamageNumbers = DamageNumbers.ALL,
     /** The hero's life share, in per cent, under which a running fight pauses by itself; 0 never. */
     val autoPause: Int = 0,
@@ -65,9 +63,3 @@ enum class TextSize(val scale: Float) { S(.9f), M(1f), L(1.15f) }
 
 /** Вибрации - из :core. */
 typealias Buzz = com.sperance.exileforge.core.session.Buzz
-
-/** Скорости боя из правил (`fight.speeds`); контента ещё нет - умолчания правил. */
-fun fightSpeeds(index: com.sperance.exileforge.rules.content.ContentIndex?): List<Int> = index?.rules?.fight?.speeds.orEmpty()
-
-/** Сколько нажатий кнопки скорости боя дают скорость [speed] из настроек: 1 → 2 → 4. */
-fun speedPresses(index: com.sperance.exileforge.rules.content.ContentIndex?, speed: Int): Int = fightSpeeds(index).indexOf(speed).coerceAtLeast(0)

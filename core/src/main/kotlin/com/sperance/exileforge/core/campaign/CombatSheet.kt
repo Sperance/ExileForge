@@ -118,6 +118,13 @@ enum class FightReading(override val stat: String, override val from: String, ov
         }
     },
 
+    /** Скорость атаки: цифра листа в пределах правил на темп боя (`combat.tempo`) - так часто бой и замахивается (`Fighter.slow`). */
+    ATTACK_SPEED(CoreStat.ATTACK_SPEED.code, CoreStat.ATTACK_SPEED.code, false) {
+        override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
+            to(ReadingPart.TEMPO, body.attackSpeed * body.rules.tempo, body.rules.tempo)
+        }.steps
+    },
+
     /** Здоровье за убийство: плоское и доля максимума на скорость восстановления - как в бою (`Battle.slain`). */
     LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
         override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
@@ -165,6 +172,9 @@ enum class ReadingPart(val stat: String?) {
     SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code),
     KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code),
     CHARGE_BASE(null),
+
+    /** Темп боя правил (`combat.tempo`): множитель скорости всех действий в бою. */
+    TEMPO(null),
     ;
 
     /** Источник сдвига части в разборе ([SourceKind.FIGHT]). */

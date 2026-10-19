@@ -70,7 +70,7 @@ import kotlin.random.Random
  * ([WEAK]) - небрежный игрок: подбирает так же, но роллы вещей - нижней четверти, редкие и волшебные вперемешку.
  *
  * Баланс монстров (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными функциями правил
- * и настоящим боем клиента ([Battle]). Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над
+ * и настоящим боем клиента ([Battle]). Вывод - TSV; цели: время убийства по редкостям ([TempoTarget]) и 55-60% побед эталона над
  * стражем своего уровня ([GuardianTarget]).
  */
 enum class GearBand(val candidates: Int, val share: Double, val tierStep: Int, val rarities: List<Rarity>, val maxUniques: Int, val flasks: Rarity) {
@@ -818,7 +818,8 @@ object Prober {
  *
  * Режимы: кампания (каждый босс каждым классом), архетипы, стражи Ваал, карты по тирам, Мощь боссов, лист эталонов, зонд, Мощь при
  * вариантах `might.skills`, время и опыт захода, выравнивание классов (урон и доля побед на уровнях [levels]), разбор по стражам, раш и
- * башня, стражи кристаллов и Бездна, Бездна по глубинам, Разлом недели, Скверна, алтари, Мощь стражей зон правилом `BossMight`.
+ * башня, стражи кристаллов и Бездна, Бездна по глубинам, Разлом недели, Скверна, алтари, Мощь стражей зон правилом `BossMight`, темп боя
+ * (`tempo`: стражи и монстры зон по редкостям против [TempoTarget]).
  */
 fun main(args: Array<String>) {
     val content = File(System.getProperty("content"))
@@ -839,13 +840,13 @@ fun main(args: Array<String>) {
     val tasks = mutableListOf<Task>()
     fun penalty(zone: Zone, onMap: Boolean) = index.campaign.resistPenalty(zone.code, onMap)
     when (mode) {
-        "campaign", "guard" -> zones.forEach { zone ->
+        "campaign", "guard", "tempo" -> zones.forEach { zone ->
             classes.forEach { c ->
                 tasks += Task {
-                    val band = if (mode == "guard" || System.getProperty("ladder") == "1") campaignBand(zone.level) else GearBand.TYPICAL
+                    val band = if (mode != "campaign" || System.getProperty("ladder") == "1") campaignBand(zone.level) else GearBand.TYPICAL
                     val hero = sim.hero(c, zone.level, Archetype(band), penalty(zone, false))
                     val rows = mutableListOf(sim.boss(zone, hero, null, Rarity.COMMON, cap))
-                    if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.forEach { r -> rows += sim.monsters(zone, hero, null, Rarity.COMMON, r, 120.0) }
+                    if (mode == "tempo" || System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.forEach { r -> rows += sim.monsters(zone, hero, null, Rarity.COMMON, r, 120.0) }
                     rows
                 }
             }
@@ -1217,9 +1218,10 @@ fun main(args: Array<String>) {
 
         "spread" -> {
             val k = (System.getProperty("k") ?: "3").toInt()
+            val offsets = System.getProperty("offsets")?.split(',')?.map { it.trim().toInt() } ?: (-k..k).toList()
             val bands = (System.getProperty("band") ?: "WEAK,REF").split(',').map { it.trim() }
             zones.forEach { zone ->
-                (-k..k).map { zone.level + it }.filter { it in 1..index.classes.maxLevel }.forEach { level ->
+                offsets.map { zone.level + it }.filter { it in 1..index.classes.maxLevel }.forEach { level ->
                     bands.forEach { name ->
                         classes.forEach { c ->
                             tasks += Task {
@@ -1245,12 +1247,14 @@ fun main(args: Array<String>) {
     }.toList()
     val written = when (mode) {
         "guard" -> rows + guard(index, rows)
+        "tempo" -> rows + guard(index, rows) + TempoTarget.summary(rows)
         "spread" -> rows + spread(rows)
         "trials" -> rows + Trials.summary(index, rows)
         else -> rows
     }
     out.writeText(written.joinToString("\n") { it.tsv() } + "\n")
-    if (mode == "guard") written.filter { it.values[0] == "guard" && it.values.last() == false }.forEach { System.err.println("mobbal guard: ${it.tsv()}") }
+    if (mode == "tempo") written.filter { it.values[0] == "temposum" }.forEach { System.err.println("mobbal tempo: ${it.tsv()}") }
+    if (mode == "guard" || mode == "tempo") written.filter { it.values[0] == "guard" && it.values.last() == false }.forEach { System.err.println("mobbal guard: ${it.tsv()}") }
     println("mobbal $mode: ${rows.size} rows in ${(System.nanoTime() - started) / 1_000_000_000} s -> ${out.path}")
 }
 
@@ -1265,6 +1269,40 @@ object GuardianTarget {
 
     /** Цель стража: финал акта ([final]) - нижняя половина коридора. */
     fun of(final: Boolean): ClosedFloatingPointRange<Double> = if (final) FINALS else WINS
+}
+
+/**
+ * Темп боя (RULES «Общее», цели баланса): время убийства эталоном кампании своего уровня - обычного, волшебного и редкого монстра
+ * зоны один на один (медиана строк `mob`) и стража кампании (среднее время победы строк `boss`), секунды боя на скорости ×1.
+ * Отчёт - `-Pmode=tempo` (стражи, как `guard`, и монстры зон по редкостям).
+ */
+object TempoTarget {
+    val SECONDS: Map<String, ClosedFloatingPointRange<Double>> = linkedMapOf(
+        MonsterRarity.NORMAL.name to 3.0..5.0,
+        MonsterRarity.MAGIC.name to 5.0..8.0,
+        MonsterRarity.RARE.name to 10.0..18.0,
+        BOSS to 30.0..60.0,
+    )
+
+    /**
+     * Строки `temposum`: редкость, медиана времени убийства, нижняя и верхняя четверти, цель и в цели ли медиана; ниже - то же по
+     * отрезкам уровней зон ([BANDS]).
+     */
+    fun summary(rows: List<Row>): List<Row> {
+        val times = rows.filter { it.values[0] == "mob" && (it.values[10] as Double) > 0 }.map { Triple(it.values[2] as String, it.values[3] as Int, it.values[10] as Double) } +
+            rows.filter { it.values[0] == "boss" && (it.values[11] as Double) > 0 }.map { Triple(BOSS, it.values[3] as Int, it.values[11] as Double) }
+        return SECONDS.flatMap { (kind, target) ->
+            val own = times.filter { it.first == kind }
+            (listOf("all" to own) + BANDS.map { band -> "${band.first}-${band.last}" to own.filter { it.second in band } }).filter { it.second.isNotEmpty() }.map { (band, list) ->
+                val sorted = list.map { it.third }.sorted()
+                val median = sorted[sorted.size / 2]
+                Row(listOf("temposum", kind, band, median, sorted[sorted.size / 4], sorted[sorted.size * 3 / 4], target.start, target.endInclusive, median in target))
+            }
+        }
+    }
+
+    /** Отрезки уровней зон сводки. */
+    private val BANDS = listOf(1..20, 21..45, 46..70, 71..100)
 }
 
 /**
@@ -1334,7 +1372,8 @@ fun guard(index: ContentIndex, rows: List<Row>, tolerance: Double = GUARD_TOLERA
 }
 
 /**
- * Отчёт «босс L против героя L±k» (`-Pmode=spread -Pk=3 -Pband=WEAK,REF`): строка `spreadsum` - полоса вещей (`REF` - эталона
+ * Отчёт «босс L против героя L±k» (`-Pmode=spread -Pk=3 -Pband=WEAK,REF`; только свои сдвиги - `-Poffsets=6`, цель слабого билда
+ * [WeakTarget]): строка `spreadsum` - полоса вещей (`REF` - эталона
  * кампании своего уровня, [campaignBand]), сдвиг уровня героя от уровня стража и средняя доля побед по всем стражам и классам.
  */
 fun spread(rows: List<Row>): List<Row> = rows.filter { it.values[0] == "spread" }.groupBy { it.values[6] as String to it.values[5] as Int }.toSortedMap(compareBy({ it.first }, { it.second }))
@@ -1401,7 +1440,7 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
         val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(region.zones.last().code, false))
         val r = modes.rush(hero, region, tier, SimKit.SEED + 101L * seed + 7L * tier + level)
         val share = r.killed.toDouble() / r.bosses.coerceAtLeast(1)
-        return RushTry(region.code, level, heroClass.code, tier, r.killed >= r.bosses && r.bosses > 0, rules.rush.tier(tier).runs * share, r.wall)
+        return RushTry(region.code, level, heroClass.code, tier, r.killed >= r.bosses && r.bosses > 0, rules.rush.tier(tier).runs * share, r.wall, r.fast)
     }
 
     /** Башня эталоном класса [heroClass] уровня [level] с первого этажа до этажа цели ([TowerTarget.floor]) или гибели, кости [seed]. */
@@ -1439,9 +1478,9 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
         return RunTry(level, heroClass.code, (row.values[11] as Double) / speed + (row.values[12] as Double))
     }
 
-    /** Попытка раша: ступень [tier], зачищен ли, «заходов» награды [runs] по доле павших, секунды стены [wall]. */
-    data class RushTry(val region: String, val level: Int, val heroClass: String, val tier: Int, val cleared: Boolean, val runs: Double, val wall: Double) {
-        fun row(act: Int) = Row(listOf("rush", act, region, level, heroClass, tier, cleared, runs, wall))
+    /** Попытка раша: ступень [tier], зачищен ли, «заходов» награды [runs] по доле павших, секунды стены [wall], уложился ли в `rush.seconds` ([fast]). */
+    data class RushTry(val region: String, val level: Int, val heroClass: String, val tier: Int, val cleared: Boolean, val runs: Double, val wall: Double, val fast: Boolean) {
+        fun row(act: Int) = Row(listOf("rush", act, region, level, heroClass, tier, cleared, runs, wall, fast))
     }
 
     /** Подъём на башню: этаж [floor] из цели [goal], «заходов» награды [runs] (этажи и клады), секунды стены [wall]. */
@@ -1461,7 +1500,8 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
 
         /**
          * Сводка `-Pmode=trials`: доля зачисток раша по ступени против [RushTarget], доля героев, дошедших до этажа цели башни,
-         * и награда испытаний в минуту долей заходов в минуту ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта.
+         * и награда испытаний в минуту долей заходов в минуту ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта; у раша ещё
+         * доля зачисток, что уложились в `rush.seconds` на босса (бонус скорости).
          */
         fun summary(index: ContentIndex, rows: List<Row>): List<Row> {
             val runs = rows.filter { it.values[0] == "run" }
@@ -1470,7 +1510,9 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
             val rush = rows.filter { it.values[0] == "rush" }.groupBy { it.values[5] as Int }.toSortedMap().map { (tier, list) ->
                 val clear = list.count { it.values[6] == true }.toDouble() / list.size
                 val pay = list.sumOf { it.values[7] as Double } / (list.sumOf { it.values[8] as Double } / 60) / perMinute
-                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay))
+                val cleared = list.filter { it.values[6] == true }
+                val fast = if (cleared.isEmpty()) 0.0 else cleared.count { it.values[9] == true }.toDouble() / cleared.size
+                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, fast))
             }
             val farms = rows.filter { it.values[0] == "farm" }.groupBy { it.values[1] as Int }
             val tower = rows.filter { it.values[0] == "tower" }.groupBy { it.values[1] as Int }.toSortedMap().map { (level, list) ->

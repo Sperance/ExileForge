@@ -97,13 +97,14 @@ object SkillText {
 
     /**
      * Темп активного умения у героя [hero]: цена маны умения уровня [level] ([SkillDefinition.manaAt], у всех видов - по уровню умения) со снижением цены листа, время применения ([CastTime]) и перезарядка
-     * на его листе, регенерация маны; у пассивного - null. Им гримуар и лист боя печатают «применение · перезарядка» и «цена в секунду
+     * на его листе в темпе боя правил (`combat.tempo`), регенерация маны; у пассивного - null. Им гримуар и лист боя печатают «применение · перезарядка» и «цена в секунду
      * / ваша регенерация».
      */
     fun pace(skill: SkillDefinition, level: Int, hero: Combatant): SkillPace? {
         if (skill.kind != SkillKind.ACTIVE) return null
         val mana = skill.manaAt(level) * hero.skillCost
-        return SkillPace(mana, CastTime.of(skill, hero, hero.rules), skill.cooldown / hero.recovery, Recovery.manaRegen(hero, hero.rules.mana))
+        val tempo = hero.rules.tempo
+        return SkillPace(mana, CastTime.of(skill, hero, hero.rules) / tempo, skill.cooldown / hero.recovery / tempo, Recovery.manaRegen(hero, hero.rules.mana))
     }
 
     /** Строка цены маны в секунду цикла против регенерации героя. */

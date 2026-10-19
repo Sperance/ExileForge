@@ -7,11 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -60,38 +58,36 @@ fun FilterAccordionSheet(
     onDismiss: () -> Unit,
 ) {
     var open by rememberSaveable { mutableStateOf<String?>(null) }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(ui("filter.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(
-                query,
-                onQuery,
-                placeholder = { Text(queryHint) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, ui("common.clear")) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onShow() }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Column(Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp))) {
-                groups.forEachIndexed { at, group ->
-                    if (at > 0) HorizontalDivider(color = PanelRaised)
-                    AccordionRow(group, group.key == open) { open = if (open == group.key) null else group.key }
-                }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
+            ForgeOutlinedButton(onClick = onReset, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("filter.reset")) }
+            ForgeButton(onClick = onShow, modifier = Modifier.weight(1f)) { Text(show, maxLines = 1) }
+        },
+    ) {
+        Text(ui("filter.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(
+            query,
+            onQuery,
+            placeholder = { Text(queryHint) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, ui("common.clear")) } },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onShow() }),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Column(Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp))) {
+            groups.forEachIndexed { at, group ->
+                if (at > 0) HorizontalDivider(color = PanelRaised)
+                AccordionRow(group, group.key == open) { open = if (open == group.key) null else group.key }
             }
-            switches.forEach { switch ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Switch(checked = switch.checked, onCheckedChange = switch.onChange)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = onReset, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("filter.reset")) }
-                ForgeButton(onClick = onShow, modifier = Modifier.weight(1f)) { Text(show, maxLines = 1) }
+        }
+        switches.forEach { switch ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Switch(checked = switch.checked, onCheckedChange = switch.onChange)
             }
         }
     }

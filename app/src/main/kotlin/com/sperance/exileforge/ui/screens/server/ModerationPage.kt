@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -170,9 +167,8 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 }
 
 /**
- * Лист «Фильтры»: «Сбросить» в заголовке, порядок сегментами, дары - поиск и
- * сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор - черновик листа: в список он уходит по
- * «Показать» ([onApply]); «Сбросить» (и в заголовке, и внизу) сразу применяет обычный отбор и закрывает лист.
+ * Лист «Фильтры»: порядок сегментами, дары - поиск и сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор -
+ * черновик листа: в список он уходит по «Показать» ([onApply]); «Сбросить» в подвале сразу применяет обычный отбор и закрывает лист.
  */
 @Composable private fun FiltersSheet(account: AccountUi, current: ModerationFilters, onDismiss: () -> Unit, onApply: (ModerationFilters) -> Unit) {
     var draft by remember(current) { mutableStateOf(current) }
@@ -184,46 +180,35 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
         val fixed = listOf(ui("moderation.fate.all") to ModerationFate.All, ui("moderation.fate.none") to ModerationFate.Fateless)
         (if (query.isBlank()) fixed else emptyList()) + found
     }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(ui("moderation.filters"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                ForgeTextButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable) {
-                    Text(ui("moderation.filters.reset"), color = Gold)
-                }
-            }
-            SheetLabel(ui("moderation.filters.sort"))
-            PillTabs(
-                ModerationSort.entries.map { ui("moderation.sort_short.${it.name}") },
-                draft.sort.ordinal,
-                { draft = draft.copy(sort = ModerationSort.entries[it]) },
-                segmented = true,
-            )
-            SheetLabel(ui("moderation.fate.title"))
-            OutlinedTextField(
-                query,
-                { query = it },
-                placeholder = { Text(ui("moderation.filters.fate_search")) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            LazyVerticalGrid(
-                GridCells.Fixed(2),
-                Modifier.fillMaxWidth().heightIn(max = FATE_GRID_HEIGHT),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(options, key = { it.second.param.ifEmpty { "*" } }) { (title, fate) ->
-                    FateOption(title, mark = fate is ModerationFate.Chosen, selected = draft.fate == fate) { draft = draft.copy(fate = fate) }
-                }
-            }
-            if (options.isEmpty()) MutedText(ui("moderation.none"))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
-                ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
-            }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 8.dp),
+        footer = {
+            ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
+            ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
+        },
+    ) {
+        Text(ui("moderation.filters"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        SheetLabel(ui("moderation.filters.sort"))
+        PillTabs(
+            ModerationSort.entries.map { ui("moderation.sort_short.${it.name}") },
+            draft.sort.ordinal,
+            { draft = draft.copy(sort = ModerationSort.entries[it]) },
+            segmented = true,
+        )
+        SheetLabel(ui("moderation.fate.title"))
+        OutlinedTextField(
+            query,
+            { query = it },
+            placeholder = { Text(ui("moderation.filters.fate_search")) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        FateGrid(options) { (title, fate) ->
+            FateOption(title, mark = fate is ModerationFate.Chosen, selected = draft.fate == fate) { draft = draft.copy(fate = fate) }
         }
+        if (options.isEmpty()) MutedText(ui("moderation.none"))
     }
 }
 
@@ -250,7 +235,21 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 }
 
 /** Наибольшая высота сетки даров в листах фильтров и смены дара: дальше - прокрутка внутри сетки. */
-internal val FATE_GRID_HEIGHT = 228.dp
+/**
+ * Сетка даров в два столбца - неленивая: она живёт в листающемся теле листа ([SheetBody.Scroll]) и своей прокрутки не держит.
+ */
+@Composable internal fun <T> FateGrid(items: List<T>, cell: @Composable (T) -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        items.chunked(FATE_COLUMNS).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { Box(Modifier.weight(1f)) { cell(it) } }
+                repeat(FATE_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+private const val FATE_COLUMNS = 2
 
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
     if (pages <= 1 && page == 0) return
@@ -354,49 +353,52 @@ internal val FATE_GRID_HEIGHT = 228.dp
     var category by remember { mutableStateOf(SanctionCategory.OTHER) }
     var comment by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            val name = dossier.hero?.name ?: dossier.account.login
-            Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_title" else "moderation.ban_title", name), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            if (kind == SanctionKind.MUTE) MutedText(ui("moderation.mute_note"))
-            Label(ui("moderation.target"))
-            Chips {
-                if (dossier.hero != null) Chip(ui("moderation.target.HERO"), target == SanctionTarget.HERO) { target = SanctionTarget.HERO }
-                Chip(ui("moderation.target.ACCOUNT"), target == SanctionTarget.ACCOUNT) { target = SanctionTarget.ACCOUNT }
-                device?.let { Chip(it.model.ifBlank { it.hardware.take(HARDWARE) }, target == SanctionTarget.DEVICE) { target = SanctionTarget.DEVICE } }
-            }
-            Label(ui("moderation.term"))
-            Chips {
-                presets.forEach { preset ->
-                    Chip(hoursText(preset), hours == preset && custom.isBlank()) {
-                        hours = preset
-                        custom = ""
-                    }
-                }
-                Chip(ui("moderation.forever"), hours == null && custom.isBlank()) {
-                    hours = null
-                    custom = ""
-                }
-            }
-            OutlinedTextField(
-                custom,
-                { custom = it.filter(Char::isDigit).take(DIGITS) },
-                label = { Text(ui("moderation.custom_hours")) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Label(ui("moderation.category"))
-            Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
-            ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
-            ModerationText(account, comment, ui("moderation.comment")) { comment = it }
-            val term = custom.toIntOrNull() ?: hours
+    val term = custom.toIntOrNull() ?: hours
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
             ForgeButton(
                 enabled = !account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0),
                 onClick = { onBan(SanctionRequest(target, kind, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment, reason)) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
             ) { Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_for" else "moderation.ban_for", ui("moderation.target.$target"), term?.let(::hoursText) ?: ui("moderation.forever"))) }
+        },
+    ) {
+        val name = dossier.hero?.name ?: dossier.account.login
+        Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_title" else "moderation.ban_title", name), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        if (kind == SanctionKind.MUTE) MutedText(ui("moderation.mute_note"))
+        Label(ui("moderation.target"))
+        Chips {
+            if (dossier.hero != null) Chip(ui("moderation.target.HERO"), target == SanctionTarget.HERO) { target = SanctionTarget.HERO }
+            Chip(ui("moderation.target.ACCOUNT"), target == SanctionTarget.ACCOUNT) { target = SanctionTarget.ACCOUNT }
+            device?.let { Chip(it.model.ifBlank { it.hardware.take(HARDWARE) }, target == SanctionTarget.DEVICE) { target = SanctionTarget.DEVICE } }
         }
+        Label(ui("moderation.term"))
+        Chips {
+            presets.forEach { preset ->
+                Chip(hoursText(preset), hours == preset && custom.isBlank()) {
+                    hours = preset
+                    custom = ""
+                }
+            }
+            Chip(ui("moderation.forever"), hours == null && custom.isBlank()) {
+                hours = null
+                custom = ""
+            }
+        }
+        OutlinedTextField(
+            custom,
+            { custom = it.filter(Char::isDigit).take(DIGITS) },
+            label = { Text(ui("moderation.custom_hours")) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Label(ui("moderation.category"))
+        Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+        ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
+        ModerationText(account, comment, ui("moderation.comment")) { comment = it }
     }
 }
 
@@ -410,24 +412,27 @@ internal val FATE_GRID_HEIGHT = 228.dp
     var reason by remember { mutableStateOf("") }
     val days = account.index?.rules?.moderation?.trashDays ?: TRASH_DAYS
     val hero = dossier.hero?.takeIf { !it.deleted }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("moderation.delete_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            Chips {
-                hero?.let { Chip(it.name, target == SanctionTarget.HERO) { onTarget(SanctionTarget.HERO) } }
-                Chip(ui("moderation.delete_account", dossier.account.login, dossier.account.heroes), target == SanctionTarget.ACCOUNT) { onTarget(SanctionTarget.ACCOUNT) }
-            }
-            MutedText(ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_note" else "moderation.delete_account_note", days))
-            Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
-            ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
-            ModerationText(account, comment, ui("moderation.delete_reason")) { comment = it }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
             HoldButton(
                 ui("moderation.hold_delete"),
                 LifeRed,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
                 enabled = !account.busy && comment.isNotBlank(),
             ) { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) }
+        },
+    ) {
+        Text(ui("moderation.delete_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        Chips {
+            hero?.let { Chip(it.name, target == SanctionTarget.HERO) { onTarget(SanctionTarget.HERO) } }
+            Chip(ui("moderation.delete_account", dossier.account.login, dossier.account.heroes), target == SanctionTarget.ACCOUNT) { onTarget(SanctionTarget.ACCOUNT) }
         }
+        MutedText(ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_note" else "moderation.delete_account_note", days))
+        Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+        ModerationText(account, reason, ui("moderation.reason_for_player")) { reason = it }
+        ModerationText(account, comment, ui("moderation.delete_reason")) { comment = it }
     }
 }
 
@@ -565,33 +570,39 @@ internal val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
     var login by remember { mutableStateOf("") }
     var role by remember { mutableStateOf(AccountRole.USER) }
     val clipboard = LocalClipboardManager.current
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(ui("moderation.new_tester"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 12.dp),
+        footer = {
             if (created == null) {
-                OutlinedTextField(
-                    login,
-                    { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
-                    label = { Text(ui("moderation.tester_login")) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Chips {
-                    CREATABLE.forEach { option -> Chip(ui("moderation.role.${option.name}"), role == option) { role = option } }
-                }
-                ForgeButton(onClick = { onCreate(login, role) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.tester_create")) }
+                ForgeButton(onClick = { onCreate(login, role) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.weight(1f)) { Text(ui("moderation.tester_create")) }
             } else {
-                MutedText(ui("moderation.tester_once"))
-                listOf(ui("moderation.tester_login") to created.login, ui("moderation.tester_password") to created.password.orEmpty()).forEach { (label, value) ->
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            Label(label)
-                            Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                        }
-                        ForgeOutlinedButton(onClick = { clipboard.setText(AnnotatedString(value)) }) { Text(ui("tester.copy")) }
+                ForgeButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(ui("tester.ok")) }
+            }
+        },
+    ) {
+        Text(ui("moderation.new_tester"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        if (created == null) {
+            OutlinedTextField(
+                login,
+                { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
+                label = { Text(ui("moderation.tester_login")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Chips {
+                CREATABLE.forEach { option -> Chip(ui("moderation.role.${option.name}"), role == option) { role = option } }
+            }
+        } else {
+            MutedText(ui("moderation.tester_once"))
+            listOf(ui("moderation.tester_login") to created.login, ui("moderation.tester_password") to created.password.orEmpty()).forEach { (label, value) ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Label(label)
+                        Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
+                    ForgeOutlinedButton(onClick = { clipboard.setText(AnnotatedString(value)) }) { Text(ui("tester.copy")) }
                 }
-                ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("tester.ok")) }
             }
         }
     }

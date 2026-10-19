@@ -48,56 +48,59 @@ fun ListingSheet(
     val count = if (owned == null) 1L else amount.toLongOrNull() ?: 0L
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     val recent by produceState<PriceHint?>(null, hint) { value = hint?.invoke() }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Engraved(ui("sell.list"))
-            Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
-            if (owned != null) {
-                OutlinedTextField(
-                    amount,
-                    { value -> amount = value.filter(Char::isDigit).take(game.inputs.number) },
-                    label = { Text(ui("sell.amount_owned", owned)) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+    val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
+    val bill = game.goldBill(fee).takeIf { fee > 0 }
+    val closed = auctionClosed(game)
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
+            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
+                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
             }
-            if (game.currencies.isEmpty()) {
-                Text(ui("orb.none"), color = Muted)
-            } else {
-                OrbGrid(ui("orb.orb"), game.currencies, orb, { orb = it }, enabled = !game.busy)
-            }
+        },
+    ) {
+        Engraved(ui("sell.list"))
+        Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
+        if (owned != null) {
             OutlinedTextField(
-                price,
-                { value -> price = value.filter(Char::isDigit).take(game.inputs.number) },
-                label = { Text(ui("sell.price")) },
+                amount,
+                { value -> amount = value.filter(Char::isDigit).take(game.inputs.number) },
+                label = { Text(ui("sell.amount_owned", owned)) },
                 singleLine = true,
                 keyboardOptions = digits,
                 modifier = Modifier.fillMaxWidth(),
             )
-            recent?.let { h ->
-                TextButton(onClick = {
-                    orb = h.priceOrb
-                    price = (h.price * count.coerceAtLeast(1)).toString()
-                }, contentPadding = PaddingValues(0.dp)) {
-                    Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-            val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
-            val bill = game.goldBill(fee).takeIf { fee > 0 }
-            bill?.let {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    GoldCost(it)
-                }
-            }
-            MutedText(ui("sell.note"))
-            val closed = auctionClosed(game)
-            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
-                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
-            }
-            closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
         }
+        if (game.currencies.isEmpty()) {
+            Text(ui("orb.none"), color = Muted)
+        } else {
+            OrbGrid(ui("orb.orb"), game.currencies, orb, { orb = it }, enabled = !game.busy)
+        }
+        OutlinedTextField(
+            price,
+            { value -> price = value.filter(Char::isDigit).take(game.inputs.number) },
+            label = { Text(ui("sell.price")) },
+            singleLine = true,
+            keyboardOptions = digits,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        recent?.let { h ->
+            TextButton(onClick = {
+                orb = h.priceOrb
+                price = (h.price * count.coerceAtLeast(1)).toString()
+            }, contentPadding = PaddingValues(0.dp)) {
+                Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        bill?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                GoldCost(it)
+            }
+        }
+        MutedText(ui("sell.note"))
+        closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

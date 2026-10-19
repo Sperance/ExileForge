@@ -2,15 +2,10 @@ package com.sperance.exileforge.ui.components
 
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,42 +95,45 @@ fun BugSheet(
     }
     val clipboard = LocalClipboardManager.current
     val limit = game.inputs.report
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
-            OutlinedTextField(
-                text,
-                {
-                    text = it.take(limit)
-                    drafts.save(kind, text)
-                },
-                label = { Text(ui("bug.text")) },
-                minLines = 4,
-                supportingText = { Text(ui("bug.count", text.length, limit)) },
-                trailingIcon = {
-                    IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
-                        Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-            )
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 8.dp),
+        footer = {
             ForgeButton(
                 enabled = text.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))
                     onDismiss()
                 },
             ) { Text(ui("bug.send")) }
-            if (game.session.signedIn) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReportsTab.entries.forEach { tab ->
-                        ForgeOutlinedButton(onClick = {
-                            onDismiss()
-                            onReports(tab)
-                        }, modifier = Modifier.weight(1f)) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
-                    }
+        },
+    ) {
+        Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
+        OutlinedTextField(
+            text,
+            {
+                text = it.take(limit)
+                drafts.save(kind, text)
+            },
+            label = { Text(ui("bug.text")) },
+            minLines = 4,
+            supportingText = { Text(ui("bug.count", text.length, limit)) },
+            trailingIcon = {
+                IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
+                    Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
+                }
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+        )
+        if (game.session.signedIn) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReportsTab.entries.forEach { tab ->
+                    ForgeOutlinedButton(onClick = {
+                        onDismiss()
+                        onReports(tab)
+                    }, modifier = Modifier.weight(1f)) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
                 }
             }
         }

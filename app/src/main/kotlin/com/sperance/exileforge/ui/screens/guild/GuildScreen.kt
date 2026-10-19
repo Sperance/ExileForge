@@ -363,13 +363,14 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 @Composable
 private fun CodeSheet(busy: Boolean, onDismiss: () -> Unit, onJoin: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("guild.join_code_title"), style = relicName(16).copy(color = GoldBright))
-            MutedText(ui("guild.join_code_note"))
-            CodeCells(code) { code = it.filter(Char::isDigit).take(CODE_LENGTH) }
-            ForgeButton(enabled = !busy && code.length == CODE_LENGTH, onClick = { onJoin(code) }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.join")) }
-        }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = { ForgeButton(enabled = !busy && code.length == CODE_LENGTH, onClick = { onJoin(code) }, modifier = Modifier.weight(1f)) { Text(ui("guild.join")) } },
+    ) {
+        Text(ui("guild.join_code_title"), style = relicName(16).copy(color = GoldBright))
+        MutedText(ui("guild.join_code_note"))
+        CodeCells(code) { code = it.filter(Char::isDigit).take(CODE_LENGTH) }
     }
 }
 

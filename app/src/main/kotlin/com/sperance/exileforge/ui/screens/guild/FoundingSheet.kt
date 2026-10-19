@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,53 +65,53 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         faction.isBlank() -> ui("guild.api.faction")
         else -> null
     }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Engraved(ui("guild.found_title"))
-            OutlinedTextField(
-                name,
-                { name = NameCharset.filter(it).take(rules.nameLength.last) },
-                label = { Text(ui("guild.name")) },
-                singleLine = true,
-                supportingText = { Text(ui("common.name_charset") + " · ${name.trim().length}/${rules.nameLength.last}") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                tag,
-                { tag = it.filter(Char::isLetterOrDigit).uppercase().take(rules.tagLength.last) },
-                label = { Text(ui("guild.tag")) },
-                singleLine = true,
-                supportingText = { Text(ui("guild.tag_hint", rules.tagLength.first, rules.tagLength.last)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Engraved(ui("guild.faction"))
-            MutedText(ui("guild.faction_forever"))
-            rules.factions.forEach { FactionCard(it, rules, chosen = it.code == faction) { faction = it.code } }
-            Engraved(ui("guild.arms"))
-            ArmsPicker(rules.emblems, rules.colors, emblem, color, enabled = true, onEmblem = { emblem = it }, onColor = { color = it })
-            Engraved(ui("guild.entry"))
-            ModePicker(mode, enabled = true) { mode = it }
-            MinLevelField(minLevel, enabled = true) { minLevel = it }
-            OrnateDivider()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MutedText(ui("guild.found_price"), Modifier.weight(1f))
-                bill?.let { GoldCost(it) } ?: GoldPrice(price)
-            }
-            PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
-            refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
             HoldButton(
                 bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble())),
                 Gold,
-                Modifier.fillMaxWidth(),
+                Modifier.weight(1f),
                 enabled = !game.busy && refusal == null,
                 icon = ForgeGlyphs.Banner,
             ) {
                 onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor))
             }
+        },
+    ) {
+        Engraved(ui("guild.found_title"))
+        OutlinedTextField(
+            name,
+            { name = NameCharset.filter(it).take(rules.nameLength.last) },
+            label = { Text(ui("guild.name")) },
+            singleLine = true,
+            supportingText = { Text(ui("common.name_charset") + " · ${name.trim().length}/${rules.nameLength.last}") },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            tag,
+            { tag = it.filter(Char::isLetterOrDigit).uppercase().take(rules.tagLength.last) },
+            label = { Text(ui("guild.tag")) },
+            singleLine = true,
+            supportingText = { Text(ui("guild.tag_hint", rules.tagLength.first, rules.tagLength.last)) },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Engraved(ui("guild.faction"))
+        MutedText(ui("guild.faction_forever"))
+        rules.factions.forEach { FactionCard(it, rules, chosen = it.code == faction) { faction = it.code } }
+        Engraved(ui("guild.arms"))
+        ArmsPicker(rules.emblems, rules.colors, emblem, color, enabled = true, onEmblem = { emblem = it }, onColor = { color = it })
+        Engraved(ui("guild.entry"))
+        ModePicker(mode, enabled = true) { mode = it }
+        MinLevelField(minLevel, enabled = true) { minLevel = it }
+        OrnateDivider()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MutedText(ui("guild.found_price"), Modifier.weight(1f))
+            bill?.let { GoldCost(it) } ?: GoldPrice(price)
         }
+        PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
+        refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

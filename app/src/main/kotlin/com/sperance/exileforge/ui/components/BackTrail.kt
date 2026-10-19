@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -121,9 +119,7 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 @Composable private fun BackTrail(root: String, levels: List<TrailEntry>) {
     val jump = { keep: Int -> levels.drop(keep).asReversed().forEach { it.back.value() } }
     Row(Modifier.fillMaxWidth().height(TRAIL_HEIGHT).padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { levels.last().back.value() }, modifier = Modifier.size(TRAIL_HEIGHT)) {
-            Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold, modifier = Modifier.size(20.dp))
-        }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, tint = Gold)
         val data = levels.last().data
         Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.shown }

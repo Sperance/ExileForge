@@ -36,10 +36,10 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 ) {
     var expanded by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
-    ForgeOutlinedButton(onClick = {
+    ForgeButton(onClick = {
         search = ""
         expanded = true
-    }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+    }, enabled = enabled, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
         if (optionArt != null && value.isNotBlank()) optionArt(value, 24.dp) else Icon(glyph.vector, null, modifier = Modifier.size(20.dp), tint = Gold)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Muted)
@@ -54,10 +54,10 @@ import com.sperance.exileforge.ui.theme.PanelRaised
             if (filtered.isEmpty()) Text(ui("common.no_options"), color = Muted)
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                 items(filtered, key = { it.first }) { (key, title) ->
-                    ForgeTextButton(enabled = enabled, onClick = {
+                    ForgeButton(enabled = enabled, onClick = {
                         expanded = false
                         onChange(key)
-                    }, modifier = Modifier.fillMaxWidth()) {
+                    }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
                         if (optionArt != null) {
                             optionArt(key, 26.dp)
                         } else {
@@ -88,6 +88,6 @@ val DialogShape = RoundedCornerShape(22.dp)
             Text(title.uppercase(), style = MaterialTheme.typography.titleMedium)
         },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
-        confirmButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.close")) } },
+        confirmButton = { ForgeButton(onClick = onDismiss, kind = ButtonKind.Text) { Text(ui("common.close")) } },
     )
 }

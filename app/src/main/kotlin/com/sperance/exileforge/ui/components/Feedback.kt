@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -183,10 +182,10 @@ fun ReportsSheet(start: ReportsView, onDismiss: () -> Unit) {
                     PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
                 }
                 if (tab == ReportsTab.KNOWN) {
-                    IconButton(onClick = {
+                    ForgeIconButton(Icons.Outlined.Search, ui("feedback.search_open"), onClick = {
                         searching = !searching
                         if (!searching) query = ""
-                    }) { Icon(Icons.Outlined.Search, ui("feedback.search_open"), tint = if (searching) GoldBright else Muted) }
+                    }, style = if (searching) IconButtonStyle.Tonal else IconButtonStyle.Ghost)
                 }
             }
             if (tab == ReportsTab.KNOWN && searching) {
@@ -263,17 +262,13 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 @Composable private fun VoteRow(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
-    VoteButton("+", known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
-    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, LifeRed, enabled && known.votable) { onVote(Vote.DISLIKE) }
+    VoteButton("+", known.likes, known.vote == Vote.LIKE, enabled && known.votable) { onVote(Vote.LIKE) }
+    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, enabled && known.votable) { onVote(Vote.DISLIKE) }
 }
 
 /** Удаление отчёта - всегда с вопросом: оно жёсткое и не возвращается. */
 @Composable fun ReportDeleteButton(enabled: Boolean, onClick: () -> Unit) {
-    ForgeTextButton(enabled = enabled, onClick = onClick) {
-        Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(ui("feedback.delete"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
-    }
+    ForgeButton(onClick = onClick, kind = ButtonKind.Danger, size = ButtonSize.Small, icon = Icons.Outlined.Delete, enabled = enabled) { Text(ui("feedback.delete")) }
 }
 
 /** Вопрос перед удалением отчёта: удержание - [onDelete], отмена - [onDismiss]. */
@@ -281,22 +276,9 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
     ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, blocked = busy, onConfirm = onDelete)
 }
 
-/** Голос «+» или «−» со счётом: свой голос подсвечен цветом стороны. */
-@Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    Text(
-        "$sign$count",
-        color = if (chosen) {
-            tint
-        } else if (enabled) {
-            Parchment
-        } else {
-            Muted
-        },
-        style = MaterialTheme.typography.labelLarge,
-        fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
-        modifier = Modifier.background(if (chosen) tint.copy(alpha = .18f) else Color.Transparent, RoundedCornerShape(8.dp))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp),
-    )
+/** Голос «+» или «−» со счётом - чип: свой голос выбран. */
+@Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    ForgeChip("$sign$count", chosen, onClick, enabled = enabled)
 }
 
 /** Длина поиска известных проблем. */

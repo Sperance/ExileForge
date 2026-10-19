@@ -37,8 +37,12 @@ import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkState
+import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.FeedbackViewModel
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeMenu
+import com.sperance.exileforge.ui.components.IconButtonStyle
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -111,9 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Шестерёнка шапки: открывает настройки ([onSettings]); открытые настройки - светлее. */
 @Composable internal fun SettingsButton(settingsOpen: Boolean, onSettings: () -> Unit) {
-    IconButton(onClick = onSettings) {
-        Icon(Icons.Outlined.Settings, ui("settings.title"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
-    }
+    ForgeIconButton(Icons.Outlined.Settings, ui("settings.title"), onClick = onSettings, style = if (settingsOpen) IconButtonStyle.Tonal else IconButtonStyle.Ghost, tint = Gold)
 }
 
 /**
@@ -124,10 +126,14 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable internal fun MailBadge(unread: Int) {
     val open = LocalMailOpen.current ?: return
     val fresh = unread > 0
-    IconButton(onClick = open, modifier = Modifier.semantics { stateDescription = ui("mail.unread", unread) }) {
-        UnreadBadge(fresh) {
-            Icon(if (fresh) Icons.Filled.Mail else Icons.Outlined.Mail, ui("mail.title"), tint = if (fresh) Gold else Muted, modifier = Modifier.size(22.dp))
-        }
+    UnreadBadge(fresh) {
+        ForgeIconButton(
+            if (fresh) Icons.Filled.Mail else Icons.Outlined.Mail,
+            ui("mail.title"),
+            onClick = open,
+            modifier = Modifier.semantics { stateDescription = ui("mail.unread", unread) },
+            tint = if (fresh) Gold else Muted,
+        )
     }
 }
 
@@ -164,10 +170,10 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (link.waiting.isNotEmpty()) Text(ui("link.waiting", link.waiting.size), color = Gold, style = MaterialTheme.typography.labelSmall)
                 if (admin) link.detail?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
                 tap?.let {
-                    TextButton(onClick = {
+                    ForgeButton(onClick = {
                         open = false
                         it()
-                    }) { Text(ui("link.retry_now"), color = GoldBright) }
+                    }, kind = ButtonKind.Text) { Text(ui("link.retry_now")) }
                 }
             }
         }

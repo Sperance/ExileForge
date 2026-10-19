@@ -1,7 +1,5 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
@@ -21,7 +18,6 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Whatshot
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -124,11 +119,9 @@ data class RunMenuItem(
     }
 }
 
-/** ☰ в бронзовом кольце, как круглые кнопки карты. */
+/** ☰ меню забега: тональная иконка-кнопка, как кнопки карты. */
 @Composable fun RunMenuButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = modifier.size(44.dp).background(Color(0xE60A0D12), CircleShape).border(1.5.dp, Bronze, CircleShape)) {
-        Icon(Icons.Outlined.Menu, ui("run.menu"), tint = GoldBright, modifier = Modifier.size(24.dp))
-    }
+    ForgeIconButton(Icons.Outlined.Menu, ui("run.menu"), onClick = onClick, modifier = modifier, style = IconButtonStyle.Tonal)
 }
 
 /** Настройки, что нужны посреди боя: анимации и цифры урона - те же строки, что на экране настроек. */

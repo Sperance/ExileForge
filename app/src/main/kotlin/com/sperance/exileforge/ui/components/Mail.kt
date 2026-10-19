@@ -155,7 +155,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui("mail.title"), style = relicName(19).copy(color = GoldBright), modifier = Modifier.weight(1f))
-                ForgeTextButton(onClick = { ignoring = !ignoring }) {
+                ForgeButton(onClick = { ignoring = !ignoring }, kind = ButtonKind.Text) {
                     Text(if (ignoring) ui("mail.back") else ui("mail.ignore.list", feedback.ignored.size), color = Muted, style = MaterialTheme.typography.labelMedium)
                 }
             }
@@ -206,10 +206,10 @@ object MailLinks {
     val unread = feedback.mail.count { !it.read }
     val removable = feedback.mail.count { it.read && !it.claimable }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeOutlinedButton(onClick = model::readAllMail, enabled = !busy && unread > 0, modifier = Modifier.weight(1f)) {
+        ForgeButton(onClick = model::readAllMail, enabled = !busy && unread > 0, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
             Text(ui("mail.read_all", unread), style = MaterialTheme.typography.labelMedium)
         }
-        ForgeOutlinedButton(onClick = { purging = true }, enabled = !busy && removable > 0, modifier = Modifier.weight(1f)) {
+        ForgeButton(onClick = { purging = true }, enabled = !busy && removable > 0, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
             Text(ui("mail.delete_read", removable), style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -309,10 +309,10 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
                     model.letters.reply(mail, game.index?.rules?.mail?.subject ?: Int.MAX_VALUE)
                 }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.AutoMirrored.Outlined.Reply, ui("mail.reply")) }
             }
-            ForgeOutlinedButton(onClick = {
+            ForgeButton(onClick = {
                 model.deleteMail(mail.id)
                 onClose()
-            }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.Outlined.Delete, ui("mail.delete"), tint = if (busy) Color.Unspecified else Parchment) }
+            }, enabled = !busy, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { IconLabel(Icons.Outlined.Delete, ui("mail.delete"), tint = if (busy) Color.Unspecified else Parchment) }
         },
     ) {
         Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright, lineHeight = 21.sp))
@@ -377,10 +377,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 @Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, enabled: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(
-            onClick = { open = true },
-            modifier = Modifier.size(MORE).then(if (open) Modifier.background(PanelRaised, CircleShape).border(1.dp, Bronze, CircleShape) else Modifier),
-        ) { Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = Parchment) }
+        ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { open = true }, style = if (open) IconButtonStyle.Tonal else IconButtonStyle.Ghost, compact = true)
         ForgeMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = {
@@ -459,7 +456,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
                 Text(hero.name, color = Parchment, style = MaterialTheme.typography.labelLarge)
                 MutedText(classTitle(hero.heroClass), style = MaterialTheme.typography.labelSmall)
             }
-            ForgeTextButton(onClick = { onLift(hero) }, enabled = !busy) { Text(ui("mail.ignore.lift"), color = Gold) }
+            ForgeButton(onClick = { onLift(hero) }, enabled = !busy, kind = ButtonKind.Text) { Text(ui("mail.ignore.lift"), color = Gold) }
         }
         HorizontalDivider(color = Bronze.copy(alpha = .47f), thickness = 1.dp)
     }

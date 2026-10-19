@@ -5,9 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,10 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -81,24 +76,14 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
                 SellPreset.Rules -> ui("sell.preset_rules") to GoldBright
                 is SellPreset.OfRarity -> ui("stash.rarity_many.${preset.rarity.name}") to rarityColor(preset.rarity.name)
             }
-            PresetChip(label, tint, on = pick.covers(preset), enabled = pick.offers(preset)) { pick.flip(preset) }
+            PresetChip(label, on = pick.covers(preset), enabled = pick.offers(preset)) { pick.flip(preset) }
         }
     }
 }
 
-/** Фишка набора: контур в цвете набора, у включённого - заливка. */
-@Composable private fun PresetChip(label: String, tint: Color, on: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(15.dp)
-    val ink = when {
-        !enabled -> Muted.copy(alpha = .5f)
-        on -> Abyss
-        else -> tint
-    }
-    Box(
-        Modifier.height(30.dp).clip(shape).then(if (on) Modifier.background(tint.copy(alpha = .9f), shape) else Modifier.border(1.dp, ink.copy(alpha = .45f), shape))
-            .toggleable(on, enabled = enabled, role = Role.Checkbox) { onClick() }.padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, color = ink, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1) }
+/** Чип набора: включённый - выбран. */
+@Composable private fun PresetChip(label: String, on: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    ForgeChip(label, on, onClick, enabled = enabled)
 }
 
 /**
@@ -170,15 +155,16 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 
 @Composable private fun SellRow(pick: SellPick, picked: List<SellLot>, enabled: Boolean, verb: String, onCancel: (() -> Unit)?, onSell: (List<String>) -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        onCancel?.let { ForgeOutlinedButton(onClick = it) { Text(ui("common.cancel")) } }
-        HoldButton(
-            if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size),
-            Gold,
-            Modifier.weight(1f),
+        onCancel?.let { ForgeButton(onClick = it, kind = ButtonKind.Secondary) { Text(ui("common.cancel")) } }
+        ForgeButton(
+            onClick = { onSell(picked.map { it.id }) },
+            modifier = Modifier.weight(1f),
             enabled = enabled && picked.isNotEmpty(),
-            rearm = true,
             icon = ForgeGlyphs.Coins,
-            figure = picked.takeIf { it.isNotEmpty() }?.let { "+" + number(pick.total.toDouble()) },
-        ) { onSell(picked.map { it.id }) }
+            hold = Hold(rearm = true),
+        ) {
+            Text(if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (picked.isNotEmpty()) ButtonFigure("+" + number(pick.total.toDouble()))
+        }
     }
 }

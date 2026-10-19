@@ -122,7 +122,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
                     Starting(s, stages, reach, unreachable = face == StartVerdict.UNREACHABLE)
                     if (face == StartVerdict.UNREACHABLE) ForgeButton(onClick = actions.retry, modifier = Modifier.fillMaxWidth()) { Text(ui("start.retry")) }
                     if (face == StartVerdict.UNREACHABLE || waited) {
-                        ForgeOutlinedButton(onClick = actions.release, modifier = Modifier.fillMaxWidth()) { Text(ui("start.offline")) }
+                        ForgeButton(onClick = actions.release, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("start.offline")) }
                         CopyLog {
                             "--- window\nlifecycle=${lifecycle.currentState} verdict=$verdict face=$face visible=$visible busy=$busy\nseen $window\nseen update checking=${s.checking} " +
                                 "update=${s.update?.info?.versionName} failure=${s.failure}\nlive update checking=${updates.state.value.checking}\n$stages\nwarmup=$warmup\n" + diagnostics()
@@ -188,7 +188,7 @@ class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit:
         val now by ticking()
         MutedText(ui("launch.next_check", ((at - now + 999) / 1000).coerceAtLeast(0)), style = MaterialTheme.typography.labelSmall)
     }
-    ForgeOutlinedButton(onClick = onCheck, modifier = Modifier.fillMaxWidth()) { Text(ui("launch.check_now")) }
+    ForgeButton(onClick = onCheck, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("launch.check_now")) }
 }
 
 /** Строка «что идёт», полоса доли [progress] и шаги [details] - по «Подробнее». */
@@ -305,10 +305,10 @@ private enum class RowState { RUN, DONE, FAIL }
             copied = false
         }
     }
-    TextButton(onClick = {
+    ForgeButton(onClick = {
         clipboard.setText(AnnotatedString(diagnostics()))
         copied = true
-    }, modifier = Modifier.fillMaxWidth()) { Text(ui(if (copied) "start.copied" else "start.copy_log"), color = Gold) }
+    }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) { Text(ui(if (copied) "start.copied" else "start.copy_log")) }
 }
 
 private const val COPIED_MS = 2_000L
@@ -352,7 +352,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
     val s by updates.state.collectAsStateWithLifecycle()
     InfoCard(ui("update.card_title"), ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) + updateNote(s)?.let { "\n$it" }.orEmpty())
     if (s.update != null) {
-        ForgeOutlinedButton(enabled = !s.installing, onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui("update.install")) }
+        ForgeButton(enabled = !s.installing, onClick = updates::install, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("update.install")) }
     }
 }
 

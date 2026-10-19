@@ -91,8 +91,9 @@ import kotlinx.coroutines.delay
 
 /** Работы профессии: строка работы, лист запуска с выбором и добавками, выбор инструмента. */
 /**
- * Строка работы формулой рецепта: иконка выхода (касание - его карточка), имя (у идущей - «Идёт»), под ним вход мини-иконками
+ * Строка работы формулой рецепта: иконка выхода (касание - его карточка), имя, под ним вход мини-иконками
  * «есть/нужно» (нехватка красным, касание - карточка материала) и время цикла; справа крупно выход в час (касание - справка «В час»).
+ * Идущая работа ([current]) - короткой строкой: иконка, имя и «Идёт» справа; её вход, цикл и выход в час печатает плашка работы.
  * Работа, до которой профессия не доросла, - тусклая «???» с замком и уровнем открытия. Касание строки открывает лист работы.
  */
 @Composable internal fun JobRow(game: GameUi, profession: ProfessionView, job: JobView, rules: CraftsRules?, locked: Boolean, current: Boolean, onClick: () -> Unit) {
@@ -101,7 +102,7 @@ import kotlinx.coroutines.delay
     var help by remember { mutableStateOf(false) }
     val short = !locked && game.shortfall(job.cycleCost()) != null
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 62.dp).alpha(if (locked) .5f else 1f).depthPanel(shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
+        Modifier.fillMaxWidth().heightIn(min = if (current) 48.dp else 62.dp).alpha(if (locked) .5f else 1f).depthPanel(shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
             .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -114,20 +115,21 @@ import kotlinx.coroutines.delay
             if (locked) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(20.dp)) else JobIcon(job, Modifier.size(28.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    if (locked) ui("expedition.hidden") else jobTitle(job.code),
-                    color = if (locked) Muted else GoldBright,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (current) RunningPill()
+            Text(
+                if (locked) ui("expedition.hidden") else jobTitle(job.code),
+                color = if (locked) Muted else GoldBright,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            when {
+                locked -> MutedText(ui("crafts.opens_at", job.level), style = MaterialTheme.typography.labelSmall)
+                !current -> RecipeLine(game, job) { inspect(Inspect.Stack(it)) }
             }
-            if (locked) MutedText(ui("crafts.opens_at", job.level), style = MaterialTheme.typography.labelSmall) else RecipeLine(game, job) { inspect(Inspect.Stack(it)) }
         }
-        if (!locked) {
+        if (current) {
+            RunningPill()
+        } else if (!locked) {
             Column(Modifier.clip(RoundedCornerShape(6.dp)).clickable(enabled = rules != null, role = Role.Button) { help = true }.padding(4.dp), horizontalAlignment = Alignment.End) {
                 val hour = rules?.let { remember(it, profession.level, profession.layers, job) { JobRates.perHour(it, profession, job) } }
                 Text(hour?.let { fineNumber(it) } ?: "—", color = if (short) Muted else Vital, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)

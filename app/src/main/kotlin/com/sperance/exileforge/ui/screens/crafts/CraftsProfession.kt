@@ -132,9 +132,10 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /**
- * Окно профессии плотной колонкой: в шапке имя, уровень тонкой полосой с опытом, справка ⓘ (с описанием профессии) и инструмент;
- * под ней идущая здесь работа - та же плашка, что на главном экране вкладки ([WorkPlaque]); ниже
- * работы профессии строками ([JobRow]) с отбором по группе выхода ([JobGroups]), когда групп больше одной.
+ * Окно профессии плотной колонкой: в шапке имя, уровень тонкой полосой (опыт - в подсказке по касанию), справка ⓘ (с описанием
+ * профессии и тем, как идёт работа) и инструмент; под ней идущая здесь работа - та же плашка, что на главном экране вкладки
+ * ([WorkPlaque]); ниже без заголовка работы профессии строками ([JobRow], идущая - короткой строкой) с отбором по группе выхода
+ * ([JobGroups]), когда групп больше одной.
  *
  * Открытые работы и следующая за ними - «???» со своим уровнем.
  */
@@ -153,7 +154,6 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { ProfessionHeader(game, crafts, profession, onBack = { vm.openProfession("") }) { toolOpen = true } }
         if (work != null) item { WorkPlaque(game, vm, crafts, offset) }
-        item { SectionRule(ui("crafts.works")) }
         if (groups.size > 1) item { JobFilters(groups, picked) { group = it } }
         items(shown, key = { it.code }) { job ->
             JobRow(game, profession, job, crafts.state?.rules, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
@@ -174,23 +174,27 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     }
 }
 
-/** Шапка окна профессии: назад, имя и уровень тонкой полосой с опытом «набрано / нужно», справка с описанием профессии и инструмент. */
+/**
+ * Шапка окна профессии: назад, имя и уровень тонкой полосой (на последнем - «макс.»; касание - подсказка с опытом «набрано / нужно»),
+ * справка с описанием профессии и инструмент. Срок до уровня печатает плашка идущей работы.
+ */
 @Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onBack: () -> Unit, onTool: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, accent = Gold)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(4.dp), color = Vital, trackColor = PanelRaised)
-                Text(
-                    profession.next?.let { ui("crafts.level_experience", compactNumber(profession.experience), compactNumber(it)) } ?: ui("crafts.level_top_short"),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelSmall,
-                )
+            val tip = profession.next?.let { next ->
+                { Tip(ui("crafts.level", profession.level), facts = listOf(ui("crafts.totals_experience") to ui("crafts.level_experience", compactNumber(profession.experience), compactNumber(next)))) }
+            }
+            Tipped(tip, Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(4.dp), color = Vital, trackColor = PanelRaised)
+                    if (profession.next == null) Text(ui("crafts.level_top_short"), color = Muted, style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
-        CraftsGlossaryButton(crafts.state?.rules, intro = professionDescription(profession.code))
+        CraftsGlossaryButton(crafts.state?.rules, intro = professionDescription(profession.code), note = true)
         ToolButton(game, profession, onTool)
     }
 }

@@ -170,31 +170,22 @@ fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
 }
 
 /**
- * Строка уровня профессии под полосой цикла: «Ур. 14», тонкая полоса опыта и сколько работа ещё идёт до следующего - «до 15 · 42 мин»
- * ([JobRates.toLevel]) минус пройденное идущим циклом. На последнем уровне - «макс.».
+ * Срок до следующего уровня профессии строкой плашки работы: «до ур. 15 · ≈ 42 мин» ([JobRates.toLevel]) минус пройденное идущим
+ * циклом. Свои часы раз в секунду - перерисовывается только эта подпись, не плашка работы вокруг (часы в листовом элементе, вкладка
+ * ремёсел не теряет кадров). Уровень и опыт печатает шапка окна профессии и плитка; на последнем уровне строки нет.
  */
-@Composable internal fun LevelRow(profession: ProfessionView, job: JobView, work: WorkView, offset: Long) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
-        LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(3.dp), color = Vital, trackColor = PanelRaised)
-        if (profession.next == null) {
-            LevelNote(ui("crafts.level_top_short"))
-        } else {
-            JobRates.toLevel(profession, job, work.cycleMillis)?.let { LevelEta(profession.level + 1, it, work, offset) }
-        }
-    }
-}
-
-/**
- * Сколько до уровня [level] живьём: свои часы раз в секунду - перерисовывается только эта подпись, не плашка работы вокруг
- * (часы в листовом элементе, вкладка ремёсел не теряет кадров).
- */
-@Composable private fun LevelEta(level: Int, total: Long, work: WorkView, offset: Long) {
+@Composable internal fun LevelEta(profession: ProfessionView, job: JobView, work: WorkView, offset: Long) {
+    if (profession.next == null) return
+    val total = remember(profession, job, work.cycleMillis) { JobRates.toLevel(profession, job, work.cycleMillis) } ?: return
     val now by rememberNow(1000L)
-    LevelNote(ui("crafts.level_eta", level, eta((total - work.phase(now + offset)).coerceAtLeast(0L))))
+    Text(
+        ui("crafts.level_eta", profession.level + 1, eta((total - work.phase(now + offset)).coerceAtLeast(0L))),
+        color = Muted,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
-
-@Composable private fun LevelNote(text: String) = Text(text, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
 
 /**
  * Подсказка листа работы при нехватке на цикл (с примесями [additives]): первый недостающий материал, сколько его есть и нужно, и где он

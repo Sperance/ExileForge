@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import android.graphics.Matrix
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,13 +13,14 @@ import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.LinearGradientShader
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -75,17 +77,31 @@ private val MoltenFigure = listOf(MoltenGold, MoltenHeat, MoltenGold, Color(0xFF
  */
 @Composable private fun moltenPhase(): State<Float> = motionPhase(MOLTEN_MS, still = MOLTEN_STILL)
 
-/** Свет [colors] на доле течения [shift]: жар медленно течёт по золоту. */
-private fun moltenBrush(shift: Float, colors: List<Color> = Molten): Brush {
-    val span = MOLTEN_SPAN
-    return Brush.linearGradient(colors, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
+/**
+ * Свет жара цветами [colors]: один шейдер на элемент, собирается в кэше рисования; течение сдвигает его матрицу
+ * ([at]), так что кадр не создаёт ни кисти, ни шейдера.
+ */
+private class MoltenFlow(colors: List<Color>) {
+    private val shader = LinearGradientShader(Offset(-MOLTEN_SPAN, 0f), Offset(0f, MOLTEN_SPAN / 3), colors, tileMode = TileMode.Mirror)
+    private val shift = Matrix()
+    private val brush = ShaderBrush(shader)
+
+    /** Кисть на доле течения [phase]: жар медленно течёт по золоту. */
+    fun at(phase: Float): Brush {
+        shift.setTranslate(phase * MOLTEN_SPAN * 2, 0f)
+        shader.setLocalMatrix(shift)
+        return brush
+    }
 }
 
-/** Перекрашивает нарисованный текст жаром на фазе [phase]: кисть собирается в рисовании, без перекомпоновки. */
+/** Перекрашивает нарисованный текст жаром на фазе [phase]: фаза читается только в рисовании, без перекомпоновки. */
 private fun Modifier.moltenText(phase: State<Float>): Modifier = graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-    .drawWithContent {
-        drawContent()
-        drawRect(moltenBrush(phase.value, MoltenFigure), blendMode = BlendMode.SrcIn)
+    .drawWithCache {
+        val flow = MoltenFlow(MoltenFigure)
+        onDrawWithContent {
+            drawContent()
+            drawRect(flow.at(phase.value), blendMode = BlendMode.SrcIn)
+        }
     }
 
 /** Сколько течёт жар по идеальному роллу, мс. */
@@ -129,10 +145,11 @@ private val PillSpec = RollMarkSpec(ring = 12.dp, stroke = 1.4.dp, track = .12f,
                 val corner = Offset(width / 2, width / 2)
                 val arc = Size(size.width - width, size.height - width)
                 val sweep = 360f * quality.coerceIn(0, 100) / 100f
+                val flow = molten?.let { MoltenFlow(Molten) }
                 onDrawBehind {
                     drawArc(trackColor, -90f, 360f, false, corner, arc, style = track)
                     when {
-                        molten != null -> drawArc(moltenBrush(molten.value), -90f, 360f, false, corner, arc, style = stroke)
+                        molten != null && flow != null -> drawArc(flow.at(molten.value), -90f, 360f, false, corner, arc, style = stroke)
                         sweep > 0f -> drawArc(arcColor, -90f, sweep, false, corner, arc, style = stroke)
                     }
                 }
@@ -141,8 +158,7 @@ private val PillSpec = RollMarkSpec(ring = 12.dp, stroke = 1.4.dp, track = .12f,
 }
 
 /** Метка качества роллов: кольцо-значок и «N%» рядом тихим цветом; у сотни кольцо и цифра в жару. */
-@Composable private fun RollMark(quality: Int, spec: RollMarkSpec, modifier: Modifier = Modifier) {
-    val tier = RollTier.of(quality)
+@Composable private fun RollMark(quality: Int, tier: RollTier, spec: RollMarkSpec, modifier: Modifier = Modifier) {
     val molten = if (tier == RollTier.PERFECT) moltenPhase() else null
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(spec.gap), verticalAlignment = Alignment.CenterVertically) {
         RollArc(quality, tier.tint, molten, spec)
@@ -158,16 +174,20 @@ private val PillSpec = RollMarkSpec(ring = 12.dp, stroke = 1.4.dp, track = .12f,
     }
 }
 
+/** Подсказка и описание метки: «Модификаторы предмета · Хорошие · 72%». */
+private fun rollLabel(quality: Int, tier: RollTier): String = ui("card.roll_quality", ui(tier.key), quality)
+
 /** Качество роллов в шапке карточки: кольцо 26dp с дугой до доли и «N%» рядом; касание - «Модификаторы предмета · Хорошие · 72%». */
 @Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
     val tier = RollTier.of(quality)
-    Tipped({ Tip(ui("card.roll_quality", ui(tier.key), quality), tint = tier.tint) }, modifier) {
-        RollMark(quality, RingSpec)
+    Tipped({ Tip(rollLabel(quality, tier), tint = tier.tint) }, modifier) {
+        RollMark(quality, tier, RingSpec)
     }
 }
 
 /** Качество роллов в строке списка: значок-кольцо и «N%»; чтение экрана слышит «Модификаторы предмета · ступень · N%». */
 @Composable fun RollPill(quality: Int) {
-    val label = ui("card.roll_quality", ui(RollTier.of(quality).key), quality)
-    RollMark(quality, PillSpec, Modifier.clearAndSetSemantics { contentDescription = label })
+    val tier = RollTier.of(quality)
+    val label = rollLabel(quality, tier)
+    RollMark(quality, tier, PillSpec, Modifier.clearAndSetSemantics { contentDescription = label })
 }

@@ -2964,7 +2964,7 @@
   "quest.reset_tip.weekly": "Новые задания недели — через {0}",
   "quest.days_hours": "{0} д {1} ч",
   "quest.claim": "Сдать",
-  "quest.claim_all": "Сдать всё · {0}",
+  "quest.claim_all": "Сдать всё",
   "quest.claim_share": "Забрать долю",
   "quest.claimed": "Награда получена",
   "quest.progress": "{0} / {1}",

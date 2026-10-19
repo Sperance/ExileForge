@@ -67,6 +67,7 @@ class Notices {
     val state: StateFlow<Notice?> = mutable
 
     fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) {
+        if (text.isBlank()) return
         mutable.value = Notice(text, kind)
     }
 

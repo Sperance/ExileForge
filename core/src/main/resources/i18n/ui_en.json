@@ -2964,7 +2964,7 @@
   "quest.reset_tip.weekly": "New weekly quests in {0}",
   "quest.days_hours": "{0} d {1} h",
   "quest.claim": "Turn in",
-  "quest.claim_all": "Turn in all · {0}",
+  "quest.claim_all": "Turn in all",
   "quest.claim_share": "Claim share",
   "quest.claimed": "Reward claimed",
   "quest.progress": "{0} / {1}",

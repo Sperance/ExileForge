@@ -90,7 +90,7 @@ fun QuestsScreen() {
             }
         }
         val ready = QuestTab.entries.sumOf { readyCount(it, board) }
-        if (ready >= CLAIM_ALL_FROM) ClaimAllBar(ready, busy, vm::claimAll)
+        if (ready >= CLAIM_ALL_FROM) ClaimAllBar(busy, vm::claimAll)
     }
 }
 
@@ -107,11 +107,14 @@ fun QuestsScreen() {
     TrailData(ui("quest.trail_reset", left), Tip(ui("quest.reset_tip.${tab.name.lowercase()}", left), ui("quest.counting_note"), Rune))
 }
 
-/** Подвал «Сдать всё»: главная кнопка на всю ширину с числом готовых по всем вкладкам. */
-@Composable private fun ClaimAllBar(ready: Int, busy: Boolean, onClaim: () -> Unit) {
+/**
+ * Подвал «Сдать всё»: главная кнопка на всю ширину. Числа на ней нет: сервер сдаёт разом ещё готовый шаг сюжета и задания гильдии,
+ * которых доска не считает, - сколько сдано, называет тост.
+ */
+@Composable private fun ClaimAllBar(busy: Boolean, onClaim: () -> Unit) {
     Box(Modifier.fillMaxWidth().background(Panel).padding(horizontal = 16.dp, vertical = 10.dp)) {
         ForgeButton(onClick = onClaim, modifier = Modifier.fillMaxWidth(), icon = Icons.Outlined.Check, state = ButtonState.of(!busy)) {
-            Text(ui("quest.claim_all", ready), maxLines = 1)
+            Text(ui("quest.claim_all"), maxLines = 1)
         }
     }
 }

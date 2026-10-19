@@ -118,7 +118,7 @@ class QuestActions(
         val targets = repository.state.value.targets()
         val result = api.quests.claimAll(id)
         val boards = if (heroes.onScreen(id)) settle(id, result, null, targets) else null
-        claimedLine(result.claimed, targets + Quests(guild = boards).targets())
+        if (result.claimed.isEmpty()) "" else claimedLine(result.claimed, targets + Quests(guild = boards).targets())
     }
 
     /**

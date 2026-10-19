@@ -225,17 +225,34 @@ object Sheets {
      * Вещь, что ещё не у героя (товар, лот), взвешивается как лежащая в тайнике.
      */
     private fun worn(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance>? {
-        val template = index.template(item.template) ?: return null
-        val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
-        val target = EquipSlots.target(template.slot, place, worn.mapNotNull { it.slot })
-        val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
-        val freed = EquipSlots.displaced(template.slot, template.weaponType, wornWeapon) + target
+        val fit = fit(index, item, items, place) ?: return null
         return (if (items.none { it.id == item.id }) items + item else items).map {
             when {
-                it.id == item.id -> it.copy(slot = target, socket = null)
-                !it.socketed && it.slot in freed -> it.copy(slot = null)
+                it.id == item.id -> it.copy(slot = fit.target, socket = null)
+                !it.socketed && it.slot in fit.freed -> it.copy(slot = null)
                 else -> it
             }
         }
     }
+
+    /**
+     * Что снимет надевание [item] (на место [place] у кольца и фляги) из надетого [items]: вещь на её месте и всё, что
+     * освобождает [EquipSlots.displaced], - двуручное снимает оружие и щит, лук снимает щит; пусто - места свободны или
+     * контент вещи не знает. Одна мера для листа «если надеть», места сравнения и «Теряешь».
+     */
+    fun takenOff(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance> {
+        val fit = fit(index, item, items, place) ?: return emptyList()
+        return items.filter { it.equipped && !it.socketed && it.id != item.id && it.slot in fit.freed }
+    }
+
+    /** Место вещи [item] и слоты, что она освобождает (вместе с её собственным), - как надел бы сервер. */
+    private fun fit(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): Fit? {
+        val template = index.template(item.template) ?: return null
+        val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
+        val target = EquipSlots.target(template.slot, place, worn.mapNotNull { it.slot })
+        val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
+        return Fit(target, EquipSlots.displaced(template.slot, template.weaponType, wornWeapon) + target)
+    }
+
+    private class Fit(val target: Slot, val freed: Set<Slot>)
 }

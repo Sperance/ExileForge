@@ -63,7 +63,8 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
  * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
  * погашена, а [warning] без своего говорит недостачу. [holdMillis] - сколько держать кнопку (сброс всего дерева держат дольше).
- * Тело листается: поле в [options] с клавиатурой не сжимает кнопку, а уводит её под прокрутку.
+ * Тело листается, кнопка удержания и «Отмена» закреплены в подвале листа: поле в [options] с клавиатурой их не прячет. Полоса редкости
+ * идёт вдоль всего листа.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,34 +85,18 @@ fun ConfirmSheet(
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
-    ForgeSheet(onDismissRequest = onDismiss, dragHandle = null, scroll = true) {
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            RaritySpine(accent, 5.dp)
-            Column(
-                Modifier.weight(1f).padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 22.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    Modifier.align(Alignment.CenterHorizontally).size(38.dp, 4.dp)
-                        .background(Muted.copy(alpha = .35f), RoundedCornerShape(2.dp)),
-                )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    icon?.let { Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { it() } }
-                    Column(Modifier.weight(1f)) {
-                        Text(title, color = Parchment, style = MaterialTheme.typography.titleLarge)
-                        subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
-                    }
-                }
-                val lines = ledger + gold?.goldLedger().orEmpty()
-                if (lines.isNotEmpty()) Ledger(lines)
-                options?.invoke()
-                note?.let { MutedText(it) }
-                (warning ?: gold?.takeUnless { it.affordable }?.shortText())?.let {
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Icon(Icons.Outlined.ErrorOutline, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
-                        Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = null,
+        body = SheetBody.Scroll(padding = PaddingValues(start = SPINE + 18.dp, end = 18.dp, bottom = 12.dp), spacing = 12.dp),
+        header = {
+            Box(
+                Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp, bottom = 12.dp).size(38.dp, 4.dp)
+                    .background(Muted.copy(alpha = .35f), RoundedCornerShape(2.dp)),
+            )
+        },
+        footer = {
+            Column(Modifier.weight(1f).padding(start = SPINE + 2.dp, end = 2.dp)) {
                 HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked && gold?.affordable != false, millis = holdMillis) {
                     onDismiss()
                     onConfirm()
@@ -124,9 +109,31 @@ fun ConfirmSheet(
                     modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp),
                 )
             }
+        },
+        contentModifier = Modifier.raritySpine(accent, SPINE),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            icon?.let { Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { it() } }
+            Column(Modifier.weight(1f)) {
+                Text(title, color = Parchment, style = MaterialTheme.typography.titleLarge)
+                subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+        val lines = ledger + gold?.goldLedger().orEmpty()
+        if (lines.isNotEmpty()) Ledger(lines)
+        options?.invoke()
+        note?.let { MutedText(it) }
+        (warning ?: gold?.takeUnless { it.affordable }?.shortText())?.let {
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Icon(Icons.Outlined.ErrorOutline, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
+                Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
+
+/** Ширина полосы редкости подтверждения вдоль левого края листа. */
+private val SPINE = 5.dp
 
 /** The account of an action, one line each, with what leaves and what arrives in their colours. */
 @Composable private fun Ledger(lines: List<LedgerLine>) {

@@ -60,38 +60,34 @@ fun FilterAccordionSheet(
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     ForgeSheet(
         onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
         footer = {
             ForgeOutlinedButton(onClick = onReset, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("filter.reset")) }
             ForgeButton(onClick = onShow, modifier = Modifier.weight(1f)) { Text(show, maxLines = 1) }
         },
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text(ui("filter.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(
-                query,
-                onQuery,
-                placeholder = { Text(queryHint) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, ui("common.clear")) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onShow() }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Column(Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp))) {
-                groups.forEachIndexed { at, group ->
-                    if (at > 0) HorizontalDivider(color = PanelRaised)
-                    AccordionRow(group, group.key == open) { open = if (open == group.key) null else group.key }
-                }
+        Text(ui("filter.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(
+            query,
+            onQuery,
+            placeholder = { Text(queryHint) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, ui("common.clear")) } },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { onShow() }),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Column(Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp))) {
+            groups.forEachIndexed { at, group ->
+                if (at > 0) HorizontalDivider(color = PanelRaised)
+                AccordionRow(group, group.key == open) { open = if (open == group.key) null else group.key }
             }
-            switches.forEach { switch ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Switch(checked = switch.checked, onCheckedChange = switch.onChange)
-                }
+        }
+        switches.forEach { switch ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Switch(checked = switch.checked, onCheckedChange = switch.onChange)
             }
         }
     }

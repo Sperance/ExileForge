@@ -2,11 +2,9 @@ package com.sperance.exileforge.ui.components
 
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -99,6 +97,7 @@ fun BugSheet(
     val limit = game.inputs.report
     ForgeSheet(
         onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
             ForgeButton(
                 enabled = text.isNotBlank(),
@@ -110,33 +109,31 @@ fun BugSheet(
             ) { Text(ui("bug.send")) }
         },
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
-            OutlinedTextField(
-                text,
-                {
-                    text = it.take(limit)
-                    drafts.save(kind, text)
-                },
-                label = { Text(ui("bug.text")) },
-                minLines = 4,
-                supportingText = { Text(ui("bug.count", text.length, limit)) },
-                trailingIcon = {
-                    IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
-                        Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-            )
-            if (game.session.signedIn) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ReportsTab.entries.forEach { tab ->
-                        ForgeOutlinedButton(onClick = {
-                            onDismiss()
-                            onReports(tab)
-                        }, modifier = Modifier.weight(1f)) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
-                    }
+        Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
+        OutlinedTextField(
+            text,
+            {
+                text = it.take(limit)
+                drafts.save(kind, text)
+            },
+            label = { Text(ui("bug.text")) },
+            minLines = 4,
+            supportingText = { Text(ui("bug.count", text.length, limit)) },
+            trailingIcon = {
+                IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
+                    Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
+                }
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+        )
+        if (game.session.signedIn) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ReportsTab.entries.forEach { tab ->
+                    ForgeOutlinedButton(onClick = {
+                        onDismiss()
+                        onReports(tab)
+                    }, modifier = Modifier.weight(1f)) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
                 }
             }
         }

@@ -3,9 +3,6 @@ package com.sperance.exileforge.ui.screens.server
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Smartphone
@@ -386,25 +383,17 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     val ready = picked != null && picked != current && (other == null || reason.isNotBlank())
     ForgeSheet(
         onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 8.dp),
         footer = { HoldButton(ui("moderation.fate.hold"), Gold, Modifier.weight(1f), enabled = !account.busy && ready) { picked?.let { onPick(it, reason) } } },
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(other?.let { ui("moderation.fate.change_for", it) } ?: ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            MutedText(ui("moderation.fate.change_note"))
-            if (other != null) MutedText(ui("moderation.fate.letter_note"))
-            LazyVerticalGrid(
-                GridCells.Fixed(2),
-                Modifier.fillMaxWidth().heightIn(max = FATE_GRID_HEIGHT),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(fates, key = { it.code }) { card -> FateOption(card.title, mark = true, selected = picked == card.code) { picked = card.code } }
-            }
-            picked?.let { code ->
-                Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
-            }
-            if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
+        Text(other?.let { ui("moderation.fate.change_for", it) } ?: ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        MutedText(ui("moderation.fate.change_note"))
+        if (other != null) MutedText(ui("moderation.fate.letter_note"))
+        FateGrid(fates) { card -> FateOption(card.title, mark = true, selected = picked == card.code) { picked = card.code } }
+        picked?.let { code ->
+            Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
         }
+        if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
     }
 }
 
@@ -413,29 +402,28 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     var name by remember { mutableStateOf("") }
     ForgeSheet(
         onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 12.dp),
         footer = {
             ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.weight(1f)) {
                 Text(ui("admin.server_create"))
             }
         },
     ) {
-        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(ui("admin.server_new"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(
-                code,
-                { value -> code = value.filter { it.isLetterOrDigit() || it == '_' }.uppercase().take(SERVER_CODE) },
-                label = { Text(ui("admin.server_code")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                name,
-                { name = it.take(SERVER_NAME) },
-                label = { Text(ui("admin.server_name")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
+        Text(ui("admin.server_new"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(
+            code,
+            { value -> code = value.filter { it.isLetterOrDigit() || it == '_' }.uppercase().take(SERVER_CODE) },
+            label = { Text(ui("admin.server_code")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            name,
+            { name = it.take(SERVER_NAME) },
+            label = { Text(ui("admin.server_name")) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

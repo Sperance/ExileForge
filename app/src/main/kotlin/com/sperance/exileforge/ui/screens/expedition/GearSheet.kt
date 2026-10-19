@@ -28,7 +28,7 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("expedition.gear")) }
             item { MutedText(ui("expedition.gear_hint")) }
-            item { EquipmentLedger(game) { _, id -> worn = id } }
+            item { EquipmentLedger(game, readOnly = true) { _, id -> worn = id } }
         }
     }
     val instance = worn?.let { id -> game.hero?.item(id) } ?: return

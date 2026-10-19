@@ -51,22 +51,23 @@ import com.sperance.exileforge.ui.theme.*
  * A line is a way in rather than a control of its own: a worn item opens its sheet, where taking it
  * off is one of the actions, and an empty place opens the stash narrowed to what fits it. Each line
  * carries the item's name and the one property it is worn for, so the whole outfit reads without a
- * tap. [onPlace] gets the place and the worn item's id, or null.
+ * tap. [onPlace] gets the place and the worn item's id, or null. [readOnly] - только просмотр (заход): без выбора из
+ * тайника и без инструментов ремёсел.
  */
-@Composable fun EquipmentLedger(game: GameUi, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
-    rememberEquipment(game)?.let { EquipmentLedger(it, onPlace) }
+@Composable fun EquipmentLedger(game: GameUi, readOnly: Boolean = false, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
+    rememberEquipment(game)?.let { EquipmentLedger(it, readOnly, onPlace) }
 }
 
 /**
  * Снаряжение «Полными карточками» (выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и
  * инструменты ремёсел со счётом надетых. Надетая вещь - карточка во всю ширину: имя с номером экземпляра, метка роллов и все
  * строки вещи целиком, с переносом; пустое место - строка с кнопкой выбора из тайника. Своя нарезка состояния: движение
- * кошелька не перерисовывает надетое.
+ * кошелька не перерисовывает надетое. [readOnly] - только просмотр: у пустого места нет кнопки выбора, группы инструментов нет.
  */
-@Composable fun EquipmentLedger(equipment: EquipmentState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
+@Composable fun EquipmentLedger(equipment: EquipmentState, readOnly: Boolean = false, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
     val byCode = equipment.places.associateBy { it.place.code }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        GEAR_GROUPS.forEach { group ->
+        GEAR_GROUPS.filterNot { readOnly && it.tools }.forEach { group ->
             val lines = group.codes.mapNotNull { byCode[it] }
             if (lines.isEmpty()) return@forEach
             GroupHeader(group, lines)
@@ -75,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
                 if (line.worn != null) {
                     WornCard(line, line.worn, equipment.lang, equipment.signedIn, group.compact, open)
                 } else {
-                    EmptyPlace(line, equipment.lang, equipment.signedIn, open)
+                    EmptyPlace(line, equipment.lang, equipment.signedIn, pickable = !readOnly, onPick = open)
                 }
             }
         }
@@ -83,7 +84,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** Группа мест по порядку тела: ключ заголовка, коды мест, считать ли надетое в заголовке и плотнее ли карточки. */
-private class GearGroup(val key: String, val codes: List<String>, val counted: Boolean = false, val compact: Boolean = false)
+private class GearGroup(val key: String, val codes: List<String>, val counted: Boolean = false, val compact: Boolean = false, val tools: Boolean = false)
 
 /** Группы мест по порядку тела, инструменты - последними. */
 private val GEAR_GROUPS: List<GearGroup> = listOf(
@@ -92,7 +93,7 @@ private val GEAR_GROUPS: List<GearGroup> = listOf(
     GearGroup("jewellery", listOf(Slot.AMULET, Slot.RING, Slot.RING_2, Slot.BELT).map { it.name }),
     GearGroup("other", listOf(Slot.WINGS.name)),
     GearGroup("flasks", Slot.FLASKS.map { it.name }),
-    GearGroup("tools", toolPlaces.map { it.code }, counted = true, compact = true),
+    GearGroup("tools", toolPlaces.map { it.code }, counted = true, compact = true, tools = true),
 )
 
 /** Заголовок группы серифами с чертой до края; у счётной группы - «5 из 7» надетого. */
@@ -183,10 +184,10 @@ private fun PlaceNumber(number: Int, modifier: Modifier) {
 
 /**
  * Пустое место строкой в пунктире: гнездо с силуэтом слота, имя места и справа - кнопка «Выбрать из N», когда в тайнике
- * есть подходящее, иначе «Нечего надеть»; вторая рука под двуручным оружием - сплошная рамка и «Занята двуручным оружием».
+ * есть подходящее, иначе «Нечего надеть»; вторая рука под двуручным оружием - сплошная рамка и «Занята двуручным оружием». Без [pickable] (только просмотр) справа пусто.
  */
 @Composable
-private fun EmptyPlace(line: PlaceState, lang: Lang, signedIn: Boolean, onPick: () -> Unit) {
+private fun EmptyPlace(line: PlaceState, lang: Lang, signedIn: Boolean, pickable: Boolean, onPick: () -> Unit) {
     val place = line.place
     val shape = RoundedCornerShape(14.dp)
     val frame = if (line.blocked) Modifier.border(1.dp, Color(0xFF26323B), shape) else Modifier.dashedBorder(Color(0xFF2B3944), shape)
@@ -202,6 +203,7 @@ private fun EmptyPlace(line: PlaceState, lang: Lang, signedIn: Boolean, onPick: 
         Text(slotTitle(place.code, lang), color = Parchment, fontSize = 14.sp, lineHeight = 17.5.sp, modifier = Modifier.weight(1f))
         when {
             line.blocked -> EmptyNote(ui("hero.off_hand_taken"))
+            !pickable -> Unit
             line.spare > 0 -> PickButton(line.spare, signedIn, onPick)
             else -> EmptyNote(ui("gear.nothing_to_wear"))
         }

@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.skillsFree
 import com.sperance.exileforge.rules.content.AilmentRule
+import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.EnrageRule
@@ -164,6 +165,24 @@ class Battle(
 
         /** Buffs, curses and draughts on it. */
         val effects = mutableListOf<TimedEffect>()
+
+        /**
+         * Что из [effects] действует сейчас. Вечный бафф ([BuffKind.standing]) и временный того же вида ([BuffKind.source])
+         * не складываются - действует сильнейший: временный лежит строками правила целиком, вечный героя - долей
+         * `combat.buffs.<вид>.always` ([com.sperance.exileforge.rules.content.BuffRule.standing]), монстра - целиком; при
+         * равной силе действует временный. По концу временного снова действует вечный.
+         */
+        val acting: List<TimedEffect> get() = effects.filterNot { outshone(it) }
+
+        /** [effect] - слой баффа, что молчит: рядом лежит не слабее его другой слой того же вида. */
+        private fun outshone(effect: TimedEffect): Boolean {
+            val kind = BuffKind.of(effect.source)?.takeIf { effect.kind == EffectKind.BUFF } ?: return false
+            val standing = effect.source == kind.standing
+            val rival = if (standing) kind.source else kind.standing
+            if (effects.none { it.kind == EffectKind.BUFF && it.source == rival }) return false
+            val standingShare = if (this === heroFighter) rules.buffs[kind].always / 100 else 1.0
+            return standing == (standingShare <= 1.0)
+        }
 
         /** What a barrier still soaks, and until when. */
         var barrier = 0.0

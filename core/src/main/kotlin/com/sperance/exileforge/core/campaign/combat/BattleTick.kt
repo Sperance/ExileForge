@@ -248,7 +248,7 @@ internal fun Battle.remake(fighter: Fighter) {
 /** Что лежит на враге [fighter] сейчас: строки эффектов и прибавка скорости при низком здоровье. */
 internal fun Battle.foeLines(fighter: Fighter): List<StatLine> {
     val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
-    return fighter.effects.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
+    return fighter.acting.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
 }
 
 /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */
@@ -256,7 +256,7 @@ internal fun Battle.heroBody(extra: List<StatLine>): Combatant = model.body(hero
 
 /** What lies on the hero now: low life's lines, the standing powers', the charges', the conditions' and the effects'. */
 private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.lowLife else emptyList()) +
-    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.holding(conditions) }
+    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.acting.flatMap { it.holding(conditions) }
 
 /**
  * The increases of [type] a hero's blow is grown by now, in percent: the sheet's own, the damage in
@@ -341,7 +341,7 @@ internal fun Battle.chanceBuff(kind: BuffKind) {
 internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.body.wears(it) }.forEach { kind ->
     val rule = rules.buffs[kind]
     val lines = if (fighter === heroFighter) rule.standing else rule.lines
-    lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
+    lay(fighter, TimedEffect(EffectKind.BUFF, kind.standing, lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
 }
 
 /** What of a hit on [target] its spell suppression or deflection lets through; drawn only for a target with a chance. */

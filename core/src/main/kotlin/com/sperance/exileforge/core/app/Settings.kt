@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.app
 
+import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.serialization.Serializable
 
 /**
@@ -26,6 +27,11 @@ data class GameSettings(
     val storyFold: StoryFold = StoryFold(),
     /** Где стояла камера карты «Похода» у каждого героя: по id героя; вход на вкладку возвращает её туда же. */
     val worldViews: Map<String, WorldView> = emptyMap(),
+    /**
+     * Последняя зона, в которую входил каждый герой на этом устройстве, по id героя: удобство устройства, как [worldViews], - сервер
+     * последней зоны не хранит (только открытый заход); к ней ведут кнопка «К герою» и первая камера карты «Похода».
+     */
+    val lastZones: Map<String, MapCode> = emptyMap(),
     /** Пролог уже показан на этом устройстве: дальше перед созданием героя его можно пропустить сразу. */
     val prologueSeen: Boolean = false,
     /** Продолжения шагов сюжета, что уже показаны: `герой:шаг`; повтор - из «Всего сюжета». */

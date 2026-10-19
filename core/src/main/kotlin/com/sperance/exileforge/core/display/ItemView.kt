@@ -233,8 +233,6 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** Уровень района карты: уровень её зоны, поднятый тиром (`MapRule.areaLevel` правил); у не-карты - null. */
     val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier) }
 
-    /** A unique's or mythic's lore; a base carries no description. */
-    val description: String get() = if (template.unique) equipmentDescription(code) else ""
     val trade: String? get() = tradeName(code, equipment = true)
     val requirements: List<ItemNeed> get() = itemRequirements(template)
     val visualKind: ItemVisualKind get() = itemVisualKind(template)

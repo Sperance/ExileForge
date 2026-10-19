@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.admin.RedemptionActions
 import com.sperance.exileforge.core.admin.SanctionModel
 import com.sperance.exileforge.core.app.Actions
-import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.CharacterActions
 import com.sperance.exileforge.core.app.CharactersModel
@@ -172,13 +171,24 @@ val appModule = module {
     single { LanguageRepository() }
     single { LinkRepository() }
     single { AdminRepository() }
-    single { AppModes() }
-    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single {
+        GameSlice(
+            sessions = get(),
+            commands = get(),
+            languages = get(),
+            worlds = get(),
+            heroes = get(),
+            links = get(),
+            prefs = get(),
+            notices = get(),
+            scope = get(named(APP_SCOPE)),
+        )
+    }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)
     single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get(), get(), get()) }
-    single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get()) }
+    single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get(), get()) }
     single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }, get()) }
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }

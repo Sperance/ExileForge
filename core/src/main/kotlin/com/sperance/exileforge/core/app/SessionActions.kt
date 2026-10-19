@@ -59,14 +59,6 @@ class SessionActions(
     private val characterActions: CharacterActions get() = lazyCharacters.value
     private val warmupActions: WarmupActions get() = lazyWarmup.value
 
-    fun mode(mode: AppMode) {
-        run {
-            if (commands.state.value.held || mode == AppMode.ADMIN && !sessions.state.value.isModerator) return
-            modes.set(mode)
-            screens.tab(if (mode == AppMode.ADMIN) Landing.ADMIN else Landing.HERO)
-        }
-    }
-
     /** Подключение к адресу [draft] из поля экрана (черновик живёт на экране). */
     fun connect(draft: String) = connectTo(normalizeServer(draft))
 
@@ -174,7 +166,6 @@ class SessionActions(
             heroes.select(heroId)
             expeditions.clear()
             screens.reset(Landing.HERO)
-            modes.set(AppMode.PLAYER)
             warmupActions.clear()
             heroSync.restore(heroId, copy.snapshot)
             heroSync.drawn()
@@ -342,7 +333,6 @@ class SessionActions(
             api.requireRoutes()
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
             screens.reset(Landing.CHARACTERS)
-            modes.set(AppMode.PLAYER)
             store.saveDeviceSession(byDevice)
             store.saveToken(sessions.state.value.server, api.sessionToken())
             forgetForeignHero(sessions.state.value.server, profile.id)
@@ -505,7 +495,6 @@ class SessionActions(
         guilds.clear()
         commands.clearFailure()
         admins.clear()
-        modes.set(AppMode.PLAYER)
         warmupActions.clear()
     }
 }

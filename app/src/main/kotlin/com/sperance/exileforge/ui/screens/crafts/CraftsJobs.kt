@@ -49,7 +49,6 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
-import com.sperance.exileforge.core.display.equipmentDescription
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -366,15 +365,16 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     }
 }
 
-/** Что получится: имя выхода, сведения (в сумке или уровень) и описание; касание - [onOpen] с его карточкой, если она есть. */
+/** Что получится: имя выхода, сведения (в сумке или уровень) и описание стопки; касание - [onOpen] с его карточкой, если она есть. */
 @Composable private fun ResultLine(game: GameUi, job: JobView, onOpen: (Inspect?) -> Unit) {
     val card = resultCard(game, job)
     val output = job.output
-    val (meta, description) = when (card) {
-        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble())) to itemDescription(output, game.index)
-        is Inspect.Showcase -> (game.index?.template(output)?.let { ui("row.level", it.level) } ?: "") to equipmentDescription(output)
-        else -> "" to ""
+    val meta = when (card) {
+        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble()))
+        is Inspect.Showcase -> game.index?.template(output)?.let { ui("row.level", it.level) }.orEmpty()
+        else -> ""
     }
+    val description = if (card is Inspect.Stack) itemDescription(output, game.index) else ""
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = card != null, role = Role.Button) { onOpen(card) }.padding(vertical = 2.dp),
         verticalAlignment = Alignment.Top,

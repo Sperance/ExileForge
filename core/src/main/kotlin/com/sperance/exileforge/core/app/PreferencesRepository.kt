@@ -5,10 +5,10 @@ import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemFilters
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.LaunchLines
+import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
@@ -25,20 +25,8 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
     /** Какие строки журнала боя видны (из общего состояния сюда). */
     val logFilter: StateFlow<Set<LogKind>> = store.logFilter.map { LogKind.parse(it) }.stateIn(scope, SharingStarted.Eagerly, LogKind.DEFAULT)
 
-    suspend fun saveSettings(value: GameSettings) = store.saveGameSettings(value)
-
-    /** Правка настроек от записанного на устройстве, а не от потока: на старте поток ещё может держать умолчания. */
-    suspend fun editStored(edit: GameSettings.() -> GameSettings) {
-        val stored = store.gameSettings.first()
-        val next = stored.edit()
-        if (next != stored) store.saveGameSettings(next)
-    }
-
-    /** Правка настроек от их текущего значения; ничего не изменилось - на устройство не пишется. */
-    suspend fun editSettings(edit: GameSettings.() -> GameSettings) {
-        val next = settings.value.edit()
-        if (next != settings.value) store.saveGameSettings(next)
-    }
+    /** Правка настроек от записанного на устройстве, атомарно в хранилище: на старте поток ещё может держать умолчания, а параллельные правки не затирают друг друга. */
+    suspend fun editSettings(edit: GameSettings.() -> GameSettings) = store.editGameSettings { it.edit() }
 
     suspend fun saveItemFilter(shelf: ItemShelf, value: ItemFilter) = store.saveItemFilters(itemFilters.value.with(shelf, value))
 
@@ -53,13 +41,25 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
         editSettings { copy(worldViews = worldViews + (heroId to view)) }
     }
 
+    /** Последняя зона, в которую входил герой [heroId] на этом устройстве; не входил - null. */
+    fun lastZone(heroId: String): MapCode? = settings.value.lastZones[heroId]
+
+    /** Запомнить зону [zone], в которую вошёл герой [heroId]: только настройки устройства; без героя - ничего. */
+    suspend fun keepLastZone(heroId: String, zone: MapCode) {
+        if (heroId.isBlank()) return
+        editSettings { copy(lastZones = lastZones + (heroId to zone)) }
+    }
+
+    /** Забыть камеру карты и последнюю зону стёртого героя [heroId]: его записи на устройстве больше никому не нужны. */
+    suspend fun forgetHero(heroId: String) = editSettings { copy(worldViews = worldViews - heroId, lastZones = lastZones - heroId) }
+
     /**
      * Строка окна загрузки на этот показ из [keys]: не та, что в прошлый ([GameSettings.lastLaunchLine], прочитано с устройства), выбор
      * помнится; строк нет - null.
      */
     suspend fun launchLine(keys: List<String>): String? {
         var picked: String? = null
-        editStored {
+        editSettings {
             val next = LaunchLines.next(keys, lastLaunchLine)
             picked = next
             next?.let { copy(lastLaunchLine = it) } ?: this

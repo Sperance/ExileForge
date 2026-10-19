@@ -22,16 +22,15 @@ class AccountSlice(
     links: LinkRepository,
     admins: AdminRepository,
     heroes: HeroRepository,
-    modes: AppModes,
     scope: CoroutineScope,
 ) {
     val ui: StateFlow<AccountUi> = combine(
         combine(sessions.state, commands.state, languages.lang, worlds.state) { session, activity, lang, world -> AccountUi(session, activity, lang, world) },
-        combine(links.state, admins.state, heroes.state, modes.mode) { link, admin, hero, mode -> AccountUi(sessions.state.value, link = link, admin = admin, hero = hero, mode = mode) },
-    ) { base, rest -> base.copy(link = rest.link, admin = rest.admin, hero = rest.hero, mode = rest.mode) }
+        combine(links.state, admins.state, heroes.state) { link, admin, hero -> AccountUi(sessions.state.value, link = link, admin = admin, hero = hero) },
+    ) { base, rest -> base.copy(link = rest.link, admin = rest.admin, hero = rest.hero) }
         .stateIn(
             scope,
             SharingStarted.Eagerly,
-            AccountUi(sessions.state.value, commands.state.value, languages.lang.value, worlds.state.value, links.state.value, admins.state.value, heroes.state.value, modes.mode.value),
+            AccountUi(sessions.state.value, commands.state.value, languages.lang.value, worlds.state.value, links.state.value, admins.state.value, heroes.state.value),
         )
 }

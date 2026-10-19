@@ -30,7 +30,11 @@ interface SettingsStore {
 
     suspend fun saveLanguage(value: Lang)
 
-    suspend fun saveGameSettings(value: GameSettings)
+    /**
+     * Правка настроек игры одним атомарным чтением-записью хранилища: [edit] получает записанное на устройстве, параллельные
+     * правки не затирают друг друга; результат, равный записанному, не пишется.
+     */
+    suspend fun editGameSettings(edit: (GameSettings) -> GameSettings)
 
     suspend fun saveItemFilters(value: ItemFilters)
 

@@ -4,10 +4,10 @@ package com.sperance.exileforge.core.app
 data class Spot(val phase: AppPhase, val tab: Int, val building: Building?)
 
 /**
- * Куда модели ядра ведут игрока: фазы входа, корни вкладок героя и администратора, Атлас «Похода», аукцион и гильдия Города,
+ * Куда модели ядра ведут игрока: фазы входа, корень вкладки героя, Атлас «Похода», аукцион и гильдия Города,
  * страницы настроек с письмом администратора и окном модерации.
  */
-enum class Landing { AUTH, CHARACTERS, FATE, HERO, ADMIN, ATLAS, AUCTION, GUILD, HALL, MAIL, MODERATION }
+enum class Landing { AUTH, CHARACTERS, FATE, HERO, ATLAS, AUCTION, GUILD, HALL, MAIL, MODERATION }
 
 /**
  * Стек экранов глазами ядра: его держит навигатор `:app` (ключи Navigation 3), сервисы читают верх и просят переходы. Вкладка,

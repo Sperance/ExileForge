@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.admin.AdminRepository
 import com.sperance.exileforge.core.app.AccountSlice
 import com.sperance.exileforge.core.app.AccountUi
-import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.network.LinkRepository
@@ -25,10 +24,9 @@ class ServerViewModel(
     links: LinkRepository,
     admins: AdminRepository,
     heroes: HeroRepository,
-    modes: AppModes,
 ) : ViewModel() {
     val session: StateFlow<Session> = sessions.state
     val world: StateFlow<World> = worlds.state
 
-    val ui: StateFlow<AccountUi> = AccountSlice(sessions, worlds, commands, languages, links, admins, heroes, modes, viewModelScope).ui
+    val ui: StateFlow<AccountUi> = AccountSlice(sessions, worlds, commands, languages, links, admins, heroes, viewModelScope).ui
 }

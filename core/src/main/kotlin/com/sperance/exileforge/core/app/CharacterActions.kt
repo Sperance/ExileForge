@@ -27,6 +27,7 @@ class CharacterActions(
     private val loader: WorldLoader,
     private val lazyWarmup: Lazy<WarmupActions>,
     private val trace: StartupTrace,
+    private val prefs: PreferencesRepository,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val warmupActions: WarmupActions get() = lazyWarmup.value
 
@@ -190,7 +191,7 @@ class CharacterActions(
     fun restore(id: String) = rosterCommand { api.hero.restoreDeletion(id) }
 
     /** Стереть героя [id] сразу и навсегда; [name] - его имя, введённое ещё раз. */
-    fun erase(id: String, name: String) = rosterCommand { api.hero.eraseDeletion(id, name) }
+    fun erase(id: String, name: String) = rosterCommand { api.hero.eraseDeletion(id, name).also { prefs.forgetHero(id) } }
 
     /** Команда над героями аккаунта, что отвечает их списком с санкциями: меню берёт ответ как есть. */
     private fun rosterCommand(call: suspend () -> HeroRoster) {

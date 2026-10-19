@@ -170,6 +170,9 @@ class ExpeditionActions(
     /** Прогресс кампании, как его считают правила по герою и миру. */
     private fun progress(): CampaignProgress? = index?.let { i -> hero?.let { h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) } }
 
+    /** Зона героя на карте мира: открытый на сервере заход, иначе последняя, в которую он входил на этом устройстве; нет - null. */
+    fun heroZone(): MapCode? = hero?.campaign?.run?.zone?.let(::MapCode) ?: prefs.lastZone(heroes.heroId)
+
     /** Карта мира своего не читает: прогресс и атлас - героя. */
     fun loadCampaign() = heroSync.ensure()
 
@@ -293,6 +296,7 @@ class ExpeditionActions(
         val run = Run(i, zone, started.seed, started.context)
         val marks = repository.state.value.saleMarks.takeIf { marked == started.id }.orEmpty()
         marked = started.id
+        scope.launch { prefs.keepLastZone(id, zone.code) }
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, saleMarks = marks, chestStock = started.chestStock).also { runJournal = it }
         if (marks.isNotEmpty()) persist()
         val board = quests.board().takeIf { it.board != null }

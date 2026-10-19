@@ -8,18 +8,15 @@ import kotlinx.coroutines.flow.SharedFlow
  * Оболочка приложения глазами ядра: какие вкладки открыты аккаунту, повторное нажатие на открытую вкладку, просьба листа
  * отчёта и узел древа, на котором оно откроется.
  */
-class ShellModel(private val sessions: SessionRepository, private val modes: AppModes) {
+class ShellModel(private val sessions: SessionRepository) {
     /**
-     * Открыта ли аккаунту вкладка [tab]: инструменты администратора - роли модерации в режиме администратора, промокоды - только
+     * Открыта ли аккаунту вкладка [tab]: инструменты администратора - ролям модерации, промокоды - только
      * администратору (модератору их экран не открывается).
      */
     fun opens(tab: Int): Boolean {
-        if (!adminTools() && tab in ADMIN_TABS) return false
+        if (!sessions.state.value.isModerator && tab in ADMIN_TABS) return false
         return tab != TAB_REDEMPTION || sessions.state.value.isAdmin
     }
-
-    /** Инструменты администратора: роль модерации аккаунта и режим вместе. */
-    private fun adminTools(): Boolean = sessions.state.value.isModerator && modes.mode.value == AppMode.ADMIN
 
     private val reselects = MutableSharedFlow<Int>(extraBufferCapacity = 1)
 

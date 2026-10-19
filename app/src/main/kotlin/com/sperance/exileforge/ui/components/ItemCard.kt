@@ -21,7 +21,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -239,17 +238,6 @@ fun ItemCard(
         FatedSlot(item.item)
         if (detailed && item.slot.isFlask) FlaskYours(look)
         if (detailed) {
-            item.description.takeIf { it.isNotBlank() }?.let {
-                Text(
-                    "«$it»",
-                    color = look.muted,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontFamily = FontFamily.Serif,
-                    fontStyle = FontStyle.Italic,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                )
-            }
             item.item.maker?.let { maker ->
                 Text(ui("card.maker", maker.hero, stampText(maker.at)), color = look.muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
             }

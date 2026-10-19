@@ -31,9 +31,11 @@ class PreferencesRepositoryTest {
             language.value = value.code
         }
 
-        override suspend fun saveGameSettings(value: GameSettings) {
+        override suspend fun editGameSettings(edit: (GameSettings) -> GameSettings) {
+            val next = edit(gameSettings.value)
+            if (next == gameSettings.value) return
             settingsWrites++
-            gameSettings.value = value
+            gameSettings.value = next
         }
 
         override suspend fun saveItemFilters(value: ItemFilters) {
@@ -54,7 +56,6 @@ class PreferencesRepositoryTest {
         runCurrent()
         assertEquals(2, prefs.settings.value.fightSpeed)
         assertEquals(1, store.settingsWrites)
-        prefs.editStored { copy(fightSpeed = 2) }
         prefs.editSettings { this }
         assertEquals(1, store.settingsWrites)
     }

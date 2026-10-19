@@ -29,7 +29,6 @@ abstract class AppService(
     protected val languages get() = repositories.languages
     protected val links get() = repositories.links
     protected val admins get() = repositories.admins
-    protected val modes get() = repositories.modes
     protected val quests get() = actions.quests
     protected val market get() = actions.market
     protected val guild get() = actions.guild

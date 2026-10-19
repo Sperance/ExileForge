@@ -96,7 +96,7 @@ private const val CAPSULE_GROW = 2.4f
     val shell: ShellViewModel = koinViewModel()
     val craftsAway by shell.craftsAway.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
-    val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { game.adminTools })
+    val destinations = PLAYER_TABS + listOfNotNull(TAB_ADMIN.takeIf { game.isModerator })
     Row(
         Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(plate, elevation = 16.dp).clip(plate)
             .fillMaxWidth().height(68.dp).padding(horizontal = 8.dp),

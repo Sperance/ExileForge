@@ -45,7 +45,6 @@ fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lan
  * профессия, работа - нет строки в словаре на устройстве - заглушка «…» и дыра словаря ([loc], `LocaleHoles`), не код.
  */
 fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else loc(LocaleKey.equipmentName(code))
-fun equipmentDescription(code: String): String = locOr(LocaleKey.equipmentDescription(code), "")
 
 /** The name of a stacking item — an orb, a material, a book, an essence. */
 fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code") { loc(LocaleKey.itemName(code)) })

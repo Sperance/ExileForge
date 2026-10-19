@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * Срез «игра»: что читают экраны героя и его мест - команда в полёте, язык, мир, сессия, герой на экране,
- * связь, режим и настройки устройства. Имена - те же, что у общего состояния, чтобы экраны переезжали без пересказа.
+ * связь и настройки устройства. Имена - те же, что у общего состояния, чтобы экраны переезжали без пересказа.
  */
 data class GameUi(
     val activity: Activity = Activity(),
@@ -48,7 +48,6 @@ data class GameUi(
     val session: Session = Session(DEFAULT_SERVER),
     val holding: HeroHolding = HeroHolding(),
     val link: Link = Link(),
-    val mode: AppMode = AppMode.PLAYER,
     val settings: GameSettings = GameSettings(),
     val logFilter: Set<LogKind> = LogKind.DEFAULT,
     /** Тост успеха на экране; отказ - у [activity]. */
@@ -66,11 +65,8 @@ data class GameUi(
     /** Герой в игре - тестировщик. */
     val isTester: Boolean get() = session.tester(holding)
 
-    /** Модератор или администратор. */
+    /** Модератор или администратор: ему открыты инструменты администратора; права проверяет сервер. */
     val isModerator: Boolean get() = session.isModerator
-
-    /** Инструменты администратора: роль модерации аккаунта и режим вместе; права проверяет сервер. */
-    val adminTools: Boolean get() = isModerator && mode == AppMode.ADMIN
     val sessionEpoch: Int get() = session.sessionEpoch
     val index: ContentIndex? get() = world.content
     val heroId: String get() = holding.heroId
@@ -124,7 +120,6 @@ class GameSlice(
     worlds: WorldRepository,
     heroes: HeroRepository,
     links: LinkRepository,
-    modes: AppModes,
     prefs: PreferencesRepository,
     notices: Notices,
     scope: CoroutineScope,
@@ -133,15 +128,15 @@ class GameSlice(
         combine(commands.state, languages.lang, worlds.state, sessions.state, heroes.state) { activity, lang, world, session, holding ->
             GameUi(activity, lang, world, session, holding)
         },
-        combine(links.state, modes.mode, prefs.settings, prefs.logFilter, notices.state) { link, mode, settings, logFilter, notice ->
-            GameUi(link = link, mode = mode, settings = settings, logFilter = logFilter, notice = notice)
+        combine(links.state, prefs.settings, prefs.logFilter, notices.state) { link, settings, logFilter, notice ->
+            GameUi(link = link, settings = settings, logFilter = logFilter, notice = notice)
         },
-    ) { a, b -> a.copy(link = b.link, mode = b.mode, settings = b.settings, logFilter = b.logFilter, notice = b.notice) }
+    ) { a, b -> a.copy(link = b.link, settings = b.settings, logFilter = b.logFilter, notice = b.notice) }
         .stateIn(
             scope,
             SharingStarted.Eagerly,
             GameUi(
-                commands.state.value, languages.lang.value, worlds.state.value, sessions.state.value, heroes.state.value, links.state.value, modes.mode.value,
+                commands.state.value, languages.lang.value, worlds.state.value, sessions.state.value, heroes.state.value, links.state.value,
                 prefs.settings.value, prefs.logFilter.value, notices.state.value,
             ),
         )

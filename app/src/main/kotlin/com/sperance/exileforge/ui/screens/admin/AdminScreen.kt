@@ -9,14 +9,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_REDEMPTION
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.AdminGrantPanel
-import com.sperance.exileforge.ui.theme.Muted
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -63,33 +61,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
 
             AdminGrantPanel(game, vm)
-        }
-
-        ForgePanel {
-            Engraved(ui("admin.mode"))
-            Text(
-                if (game.adminTools) {
-                    ui("admin.mode_all")
-                } else {
-                    ui("admin.mode_player")
-                },
-                color = Muted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            ForgeOutlinedButton(
-                enabled = !game.busy,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { vm.mode(if (game.adminTools) AppMode.PLAYER else AppMode.ADMIN) },
-            ) {
-                Text(
-                    if (game.adminTools) {
-                        ui("admin.as_player")
-                    } else {
-                        ui("account.tools_back")
-                    },
-                )
-            }
-            if (game.adminTools) MutedText(ui("admin.as_player_note"))
         }
     }
 }

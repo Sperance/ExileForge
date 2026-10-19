@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.app.WorldView
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.TrialArena
+import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.expedition.ExpeditionActions
@@ -18,7 +19,7 @@ import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
@@ -43,6 +44,9 @@ class ExpeditionViewModel(
     fun keepWorldView(heroId: String, view: WorldView) {
         viewModelScope.launch { prefs.keepWorldView(heroId, view) }
     }
+
+    /** Точка героя на карте [world]: жетон его зоны ([ExpeditionActions.heroZone]), нет зоны или жетона - граница. */
+    fun heroPoint(world: WorldMap): WorldPoint = expedition.heroZone()?.let(world::point) ?: world.frontier()
 
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui

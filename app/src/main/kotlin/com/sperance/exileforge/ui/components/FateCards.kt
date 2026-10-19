@@ -68,6 +68,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.fateDescription
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.ui.theme.Muted
@@ -259,6 +260,8 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
  */
 @Composable fun FateScroll(card: FateCard, modifier: Modifier = Modifier) {
     val motion = LocalMotion.current
+    val index = LocalContentIndex.current
+    val description = remember(card.code, index) { fateDescription(card, index) }
     val open = remember(card.code) { Animatable(if (motion) 0f else 1f) }
     LaunchedEffect(card.code) { open.animateTo(1f, tween(SCROLL_MS, easing = LinearEasing)) }
     val rise = FastOutSlowInEasing.transform((open.value / SCROLL_RISE).coerceIn(0f, 1f))
@@ -285,7 +288,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             ) {
                 Text(card.title, style = relicName(15).copy(color = FateInk.GoldLight), textAlign = TextAlign.Center)
                 FateFlourish(Modifier.padding(vertical = 6.dp).fillMaxWidth(.5f).height(8.dp))
-                Text(card.text(LocalContentIndex.current), color = FateInk.Text, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
+                Text(description, color = FateInk.Text, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
             }
         }
         ScrollRod()
@@ -401,6 +404,8 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 
 /** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now] и предупреждение, что дар навсегда. */
 @Composable private fun FateUnrolled(card: FateCard, now: List<String>) {
+    val index = LocalContentIndex.current
+    val description = remember(card.code, index) { fateDescription(card, index) }
     Box(Modifier.fillMaxWidth().height(1.dp).background(FateInk.Rim))
     Column(
         Modifier.fillMaxWidth().background(Brush.verticalGradient(FateInk.Parchment.drop(1))).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -408,7 +413,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text("❧ $SIGIL ❧", color = FateInk.Gold, fontSize = 11.sp, letterSpacing = 6.sp)
-        card.text(LocalContentIndex.current).takeIf { it.isNotBlank() }?.let { text ->
+        description.takeIf { it.isNotBlank() }?.let { text ->
             Text(
                 ui("fate.ribbon.quote", text),
                 color = FateInk.Vellum,

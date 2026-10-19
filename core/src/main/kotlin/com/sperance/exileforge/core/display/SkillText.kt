@@ -22,7 +22,7 @@ import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
-import com.sperance.exileforge.rules.text.TextNumbers
+import com.sperance.exileforge.rules.text.numbered
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -200,7 +200,7 @@ object SkillText {
      * `.negative` one for a minus — or the stat's title and the number where the server has none.
      *
      * Шаблон «+{v}» с отрицательным числом печатается «−5»: знак ставит fillTemplate. Числа силы и правил шаблона
-     * (`{p:…}`, `{r:…}`) подставляет контент [index] ([com.sperance.exileforge.rules.text.TextNumbers.fill]), как в строках
+     * (`{p:…}`, `{r:…}`) подставляет контент [index] ([com.sperance.exileforge.rules.text.numbered]), как в строках
      * модификаторов; подстановка без своего числа (или без контента) игроку не печатается: строка выходит общей - «Имя: +N».
      */
     fun statLine(stat: String, operation: Op, value: Double, index: ContentIndex?): String {
@@ -209,7 +209,7 @@ object SkillText {
         val template = (negative ?: locOr(key, "")).takeIf(String::isNotBlank)
         val shown = if (negative != null) abs(value) else value
         val number = if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown)
-        val numbered = template?.let { if (index == null) it.takeUnless { text -> TextNumbers.wants(text) } else index.textNumbers.fill(stat, it) }
+        val numbered = template?.let { index.numbered(it, stat) }
         return numbered?.let { fillTemplate(it.replace("{v}", "{0}"), listOf(number)) } ?: plainStatLine(stat, operation, value)
     }
 

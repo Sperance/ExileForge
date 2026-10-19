@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
@@ -25,6 +26,7 @@ import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
+import com.sperance.exileforge.rules.text.numbered
 
 /** A code made readable when no dictionary names it: `IRON_HAT` → «IRON HAT». */
 fun displayName(value: String, lang: Lang = uiLanguage): String = value.substringAfterLast('/').substringAfterLast('.').replace('_', ' ')
@@ -49,13 +51,16 @@ fun equipmentDescription(code: String): String = locOr(LocaleKey.equipmentDescri
 fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code") { loc(LocaleKey.itemName(code)) })
 
 /**
- * Описание стопки [code] (сфера, материал, оттиск): числа правил `{r:…}` подставляет [index] ([com.sperance.exileforge.rules.text.TextNumbers.text]);
- * без контента или без числа - текст как есть.
+ * Описание стопки [code] (сфера, материал, оттиск): числа правил `{r:…}` подставляет [index] ([com.sperance.exileforge.rules.text.numbered]);
+ * без контента или без числа - пусто, сырой плейсхолдер не печатается.
  */
-fun itemDescription(code: String, index: ContentIndex?): String {
-    val text = locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))
-    return index?.textNumbers?.text(text) ?: text
-}
+fun itemDescription(code: String, index: ContentIndex?): String = index.numbered(locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))).orEmpty()
+
+/**
+ * Что делает дар Предначертания [card], словами сервера: числа записи дара `{r:fates.<код>.…}` подставляет [index]
+ * ([com.sperance.exileforge.rules.text.numbered]); без контента или без числа - пусто.
+ */
+fun fateDescription(card: FateCard, index: ContentIndex?): String = index.numbered(locOr(card.description, "")).orEmpty()
 
 /** The English trade name, one in every language, for a full card only; null when the dictionary has none or it is the shown name already. */
 fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }

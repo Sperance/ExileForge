@@ -511,7 +511,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
 }
 
 /**
- * Лист эффектов героя «на весь бой» (кнопка «≡ N» у портрета): «На весь бой · N», чипы-фильтры по источнику со счётом (больше одной
+ * Лист эффектов героя «на весь бой» (кнопка «≡ N» у портрета): «На весь бой · N», чипы выбора источника со счётом (больше одной
  * группы) и группы [LastingGroup] строками с полными текстами - у силы уникалки источник - имя вещи. Читается вживую, бой не стоит.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -527,8 +527,8 @@ internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
             Text(ui("fight.shelf.lasting", items.size), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             if (groups.size > 1) {
                 FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ForgeChip(ui("fight.lasting.all"), only == null, { only = null }, count = items.size)
-                    groups.forEach { (group, list) -> ForgeChip(ui("fight.lasting.group.${group.name}"), only == group, { only = if (only == group) null else group }, count = list.size) }
+                    ForgeChip(ui("fight.lasting.all"), only == null, { only = null }, mode = ChipMode.Choice, count = items.size)
+                    groups.forEach { (group, list) -> ForgeChip(ui("fight.lasting.group.${group.name}"), only == group, { only = group }, mode = ChipMode.Choice, count = list.size) }
                 }
             }
             if (items.isEmpty()) MutedText(ui("fight.no_states"))

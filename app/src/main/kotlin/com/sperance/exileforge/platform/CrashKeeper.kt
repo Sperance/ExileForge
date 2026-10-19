@@ -13,11 +13,14 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 
+/** Время падения (мс) - приставка имени его файла. */
+private val File.stamp: Long get() = name.substringBefore('-').toLongOrNull() ?: 0
+
 /**
  * Падения клиента: необработанное исключение пишет стек на диск ([CRASH_DIR]) и отдаёт падение прежнему обработчику -
  * процесс умирает как обычно. Следующий запуск шлёт каждое неотправленное падение отчётом [FeedbackKind.CRASH] ([pending] /
- * [sent]) - сервер сам заведёт Issue или посчитает повтор. Последние [KEEP] стеков остаются и после отправки: их прикладывает
- * отчёт об ошибке игрока ([recent]).
+ * [sent]) - сервер сам заведёт Issue или посчитает повтор. Отправленные стеки живут [FRESH_MS] и только в своей версии сборки
+ * ([sweep]): их прикладывает отчёт об ошибке игрока ([recent]); неотправленные срок и смена версии не трогают.
  */
 class CrashKeeper(context: Context) :
     LeftReports,
@@ -51,24 +54,33 @@ class CrashKeeper(context: Context) :
     }
 
     /** Стеки новыми первыми. */
-    private fun files(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.name.substringBefore('-').toLongOrNull() ?: 0 }.orEmpty()
+    private fun files(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedByDescending { it.stamp }.orEmpty()
+
+    /** Прочитанные записи падений, новые первыми; нечитаемая и без стека - не падение. */
+    private fun kept(): List<KeptCrash> = files().mapNotNull { file -> runCatching { file.readText() }.getOrNull()?.let { KeptCrash.of(file, it) } }
+
+    /**
+     * Стирает отправленные стеки старше [FRESH_MS] от [now] и прежних версий сборки - к отчёту они больше не идут; неотправленные
+     * ждут своей отправки.
+     */
+    private fun sweep(now: Long) {
+        kept().filter { it.sent && (it.at < now - FRESH_MS || it.trace.buildVersion != BuildConfig.VERSION_NAME) }.forEach { it.file.delete() }
+    }
 
     /** Неотправленные падения: готовый отчёт и стирание его записи, старые первыми. */
     override suspend fun pending(): List<LeftReport> = withContext(Dispatchers.IO) {
-        files().filter { it.name.endsWith(PENDING) }.reversed().mapNotNull { file ->
-            val text = runCatching { file.readText() }.getOrNull() ?: return@mapNotNull null
-            val head = text.substringBefore(SPLIT).lines()
-            val crash = trace(text) ?: return@mapNotNull null
+        sweep(System.currentTimeMillis())
+        kept().filterNot { it.sent }.reversed().map { crash ->
             val report = BugReportRequest(
-                text = crash.stack.lineSequence().first().take(TITLE),
+                text = crash.trace.stack.lineSequence().first().take(TITLE),
                 screen = SCREEN,
-                context = mapOf("crashThread" to head.getOrNull(1).orEmpty(), "auto" to "true"),
+                context = mapOf("crashThread" to crash.thread, "auto" to "true"),
                 kind = FeedbackKind.CRASH,
-                clientVersion = crash.buildVersion,
-                crashes = listOf(crash),
-                key = "crash-${file.name.substringAfter('-').substringBefore('.')}",
+                clientVersion = crash.trace.buildVersion,
+                crashes = listOf(crash.trace),
+                key = "crash-${crash.file.name.substringAfter('-').substringBefore('.')}",
             )
-            LeftReport(report) { sent(file) }
+            LeftReport(report) { sent(crash.file) }
         }
     }
 
@@ -77,15 +89,30 @@ class CrashKeeper(context: Context) :
         file.renameTo(File(dir, file.name.removeSuffix(PENDING) + SENT))
     }
 
-    /** Последние падения (новые первыми) - к отчёту игрока об ошибке: стек с версией своей сборки, без потока. */
+    /**
+     * Падения к отчёту игрока об ошибке: только этой версии сборки и не старше [FRESH_MS], одинаковые стеки - одним с числом повторов
+     * ([CrashTrace.count]), новые первыми; стек с версией своей сборки, без потока.
+     */
     override suspend fun recent(): List<CrashTrace> = withContext(Dispatchers.IO) {
-        files().mapNotNull { file -> runCatching { file.readText() }.getOrNull()?.let(::trace) }
+        val now = System.currentTimeMillis()
+        sweep(now)
+        kept().filter { it.at >= now - FRESH_MS && it.trace.buildVersion == BuildConfig.VERSION_NAME }
+            .groupBy { it.trace.stack }.values.map { same -> same.first().trace.copy(count = same.size) }
     }
 
-    /** Запись падения: первая строка шапки - версия сборки, после [SPLIT] - стек; пустой стек - не падение. */
-    private fun trace(text: String): CrashTrace? {
-        val stack = text.substringAfter(SPLIT, "").takeIf { it.isNotBlank() } ?: return null
-        return CrashTrace(stack, text.substringBefore(SPLIT).lineSequence().first())
+    /**
+     * Запись падения на диске: [file], время [at] из имени, отправлено ли ([sent] - `.sent`), поток [thread] и стек с версией
+     * сборки [trace].
+     */
+    private data class KeptCrash(val file: File, val at: Long, val sent: Boolean, val thread: String, val trace: CrashTrace) {
+        companion object {
+            /** Запись [text] файла [file]: первая строка шапки - версия сборки, вторая - поток, после [SPLIT] - стек; пустой стек - не падение. */
+            fun of(file: File, text: String): KeptCrash? {
+                val stack = text.substringAfter(SPLIT, "").takeIf { it.isNotBlank() } ?: return null
+                val head = text.substringBefore(SPLIT).lines()
+                return KeptCrash(file, file.stamp, file.name.endsWith(SENT), head.getOrNull(1).orEmpty(), CrashTrace(stack, head.first()))
+            }
+        }
     }
 
     private companion object {
@@ -96,5 +123,8 @@ class CrashKeeper(context: Context) :
         const val KEEP = 3
         const val TITLE = 200
         const val SCREEN = "CRASH"
+
+        /** Сколько живёт отправленный стек и сколько падение идёт к отчёту об ошибке: сутки. */
+        const val FRESH_MS = 24 * 60 * 60 * 1000L
     }
 }

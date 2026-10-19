@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,7 +22,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -130,15 +130,16 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 
 /**
  * Предмет как страница «Реликвария» (выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
- * под ним что это и плашки уровня, качества и цены; база - крупными числами в три колонки; строки - со значком тира и вилкой
- * справа, нажатие открывает тир и место ролла. Уникальная и мифическая вещь лежат в «Астролябии»: кольца вокруг гнезда, искры
- * или звёзды, завитки по углам и номер экземпляра печатью. [totals] - итог героя «сейчас → станет» под строками,
+ * под ним что это и плашки уровня, качества и цены; строки - со значком тира, нажатие открывает тир и место ролла.
+ * Полная карточка начинается «Медальоном» ([MedallionHead]): база слева от гнезда, кольцо качества роллов и значки состояний
+ * справа, у легенды гнездо в «Астролябии» 112dp; касание имени - английское имя для поиска на аукционе, касание значка - что он
+ * значит. Короткая - значки в углу, гнездо по центру, база крупными числами под разделителем. Уникальная и мифическая вещь -
+ * искры или звёзды, завитки по углам и номер экземпляра. [totals] - итог героя «сейчас → станет» под строками,
  * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
  * Цена торговца копии заменяет голую цену шаблона. Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
- * требований - галка или крест, null - не с чем сравнить. Плашки состояний и замок - в углу (у легенды ниже и от края, мимо завитков
- * рамки), у полной карточки касание значка открывает подсказку, что он значит; кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе.
+ * требований - галка или крест, null - не с чем сравнить.
  * Строки - в порядке [ItemView.lineGroups]: врождённые над чертой, у полной - особые источники и [seals] (`GameUi.itemSeals`: захват
  * и качество карты с Атласом героя) плашками особого блока, основные - списком, под ними стороны аффиксов; у короткой - тот же порядок
  * без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
@@ -162,73 +163,21 @@ fun ItemCard(
 ) {
     val look = relicLook(item.rarity)
     val legend = look.legend != null
-    val serial = item.item.serial
     val shape = RoundedCornerShape(22.dp)
     val rolled = item.orderedLines
     var opened by remember { mutableStateOf<ItemLine?>(null) }
     Column(
         Modifier.fillMaxWidth().relicGround(look, shape, selected, sky = detailed)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(start = 18.dp, end = 18.dp, top = if (legend) 6.dp else 18.dp, bottom = 14.dp),
+            .padding(start = 18.dp, end = 18.dp, top = if (legend && !detailed) 6.dp else 18.dp, bottom = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            item.states.forEach { state ->
-                Tipped(if (detailed) ({ Tip(stateTitle(state), item.stateHint(state), tint = stateColor(state)) }) else null) {
-                    Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(15.dp))
-                }
-            }
-            if (locked) {
-                Tipped(if (detailed) ({ Tip(ui("item.locked"), ui("item.locked_hint")) }) else null) {
-                    Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
-                }
-            }
-            if (waiting) PendingMark()
-            Spacer(Modifier.weight(1f))
-            if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
-            if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
-        }
-        if (legend) {
-            Astrolabe(look, size = if (detailed) 200.dp else 140.dp, socket = if (detailed) 108.dp else 76.dp) {
-                ItemIcon(item, look.rarity, Modifier.size(if (detailed) 66.dp else 46.dp))
-            }
+        if (detailed) {
+            MedallionHead(item, look, price, locked, waiting, selected)
         } else {
-            RelicSocket(item, look, 88.dp)
+            ShortHead(item, look, price, locked, waiting, selected)
         }
-        Text(
-            item.title,
-            color = look.name,
-            style = look.nameStyle(if (legend) 23 else 22),
-            textAlign = TextAlign.Center,
-            maxLines = if (detailed) 4 else 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        val kind = listOfNotNull(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), rarityTitle(item.rarity)).joinToString(" · ")
-        Text(
-            if (legend) kind.uppercase() else kind,
-            color = look.muted,
-            style = MaterialTheme.typography.labelMedium,
-            letterSpacing = if (legend) 2.4.sp else .4.sp,
-            textAlign = TextAlign.Center,
-        )
-        if (detailed) item.trade?.let { Text(it, color = look.faint, style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic) }
-        if (serial > 0) SerialSeal(serial, look)
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-            itemVerticalAlignment = Alignment.CenterVertically,
-        ) {
-            RelicChip { Text(item.mapLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
-            QualityBadge(item)
-            (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
-        }
-        RelicDivider(look, Modifier.padding(horizontal = 4.dp))
-        BaseFigures(item, look)
         if (detailed) {
             RelicLines(item, look, seals) { opened = it }
         } else {
@@ -256,6 +205,150 @@ fun ItemCard(
     }
     opened?.let { ModifierInfoSheet(it) { opened = null } }
 }
+
+/** Значки состояний копии, замок и «ждёт отправки»; у полной карточки ([tipped]) касание значка - подсказка, что он значит. */
+@Composable private fun StateMarks(item: ItemView, locked: Boolean, waiting: Boolean, tipped: Boolean) {
+    item.states.forEach { state ->
+        Tipped(if (tipped) ({ Tip(stateTitle(state), item.stateHint(state), tint = stateColor(state)) }) else null) {
+            Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(15.dp))
+        }
+    }
+    if (locked) {
+        Tipped(if (tipped) ({ Tip(ui("item.locked"), ui("item.locked_hint")) }) else null) {
+            Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+        }
+    }
+    if (waiting) PendingMark()
+}
+
+/** Отметка выбранной карточки. */
+@Composable private fun SelectedMark() {
+    Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+}
+
+/** Имя предмета цветом редкости по центру; под ним - «тип или оружие · редкость» (у легенды заглавными). */
+@Composable private fun RelicTitle(item: ItemView, look: RelicLook, size: Int, maxLines: Int) {
+    val legend = look.legend != null
+    Text(item.title, color = look.name, style = look.nameStyle(size), textAlign = TextAlign.Center, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
+    val kind = listOfNotNull(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), rarityTitle(item.rarity)).joinToString(" · ")
+    Text(
+        if (legend) kind.uppercase() else kind,
+        color = look.muted,
+        style = MaterialTheme.typography.labelMedium,
+        letterSpacing = if (legend) 2.4.sp else .4.sp,
+        textAlign = TextAlign.Center,
+    )
+}
+
+/**
+ * Плашки шапки одной линией: уровень (кроме [noLevel] - уровень уже напечатан у гнезда), качество и цена [price]
+ * (цена торговца копии, иначе шаблона); [serial] - номер экземпляра легенды последней плашкой.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: Boolean = false, serial: Boolean = false) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (!noLevel) {
+            RelicChip { Text(item.mapLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+        }
+        QualityBadge(item)
+        (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
+        if (serial && item.item.serial > 0) SerialChip(item.item.serial, look)
+    }
+}
+
+/** Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера и плашки. */
+@Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
+    val legend = look.legend != null
+    Row(
+        Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        StateMarks(item, locked, waiting, tipped = false)
+        Spacer(Modifier.weight(1f))
+        if (selected) SelectedMark()
+    }
+    if (legend) {
+        Astrolabe(look, size = 140.dp, socket = 76.dp) { ItemIcon(item, look.rarity, Modifier.size(46.dp)) }
+    } else {
+        RelicSocket(item, look, 88.dp)
+    }
+    RelicTitle(item, look, if (legend) 23 else 22, maxLines = 2)
+    if (item.item.serial > 0) SerialSeal(item.item.serial, look)
+    RelicChips(item, look, price)
+    RelicDivider(look, Modifier.padding(horizontal = 4.dp))
+    BaseFigures(item, look)
+}
+
+/**
+ * Шапка полной карточки - «Медальон»: в ряду гнезда слева база (до [MEDALLION_FIGURES] чисел; у карты без базы - уровень карты),
+ * в центре гнездо или «Астролябия» 112dp, справа кольцо качества роллов и значки состояний. Ниже имя (касание - английское имя
+ * для поиска на аукционе), тип, плашки и разделитель; база сверх ряда гнезда - под разделителем.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
+    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
+    val mapLevel = item.mapLevel.takeIf { figures.isEmpty() }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            figures.take(MEDALLION_FIGURES).forEach { MedallionFigure(it.text, statTitle(it.stat), if (it.augmented) Rune else FigureInk, look) }
+            mapLevel?.let { MedallionFigure(it.toString(), ui("card.map_level_short"), FigureInk, look) }
+        }
+        if (look.legend != null) {
+            Astrolabe(look, size = 112.dp, socket = 72.dp) { ItemIcon(item, look.rarity, Modifier.size(48.dp)) }
+        } else {
+            RelicSocket(item, look, 72.dp)
+        }
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (item.orderedLines.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                StateMarks(item, locked, waiting, tipped = true)
+                if (selected) SelectedMark()
+            }
+        }
+    }
+    val trade = item.trade
+    Tipped(trade?.let { { Tip(it, ui("card.trade_hint")) } }, contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            RelicTitle(item, look, MEDALLION_NAME, maxLines = 4)
+        }
+    }
+    RelicChips(item, look, price, noLevel = mapLevel != null, serial = true)
+    RelicDivider(look, Modifier.padding(horizontal = 4.dp))
+    BaseFigures(item, look, skip = MEDALLION_FIGURES)
+}
+
+/** Число базы у гнезда «Медальона»: крупно цветом [ink], под ним подпись [label] цветом `muted`, по правому краю. */
+@Composable private fun MedallionFigure(value: String, label: String, ink: Color, look: RelicLook) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(value, color = ink, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Text(label, color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .8.sp, textAlign = TextAlign.End, maxLines = 2)
+    }
+}
+
+/** Номер экземпляра легенды плашкой шапки: Cinzel цветом акцента в золотой нити. */
+@Composable private fun SerialChip(serial: Long, look: RelicLook) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        Modifier.height(RelicChipHeight).background(look.gold.copy(alpha = .08f), shape).border(1.dp, look.gold.copy(alpha = .4f), shape).padding(horizontal = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(ui("relic.serial", serial), color = look.accent, style = TextStyle(fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, letterSpacing = .6.sp), maxLines = 1)
+    }
+}
+
+/** Чисел базы в ряду гнезда «Медальона»; остальные - под разделителем. */
+private const val MEDALLION_FIGURES = 3
+
+/** Кегль имени полной карточки. */
+private const val MEDALLION_NAME = 21
+
+/** Цвет крупного числа базы, не сдвинутого строками копии. */
+private val FigureInk = Color(0xFFFFF6E6)
 
 /** Высота плашек шапки карточки: уровень, жетон качества, цена. */
 internal val RelicChipHeight = 24.dp
@@ -316,18 +409,18 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 }
 
 /**
- * База вещи крупными числами: по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
+ * База вещи крупными числами без первых [skip] (они - у гнезда): по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
  * голубое. Свойство без характеристики остаётся фразой.
  */
-@Composable private fun BaseFigures(item: ItemView, look: RelicLook) {
-    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
+@Composable private fun BaseFigures(item: ItemView, look: RelicLook, skip: Int = 0) {
+    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }.drop(skip)
     val sentences = item.base.filter { property -> property.values.all { it.stat.isBlank() } }
     figures.chunked(3).forEach { row ->
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             row.forEachIndexed { i, value ->
                 if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(look.gold.copy(alpha = .16f)))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(value.text, color = if (value.augmented) Rune else Color(0xFFFFF6E6), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    Text(value.text, color = if (value.augmented) Rune else FigureInk, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
                     Text(statTitle(value.stat), color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
                 }
             }

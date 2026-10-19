@@ -926,6 +926,8 @@
   "card.roll_modest": "Скромные",
   "card.map_tier_title": "{0} · тир {1} · ур. {2}",
   "card.map_level": "Уровень карты {0}",
+  "card.map_level_short": "Ур. карты",
+  "card.trade_hint": "Имя для поиска на аукционе",
   "card.seal.capture": "монстры +{0}% · вещь с влиянием {1}%",
   "card.seal.quality": "+{0}% к количеству добычи",
   "card.seal.quality_source": "качество {0}%",

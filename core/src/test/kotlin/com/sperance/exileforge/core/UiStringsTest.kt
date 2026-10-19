@@ -198,7 +198,10 @@ class UiStringsTest {
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
             com.sperance.exileforge.core.network.SanctionCategory.entries.forEach { add("moderation.category.${it.name}") }
-            com.sperance.exileforge.core.model.feedback.ReportTopic.entries.forEach { add("bug.topic.${it.name}") }
+            com.sperance.exileforge.core.model.feedback.ReportTopic.entries.forEach {
+                add("bug.topic.${it.name}")
+                add("bug.title.${it.name}")
+            }
             com.sperance.exileforge.core.network.SanctionKind.entries.forEach {
                 add("moderation.kind.${it.name}")
                 add("moderation.imposed.${it.name}")

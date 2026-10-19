@@ -97,6 +97,8 @@ import kotlinx.serialization.Serializable
     val deletable: Boolean = false,
     /** Issue отчёта; null - ещё не отправлен. */
     val issue: IssueView? = null,
+    /** Тема ошибки: у улучшения карточка несёт «Идея». */
+    val topic: ReportTopic = ReportTopic.ERROR,
 ) {
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
@@ -150,6 +152,8 @@ import kotlinx.serialization.Serializable
     /** Сколько падений клиента и неудачных запросов несёт отчёт: сами они - в теле Issue. */
     val crashCount: Int = 0,
     val failureCount: Int = 0,
+    /** Тема ошибки: у улучшения карточка несёт «Идея». */
+    val topic: ReportTopic = ReportTopic.ERROR,
 )
 
 /**

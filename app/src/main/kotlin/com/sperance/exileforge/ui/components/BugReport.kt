@@ -102,8 +102,8 @@ fun BugSheet(
     val limit = game.inputs.report
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (game.isAdmin) PillTabs(ReportTopic.entries.map { ui("bug.topic.${it.name}") }, topic.ordinal, { topic = ReportTopic.entries[it] }, segmented = true)
-            Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            if (game.isAdmin) PillTabs(ReportTopic.entries.map { ui("bug.topic.${it.name}") }, ReportTopic.entries.indexOf(topic), { topic = ReportTopic.entries[it] }, segmented = true)
+            Text(ui("bug.title.${topic.name}"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
             OutlinedTextField(
                 text,

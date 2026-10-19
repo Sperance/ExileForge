@@ -242,6 +242,7 @@ private fun AdminReport.matches(query: String): Boolean {
         version = report.clientVersion,
         focused = true,
         onHeader = onCollapse,
+        topic = report.topic,
         author = { AuthorLine(entry, onDossier) },
         extra = {
             if (!report.kind.exported) Circumstances(report.context)

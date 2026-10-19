@@ -32,6 +32,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
+import com.sperance.exileforge.core.model.feedback.ReportTopic
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -40,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
  * ответ автора; [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
  * места, ссылки на GitHub у игрока нет. Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
  * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
- * (у модерации сворачивает тикет в строку).
+ * (у модерации сворачивает тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
  */
 @Composable internal fun ReportTicket(
     kind: FeedbackKind,
@@ -57,6 +58,7 @@ import com.sperance.exileforge.ui.theme.*
     onHeader: (() -> Unit)? = null,
     author: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
+    topic: ReportTopic = ReportTopic.ERROR,
     footer: @Composable RowScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
@@ -67,6 +69,7 @@ import com.sperance.exileforge.ui.theme.*
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ReportKindMark(kind, fate.tint)
+            if (topic == ReportTopic.IMPROVEMENT) Text(ui("feedback.idea"), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
             FatePill(fate, kind, issue, fresh)
             if (version.isNotBlank()) VersionTag(version)

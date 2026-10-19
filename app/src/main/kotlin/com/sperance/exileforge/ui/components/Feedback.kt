@@ -243,7 +243,7 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
     val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
-    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, reportThread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer) {
+    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, reportThread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer, topic = own.topic) {
         Score(own.likes, own.dislikes)
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }

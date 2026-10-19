@@ -40,11 +40,12 @@ import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.Engraved
-import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
+import com.sperance.exileforge.ui.components.RowActions
+import com.sperance.exileforge.ui.components.RowButton
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.skills.SkillPeek
 import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
@@ -197,35 +198,16 @@ internal fun compactCount(amount: Long): String = when {
     val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (forgeable) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui("bag.to_forge"))
-                }
-            }
-            if (essence) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui("bag.to_forge"))
-                }
-            }
-            if (seal) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = { onSeal(code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui("bag.to_forge"))
-                }
-            }
+        RowActions(Modifier.fillMaxWidth()) {
+            val idle = ButtonState.of(!game.busy)
+            RowButton(ui("hero.action_auction"), onClick = { onAuction(code) }, kind = ButtonKind.Secondary, state = idle)
+            if (forgeable) RowButton(ui("bag.to_forge"), onClick = { onForge(code) }, state = idle)
+            if (essence) RowButton(ui("bag.to_forge"), onClick = { onEssence(code) }, state = idle)
+            if (seal) RowButton(ui("bag.to_forge"), onClick = { onSeal(code) }, state = idle)
             if (readable && skill != null) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = { onRead(skill.code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"))
-                }
+                RowButton(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"), onClick = { onRead(skill.code) }, state = idle)
             }
-            if (chest) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = { onOpenChest(code) }, modifier = Modifier.weight(1f)) {
-                    Text(ui("chest.open"))
-                }
-            }
-            ForgeButton(state = ButtonState.of(!game.busy), onClick = { onAuction(code) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
-                Text(ui("hero.action_auction"))
-            }
+            if (chest) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
         }
     }
 }

@@ -224,8 +224,8 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
 }
 
 /**
- * One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the button with the next price.
- * Цена - чип «цена / есть» на кнопке ([GoldCost]); не хватает - цена красная, кнопка погашена.
+ * One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the next price over the button.
+ * В правом углу строки - чип «цена / есть» ([GoldCost]) и под ним малая «Купить»; не хватает - цена красная, кнопка погашена.
  *
  * Запас окна - сколько ещё на полке, угольным, когда пусто; нехватка золота - недостачей счёта.
  */
@@ -244,7 +244,9 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
                 bill?.takeUnless { it.affordable || orb.soldOut }?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
         }
-        ForgeButton(state = ButtonState.of(enabled), onClick = onBuy, kind = ButtonKind.Secondary) { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }
+        RowActions(value = { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }) {
+            RowButton(ui("auction.buy"), onClick = onBuy, state = ButtonState.of(enabled))
+        }
     }
 }
 

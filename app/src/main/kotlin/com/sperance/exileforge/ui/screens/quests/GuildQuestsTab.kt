@@ -47,7 +47,7 @@ import org.koin.compose.viewmodel.koinViewModel
         if (quests.personal.isEmpty()) item { MutedText(ui("quest.none")) }
         items(quests.personal, key = { it.id }) { quest ->
             QuestRow(quest) {
-                if (quest.done && !quest.claimed) ForgeButton({ vm.claimGuild(questId = quest.id) }, state = ButtonState.of(!busy)) { Text(ui("quest.claim")) }
+                if (quest.done && !quest.claimed) RowButton(ui("quest.claim"), onClick = { vm.claimGuild(questId = quest.id) }, state = ButtonState.of(!busy))
             }
         }
         goals(game.heroId, vm, busy, ui("quest.guild_daily"), ui("quest.resets", untilText(quests.dayEndsAt)), quests.daily, names)
@@ -106,7 +106,7 @@ private fun LazyListScope.goals(me: String, vm: QuestViewModel, busy: Boolean, t
             Row(horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 when {
                     view.claimed -> Text(ui("quest.claimed"), color = Vital, style = MaterialTheme.typography.labelMedium)
-                    done && view.mine >= view.need -> ForgeButton({ vm.claimGuild(goal = goal.key) }, state = ButtonState.of(!busy)) { Text(ui("quest.claim_share")) }
+                    done && view.mine >= view.need -> RowButton(ui("quest.claim_share"), onClick = { vm.claimGuild(goal = goal.key) }, state = ButtonState.of(!busy))
                     done -> MutedText(ui("quest.guild_short"))
                 }
             }

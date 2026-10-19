@@ -107,7 +107,6 @@
   "account.signin_section": "Вход",
   "account.strings": "строк: {0}",
   "account.title": "Врата мира",
-  "account.tools_hidden": "Инструменты сейчас скрыты — приложение выглядит так, как его видит игрок.",
   "account.content": "Контент мира",
   "account.chunks": "частей: {0}",
   "account.content_missing": "Контент мира ещё не прочитан: таблицы игры приходят при входе за героя.",

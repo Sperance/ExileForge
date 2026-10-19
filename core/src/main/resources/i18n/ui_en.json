@@ -107,7 +107,6 @@
   "account.signin_section": "Sign-in",
   "account.strings": "{0} strings",
   "account.title": "Gateway",
-  "account.tools_hidden": "The tools are hidden — the app looks the way a player sees it.",
   "account.content": "World content",
   "account.chunks": "chunks: {0}",
   "account.content_missing": "The world content has not been read yet: the game tables arrive on entering a hero.",

@@ -286,6 +286,7 @@ internal fun orbRecipe(
     val forecast = quality?.takeIf { code == Orb.QUALITY_ORB.name }
     val (effect, tone) = when {
         chosen.needsOmen && smithy.omen.isBlank() -> ui("forge.needs_omen") to Rune
+
         else -> forecast?.refusal?.let { it to LifeRed }
             ?: forecast?.raises?.takeIf { it.isNotBlank() }?.let { it to Vital }
             ?: (omen?.let { itemDescription(it, index) } ?: itemRule(code)) to Vital

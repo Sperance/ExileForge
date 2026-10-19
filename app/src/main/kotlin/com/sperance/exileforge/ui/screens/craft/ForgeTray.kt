@@ -231,4 +231,3 @@ private const val ONE_ROW = 6
         Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.fillMaxSize())
     }
 }
-

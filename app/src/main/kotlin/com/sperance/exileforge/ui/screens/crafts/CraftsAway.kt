@@ -32,8 +32,9 @@ import com.sperance.exileforge.core.crafts.Absence
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
@@ -77,19 +78,20 @@ import org.koin.compose.viewmodel.koinViewModel
             Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (made.isNotEmpty()) {
-                    ForgeOutlinedButton(
+                    ForgeButton(
                         onClick = {
                             onSeen()
                             heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true))
                         },
                         modifier = Modifier.weight(1f).height(44.dp),
+                        kind = ButtonKind.Secondary,
                     ) {
                         Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(ui("crafts.away_stash"))
                     }
                 }
-                ForgeButton(onClick = onSeen, modifier = Modifier.weight(1f).height(44.dp)) { Text(ui("crafts.away_ok")) }
+                ForgeButton(onClick = onSeen, modifier = Modifier.weight(1f), size = ButtonSize.Wide) { Text(ui("crafts.away_ok")) }
             }
         }
     }

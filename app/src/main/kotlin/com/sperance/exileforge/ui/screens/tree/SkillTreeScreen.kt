@@ -10,7 +10,6 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,7 +37,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
@@ -292,13 +290,9 @@ fun SkillTreePanel(
 
 internal val PILL = RoundedCornerShape(16.dp)
 
-/** A round button floating over the map, with a count in its corner when [badge] is given. */
+/** Кнопка поверх древа: тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
-    BadgedBox(badge = { badge?.let { Badge(containerColor = Vital, contentColor = Ink) { Text(it.toString(), fontSize = 9.sp) } } }) {
-        IconButton(onClick = onClick, modifier = Modifier.size(size).background(Panel.copy(alpha = .9f), CircleShape).border(1.dp, Bronze, CircleShape)) {
-            Icon(icon, label, tint = tint, modifier = Modifier.size(20.dp))
-        }
-    }
+    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = size < 44.dp, tint = tint, badge = badge)
 }
 
 /**

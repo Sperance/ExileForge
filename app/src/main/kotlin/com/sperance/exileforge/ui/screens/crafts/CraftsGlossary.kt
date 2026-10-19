@@ -5,8 +5,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -16,9 +14,9 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.ui.components.Engraved
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
@@ -48,7 +46,7 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
 @Composable internal fun CraftsGlossaryButton(rules: CraftsRules?, intro: String = "") {
     rules ?: return
     var open by remember { mutableStateOf(false) }
-    IconButton(onClick = { open = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("crafts.help.title"), tint = Muted) }
+    ForgeIconButton(Icons.Outlined.Info, ui("crafts.help.title"), onClick = { open = true }, compact = true)
     if (open) CraftsGlossary(rules, GLOSSARY, intro) { open = false }
 }
 

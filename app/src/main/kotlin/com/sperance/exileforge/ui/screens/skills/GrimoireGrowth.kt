@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,9 +51,9 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
@@ -64,7 +63,6 @@ import com.sperance.exileforge.ui.components.NeonHue
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.theme.Abyss
-import com.sperance.exileforge.ui.theme.Blood
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -129,7 +127,6 @@ internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: Skil
         enabled = reason == null && !game.busy,
         onClick = onRead,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
     ) {
         Text(if (view.level == 0) ui("skills.learn", books) else ui("skills.read_xp", number(view.bookXp), books))
     }
@@ -270,7 +267,7 @@ internal fun RunePicker(
             Text(ui("ritual.cost", itemTitle(input.item), have, input.amount), color = if (have >= input.amount) Vital else LifeRed, style = MaterialTheme.typography.labelMedium)
         }
         ritual.refusal?.let { Text(refusalText(it), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
-        ForgeOutlinedButton(enabled = !game.busy, onClick = { vm.openCrafts() }, modifier = Modifier.fillMaxWidth()) { Text(ui("ritual.to_job", professionTitle(ritual.profession))) }
+        ForgeButton(enabled = !game.busy, onClick = { vm.openCrafts() }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("ritual.to_job", professionTitle(ritual.profession))) }
     }
 }
 

@@ -21,8 +21,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -179,7 +177,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 /** Шапка окна профессии: назад, имя и уровень тонкой полосой с опытом «набрано / нужно», справка с описанием профессии и инструмент. */
 @Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onBack: () -> Unit, onTool: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, tint = Gold)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -201,13 +199,9 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.takeIf { it.isNotEmpty() }?.let(::choiceTitle)) + work.additives.map { "+ ${itemTitle(it)}" })
     .takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
-/** Квадратная кнопка «Остановить» 40dp в красной рамке. */
+/** «Остановить»: опасная компактная иконка-кнопка. */
 @Composable internal fun StopButton(enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Box(
-        Modifier.size(40.dp).clip(shape).border(1.dp, LifeRed.copy(alpha = .55f), shape).clickable(enabled = enabled, role = Role.Button, onClickLabel = ui("crafts.stop"), onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Icon(Icons.Outlined.Stop, ui("crafts.stop"), tint = LifeRed.copy(alpha = if (enabled) 1f else .4f), modifier = Modifier.size(18.dp)) }
+    ForgeIconButton(Icons.Outlined.Stop, ui("crafts.stop"), onClick = onClick, style = IconButtonStyle.Danger, compact = true, enabled = enabled)
 }
 
 /** The tool in the window's header: its icon in a frame of its rarity, or an empty «+» cell for none. */

@@ -50,7 +50,7 @@ import com.sperance.exileforge.ui.theme.*
             )
             MutedText("· " + ui("stash.ceiling", rules.maxSlots), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
             if (price > 0) {
-                ForgeOutlinedButton(onClick = { open = !open }) {
+                ForgeButton(onClick = { open = !open }, kind = ButtonKind.Secondary) {
                     Text(ui("stash.pack", pack))
                     Spacer(Modifier.width(6.dp))
                     GoldPrice(price)
@@ -83,15 +83,15 @@ import com.sperance.exileforge.ui.theme.*
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember)
             Spacer(Modifier.weight(1f))
-            ForgeTextButton(onClick = { vm.claimOverflow() }, enabled = !full && !game.busy) { Text(ui("stash.claim_all")) }
+            ForgeButton(onClick = { vm.claimOverflow() }, enabled = !full && !game.busy, kind = ButtonKind.Text) { Text(ui("stash.claim_all")) }
         }
         MutedText(ui("stash.overflow_hint"))
         hero.overflow.forEach { item ->
             game.view(item)?.let { piece ->
                 ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy) { Text(ui("stash.claim")) }
-                        ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked) { Text(ui("hero.sell_do")) }
+                        ForgeButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy, kind = ButtonKind.Text) { Text(ui("stash.claim")) }
+                        ForgeButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked, kind = ButtonKind.Text) { Text(ui("hero.sell_do")) }
                     }
                 }) { inspect(Inspect.Copy(item)) }
             }

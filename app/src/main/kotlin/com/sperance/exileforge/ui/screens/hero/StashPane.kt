@@ -14,7 +14,6 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -164,7 +163,7 @@ private const val SELL_HINT = "stash.hold_to_sell"
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(ui("stash.hold_hint"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp)) }
+        ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, compact = true)
     }
 }
 

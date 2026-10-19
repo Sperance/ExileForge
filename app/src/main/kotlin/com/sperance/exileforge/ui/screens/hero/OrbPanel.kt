@@ -85,10 +85,11 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     game.holding.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
     if (onGrant != null) {
-        ForgeOutlinedButton(
+        ForgeButton(
             enabled = enabled && game.isAdmin && selected.isNotBlank(),
             onClick = { onGrant(selected) },
             modifier = Modifier.fillMaxWidth(),
+            kind = ButtonKind.Secondary,
         ) {
             Text(ui("orb.top_up", ORB_TOP_UP))
         }

@@ -1,10 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
@@ -14,11 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,7 +75,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
-            val look = relicLook(view.rarity)
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
                     ItemCard(
@@ -109,7 +102,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            ForgeOutlinedButton(enabled = can && (game.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth()) {
+                            ForgeButton(enabled = can && (game.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                                 Text(ui("temper.go", itemTitle(ore), need, game.bagAmount(ore) ?: 0L))
                             }
                         }
@@ -137,18 +130,21 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             ) {
                 val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
                 when {
-                    instance.equipped && wornPlace != null -> PrimaryPill(ui("hero.replace"), can, look) { replacing = wornPlace }
-                    offer != null -> PrimaryPill(offer.label, offer.enabled, look) { offer.run(wear.target) }
+                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = can) {
+                        Text(ui("hero.replace"), maxLines = 1)
+                    }
+
+                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = offer.enabled) {
+                        Text(offer.label, maxLines = 1)
+                    }
                 }
-                QuietPill(can, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, onClick = {
+                ForgeButton(onClick = {
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
                     shell.tab(TAB_CRAFT)
-                }) { Text(ui("nav.forge"), color = if (can) GoldBright else Muted, style = MaterialTheme.typography.labelLarge, maxLines = 1) }
+                }, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, kind = ButtonKind.Secondary, size = ButtonSize.Compact, enabled = can) { Text(ui("nav.forge"), maxLines = 1) }
                 Box {
-                    QuietPill(true, square = true, onClick = { more = true }) {
-                        Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright, modifier = Modifier.size(18.dp))
-                    }
+                    ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, style = IconButtonStyle.Tonal, compact = true)
                     ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
                         if (instance.equipped && wornPlace != null) {
                             MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
@@ -183,31 +179,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     }
 }
 
-/** Главная кнопка листа: пилюля во всю ширину, у легенды - золотая. */
-@Composable private fun RowScope.PrimaryPill(label: String, enabled: Boolean, look: RelicLook, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(PillHeight / 2)
-    Box(
-        Modifier.weight(1f).height(PillHeight).then(if (enabled) Modifier.glow(look.glow, radius = 10.dp, shape = shape) else Modifier).clip(shape)
-            .then(if (enabled) Modifier.background(look.primary, shape) else Modifier.background(PanelRaised, shape))
-            .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = if (enabled) look.onPrimary else Muted, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, maxLines = 1)
-    }
-}
-
-/** Тихая кнопка рядом с главной: «Кузня» и «ещё». */
-@Composable private fun QuietPill(enabled: Boolean, square: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
-    val shape = RoundedCornerShape(PillHeight / 2)
-    Row(
-        modifier.height(PillHeight).then(if (square) Modifier.width(PillHeight) else Modifier).depthRaised(shape).clip(shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = if (square) 0.dp else 14.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-        content = content,
-    )
-}
-
 /** Строка меню «ещё»: рисунок и слово. */
 @Composable private fun MenuLine(icon: ImageVector, label: String, enabled: Boolean, accent: Color = Gold, onClick: () -> Unit) {
     DropdownMenuItem(
@@ -235,6 +206,3 @@ private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.I
 
 /** The profession whose level tempering asks. */
 private const val SMITHING = "SMITHING"
-
-/** Высота кнопок карточки: одна низкая строка вместо крупных плит. */
-private val PillHeight = 36.dp

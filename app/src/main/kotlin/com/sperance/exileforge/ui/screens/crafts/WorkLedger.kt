@@ -60,7 +60,8 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkMiss
 import com.sperance.exileforge.rules.roll.WorkTally
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberNow
@@ -180,7 +181,7 @@ internal fun WorkLedger(
             SectionRule(ui("crafts.made_title", made.size))
             MadeList(game, made) { inspect(Inspect.Copy(it)) }
             onShow?.let { show ->
-                ForgeOutlinedButton(onClick = show, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(onClick = show, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(ui("crafts.show_in_stash"))

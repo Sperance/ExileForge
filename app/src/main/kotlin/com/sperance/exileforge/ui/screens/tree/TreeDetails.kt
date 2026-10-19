@@ -202,15 +202,25 @@ import kotlin.math.sin
     if (allocated) {
         val refusal = remember(node.code, taken) { ruleRefusal { TreeAllocation.requireRefundable(index.tree, node, taken) } }
         val jewels = game.hero?.jewels.orEmpty()
-        HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && refusal == null, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
+        ForgeButton(
+            onClick = { onRefund(node.code) },
+            modifier = Modifier.fillMaxWidth(),
+            kind = ButtonKind.Danger,
+            enabled = enabled && refusal == null,
+            hold = Hold(millis = REFUND_HOLD_MS, rearm = true),
+        ) { Text(ui("tree.refund")) }
         if (refusal != null && node.type != SkillNodeType.START) Text(refusal, color = LifeRed, style = MaterialTheme.typography.bodySmall)
         if (refusal == null && node.code in jewels) MutedText(ui("tree.jewel_returns"))
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {
             val owned = game.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
-            HoldButton(ui("tree.refund_branch", branch.size), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && owned >= branch.size, rearm = true, millis = REFUND_HOLD_MS) {
-                onRefundBranch(node.code)
-            }
+            ForgeButton(
+                onClick = { onRefundBranch(node.code) },
+                modifier = Modifier.fillMaxWidth(),
+                kind = ButtonKind.Danger,
+                enabled = enabled && owned >= branch.size,
+                hold = Hold(millis = REFUND_HOLD_MS, rearm = true),
+            ) { Text(ui("tree.refund_branch", branch.size)) }
             MutedText(ui("tree.refund_branch_note", branch.size, owned))
             branch.count { it in jewels }.takeIf { it > 0 }?.let { MutedText(ui("tree.refund_branch_jewels", it)) }
         }
@@ -260,7 +270,7 @@ import kotlin.math.sin
 }
 
 @Composable internal fun CloseButton(onClose: () -> Unit) {
-    IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp)) }
+    ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onClose, compact = true)
 }
 
 /**
@@ -300,7 +310,7 @@ import kotlin.math.sin
                 noteColor = if (allocated && idle == null) Gold else LifeRed,
             ) { inspect(Inspect.Copy(inside)) }
         }
-        ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
+        ForgeButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
             Text(ui("tree.jewel_out"))
         }
     }

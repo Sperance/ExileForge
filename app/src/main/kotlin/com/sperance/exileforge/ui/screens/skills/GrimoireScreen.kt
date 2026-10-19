@@ -419,7 +419,7 @@ internal fun books(index: ContentIndex): List<Item> = index.itemsByCategory[Item
                 Text(ui("skills.books_owned", owned), color = GoldBright, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("skills.exchange_hint", rule.books))
             }
-            ForgeOutlinedButton(enabled = owned >= rule.books && pages.isNotEmpty() && !game.busy, onClick = onExchange) { Text(ui("skills.exchange")) }
+            ForgeButton(enabled = owned >= rule.books && pages.isNotEmpty() && !game.busy, onClick = onExchange, kind = ButtonKind.Secondary) { Text(ui("skills.exchange")) }
         }
     }
 }

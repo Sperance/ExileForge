@@ -64,8 +64,8 @@ import com.sperance.exileforge.ui.theme.*
         gives?.let { Text(it, color = Elder, style = MaterialTheme.typography.bodySmall) }
         val fee = game.goldBill(index.rules.craftFee.essence(view.item.level(view.template)))
         FeeChip(fee)
-        HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_essence"))), Elder, enabled = enabled && !view.item.corrupted && fee.covered, rearm = true) {
-            onApply(view.item.id, code)
+        ForgeButton(onClick = { onApply(view.item.id, code) }, modifier = Modifier.fillMaxWidth(), enabled = enabled && !view.item.corrupted && fee.covered, hold = Hold(rearm = true)) {
+            Text(fee.paying(ui("confirm.hold", ui("forge.apply_essence"))))
         }
     }
 }
@@ -120,9 +120,12 @@ import com.sperance.exileforge.ui.theme.*
             ForgeButton(onPickLine, Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted && fee.covered) { Text(fee.paying(ui("forge.engrave_pick"))) }
             return@ForgeBar
         }
-        HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_orb"))), Gold, enabled = enabled && !target.corrupted && !waiting && fee.covered, rearm = true) {
-            if (resets) confirming = true else onApply(code)
-        }
+        ForgeButton(
+            onClick = { if (resets) confirming = true else onApply(code) },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = enabled && !target.corrupted && !waiting && fee.covered,
+            hold = Hold(rearm = true),
+        ) { Text(fee.paying(ui("confirm.hold", ui("forge.apply_orb")))) }
     }
     if (confirming && chosen != null) {
         AlertDialog(
@@ -136,12 +139,12 @@ import com.sperance.exileforge.ui.theme.*
             },
             text = { Text(ui("forge.quality_reset_note", lost), color = Parchment) },
             confirmButton = {
-                ForgeTextButton(enabled = enabled, onClick = {
+                ForgeButton(enabled = enabled, onClick = {
                     confirming = false
                     onApply(chosen.code)
-                }) { Text(ui("forge.quality_reset_do")) }
+                }, kind = ButtonKind.Text) { Text(ui("forge.quality_reset_do")) }
             },
-            dismissButton = { ForgeTextButton(onClick = { confirming = false }) { Text(ui("common.cancel")) } },
+            dismissButton = { ForgeButton(onClick = { confirming = false }, kind = ButtonKind.Text) { Text(ui("common.cancel")) } },
         )
     }
 }
@@ -165,7 +168,9 @@ import com.sperance.exileforge.ui.theme.*
             if (waiting) ui("forge.needs_omen") to true else stock(code, game.bagAmount(code) ?: 0L, 1),
             code = code,
         )
-        HoldButton(ui("confirm.hold", ui("forge.apply_seal")), Gold, enabled = enabled && !target.corrupted && !waiting, rearm = true) { onApply(code) }
+        ForgeButton(onClick = { onApply(code) }, modifier = Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted && !waiting, hold = Hold(rearm = true)) {
+            Text(ui("confirm.hold", ui("forge.apply_seal")))
+        }
     }
 }
 
@@ -184,7 +189,9 @@ import com.sperance.exileforge.ui.theme.*
                 BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(scouring.name, owned, 1))
                 val fee = game.goldBill(index.rules.craftFee.uncraft(instance.level(item.template)))
                 FeeChip(fee)
-                HoldButton(fee.paying(ui("confirm.hold", ui("forge.remove_bench"))), Crafted, enabled = enabled && owned >= 1 && fee.covered, rearm = true) { vm.uncraft(instance.id) }
+                ForgeButton(onClick = { vm.uncraft(instance.id) }, modifier = Modifier.fillMaxWidth(), enabled = enabled && owned >= 1 && fee.covered, hold = Hold(rearm = true)) {
+                    Text(fee.paying(ui("confirm.hold", ui("forge.remove_bench"))))
+                }
             }
 
             recipe != null -> {
@@ -192,7 +199,9 @@ import com.sperance.exileforge.ui.theme.*
                 BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(recipe.orb.name, owned, recipe.amount))
                 val fee = game.goldBill(index.rules.craftFee.bench(instance.level(item.template)))
                 FeeChip(fee)
-                HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_bench"))), Crafted, enabled = enabled && owned >= recipe.amount && fee.covered, rearm = true) { vm.craft(instance.id, recipe.code) }
+                ForgeButton(onClick = { vm.craft(instance.id, recipe.code) }, modifier = Modifier.fillMaxWidth(), enabled = enabled && owned >= recipe.amount && fee.covered, hold = Hold(rearm = true)) {
+                    Text(fee.paying(ui("confirm.hold", ui("forge.apply_bench"))))
+                }
             }
 
             else -> Text(ui("forge.pick_line"), color = Muted)
@@ -261,8 +270,8 @@ internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> 
         ) {
             Text(ui("forge.engrave_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             lines.forEach { line -> EngraveRow(line, line.line == chosen) { chosen = line.line } }
-            HoldButton(ui("forge.engrave_do"), Gold, Modifier.padding(top = 6.dp), enabled = enabled && chosen != null, rearm = true) {
-                chosen?.let(onEngrave)
+            ForgeButton(onClick = { chosen?.let(onEngrave) }, modifier = Modifier.padding(top = 6.dp).fillMaxWidth(), enabled = enabled && chosen != null, hold = Hold(rearm = true)) {
+                Text(ui("forge.engrave_do"))
             }
         }
     }

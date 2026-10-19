@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
     val any = ui("grant.any")
     var rarity by rememberSaveable { mutableStateOf("") }
     var slot by rememberSaveable { mutableStateOf("") }
-    ForgeTextButton(onClick = { expanded = !expanded }) {
+    ForgeButton(onClick = { expanded = !expanded }, kind = ButtonKind.Text) {
         Text(ui("grant.title", if (expanded) ui("common.hide") else ui("common.show")))
     }
     if (!expanded) return

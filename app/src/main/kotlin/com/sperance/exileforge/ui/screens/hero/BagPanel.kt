@@ -37,9 +37,9 @@ import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.RuneDefinition
+import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
@@ -222,7 +222,7 @@ internal fun compactCount(amount: Long): String = when {
                     Text(ui("chest.open"))
                 }
             }
-            ForgeOutlinedButton(enabled = !game.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+            ForgeButton(enabled = !game.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
                 Text(ui("hero.action_auction"))
             }
         }

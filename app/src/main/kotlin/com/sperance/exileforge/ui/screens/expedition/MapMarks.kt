@@ -46,6 +46,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
+import com.sperance.exileforge.ui.components.touchZone
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.BlightTint
 import com.sperance.exileforge.ui.theme.Caution
@@ -139,12 +140,14 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(7.dp)
     Row(
-        Modifier.height(MARK_HEIGHT).background(MarkWell, shape).background(tint.copy(alpha = .13f), shape).border(1.dp, tint.copy(alpha = .62f), shape)
+        Modifier
             .clickable {
                 open = true
                 onOpen?.invoke()
             }
             .semantics { contentDescription = tip().let { listOf(it.title, it.body).filter(String::isNotBlank).joinToString(". ") } }
+            .touchZone()
+            .height(MARK_HEIGHT).background(MarkWell, shape).background(tint.copy(alpha = .13f), shape).border(1.dp, tint.copy(alpha = .62f), shape)
             .padding(start = 6.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),

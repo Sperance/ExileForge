@@ -70,6 +70,9 @@ class WorldMap(val campaign: CampaignFile, private val world: WorldGraph, progre
         return WorldPoint(ahead.sumOf { it.zone.x } / ahead.size, ahead.sumOf { it.zone.y } / ahead.size)
     }
 
+    /** Где на карте герой: зона [zone], если её жетон показан, иначе граница ([frontier]). */
+    fun heroSpot(zone: MapCode?): WorldPoint = zone?.let(byCode::get)?.zone?.let { WorldPoint(it.x, it.y) } ?: frontier()
+
     /** The zones that lead into [code] and are shown open or passed: whose boss will open it. */
     fun keysTo(code: MapCode): List<Zone> = byCode[code]?.zone?.from.orEmpty().mapNotNull(byCode::get).filter { it.state != TokenState.LOCKED }.map { it.zone }
 

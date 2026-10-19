@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemFilters
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.LaunchLines
+import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +52,15 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
     suspend fun keepWorldView(heroId: String, view: WorldView) {
         if (heroId.isBlank()) return
         editSettings { copy(worldViews = worldViews + (heroId to view)) }
+    }
+
+    /** Последняя зона, в которую входил герой [heroId] на этом устройстве; не входил - null. */
+    fun lastZone(heroId: String): MapCode? = settings.value.lastZones[heroId]?.let(::MapCode)
+
+    /** Запомнить зону [zone], в которую вошёл герой [heroId]: только настройки устройства; без героя - ничего. */
+    suspend fun keepLastZone(heroId: String, zone: MapCode) {
+        if (heroId.isBlank()) return
+        editSettings { copy(lastZones = lastZones + (heroId to zone.value)) }
     }
 
     /**

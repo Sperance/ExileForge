@@ -44,6 +44,9 @@ class ExpeditionViewModel(
         viewModelScope.launch { prefs.keepWorldView(heroId, view) }
     }
 
+    /** Зона героя, к которой ведёт кнопка «К герою»; нет - null, камера идёт к границе. */
+    fun heroZone(): MapCode? = expedition.heroZone()
+
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val state: StateFlow<Expedition> = repository.state

@@ -369,11 +369,12 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
 @Composable private fun ResultLine(game: GameUi, job: JobView, onOpen: (Inspect?) -> Unit) {
     val card = resultCard(game, job)
     val output = job.output
-    val (meta, description) = when (card) {
-        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble())) to itemDescription(output, game.index)
-        is Inspect.Showcase -> (game.index?.template(output)?.let { ui("row.level", it.level) } ?: "") to ""
-        else -> "" to ""
+    val meta = when (card) {
+        is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble()))
+        is Inspect.Showcase -> game.index?.template(output)?.let { ui("row.level", it.level) }.orEmpty()
+        else -> ""
     }
+    val description = if (card is Inspect.Stack) itemDescription(output, game.index) else ""
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = card != null, role = Role.Button) { onOpen(card) }.padding(vertical = 2.dp),
         verticalAlignment = Alignment.Top,

@@ -2876,6 +2876,8 @@
   "guild.invite_title": "Invite a hero",
   "guild.hero_name": "Hero's name",
   "guild.invite": "Invite",
+  "guild.invite_named": "Invite «{0}»",
+  "guild.invite_find_first": "Find the hero first",
   "guild.me": "{0} (you)",
   "guild.member_line": "{0} · {1} · lvl {2} · {3}",
   "guild.member_joined": "In the guild since {0} · gave {1}",

@@ -211,7 +211,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
 }
 
 /** Кнопка строки инструментов (40dp): значок и слово цветом [tint] на его же тусклой заливке. */
-@Composable private fun ToolButton(icon: ImageVector, text: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
+@Composable internal fun ToolButton(icon: ImageVector, text: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Row(
         Modifier.height(40.dp).alpha(if (enabled) 1f else .45f).clip(shape).background(tint.copy(alpha = .09f), shape).border(1.dp, tint.copy(alpha = .4f), shape)

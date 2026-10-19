@@ -103,14 +103,34 @@ class QuestActions(
             val targets = repository.state.value.targets()
             val result = turnIns ?: quietly { api.quests.claimAll(heroId) } ?: return@launch
             if (!heroes.onScreen(heroId)) return@launch
-            quests { it.copy(board = result.board) }
-            heroes.money(result.money)
-            val boards = guild ?: if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) quietly { api.quests.guild(heroId) } else null
-            boards?.let { g -> quests { it.copy(guild = g) } }
+            val boards = settle(heroId, result, guild, targets)
             if (result.claimed.isEmpty()) return@launch
             val named = targets + Quests(guild = boards).targets()
             if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards, it.kind, it.run) })) notices.toast(claimedLine(result.claimed, named))
         }
+    }
+
+    /**
+     * «Сдать всё» доски заданий: всё готовое разом - тот же запрос, что сдача после похода, но командой экрана (по одной за раз,
+     * отказ - тостом); тост - что сдано и награды суммой.
+     */
+    fun claimAll() = command({ line: String -> line }) { id ->
+        val targets = repository.state.value.targets()
+        val result = api.quests.claimAll(id)
+        val boards = if (heroes.onScreen(id)) settle(id, result, null, targets) else null
+        claimedLine(result.claimed, targets + Quests(guild = boards).targets())
+    }
+
+    /**
+     * Сдача разом героя [id] легла: доска и золото - из ответа [result], доски гильдии - [guild] или перечитанные, если сдалась доля
+     * в задании, которого нет среди целей [targets] до сдачи. Итог - доски гильдии, что легли (их цели называют сданное).
+     */
+    private suspend fun settle(id: String, result: QuestClaimAll, guild: GuildQuests?, targets: Map<String, Long>): GuildQuests? {
+        quests { it.copy(board = result.board) }
+        heroes.money(result.money)
+        val boards = guild ?: if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) quietly { api.quests.guild(id) } else null
+        boards?.let { g -> quests { it.copy(guild = g) } }
+        return boards
     }
 
     /** Чтение конца похода: ошибка - null, отмена идёт дальше. */

@@ -1,11 +1,8 @@
 package com.sperance.exileforge.ui.screens.quests
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.PreferencesRepository
-import com.sperance.exileforge.core.app.StoryFold
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.questboard.QuestModel
 import com.sperance.exileforge.core.quests.QuestRepository
@@ -15,12 +12,7 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 /**
  * Экран квестов Города, вкладка квестов гильдии и сюжет «Похода»: доски из репозитория, действия общие,
@@ -32,14 +24,13 @@ class QuestViewModel(
     commands: CommandRunner,
     slice: GameSlice,
     private val navigator: Navigator,
-    private val prefs: PreferencesRepository,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val quests: StateFlow<Quests> = repository.state
     val activity: StateFlow<Activity> = commands.state
 
-    private val model = QuestModel(actions, repository, prefs, viewModelScope)
+    private val model = QuestModel(actions, repository)
 
     val tab: StateFlow<QuestTab> = model.tab
 
@@ -59,16 +50,13 @@ class QuestViewModel(
     fun reset(offerId: String) = actions.reset(offerId)
     fun abandon(questId: String) = actions.abandon(questId)
 
+    /** «Сдать всё»: всё готовое на доске - разом. */
+    fun claimAll() = actions.claimAll()
+
     /** Закон трона за пройденную главу: выбор навсегда, без перевыбора. */
     fun law(code: String) = actions.law(code)
     fun book(chapter: Int, code: String) = actions.book(chapter, code)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
-
-    /** Свёрнутость карточки сюжета, из настроек устройства. */
-    val storyFold: StateFlow<StoryFold> = model.storyFold
-
-    fun foldStory(collapsed: Boolean) = model.foldStory(collapsed)
-    fun seeStory(quest: String, ready: Boolean) = model.seeStory(quest, ready)
 
     /** Весь сюжет - экран над картой «Похода». */
     fun openStory() = navigator.tab(Route.Story)

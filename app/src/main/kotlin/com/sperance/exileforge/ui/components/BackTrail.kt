@@ -34,6 +34,7 @@ private class TrailEntry(label: String, val back: State<() -> Unit>) {
     var label by mutableStateOf(label)
     var title by mutableStateOf<String?>(null)
     var data by mutableStateOf<String?>(null)
+    var tip by mutableStateOf<Tip?>(null)
     val shown: String get() = title ?: label
 }
 
@@ -99,14 +100,19 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 
 /**
  * Данные экрана справа в строке цепочки, пока вызов на экране: Гримуар - «Ур. 25 · ✦ 215 · ⛓ 30%», уникальные - «34 / 210». Своей
- * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда.
+ * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда. [tip] - пояснение данных по касанию (срок сброса
+ * доски заданий и как задания засчитываются); нет - данные не нажимаются.
  */
-@Composable fun TrailData(data: String) {
+@Composable fun TrailData(data: String, tip: Tip? = null) {
     val scope = LocalTrail.current ?: return
     val entry = scope.state.levels[scope.depth] ?: return
-    DisposableEffect(entry, data) {
+    DisposableEffect(entry, data, tip) {
         entry.data = data
-        onDispose { if (entry.data == data) entry.data = null }
+        entry.tip = tip
+        onDispose {
+            if (entry.data == data) entry.data = null
+            if (entry.tip == tip) entry.tip = null
+        }
     }
 }
 
@@ -121,6 +127,7 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
     Row(Modifier.fillMaxWidth().height(TRAIL_HEIGHT).padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, accent = Gold)
         val data = levels.last().data
+        val tip = levels.last().tip
         Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.shown }
             names.forEachIndexed { i, name ->
@@ -137,15 +144,17 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
             }
         }
         data?.let {
-            Text(
-                it,
-                color = Rune,
-                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f).padding(start = 8.dp),
-            )
+            Tipped(tip?.let { t -> { t } }, Modifier.weight(1f).fillMaxHeight().padding(start = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                Text(
+                    it,
+                    color = Rune,
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

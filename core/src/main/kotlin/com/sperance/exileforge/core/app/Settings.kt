@@ -23,8 +23,6 @@ data class GameSettings(
     val simpleEffects: Boolean = false,
     val buzzDanger: Boolean = true,
     val buzzButtons: Boolean = false,
-    /** Карточка сюжета над картой «Похода»: свёрнута ли и при каком шаге это решено. */
-    val storyFold: StoryFold = StoryFold(),
     /** Где стояла камера карты «Похода» у каждого героя: по id героя; вход на вкладку возвращает её туда же. */
     val worldViews: Map<String, WorldView> = emptyMap(),
     /**
@@ -53,19 +51,6 @@ data class GameSettings(
 /** Камера карты «Похода»: точка мира в середине экрана ([x], [y]) и приближение [scale]. */
 @Serializable
 data class WorldView(val x: Int, val y: Int, val scale: Float)
-
-/**
- * Свёрнутость карточки сюжета и шаг, при котором игрок её видел: [quest] - id задания главы, [ready] - ждала ли награда.
- * Новый шаг сюжета или награда, что стала ждать, раскрывают свёрнутую карточку сами.
- */
-@Serializable
-data class StoryFold(val collapsed: Boolean = false, val quest: String = "", val ready: Boolean = false) {
-    /** Карточка увидела шаг [quest] с наградой [ready]: новый шаг или награда, что стала ждать, - раскрыть. */
-    fun seen(quest: String, ready: Boolean): StoryFold = when {
-        quest != this.quest || (ready && !this.ready) -> StoryFold(collapsed = false, quest = quest, ready = ready)
-        else -> copy(ready = ready)
-    }
-}
 
 /** When the screen stays lit: only while a run or a trial is on screen, always, or as the phone decides. */
 enum class KeepScreen { EXPEDITION, ALWAYS, NEVER }

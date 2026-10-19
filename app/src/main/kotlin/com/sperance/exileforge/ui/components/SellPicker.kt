@@ -59,10 +59,10 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
         state.value = SellSelection()
     }
 
-    /** Отмечает лоты фильтра автопродажи, которых ещё нет в [seen], и запоминает их там ([SellSelection.byRules]). */
-    fun markByRules(seen: MutableSet<String>) {
-        state.value = state.value.byRules(lots, seen)
-        lots.filter { it.byRules }.mapTo(seen) { it.id }
+    /** Отмечает [ids], которых ещё нет в [seen], и запоминает их там ([SellSelection.mark]). */
+    fun markNew(ids: Collection<String>, seen: MutableSet<String>) {
+        state.value = state.value.mark(ids, seen)
+        seen += ids
     }
 }
 

@@ -133,13 +133,16 @@ import kotlinx.serialization.Serializable
  * Куда легли пришедшие герою вещи: в тайник, в переполнение или торговцу.
  *
  * @property overflowSold вещи, проданные торговцу из-за полных тайника и переполнения, с выручкой только с них.
- * @property autoSold добыча, проданная фильтром автопродажи героя сразу: вне захода - при любом числе свободных мест, в заходе - не влезшая в тайник.
+ * @property autoSold добыча, проданная фильтром автопродажи героя сразу: вне захода - при любом числе свободных мест, в заходе - не влезшая в тайник
+ * и отложенная, что уступила место новой добыче.
+ * @property deferred id легшей в тайник добычи захода, что продаёт фильтр героя: итоги захода отмечают к продаже ровно её.
  */
 @Serializable data class Received(
     val stashed: Int = 0,
     val overflowed: Int = 0,
     val overflowSold: Sale = Sale(),
     val autoSold: Sale = Sale(),
+    val deferred: List<String> = emptyList(),
 )
 
 /** A trial entered: the trial itself and the hero's context frozen on entry, the monsters stood up by it. */

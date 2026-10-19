@@ -235,7 +235,7 @@ class ExpeditionActions(
 
     /**
      * «Покинуть» незаконченный заход: журнал, что ещё не дошёл, отправляется - его добыча героя, - и заход закрывается
-     * на сервере, как выходом.
+     * на сервере, как выходом. Итогов нет - отложенная добыча захода продаётся вся.
      */
     fun abandonUnfinished() {
         val offer = repository.state.value.unfinished ?: return
@@ -243,6 +243,7 @@ class ExpeditionActions(
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
             finish(id, offer.runId)
+            settleDeferred(id, emptyList())
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
         }
     }
@@ -467,6 +468,7 @@ class ExpeditionActions(
             report.rewards.filter { it.atlas.isNotEmpty() }.associate { it.n to it.atlas },
         )
         report.rewards.lastOrNull { it.chestStock != null }?.chestStock?.let { j.chestStock = it }
+        markDeferred(j, report.received.deferred)
         val reported = runs().takeIf { it.isNotEmpty() }?.let { report.rewards.filter { r -> r.kind in FOUGHT_EVENTS }.flatMap { r -> r.atlas } }.orEmpty()
         runs().forEach { it.send(answer) }
         campaign()
@@ -523,6 +525,16 @@ class ExpeditionActions(
             j.saleMarks = repository.state.value.saleMarks
             persist()
         }
+    }
+
+    /**
+     * Отложенная продажа: добыча захода, что продаёт фильтр героя, сервер кладёт в тайник и называет её id - она ложится в пометки к продаже
+     * ([RunJournal.saleMarks]), и итоги карты отмечают ровно её; снятую отметку итоги передают серверу ([closeSettling]).
+     */
+    private fun markDeferred(j: RunJournal, ids: List<String>) {
+        if (ids.isEmpty()) return
+        j.saleMarks = j.saleMarks + ids
+        if (marked == j.runId) expedition { it.copy(saleMarks = it.saleMarks + ids) }
     }
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
@@ -671,8 +683,20 @@ class ExpeditionActions(
         }
     }
 
-    /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча [itemIds] продаётся пачкой. */
-    fun closeSelling(itemIds: Collection<String>) = close { id -> heroActions.value.sellBatch(id, itemIds) }
+    /**
+     * Выход из итогов захода: заход закрывается и на сервере, отмеченная добыча [sell] продаётся пачкой, затем сервер продаёт оставшуюся
+     * отложенную добычу захода, кроме [keep] - добычи итогов со снятой отметкой.
+     */
+    fun closeSettling(sell: Collection<String>, keep: Collection<String>) = close { id ->
+        if (sell.isNotEmpty()) heroActions.value.sellBatch(id, sell)
+        settleDeferred(id, keep)
+    }
+
+    /** Отложенная добыча закрытого захода продаётся сервером, кроме [keep]; проданное - тостом, как автопродажа. */
+    private suspend fun settleDeferred(heroId: String, keep: Collection<String>) {
+        val received = api.campaign.settle(heroId, keep.toList())
+        receivedText(received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
+    }
 
     /**
      * Закрывает заход [runId] на сервере: недошедший журнал отправляется (его добыча - героя), затем заход брошен, как выходом;

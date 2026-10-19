@@ -102,14 +102,21 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * fills in as the answers arrive. A piece opens its comparison with what is worn, a stack its description.
  * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N и вернуться» на месте возврата в лагерь.
  *
- * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе и подходящее фильтру автопродажи уже отмечено (сервер в заходе её
- * не продаёт, а кладёт в тайник), отметку можно снять. Есть отмеченное - выход из итогов продаёт его: кнопка «Продать N и вернуться» вместо
- * возврата, «Назад» - так же (с ценным - сперва режим продажи, где оно подтверждается). Из
+ * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе и отложенная продажа сервера (добыча, что продаёт фильтр героя: в заходе
+ * она легла в тайник, её id пришли с ответами журнала) уже отмечены, отметку можно снять - вещь остаётся. Выход из итогов продаёт отмеченное:
+ * кнопка «Продать N и вернуться» вместо возврата, «Назад» - так же (с ценным - сперва режим продажи, где оно подтверждается); оставшуюся
+ * отложенную добычу, кроме снятой, сервер продаёт сам. «Назад» живёт, как кнопки итогов: до их оживления и под командой оно ничего не делает. Из
  * выигранной зоны Ваал возвращаются на карту без продажи; павший в зоне продаёт и её добычу, и добычу основной карты. Разбор золота и опыта
  * - прибавки контекста захода, как их берёт сервер. Режим продажи включает удержание вещи; страница открывается в обычном режиме. Кнопки
  * итогов оживают не сразу: нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход. Ниже уровня штрафа гибель даром.
  */
-@Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: (sell: List<String>) -> Unit) {
+@Composable internal fun MapSummary(
+    game: GameUi,
+    vm: ExpeditionViewModel,
+    hud: RunHud,
+    head: SummaryHead = SummaryHead.of(hud),
+    onDone: (sell: List<String>, keep: List<String>) -> Unit,
+) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
@@ -129,23 +136,24 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val experience = remember(run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
-    val ruled = remember { HashSet<String>() }
-    LaunchedEffect(pick, offered) { if (offered) pick.markByRules(ruled) }
+    val seen = remember { HashSet(marks) }
+    LaunchedEffect(pick, marks) { pick.markNew(marks, seen) }
     var selling by rememberSaveable { mutableStateOf(false) }
     val selecting = offered && selling
     val docked = offered && (selling || pick.picked.isNotEmpty())
-    BackHandler(enabled = selecting) {
-        pick.clear()
-        selling = false
-    }
-    BackHandler(enabled = docked && !selecting) {
-        val picked = pick.picked
-        if (picked.any { it.valuable }) selling = true else onDone(picked.map { it.id })
-    }
+    val finish: (List<String>) -> Unit = { sold -> onDone(sold, lots.map { it.id } - sold.toSet()) }
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(ARM_DELAY)
         armed = true
+    }
+    BackHandler(enabled = selecting) {
+        pick.clear()
+        selling = false
+    }
+    BackHandler(enabled = !selecting && armed && !game.busy) {
+        val picked = pick.picked.takeIf { offered }.orEmpty()
+        if (picked.any { it.valuable }) selling = true else finish(picked.map { it.id })
     }
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
@@ -188,11 +196,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                     pick.clear()
                     selling = false
                 },
-                onSell = onDone,
+                onSell = finish,
             )
         } else {
             ForgeButton(
-                onClick = { onDone(emptyList()) },
+                onClick = { finish(emptyList()) },
                 state = ButtonState.of(armed),
                 modifier = Modifier.fillMaxWidth(),
                 size = ButtonSize.Wide,

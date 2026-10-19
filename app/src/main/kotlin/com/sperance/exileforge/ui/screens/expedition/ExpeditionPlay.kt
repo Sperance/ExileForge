@@ -84,15 +84,15 @@ import kotlin.math.roundToInt
     val zone = VaalZones.isZone(run.zone)
     val summary = hud.phase == RunPhase.LEFT || hud.phase == RunPhase.CLEARED || hud.phase == RunPhase.DEAD && hud.report == null
     var closed by remember(run) { mutableStateOf(false) }
-    val close: (sell: List<String>) -> Unit = { sell ->
+    val close: (sell: List<String>, keep: List<String>) -> Unit = { sell, keep ->
         if (!closed) {
             closed = true
-            if (sell.isEmpty()) model.closeRun() else model.closeRunSelling(sell)
+            model.closeRun(sell, keep)
         }
     }
     BackHandler {
         when {
-            summary -> close(emptyList())
+            summary -> Unit
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
             hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && (hud.fountain != null || hud.feature != null) -> model.runCommand(RunCommand.StepOff)
             hud.phase == RunPhase.MAP -> if (!zone) leaving = true

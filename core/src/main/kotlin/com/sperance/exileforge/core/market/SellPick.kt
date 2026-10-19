@@ -47,10 +47,10 @@ data class SellSelection(val chosen: Set<String> = emptySet()) {
     fun toggle(id: String) = copy(chosen = if (id in chosen) chosen - id else chosen + id)
 
     /**
-     * Отмечает лоты фильтра автопродажи ([SellLot.byRules]), которых нет в [seen], - отложенная продажа добычи захода. Уже виденный лот
-     * не отмечается снова: снятая отметка не возвращается с новыми лотами.
+     * Отмечает [ids], которых нет в [seen], - пометки к продаже и отложенная продажа добычи захода, что пришли позже. Уже виденный id
+     * не отмечается снова: снятая отметка не возвращается.
      */
-    fun byRules(lots: List<SellLot>, seen: Set<String>) = copy(chosen = chosen + lots.filter { it.byRules && it.id !in seen }.map { it.id })
+    fun mark(ids: Collection<String>, seen: Set<String>) = copy(chosen = chosen + ids.filter { it !in seen })
 
     /** Набор включён, когда в нём есть лоты и все они отмечены. */
     fun covers(lots: List<SellLot>, preset: SellPreset): Boolean = lots.filter(preset::takes).let { set -> set.isNotEmpty() && set.all { it.id in chosen } }

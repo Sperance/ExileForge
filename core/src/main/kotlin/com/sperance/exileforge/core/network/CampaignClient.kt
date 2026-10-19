@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
+import com.sperance.exileforge.core.model.campaign.Received
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -10,6 +11,7 @@ import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.encodeToJsonElement
 import java.util.UUID
 
 private const val CAMPAIGN = "api/v1/hero/campaign"
@@ -63,6 +65,11 @@ class CampaignClient internal constructor(private val http: Transport) {
      * already closed or replaced is left alone.
      */
     suspend fun abandon(heroId: String, runId: String): CampaignProgress = http.post("$CAMPAIGN/abandon", heroQuery(heroId, "runId" to runId))
+
+    /**
+     * Итоги закрытого захода закрыты: сервер продаёт отложенную добычу захода, кроме [keep] - снятых в итогах отметок; повтор безвреден.
+     */
+    suspend fun settle(heroId: String, keep: List<String>): Received = http.post("$CAMPAIGN/settle", heroQuery(heroId), body = WireJson.encodeToJsonElement(keep))
 
     /**
      * A batch of the journal of run [runId], in order; safe to repeat — numbers already applied are skipped, and a batch

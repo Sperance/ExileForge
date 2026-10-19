@@ -80,10 +80,9 @@ class ExpeditionViewModel(
     fun flushRun() = expedition.flushRun()
     fun toggleSaleMark(itemId: String) = expedition.toggleSaleMark(itemId)
     fun enterVaal() = expedition.enterVaal()
-    fun closeRun() = expedition.close()
 
-    /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
-    fun closeRunSelling(itemIds: Collection<String>) = expedition.closeSelling(itemIds)
+    /** Выход из итогов захода: отмеченное [sell] продаётся, отложенная добыча со снятой отметкой [keep] остаётся. */
+    fun closeRun(sell: Collection<String>, keep: Collection<String>) = expedition.closeSettling(sell, keep)
     fun openAtlas() = expedition.openAtlas()
 
     /** Страница «Похода» экраном под вкладкой; Атлас открывает поход - он прежде готовит своё окно. */

@@ -56,7 +56,6 @@ import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает; у золота её нет. */
@@ -457,10 +456,10 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 
 /**
  * Хозяин окна нового письма: черновик в почте ([Feedback.letter]) открывает лист поверх всего - из карточки игрока,
- * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии, не ввод; тема и текст со счётчиками, цитата ответа, квота
- * «Сегодня X из N · этому герою Y из M»; немота - причина и срок сверху, кнопка погашена.
+ * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии рядом с подписью, не ввод; тема и текст со счётчиками - текст растёт
+ * до [BODY_LINES] строк и дальше листается внутри поля; цитата ответа, квота «Сегодня X из N · этому герою Y из M»; немота - причина и
+ * срок сверху. «Отправить» - в подвале листа, над клавиатурой; нельзя - погашена.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LetterHost(game: GameUi) {
     val model = koinViewModel<FeedbackViewModel>().model
@@ -471,17 +470,27 @@ fun LetterHost(game: GameUi) {
     var subject by remember(draft) { mutableStateOf(draft.subject) }
     var body by remember(draft) { mutableStateOf("") }
     val quota = feedback.quota
-    val now by produceState(System.currentTimeMillis(), quota?.readyAt) {
-        while ((quota?.readyAt ?: 0) > value) {
-            delay(TICK_MS)
-            value = System.currentTimeMillis()
-        }
-    }
-    ForgeSheet(onDismissRequest = model.letters::close) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val now = rememberNow(TICK_MS)
+    val wait by remember(quota) { derivedStateOf { quota?.let { ((it.readyAt - now.value + SECOND_MS - 1) / SECOND_MS).coerceAtLeast(0L) } ?: 0L } }
+    val gate = quota?.let { effectiveGate(it, draft) }
+    val guildFull = draft.kind == MailKind.GUILD && quota?.guild?.let { it.sent >= it.perDay } != false
+    ForgeSheet(
+        onDismissRequest = model.letters::close,
+        footer = {
+            ForgeButton(
+                onClick = { model.letters.send(subject, body) },
+                enabled = !activity.busy && gate == MailGate.OPEN && wait == 0L && !guildFull && subject.isNotBlank() && body.isNotBlank(),
+                modifier = Modifier.weight(1f),
+            ) { Text(ui("mail.send")) }
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui(if (draft.kind == MailKind.GUILD) "mail.letter.broadcast_title" else "mail.letter.title"), style = relicName(19).copy(color = GoldBright))
             quota?.mute?.let { MuteNote(it) }
-            Field(ui("mail.letter.to")) { Addressee(game, draft, quota) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(ui("mail.letter.to"), color = Muted, style = MaterialTheme.typography.labelMedium)
+                Addressee(game, draft, quota, Modifier.weight(1f, fill = false))
+            }
             OutlinedTextField(
                 subject,
                 { subject = it.take(rules.subject) },
@@ -495,21 +504,14 @@ fun LetterHost(game: GameUi) {
                 { body = it.take(rules.body) },
                 label = { Text(ui("mail.body")) },
                 minLines = 4,
+                maxLines = BODY_LINES,
                 supportingText = { LengthCounter(body, rules.body) },
                 modifier = Modifier.fillMaxWidth(),
             )
             if (draft.quote.isNotBlank()) Quote(draft.quoteBy, draft.quote.take(rules.quote))
-            val gate = quota?.let { effectiveGate(it, draft) }
             quota?.let { QuotaBar(it, draft) }
             gate?.takeIf { it != MailGate.OPEN && it != MailGate.MUTED }?.let { Text(gateText(it, quota, rules), color = Caution, style = MaterialTheme.typography.labelMedium) }
-            val wait = quota?.let { ((it.readyAt - now + SECOND_MS - 1) / SECOND_MS).coerceAtLeast(0L) } ?: 0L
             if (wait > 0) MutedText(ui("mail.letter.cooldown", wait))
-            val guildFull = draft.kind == MailKind.GUILD && quota?.guild?.let { it.sent >= it.perDay } != false
-            ForgeButton(
-                onClick = { model.letters.send(subject, body) },
-                enabled = !activity.busy && gate == MailGate.OPEN && wait == 0L && !guildFull && subject.isNotBlank() && body.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(ui("mail.send")) }
         }
     }
 }
@@ -529,30 +531,21 @@ private fun effectiveGate(quota: MailQuota, draft: LetterDraft): MailGate = if (
     )
 }
 
-/** Поле окна письма: подпись мелко сверху, содержимое в панели. */
-@Composable private fun Field(label: String, content: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze, shape).padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        Text(label, color = Muted, fontSize = 10.sp)
-        content()
-    }
-}
-
-/** Плашка «Кому»: портрет и «Имя · уровень» героя или герб и «Вся гильдия · N» - не редактируется. */
-@Composable private fun Addressee(game: GameUi, draft: LetterDraft, quota: MailQuota?) {
+/** Плашка «Кому»: портрет и «Имя · уровень» героя или герб и «Вся гильдия · N» - не редактируется; длинное имя обрезается. */
+@Composable private fun Addressee(game: GameUi, draft: LetterDraft, quota: MailQuota?, modifier: Modifier = Modifier) {
     val guild = quota?.guild?.takeIf { draft.kind == MailKind.GUILD }
     val tint = if (draft.kind == MailKind.GUILD) Caution else Parchment
     Row(
-        Modifier.border(1.dp, if (draft.kind == MailKind.GUILD) Caution else Bronze, RoundedCornerShape(20.dp)).padding(start = 3.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+        modifier.border(1.dp, if (draft.kind == MailKind.GUILD) Caution else Bronze, RoundedCornerShape(20.dp)).padding(start = 3.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (draft.kind == MailKind.GUILD) {
             guild?.let { GuildEmblem(it.emblem, it.color, TAG) }
-            Text(ui("mail.letter.to_guild", guild?.members ?: 0), color = tint, style = MaterialTheme.typography.labelMedium)
+            Text(ui("mail.letter.to_guild", guild?.members ?: 0), color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         } else {
             ClassPortrait(draft.toClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(TAG), round = true, ring = Bronze)
-            Text(ui("mail.letter.to_hero", draft.toName, draft.toLevel), color = tint, style = MaterialTheme.typography.labelMedium)
+            Text(ui("mail.letter.to_hero", draft.toName, draft.toLevel), color = tint, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -588,6 +581,7 @@ private val ATTACHMENT_LINE = 44.dp
 private val TAG = 22.dp
 private const val SHORT_STAMP = 5
 private const val QUOTE_LINES = 3
+private const val BODY_LINES = 8
 private const val DAY_MS = 86_400_000L
 private const val SECOND_MS = 1_000L
 private const val TICK_MS = 1_000L

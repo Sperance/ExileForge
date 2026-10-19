@@ -97,7 +97,7 @@ fun BugSheet(
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
             ForgeButton(
-                enabled = text.isNotBlank(),
+                state = ButtonState.of(text.isNotBlank()),
                 modifier = Modifier.weight(1f),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind, topic = topic))
@@ -119,7 +119,7 @@ fun BugSheet(
             minLines = 4,
             supportingText = { Text(ui("bug.count", text.length, limit)) },
             trailingIcon = {
-                ForgeIconButton(Icons.Outlined.ContentCopy, ui("bug.copy"), onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank(), tint = Gold)
+                ForgeIconButton(Icons.Outlined.ContentCopy, ui("bug.copy"), onClick = { clipboard.setText(AnnotatedString(text)) }, state = ButtonState.of(text.isNotBlank()), accent = Gold)
             },
             modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
         )

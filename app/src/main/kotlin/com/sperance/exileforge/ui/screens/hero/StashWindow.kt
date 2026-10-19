@@ -38,6 +38,8 @@ import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.ui.components.ButtonFigure
+import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
@@ -86,9 +88,9 @@ internal fun StashWindow(game: GameUi, rules: AutoSell, lots: List<SellLot>, mod
             ForgeButton(
                 onClick = { model.sellMany(matching.map { it.id }) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && matching.isNotEmpty(),
+                state = ButtonState.of(!busy && matching.isNotEmpty()),
                 icon = ForgeGlyphs.Coins,
-                hold = Hold(rearm = true),
+                hold = Hold(),
             ) {
                 Text(ui("autosell.sell_now", matching.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (matching.isNotEmpty()) ButtonFigure("+" + number(matching.sumOf(SellLot::price).toDouble()))
@@ -156,7 +158,7 @@ private fun BelowRule(rules: AutoSell, steps: List<Int>, enabled: Boolean, model
 /** Чип выбора порога или редкости автопродажи; [accent] - цвет редкости. */
 @Composable
 private fun StepChip(label: String, selected: Boolean, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
-    ForgeChip(label, selected, onClick, enabled = enabled, accent = accent)
+    ForgeChip(label, selected, onClick, state = ButtonState.of(enabled), accent = accent, mode = ChipMode.Choice)
 }
 
 /** Строка правила: название, подпись мелко и переключатель справа. */

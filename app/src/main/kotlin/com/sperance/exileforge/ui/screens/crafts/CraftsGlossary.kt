@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CraftsRules
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -46,7 +47,7 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
 @Composable internal fun CraftsGlossaryButton(rules: CraftsRules?, intro: String = "") {
     rules ?: return
     var open by remember { mutableStateOf(false) }
-    ForgeIconButton(Icons.Outlined.Info, ui("crafts.help.title"), onClick = { open = true }, compact = true)
+    ForgeIconButton(Icons.Outlined.Info, ui("crafts.help.title"), onClick = { open = true }, size = ButtonSize.Compact)
     if (open) CraftsGlossary(rules, GLOSSARY, intro) { open = false }
 }
 

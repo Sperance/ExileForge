@@ -94,10 +94,9 @@ import kotlin.math.sin
         Engraved(ui("tree.find_node"))
         if (matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
         matches.forEach { node ->
-            ForgeButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
+            ForgeButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text, accent = nodeColour(node, node.code == selected)) {
                 Text(
                     "${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, game.lang)}",
-                    color = nodeColour(node, node.code == selected),
                 )
             }
         }
@@ -136,7 +135,7 @@ internal fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, 
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TREE_TAGS.forEach { code ->
-                ForgeChip(ui("tree.tag.$code"), tag == code, { onTag(if (tag == code) null else code) })
+                ForgeChip(ui("tree.tag.$code"), tag == code, { onTag(if (tag == code) null else code) }, mode = ChipMode.Choice)
             }
         }
         if (query.isNotBlank() || tag != null) {

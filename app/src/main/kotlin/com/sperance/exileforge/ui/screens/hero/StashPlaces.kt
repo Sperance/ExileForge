@@ -62,7 +62,7 @@ import com.sperance.exileforge.ui.theme.*
             ForgeButton(onClick = {
                 open = false
                 vm.expandStash()
-            }, Modifier.fillMaxWidth(), enabled = bill.affordable && !game.busy) { Text(bill.payLabel(ui("stash.expand", pack))) }
+            }, Modifier.fillMaxWidth(), state = ButtonState.of(bill.affordable && !game.busy)) { Text(bill.payLabel(ui("stash.expand", pack))) }
             MutedText(listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"), style = MaterialTheme.typography.labelSmall)
         }
     }
@@ -83,15 +83,15 @@ import com.sperance.exileforge.ui.theme.*
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember)
             Spacer(Modifier.weight(1f))
-            ForgeButton(onClick = { vm.claimOverflow() }, enabled = !full && !game.busy, kind = ButtonKind.Text) { Text(ui("stash.claim_all")) }
+            ForgeButton(onClick = { vm.claimOverflow() }, state = ButtonState.of(!full && !game.busy), kind = ButtonKind.Text) { Text(ui("stash.claim_all")) }
         }
         MutedText(ui("stash.overflow_hint"))
         hero.overflow.forEach { item ->
             game.view(item)?.let { piece ->
                 ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ForgeButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy, kind = ButtonKind.Text) { Text(ui("stash.claim")) }
-                        ForgeButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked, kind = ButtonKind.Text) { Text(ui("hero.sell_do")) }
+                        ForgeButton(onClick = { vm.claimOverflow(item.id) }, state = ButtonState.of(!full && !game.busy), kind = ButtonKind.Text) { Text(ui("stash.claim")) }
+                        ForgeButton(onClick = { vm.sellOverflow(item.id) }, state = ButtonState.of(!game.busy && !item.locked), kind = ButtonKind.Text) { Text(ui("hero.sell_do")) }
                     }
                 }) { inspect(Inspect.Copy(item)) }
             }

@@ -104,7 +104,7 @@ import com.sperance.exileforge.ui.theme.*
                     {
                         val bill = game.goldBill(fee)
                         bill?.let { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { GoldCost(it) } }
-                        ForgeButton(enabled = !game.busy && bill?.affordable == true, onClick = {
+                        ForgeButton(state = ButtonState.of(!game.busy && bill?.affordable == true), onClick = {
                             openLot = null
                             vm.extend(lot.id)
                         }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
@@ -158,7 +158,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
             ForgePanel {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DealFilter.entries.forEach { f ->
-                        ForgeChip(ui("auction.history_${f.name.lowercase()}"), filter == f, { filter = f })
+                        ForgeChip(ui("auction.history_${f.name.lowercase()}"), filter == f, { filter = f }, mode = ChipMode.Choice)
                     }
                 }
                 DealTable(game, ui("auction.history_earned"), ledger.received, open)

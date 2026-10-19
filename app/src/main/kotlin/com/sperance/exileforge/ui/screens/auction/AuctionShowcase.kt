@@ -91,7 +91,7 @@ import org.koin.compose.viewmodel.koinViewModel
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoCard(ui("auction.showcase_failed"), ui("auction.showcase_failed_hint"), failure = true)
-                    ForgeButton(enabled = Reads.AUCTION !in game.loading, onClick = onRetry, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                    ForgeButton(state = ButtonState.of(Reads.AUCTION !in game.loading), onClick = onRetry, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                         Text(ui("auction.showcase_retry"))
                     }
                 }
@@ -110,7 +110,7 @@ import org.koin.compose.viewmodel.koinViewModel
         val showcase = market.showcase
         if (showcase.next != null) {
             item {
-                ForgeButton(enabled = !game.busy && Reads.AUCTION !in game.loading, onClick = onMore, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = onMore, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     Text(ui("auction.more", showcase.items.size, showcase.totalItems))
                 }
             }
@@ -189,7 +189,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
             )
-            ForgeButton(onClick = { sheet = true }, enabled = !game.busy, contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
+            ForgeButton(onClick = { sheet = true }, state = ButtonState.of(!game.busy), contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
                 if (count > 0) {
                     Spacer(Modifier.width(6.dp))

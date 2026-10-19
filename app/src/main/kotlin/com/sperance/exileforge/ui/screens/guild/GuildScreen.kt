@@ -92,7 +92,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (Reads.GUILD in game.loading) {
                     MutedText(ui("guild.loading"))
                 } else {
-                    ForgeButton(enabled = !game.busy, onClick = vm::load, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("auction.check_again")) }
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = vm::load, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("auction.check_again")) }
                 }
             }
         }
@@ -201,23 +201,24 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                 )
             }
         }
-        ForgeIconButton(Icons.Outlined.Close, ui("guild.decline"), onClick = { vm.declineInvite(card.id) }, compact = true, enabled = !game.busy, tint = DECLINE_TINT)
-        ForgeButton(enabled = !game.busy, onClick = { vm.acceptInvite(card.id) }) { Text(ui("guild.accept")) }
+        ForgeIconButton(Icons.Outlined.Close, ui("guild.decline"), onClick = { vm.declineInvite(card.id) }, size = ButtonSize.Compact, state = ButtonState.of(!game.busy), accent = DECLINE_TINT)
+        ForgeButton(state = ButtonState.of(!game.busy), onClick = { vm.acceptInvite(card.id) }) { Text(ui("guild.accept")) }
     }
 }
 
 /** The list's faction chips: all, then each faction under its sign and name in its colour. */
 @Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        item { ForgeChip(ui("common.all"), chosen.isBlank(), { onChoose("") }, enabled = enabled) }
+        item { ForgeChip(ui("common.all"), chosen.isBlank(), { onChoose("") }, state = ButtonState.of(enabled), mode = ChipMode.Choice) }
         items(rules.factions, key = { it.code }) { faction ->
             ForgeChip(
                 GuildText.faction(faction.code),
                 chosen == faction.code,
                 { onChoose(faction.code) },
-                enabled = enabled,
+                state = ButtonState.of(enabled),
                 leading = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) },
                 accent = factionColor(faction),
+                mode = ChipMode.Choice,
             )
         }
     }
@@ -298,10 +299,10 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
                     Text(block.text(card, until), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 84.dp))
                 }
 
-                card.mode == GuildMode.OPEN -> ForgeButton(enabled = !game.busy, onClick = onJoin) { Text(ui("guild.join")) }
+                card.mode == GuildMode.OPEN -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onJoin) { Text(ui("guild.join")) }
 
                 else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    ForgeButton(enabled = !game.busy, onClick = onJoin, kind = ButtonKind.Secondary) { Text(ui("guild.apply"), color = Gold) }
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = onJoin, kind = ButtonKind.Secondary, accent = Gold) { Text(ui("guild.apply")) }
                     if (price > 0) GoldPrice(price)
                 }
             }
@@ -335,7 +336,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 }
 
 @Composable private fun PageButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = true, enabled = enabled)
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(enabled))
 }
 
 /** Шторка «Вступить по коду»: шесть ячеек цифр и «Вступить», пока код не полон - погашена. */
@@ -346,7 +347,7 @@ private fun CodeSheet(busy: Boolean, onDismiss: () -> Unit, onJoin: (String) -> 
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
-        footer = { ForgeButton(enabled = !busy && code.length == CODE_LENGTH, onClick = { onJoin(code) }, modifier = Modifier.weight(1f)) { Text(ui("guild.join")) } },
+        footer = { ForgeButton(state = ButtonState.of(!busy && code.length == CODE_LENGTH), onClick = { onJoin(code) }, modifier = Modifier.weight(1f)) { Text(ui("guild.join")) } },
     ) {
         Text(ui("guild.join_code_title"), style = relicName(16).copy(color = GoldBright))
         MutedText(ui("guild.join_code_note"))

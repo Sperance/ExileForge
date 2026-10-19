@@ -22,9 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.takeOrElse
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -155,8 +152,8 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui("mail.title"), style = relicName(19).copy(color = GoldBright), modifier = Modifier.weight(1f))
-                ForgeButton(onClick = { ignoring = !ignoring }, kind = ButtonKind.Text) {
-                    Text(if (ignoring) ui("mail.back") else ui("mail.ignore.list", feedback.ignored.size), color = Muted, style = MaterialTheme.typography.labelMedium)
+                ForgeButton(onClick = { ignoring = !ignoring }, kind = ButtonKind.Text, accent = Muted) {
+                    Text(if (ignoring) ui("mail.back") else ui("mail.ignore.list", feedback.ignored.size), style = MaterialTheme.typography.labelMedium)
                 }
             }
             if (ignoring) {
@@ -206,10 +203,10 @@ object MailLinks {
     val unread = feedback.mail.count { !it.read }
     val removable = feedback.mail.count { it.read && !it.claimable }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeButton(onClick = model::readAllMail, enabled = !busy && unread > 0, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
+        ForgeButton(onClick = model::readAllMail, state = ButtonState.of(!busy && unread > 0), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
             Text(ui("mail.read_all", unread), style = MaterialTheme.typography.labelMedium)
         }
-        ForgeButton(onClick = { purging = true }, enabled = !busy && removable > 0, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
+        ForgeButton(onClick = { purging = true }, state = ButtonState.of(!busy && removable > 0), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
             Text(ui("mail.delete_read", removable), style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -307,12 +304,12 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
                 ForgeButton(onClick = {
                     onClose()
                     model.letters.reply(mail, game.index?.rules?.mail?.subject ?: Int.MAX_VALUE)
-                }, enabled = !busy, modifier = Modifier.weight(1f)) { IconLabel(Icons.AutoMirrored.Outlined.Reply, ui("mail.reply")) }
+                }, state = ButtonState.of(!busy), modifier = Modifier.weight(1f), icon = Icons.AutoMirrored.Outlined.Reply) { Label(ui("mail.reply")) }
             }
             ForgeButton(onClick = {
                 model.deleteMail(mail.id)
                 onClose()
-            }, enabled = !busy, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { IconLabel(Icons.Outlined.Delete, ui("mail.delete"), tint = if (busy) Color.Unspecified else Parchment) }
+            }, state = ButtonState.of(!busy), modifier = Modifier.weight(1f), kind = ButtonKind.Danger, icon = Icons.Outlined.Delete) { Label(ui("mail.delete")) }
         },
     ) {
         Text(mailSubject(mail), style = relicName(16).copy(color = GoldBright, lineHeight = 21.sp))
@@ -328,12 +325,9 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     }
 }
 
-/** Значок и подпись кнопки подвала письма: подпись в одну строку, длинная обрезается; [tint] - цвет обоих, не задан - цвет кнопки. */
-@Composable private fun RowScope.IconLabel(icon: ImageVector, label: String, tint: Color = Color.Unspecified) {
-    val color = tint.takeOrElse { LocalContentColor.current }
-    Icon(icon, null, Modifier.size(18.dp), tint = color)
-    Spacer(Modifier.width(6.dp))
-    Text(label, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+/** Подпись кнопки подвала письма: в одну строку, длинная обрезается. */
+@Composable private fun RowScope.Label(label: String) {
+    Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
 }
 
 /**
@@ -377,7 +371,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 @Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, enabled: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { open = true }, style = if (open) IconButtonStyle.Tonal else IconButtonStyle.Ghost, compact = true, shape = IconButtonShape.Circle)
+        ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { open = true }, kind = if (open) ButtonKind.Secondary else ButtonKind.Text, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
         ForgeMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = {
@@ -425,7 +419,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
             }
         }
         if (mail.claimable) {
-            ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
+            ForgeButton(state = ButtonState.of(!busy && game.heroId.isNotBlank()), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {
                 Text(ui("mail.claim", game.heroName), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         } else {
@@ -456,7 +450,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
                 Text(hero.name, color = Parchment, style = MaterialTheme.typography.labelLarge)
                 MutedText(classTitle(hero.heroClass), style = MaterialTheme.typography.labelSmall)
             }
-            ForgeButton(onClick = { onLift(hero) }, enabled = !busy, kind = ButtonKind.Text) { Text(ui("mail.ignore.lift"), color = Gold) }
+            ForgeButton(onClick = { onLift(hero) }, state = ButtonState.of(!busy), kind = ButtonKind.Text, accent = Gold) { Text(ui("mail.ignore.lift")) }
         }
         HorizontalDivider(color = Bronze.copy(alpha = .47f), thickness = 1.dp)
     }
@@ -537,7 +531,7 @@ fun LetterHost(game: GameUi) {
 /** «Отправить» подвала: погашена, пока письмо не готово [ready] или не прошла пауза до [readyAt]. */
 @Composable private fun RowScope.SendButton(ready: Boolean, readyAt: Long, onSend: () -> Unit) {
     val wait = cooldownSeconds(readyAt)
-    ForgeButton(onClick = onSend, enabled = ready && wait == 0L, modifier = Modifier.weight(1f)) { Text(ui("mail.send")) }
+    ForgeButton(onClick = onSend, state = ButtonState.of(ready && wait == 0L), modifier = Modifier.weight(1f)) { Text(ui("mail.send")) }
 }
 
 /** Пауза до следующего письма словами - пока она идёт. */

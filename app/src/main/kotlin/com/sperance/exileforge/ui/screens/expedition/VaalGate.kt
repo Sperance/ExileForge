@@ -29,6 +29,7 @@ import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.theme.*
 
@@ -98,7 +99,7 @@ private object Altar {
                 ) { Text(ui(if (zone != null) "vaal.later" else "common.close")) }
                 ForgeButton(
                     onClick = onEnter,
-                    enabled = zone != null,
+                    state = if (zone != null) ButtonState.Enabled else ButtonState.Busy,
                     modifier = Modifier.weight(1.4f),
                     accent = Altar.deed,
                 ) { Text(ui("vaal.enter")) }

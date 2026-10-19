@@ -202,7 +202,7 @@ internal fun LotSheet(
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     extra?.invoke()
-                    action?.let { ForgeButton(enabled = enabled, onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(it) } }
+                    action?.let { ForgeButton(state = ButtonState.of(enabled), onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(it) } }
                 }
             }
         }

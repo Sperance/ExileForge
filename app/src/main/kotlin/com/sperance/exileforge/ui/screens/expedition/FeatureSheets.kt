@@ -49,12 +49,14 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.run.MapFeature
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.IconButtonShape
-import com.sperance.exileforge.ui.components.IconButtonStyle
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
@@ -157,7 +159,7 @@ private fun FeatureCard(
                     Text(name, color = GoldBright, style = relicName(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (facts.isNotEmpty()) Text(summary(facts), style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, style = IconButtonStyle.Tonal, compact = true, shape = IconButtonShape.Circle)
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, kind = ButtonKind.Secondary, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
             }
             if (action != null || lead != null || blocked != null) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -236,7 +238,7 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
                             val bill = game.goldBill(offer.price)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 bill?.let { GoldCost(it) }
-                                ForgeButton(enabled = bill?.affordable == true, onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.weight(1f)) {
+                                ForgeButton(state = ButtonState.of(bill?.affordable == true), onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.weight(1f)) {
                                     Text(bill?.payLabel(ui("feature.merchant.buy", number(offer.price.toDouble()))) ?: ui("feature.merchant.buy", number(offer.price.toDouble())))
                                 }
                             }
@@ -286,7 +288,7 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
         lead = tool?.let { FeatureFact(equipmentTitle(it.template), Vital) },
         blocked = blocked,
     ) { enabled ->
-        ForgeButton(enabled = enabled, onClick = { onCommand(RunCommand.Gather) }) { Text(ui("feature.node.gather_for", number(node.seconds)), maxLines = 1) }
+        ForgeButton(state = ButtonState.of(enabled), onClick = { onCommand(RunCommand.Gather) }) { Text(ui("feature.node.gather_for", number(node.seconds)), maxLines = 1) }
     }
 }
 

@@ -52,6 +52,7 @@ import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgePanel
@@ -125,7 +126,7 @@ internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: Skil
     }
     val reason = bookRefusal(index, skill, view, heroLevel, stats)
     ForgeButton(
-        enabled = reason == null && !game.busy,
+        state = ButtonState.of(reason == null && !game.busy),
         onClick = onRead,
         modifier = Modifier.fillMaxWidth(),
         accent = Blood,
@@ -269,7 +270,7 @@ internal fun RunePicker(
             Text(ui("ritual.cost", itemTitle(input.item), have, input.amount), color = if (have >= input.amount) Vital else LifeRed, style = MaterialTheme.typography.labelMedium)
         }
         ritual.refusal?.let { Text(refusalText(it), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
-        ForgeButton(enabled = !game.busy, onClick = { vm.openCrafts() }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("ritual.to_job", professionTitle(ritual.profession))) }
+        ForgeButton(state = ButtonState.of(!game.busy), onClick = { vm.openCrafts() }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("ritual.to_job", professionTitle(ritual.profession))) }
     }
 }
 

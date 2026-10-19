@@ -235,7 +235,7 @@ internal fun Exchange(
             }
             val ready = chosen.size == rule.books && target != null && bill?.affordable == true && !game.busy
             ForgeButton(
-                enabled = ready,
+                state = ButtonState.of(ready),
                 onClick = {
                     target?.let {
                         vm.exchangeBooks(chosen, it)

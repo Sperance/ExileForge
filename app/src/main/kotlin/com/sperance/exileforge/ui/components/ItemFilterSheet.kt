@@ -61,9 +61,9 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         Icons.Outlined.FilterList,
         ui("filter.title"),
         onClick = onClick,
-        style = if (tweaks > 0) IconButtonStyle.Tonal else IconButtonStyle.Ghost,
-        compact = true,
-        tint = filterTint(tweaks),
+        kind = if (tweaks > 0) ButtonKind.Secondary else ButtonKind.Text,
+        size = ButtonSize.Compact,
+        accent = filterTint(tweaks),
         shape = IconButtonShape.Circle,
         badge = tweaks,
         badgeColor = Vital,
@@ -108,7 +108,7 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         )
         Text(shown.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
         onClear?.let { clear ->
-            ForgeIconButton(Icons.Outlined.Close, ui("filter.reset"), onClick = clear, compact = true)
+            ForgeIconButton(Icons.Outlined.Close, ui("filter.reset"), onClick = clear, size = ButtonSize.Compact)
         }
         ItemFilterButton(tweaks, onOpen)
     }

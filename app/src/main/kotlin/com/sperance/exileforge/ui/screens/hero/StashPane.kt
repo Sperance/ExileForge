@@ -163,7 +163,7 @@ private const val SELL_HINT = "stash.hold_to_sell"
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(ui("stash.hold_hint"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, compact = true)
+        ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, size = ButtonSize.Compact)
     }
 }
 

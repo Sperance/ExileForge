@@ -60,6 +60,8 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.StashTakePrice
 import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChoiceChips
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
@@ -115,7 +117,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
                 if (stash.tabs.size > 1) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(stash.tabs.indices.toList(), key = { it }) { i ->
-                            ForgeChip(ui("guild.stash_tab", i + 1), i == tab, { tab = i })
+                            ForgeChip(ui("guild.stash_tab", i + 1), i == tab, { tab = i }, mode = ChipMode.Choice)
                         }
                     }
                 }
@@ -132,7 +134,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
                         vm.tabRank(tab, it.toInt())
                     }
                 }
-                ForgeButton(enabled = !game.busy && inTab.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
+                ForgeButton(state = ButtonState.of(!game.busy && inTab.size < stash.tabSize), onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
             }
         }
         if (inTab.isNotEmpty()) item { StashSearch(game, filter) { filter = it } }
@@ -311,7 +313,7 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
         null
     } else {
         {
-            ForgeButton(onClick = { onPut(null, chosen, count) }, modifier = Modifier.weight(1f), enabled = !game.busy && count in 1..(hero.bag[chosen] ?: 0L), hold = Hold()) {
+            ForgeButton(onClick = { onPut(null, chosen, count) }, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy && count in 1..(hero.bag[chosen] ?: 0L)), hold = Hold()) {
                 Text(put)
             }
         }

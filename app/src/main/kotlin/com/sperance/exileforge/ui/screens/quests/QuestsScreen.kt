@@ -167,7 +167,7 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
             QuestRow(offer, Modifier.pinned()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BoardIcon(Icons.Outlined.Refresh, ui("quest.reset"), Muted, !busy) { vm.reset(offer.id) }
-                    if (!full) ForgeButton(onClick = { vm.take(offer.id) }, size = ButtonSize.Compact, enabled = !busy) { Text(ui("quest.take"), maxLines = 1) }
+                    if (!full) ForgeButton(onClick = { vm.take(offer.id) }, size = ButtonSize.Compact, state = ButtonState.of(!busy)) { Text(ui("quest.take"), maxLines = 1) }
                 }
             }
         }
@@ -235,12 +235,12 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
 
 /** «Сдать»: компактная главная кнопка с галочкой справа в строке задания. */
 @Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
-    if (quest.done && !quest.claimed) ForgeButton(onClick = { vm.claim(quest.id) }, size = ButtonSize.Compact, icon = Icons.Outlined.Check, enabled = !busy) { Text(ui("quest.claim"), maxLines = 1) }
+    if (quest.done && !quest.claimed) ForgeButton(onClick = { vm.claim(quest.id) }, size = ButtonSize.Compact, icon = Icons.Outlined.Check, state = ButtonState.of(!busy)) { Text(ui("quest.claim"), maxLines = 1) }
 }
 
 /** Значок действия строки задания (компактная иконка-кнопка): отказаться, сбросить листок. */
 @Composable private fun BoardIcon(icon: ImageVector, label: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, compact = true, enabled = enabled, tint = tint)
+    ForgeIconButton(icon, label, onClick = onClick, size = ButtonSize.Compact, state = ButtonState.of(enabled), accent = tint)
 }
 
 /** Внутренняя латунная кромка доски и заклёпки по углам. */

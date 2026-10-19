@@ -27,6 +27,8 @@ import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -121,7 +123,7 @@ internal fun factionColor(faction: GuildFaction?): Color = faction?.color?.let(:
 @Composable
 internal fun ModePicker(mode: GuildMode, enabled: Boolean, onChange: (GuildMode) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        GuildMode.entries.forEach { ForgeChip(GuildText.mode(it), it == mode, { onChange(it) }, enabled = enabled) }
+        GuildMode.entries.forEach { ForgeChip(GuildText.mode(it), it == mode, { onChange(it) }, state = ButtonState.of(enabled), mode = ChipMode.Choice) }
     }
     Text(modeHint(mode), color = Muted, style = MaterialTheme.typography.bodySmall)
 }
@@ -148,5 +150,5 @@ internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochM
 
 /** Кнопка строки инструментов: компактная вторичная со значком, [accent] - цвет инструмента. */
 @Composable internal fun ToolButton(icon: ImageVector, text: String, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
-    ForgeButton(onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = icon, enabled = enabled, accent = accent) { Text(text, maxLines = 1) }
+    ForgeButton(onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = icon, state = ButtonState.of(enabled), accent = accent) { Text(text, maxLines = 1) }
 }

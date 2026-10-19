@@ -21,6 +21,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.ConfirmSheet
 import com.sperance.exileforge.ui.components.DialogShape
@@ -119,7 +120,7 @@ private val ItemInstance.loose: Boolean get() = !equipped && !socketed
             },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
             confirmButton = {
-                ForgeButton(enabled = can, onClick = {
+                ForgeButton(state = ButtonState.of(can), onClick = {
                     deals.close()
                     if (instance.socketed) model.unsocketJewel(instance.id) else model.unequip(instance.id)
                 }, kind = ButtonKind.Text) { Text(ui("hero.unequip")) }

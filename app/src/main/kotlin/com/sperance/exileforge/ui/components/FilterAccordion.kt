@@ -62,7 +62,7 @@ fun FilterAccordionSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            ForgeButton(onClick = onReset, enabled = resettable, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("filter.reset")) }
+            ForgeButton(onClick = onReset, state = ButtonState.of(resettable), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("filter.reset")) }
             ForgeButton(onClick = onShow, modifier = Modifier.weight(1f)) { Text(show, maxLines = 1) }
         },
     ) {

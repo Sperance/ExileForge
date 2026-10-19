@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,9 +17,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.ui.theme.*
-
-/** How long the confirm button has to be held. Long enough to mean it, short enough not to wait. */
-const val HOLD_TO_CONFIRM_MS = 700
 
 /** Whether a line of the ledger is taken away, handed over, or only said. */
 enum class Tone { PLAIN, SPEND, GAIN }
@@ -38,13 +34,14 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  *
  * The price is the thing being confirmed, so it is a ledger rather than a sentence: what is taken,
  * what is left, what comes back. And the button is held rather than tapped. A tap is what a player
- * does without looking; holding for [HOLD_TO_CONFIRM_MS] is what they do on purpose, and the band
+ * does without looking; holding for [Hold.CONFIRM_MS] is what they do on purpose, and the band
  * filling under the thumb shows the moment it becomes real. A screen reader cannot hold, so the
  * same button answers an accessibility click at once — that tap is deliberate by construction.
  *
  * It is deliberately not on everything. A question in front of an ordinary action stops being read.
  *
- * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
+ * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена; [busy] - запрос уже идёт,
+ * кнопка занята (спиннер). [options] - выбор под счётом (оплата
  * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
  * погашена, а [warning] без своего говорит недостачу. [holdMillis] - сколько держать кнопку (сброс всего дерева держат дольше).
  * Тело листается, кнопка удержания и «Отмена» закреплены в подвале листа: поле в [options] с клавиатурой их не прячет. Полоса редкости
@@ -62,10 +59,11 @@ fun ConfirmSheet(
     warning: String? = null,
     danger: Boolean = false,
     blocked: Boolean = false,
+    busy: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
     options: (@Composable () -> Unit)? = null,
     gold: GoldBill? = null,
-    holdMillis: Int = HOLD_TO_CONFIRM_MS,
+    holdMillis: Int = Hold.CONFIRM_MS,
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
@@ -88,16 +86,10 @@ fun ConfirmSheet(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     kind = if (danger) ButtonKind.Danger else ButtonKind.Primary,
-                    enabled = !blocked && gold?.affordable != false,
+                    state = ButtonState.of(!blocked && gold?.affordable != false, busy),
                     hold = Hold(millis = holdMillis),
                 ) { Text(ui("confirm.hold", confirm.lowercase()), textAlign = TextAlign.Center) }
-                Text(
-                    ui("common.cancel").uppercase(),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp),
-                )
+                ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) { Text(ui("common.cancel").uppercase()) }
             }
         },
         contentModifier = Modifier.raritySpine(accent, SPINE),

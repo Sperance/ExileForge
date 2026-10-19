@@ -250,7 +250,7 @@ private sealed interface AlbumPick {
 }
 
 @Composable private fun PoolChip(label: String, on: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, on, onClick)
+    ForgeChip(label, on, onClick, mode = ChipMode.Choice)
 }
 
 @Composable private fun TemplateIcon(template: ItemTemplate) {

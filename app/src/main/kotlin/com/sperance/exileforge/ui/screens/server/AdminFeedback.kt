@@ -167,7 +167,7 @@ private fun AdminReport.matches(query: String): Boolean {
 
 /** Чип фильтра: подпись, счёт (null - без счёта), выбран ли. */
 @Composable private fun CountChip(title: String, count: Int?, chosen: Boolean, onClick: () -> Unit) {
-    ForgeChip(title, chosen, onClick, count = count)
+    ForgeChip(title, chosen, onClick, count = count, mode = ChipMode.Choice)
 }
 
 /**
@@ -250,7 +250,7 @@ private fun AdminReport.matches(query: String): Boolean {
             ModerationNote(account, vm, report)
             if (report.issueError.isNotBlank() && issue == null) {
                 Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                ForgeButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }, kind = ButtonKind.Secondary) { Text(ui("feedback.issue_retry")) }
+                ForgeButton(state = ButtonState.of(!account.busy), onClick = { vm.reportToIssue(report.id) }, kind = ButtonKind.Secondary) { Text(ui("feedback.issue_retry")) }
             }
             if (fresh) {
                 OutlinedTextField(
@@ -271,26 +271,26 @@ private fun AdminReport.matches(query: String): Boolean {
             when {
                 fresh -> {
                     if (ReportStatus.REJECTED in entry.moves) {
-                        ForgeButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) {
+                        ForgeButton(state = ButtonState.of(!account.busy && word.isNotBlank()), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) {
                             Text(ui("feedback.admin.reject"), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                     if (ReportStatus.SENT in entry.moves) {
-                        ForgeButton(enabled = !account.busy, onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
+                        ForgeButton(state = ButtonState.of(!account.busy), onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
                             Text(ui(if (report.kind.exported) "feedback.admin.to_github" else "feedback.admin.accept"), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
 
                 issue != null -> {
-                    if (issue.state.open) ForgeButton(enabled = !account.busy, onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
-                    ForgeButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary) {
-                        Text(ui("feedback.admin.issue_link", issue.number), color = Gold, maxLines = 1, softWrap = false)
+                    if (issue.state.open) ForgeButton(state = ButtonState.of(!account.busy), onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
+                    ForgeButton(state = ButtonState.of(issue.url.startsWith("http")), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary, accent = Gold) {
+                        Text(ui("feedback.admin.issue_link", issue.number), maxLines = 1, softWrap = false)
                     }
                 }
             }
             if (entry.deletable) {
-                ForgeIconButton(Icons.Outlined.Delete, ui("feedback.delete"), onClick = { deleting = true }, style = IconButtonStyle.Danger, compact = true, enabled = !account.busy)
+                ForgeIconButton(Icons.Outlined.Delete, ui("feedback.delete"), onClick = { deleting = true }, kind = ButtonKind.Danger, size = ButtonSize.Compact, state = ButtonState.of(!account.busy))
             }
         }
     }
@@ -367,7 +367,7 @@ private fun AuthorLine(entry: AdminReport, onDossier: (String) -> Unit) {
             note = report.moderationNote
             editing = false
         }, kind = ButtonKind.Text) { Text(ui("common.cancel")) }
-        ForgeButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = {
+        ForgeButton(state = ButtonState.of(!account.busy && note.trim() != report.moderationNote), onClick = {
             vm.noteReport(report.id, note)
             editing = false
         }, kind = ButtonKind.Secondary) { Text(ui("feedback.note.save")) }
@@ -413,7 +413,7 @@ private const val SEARCH = 60
                 IssueMove.DUPLICATE -> original.isNotBlank()
                 else -> true
             }
-            ForgeButton(enabled = !account.busy && ready, onClick = { vm.steerIssue(id, move, note, original.toIntOrNull() ?: 0) }, kind = ButtonKind.Secondary) {
+            ForgeButton(state = ButtonState.of(!account.busy && ready), onClick = { vm.steerIssue(id, move, note, original.toIntOrNull() ?: 0) }, kind = ButtonKind.Secondary) {
                 Text(ui("feedback.move.${move.name}"))
             }
         }
@@ -484,7 +484,7 @@ private const val DUPLICATE_DIGITS = 6
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
             )
-            ForgeButton(enabled = item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0, onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }, kind = ButtonKind.Secondary) {
+            ForgeButton(state = ButtonState.of(item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0), onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }, kind = ButtonKind.Secondary) {
                 Text(ui("mail.add"))
             }
         }
@@ -492,16 +492,16 @@ private const val DUPLICATE_DIGITS = 6
         var rarity by remember { mutableStateOf<Rarity?>(null) }
         Spinner(ui("mail.template"), template, index.templates.values.associate { it.code to equipmentTitle(it.code) }, !account.busy) { template = it }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ForgeChip(ui("mail.template_rarity"), rarity == null, { rarity = null })
+            ForgeChip(ui("mail.template_rarity"), rarity == null, { rarity = null }, mode = ChipMode.Choice)
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
-                ForgeChip(ui("enum.rarity.${r.name}"), rarity == r, { rarity = r })
+                ForgeChip(ui("enum.rarity.${r.name}"), rarity == r, { rarity = r }, mode = ChipMode.Choice)
             }
         }
-        ForgeButton(enabled = template.isNotBlank(), onClick = { equipment += MailEquipment(template, rarity) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
+        ForgeButton(state = ButtonState.of(template.isNotBlank()), onClick = { equipment += MailEquipment(template, rarity) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
         items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
         equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }
-    ForgeButton(enabled = !account.busy && subject.isNotBlank(), modifier = Modifier.fillMaxWidth(), onClick = {
+    ForgeButton(state = ButtonState.of(!account.busy && subject.isNotBlank()), modifier = Modifier.fillMaxWidth(), onClick = {
         vm.sendMail(MailRequest(login, subject, body, MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())))
         subject = ""
         body = ""

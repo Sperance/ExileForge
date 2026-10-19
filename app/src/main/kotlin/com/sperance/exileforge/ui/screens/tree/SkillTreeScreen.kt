@@ -292,7 +292,7 @@ internal val PILL = RoundedCornerShape(16.dp)
 
 /** Кнопка поверх древа: круглая тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = size < 44.dp, tint = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = if (size < 44.dp) ButtonSize.Compact else ButtonSize.Wide, accent = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
 }
 
 /**
@@ -305,7 +305,7 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
 }
 
 /**
- * Сброс всего дерева - лист с ценой в Сферах сожаления и кнопкой удержания на [TREE_RESET_HOLD_MS], как сброс древа гильдии, без отката;
+ * Сброс всего дерева - лист с ценой в Сферах сожаления и кнопкой удержания на [Hold.RESET_MS], как сброс древа гильдии, без отката;
  * старт не возвращается и не оплачивается.
  */
 @Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
@@ -324,10 +324,9 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
             note = ui("tree.reset_confirm"), warning = shortage(returned), blocked = shortage(returned) != null, danger = true,
-            confirm = ui("tree.reset_do"), onDismiss = onClear, holdMillis = TREE_RESET_HOLD_MS,
+            confirm = ui("tree.reset_do"), onDismiss = onClear, holdMillis = Hold.RESET_MS,
         ) { onReset() }
     }
 }
 
 /** Сколько держать кнопку сброса всего дерева, мс: дольше обычного подтверждения. */
-private const val TREE_RESET_HOLD_MS = 1_200

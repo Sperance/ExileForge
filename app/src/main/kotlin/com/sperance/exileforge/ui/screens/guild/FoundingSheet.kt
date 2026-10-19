@@ -72,7 +72,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             ForgeButton(
                 onClick = { onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor)) },
                 modifier = Modifier.weight(1f),
-                enabled = !game.busy && refusal == null,
+                state = ButtonState.of(!game.busy && refusal == null),
                 icon = ForgeGlyphs.Banner,
                 hold = Hold(),
             ) { Text(bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble()))) }

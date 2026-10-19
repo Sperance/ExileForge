@@ -352,7 +352,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
     val s by updates.state.collectAsStateWithLifecycle()
     InfoCard(ui("update.card_title"), ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) + updateNote(s)?.let { "\n$it" }.orEmpty())
     if (s.update != null) {
-        ForgeButton(enabled = !s.installing, onClick = updates::install, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("update.install")) }
+        ForgeButton(state = ButtonState.of(!s.installing), onClick = updates::install, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("update.install")) }
     }
 }
 

@@ -75,7 +75,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun LanguageButton(current: Lang, offered: List<Lang>, modifier: Modifier = Modifier, enabled: Boolean = true, onLanguage: (Lang) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
-        ForgeButton(onClick = { open = true }, kind = ButtonKind.Text, enabled = enabled, icon = Icons.Outlined.Language) {
+        ForgeButton(onClick = { open = true }, kind = ButtonKind.Text, state = ButtonState.of(enabled), icon = Icons.Outlined.Language) {
             Text(current.short)
         }
         ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {

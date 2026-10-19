@@ -117,7 +117,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
                 Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, compact = true)
+                ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact)
             }
             money?.let { MerchantPurse(it) }
         }
@@ -244,7 +244,7 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
                 bill?.takeUnless { it.affordable || orb.soldOut }?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
         }
-        ForgeButton(enabled = enabled, onClick = onBuy, kind = ButtonKind.Secondary) { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }
+        ForgeButton(state = ButtonState.of(enabled), onClick = onBuy, kind = ButtonKind.Secondary) { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }
     }
 }
 
@@ -273,7 +273,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
                     MutedText(ui("merchant.gold"), Modifier.weight(1f))
                     bill?.let { GoldCost(it) } ?: GoldPrice(price)
                 }
-                ForgeButton(onClick = onBuy, modifier = Modifier.fillMaxWidth(), enabled = !game.busy && bill?.affordable == true, hold = Hold()) {
+                ForgeButton(onClick = onBuy, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(!game.busy && bill?.affordable == true), hold = Hold()) {
                     Text(bill?.payLabel(ui("merchant.buy_for", number(price.toDouble()))) ?: ui("merchant.buy_for", number(price.toDouble())))
                 }
             }

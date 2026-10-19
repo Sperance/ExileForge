@@ -163,8 +163,8 @@ private val NO_CHOICE = InspectChoice(null)
         onDone()
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        ForgeButton(onClick = { run(main) }, enabled = main.enabled, modifier = Modifier.weight(1f), contentPadding = RowPadding) { Text(main.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        side?.let { ForgeButton(onClick = { run(it) }, enabled = it.enabled, modifier = Modifier.weight(1f), contentPadding = RowPadding, kind = ButtonKind.Secondary) { Text(it.label, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+        ForgeButton(onClick = { run(main) }, state = ButtonState.of(main.enabled), modifier = Modifier.weight(1f), contentPadding = RowPadding) { Text(main.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        side?.let { ForgeButton(onClick = { run(it) }, state = ButtonState.of(it.enabled), modifier = Modifier.weight(1f), contentPadding = RowPadding, kind = ButtonKind.Secondary) { Text(it.label, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
         if (shown.menu.isNotEmpty()) MoreActions(shown.menu, run)
     }
     listOfNotNull(main, side).filter { !it.enabled }.mapNotNull { it.reason }.forEach { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
@@ -210,12 +210,12 @@ private val RowPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
         onDone()
     }
     if (action.hold) {
-        ForgeButton(onClick = run, modifier = Modifier.fillMaxWidth(), enabled = action.enabled, hold = Hold()) {
+        ForgeButton(onClick = run, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(action.enabled), hold = Hold()) {
             Text(action.label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            action.figure?.let { ButtonFigure(it, action.enabled) }
+            action.figure?.let { ButtonFigure(it) }
         }
     } else {
-        ForgeButton(onClick = run, enabled = action.enabled, modifier = Modifier.fillMaxWidth()) { Text(action.label) }
+        ForgeButton(onClick = run, state = ButtonState.of(action.enabled), modifier = Modifier.fillMaxWidth()) { Text(action.label) }
     }
     action.reason?.takeIf { !action.enabled }?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
 }

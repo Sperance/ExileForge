@@ -89,7 +89,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Engraved(code.code)
             Spacer(Modifier.weight(1f))
-            ForgeIconButton(Icons.Outlined.Delete, ui("common.delete"), onClick = onDelete, enabled = !game.busy)
+            ForgeIconButton(Icons.Outlined.Delete, ui("common.delete"), onClick = onDelete, state = ButtonState.of(!game.busy))
         }
         code.description?.takeIf { it.isNotBlank() }?.let {
             MutedText(it)
@@ -192,7 +192,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
         )
 
         ForgeButton(
-            enabled = !game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null,
+            state = ButtonState.of(!game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null),
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 rewards = rewards + redemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
@@ -214,7 +214,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
         }
 
         ForgeButton(
-            enabled = !game.busy && code.isNotBlank() && rewards.isNotEmpty(),
+            state = ButtonState.of(!game.busy && code.isNotBlank() && rewards.isNotEmpty()),
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 vm.createRedemption(

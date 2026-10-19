@@ -42,7 +42,6 @@ import com.sperance.exileforge.ui.components.FeedbackViewModel
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeMenu
-import com.sperance.exileforge.ui.components.IconButtonStyle
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -115,7 +114,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Шестерёнка шапки: открывает настройки ([onSettings]); открытые настройки - светлее. */
 @Composable internal fun SettingsButton(settingsOpen: Boolean, onSettings: () -> Unit) {
-    ForgeIconButton(Icons.Outlined.Settings, ui("settings.title"), onClick = onSettings, style = if (settingsOpen) IconButtonStyle.Tonal else IconButtonStyle.Ghost, tint = Gold)
+    ForgeIconButton(Icons.Outlined.Settings, ui("settings.title"), onClick = onSettings, kind = if (settingsOpen) ButtonKind.Secondary else ButtonKind.Text, accent = Gold)
 }
 
 /**
@@ -132,7 +131,7 @@ import org.koin.compose.viewmodel.koinViewModel
             ui("mail.title"),
             onClick = open,
             modifier = Modifier.semantics { stateDescription = ui("mail.unread", unread) },
-            tint = if (fresh) Gold else Muted,
+            accent = if (fresh) Gold else Muted,
         )
     }
 }

@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.run.SummonView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ConfirmSheet
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.GoldCost
@@ -42,7 +43,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
                 size = ButtonSize.Small,
                 kind = ButtonKind.Secondary,
                 icon = ForgeGlyphs.Portal,
-                enabled = !summon.spent && bill.affordable,
+                state = ButtonState.of(!summon.spent && bill.affordable),
             ) { Text(if (summon.spent) ui("expedition.summon") else bill.payLabel(ui("expedition.summon")), maxLines = 1) }
             GoldCost(bill)
         }

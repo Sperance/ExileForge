@@ -30,9 +30,9 @@ import com.sperance.exileforge.ui.theme.*
             ForgeButton(
                 onClick = { onCommand(RunCommand.Begin) },
                 modifier = Modifier.weight(1f),
+                kind = ButtonKind.Danger,
                 size = ButtonSize.Wide,
                 icon = ForgeGlyphs.Swords,
-                accent = Blood,
             ) {
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeButton(
-            enabled = live,
+            state = ButtonState.of(live),
             onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp),

@@ -49,10 +49,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.FateBoon
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.FateInk
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.HOLD_MS
 import com.sperance.exileforge.ui.components.Hold
+import com.sperance.exileforge.ui.components.HoldTone
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.SIGIL
 import com.sperance.exileforge.ui.components.relicName
@@ -135,8 +136,8 @@ internal val REVEALS: List<LineReveal> = listOf(VeiledReveal, FatedReveal)
             onClick = { picked?.let { onChoose(item.id, it) } },
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
             size = ButtonSize.Wide,
-            enabled = enabled && picked != null,
-            hold = Hold(millis = HOLD_MS, fate = true),
+            state = ButtonState.of(enabled && picked != null),
+            hold = Hold(Hold.FATE_MS, HoldTone.Fate),
         ) { Text(ui(if (picked == null) "fate.reveal_pick_first" else "fate.reveal_hold")) }
     }
 }

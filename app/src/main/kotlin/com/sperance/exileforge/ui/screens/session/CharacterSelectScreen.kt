@@ -128,7 +128,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
             item {
-                ForgeButton(enabled = !game.busy && game.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(state = ButtonState.of(!game.busy && game.characterSlotsLeft > 0), onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(ui("editor.create_character"), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -146,7 +146,7 @@ import org.koin.compose.viewmodel.koinViewModel
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(game.session.title, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    ForgeButton(enabled = !game.busy, onClick = onLogout, kind = ButtonKind.Text) { Text(ui("chars.sign_out")) }
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = onLogout, kind = ButtonKind.Text) { Text(ui("chars.sign_out")) }
                 }
             }
         }
@@ -212,13 +212,13 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
         when {
             voluntary -> MarkedActions(game, onRestore, onErase)
 
-            sanction != null -> ForgeButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+            sanction != null -> ForgeButton(state = ButtonState.of(!game.busy && !sanction.appealed), onClick = { appealing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                 Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
             }
 
             else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-                ForgeButton(enabled = !game.busy, onClick = onDelete, kind = ButtonKind.Secondary) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onDelete, kind = ButtonKind.Danger) { Text(ui("chars.release_do")) }
             }
         }
     }
@@ -241,10 +241,10 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
 /** Кнопки героя в своей корзине: вернуть - если есть свободное место, иначе погашено с причиной; стереть навсегда. */
 @Composable private fun MarkedActions(game: GameUi, onRestore: () -> Unit, onErase: () -> Unit) {
     val slot = game.characterSlotsLeft > 0
-    ForgeButton(enabled = !game.busy && slot, onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
+    ForgeButton(state = ButtonState.of(!game.busy && slot), onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
     if (!slot) Text(ui("chars.restore_no_slot"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-    ForgeButton(enabled = !game.busy, onClick = onErase, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-        Text(ui("chars.erase_do"), color = MaterialTheme.colorScheme.error)
+    ForgeButton(state = ButtonState.of(!game.busy), onClick = onErase, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
+        Text(ui("chars.erase_do"))
     }
 }
 
@@ -293,18 +293,18 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
         }
         ForgePanel {
             ForgeButton(
-                enabled = !game.busy && name.isNotBlank() && heroClass.isNotBlank(),
+                state = ButtonState.of(!game.busy && name.isNotBlank() && heroClass.isNotBlank()),
                 onClick = { vm.createCharacter(name, heroClass) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(ui("chars.create"))
             }
             if (canGoBack) {
-                ForgeButton(enabled = !game.busy, onClick = onBack, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onBack, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
                     Text(ui("chars.back"))
                 }
             }
-            ForgeButton(enabled = !game.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
+            ForgeButton(state = ButtonState.of(!game.busy), onClick = onSignOut, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
                 Text(ui("chars.other_account"))
             }
         }

@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -115,8 +116,8 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable private fun Actions(view: AbyssView, onCommand: (RunCommand) -> Unit) {
     val away: @Composable () -> Unit = {
-        ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
-            Text(ui(if (view.open) "abyss.leave" else "abyss.later"), color = Muted)
+        ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text, accent = Muted) {
+            Text(ui(if (view.open) "abyss.leave" else "abyss.later"))
         }
     }
     when {
@@ -132,7 +133,7 @@ import com.sperance.exileforge.ui.theme.*
         view.fallen -> away()
 
         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(enabled = view.cleared > 0, onClick = { onCommand(RunCommand.TakeHoard) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
+            ForgeButton(state = ButtonState.of(view.cleared > 0), onClick = { onCommand(RunCommand.TakeHoard) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
                 Text(ui("abyss.take"))
             }
             if (view.next != null) {

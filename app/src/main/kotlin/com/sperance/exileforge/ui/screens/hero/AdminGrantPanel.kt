@@ -55,7 +55,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
         Engraved(ui("grant.random_item"))
         Spinner(ui("common.rarity"), rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, game.lang) }, enabled, glyph = Glyph.RARITY, onChange = { rarity = it })
         Spinner(ui("grant.category"), slot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, game.lang) }, enabled, glyph = Glyph.ITEM, onChange = { slot = it })
-        ForgeButton(enabled = enabled, onClick = { vm.grantRandom(rarity, slot) }, modifier = Modifier.fillMaxWidth()) {
+        ForgeButton(state = ButtonState.of(enabled), onClick = { vm.grantRandom(rarity, slot) }, modifier = Modifier.fillMaxWidth()) {
             Icon(ForgeGlyphs.Anvil, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(ui("grant.roll"))
@@ -66,7 +66,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
         Engraved(ui("grant.named_template"))
         var template by remember(game.heroId) { mutableStateOf("") }
         Spinner(ui("grant.equipment"), template, templates, enabled && templates.isNotEmpty(), glyph = Glyph.ITEM) { template = it }
-        ForgeButton(enabled = enabled && template in templates, onClick = { vm.grant(template, Rarity.of(rarity)) }) { Text(ui("grant.chosen_item")) }
+        ForgeButton(state = ButtonState.of(enabled && template in templates), onClick = { vm.grant(template, Rarity.of(rarity)) }) { Text(ui("grant.chosen_item")) }
 
         OrnateDivider()
         Engraved(ui("grant.orbs"))
@@ -85,7 +85,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
             modifier = Modifier.fillMaxWidth(),
         )
         ForgeButton(
-            enabled = enabled && experience.toDoubleOrNull()?.let { it > 0 && it.isFinite() } == true,
+            state = ButtonState.of(enabled && experience.toDoubleOrNull()?.let { it > 0 && it.isFinite() } == true),
             onClick = { vm.addExperience(experience.toDouble()) },
         ) { Text(ui("grant.grant")) }
 
@@ -102,7 +102,7 @@ import com.sperance.exileforge.ui.screens.admin.AdminViewModel
             modifier = Modifier.fillMaxWidth(),
         )
         ForgeButton(
-            enabled = enabled && code in stacks && amount.toLongOrNull()?.let { it > 0L } == true,
+            state = ButtonState.of(enabled && code in stacks && amount.toLongOrNull()?.let { it > 0L } == true),
             onClick = { vm.grantItem(code, amount.toLong()) },
         ) { Text(ui("grant.chosen_item")) }
     }

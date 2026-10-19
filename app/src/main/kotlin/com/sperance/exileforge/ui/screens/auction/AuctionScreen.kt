@@ -44,7 +44,7 @@ fun AuctionScreen() {
         }
         market.locked?.let { locked ->
             InfoCard(ui("auction.closed"), locked, failure = true)
-            ForgeButton(enabled = !busy, onClick = model::loadAuction, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+            ForgeButton(state = ButtonState.of(!busy), onClick = model::loadAuction, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                 Text(ui("auction.check_again"))
             }
             return@Column

@@ -121,7 +121,7 @@ data class RunMenuItem(
 
 /** ☰ меню забега: круглая тональная иконка-кнопка, как кнопки карты. */
 @Composable fun RunMenuButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ForgeIconButton(Icons.Outlined.Menu, ui("run.menu"), onClick = onClick, modifier = modifier, style = IconButtonStyle.Tonal, shape = IconButtonShape.Circle)
+    ForgeIconButton(Icons.Outlined.Menu, ui("run.menu"), onClick = onClick, modifier = modifier, kind = ButtonKind.Secondary, shape = IconButtonShape.Circle)
 }
 
 /** Настройки, что нужны посреди боя: анимации и цифры урона - те же строки, что на экране настроек. */

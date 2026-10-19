@@ -177,7 +177,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 /** Шапка окна профессии: назад, имя и уровень тонкой полосой с опытом «набрано / нужно», справка с описанием профессии и инструмент. */
 @Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onBack: () -> Unit, onTool: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, tint = Gold)
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, accent = Gold)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -201,7 +201,7 @@ internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.ta
 
 /** «Остановить»: опасная компактная иконка-кнопка. */
 @Composable internal fun StopButton(enabled: Boolean, onClick: () -> Unit) {
-    ForgeIconButton(Icons.Outlined.Stop, ui("crafts.stop"), onClick = onClick, style = IconButtonStyle.Danger, compact = true, enabled = enabled)
+    ForgeIconButton(Icons.Outlined.Stop, ui("crafts.stop"), onClick = onClick, kind = ButtonKind.Danger, size = ButtonSize.Compact, state = ButtonState.of(enabled))
 }
 
 /** The tool in the window's header: its icon in a frame of its rarity, or an empty «+» cell for none. */
@@ -244,7 +244,7 @@ internal fun ToolSheet(game: GameUi, profession: ProfessionView, onDismiss: () -
                 else -> Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
             }
             BonusChips(profession)
-            ForgeButton(enabled = !game.busy, onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
+            ForgeButton(state = ButtonState.of(!game.busy), onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
         }
     }
 }

@@ -55,7 +55,7 @@ fun ListingSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
+            ForgeButton(state = ButtonState.of(closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0), onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
                 Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
             }
         },

@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.AccountBinding
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.inputs
@@ -31,7 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         if (account.session.profile?.login.isNullOrBlank()) {
             BindForm(account, sessionModel)
-            ForgeButton(enabled = !account.busy, onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
+            ForgeButton(state = ButtonState.of(!account.busy), onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
             return
         }
         var change by remember { mutableStateOf(false) }
@@ -45,18 +46,18 @@ import org.koin.compose.viewmodel.koinViewModel
         if (change) {
             OutlinedTextField(oldPassword, { oldPassword = it.take(account.inputs.password) }, label = { Text(ui("account.current_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(newPassword, { newPassword = it.take(account.inputs.password) }, label = { Text(ui("account.new_password")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
-            ForgeButton(enabled = !account.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty(), onClick = {
+            ForgeButton(state = ButtonState.of(!account.busy && oldPassword.isNotEmpty() && newPassword.isNotEmpty()), onClick = {
                 sessionModel.changePassword(oldPassword, newPassword)
                 oldPassword = ""
                 newPassword = ""
                 change = false
             }) { Text(ui("account.do_change_password")) }
         }
-        ForgeButton(enabled = !account.busy, onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
+        ForgeButton(state = ButtonState.of(!account.busy), onClick = sessionModel::logout, kind = ButtonKind.Secondary) { Text(ui("account.sign_out")) }
     } else {
         OutlinedTextField(login, { login = it.take(account.inputs.login) }, enabled = !account.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(password, { password = it.take(account.inputs.password) }, enabled = !account.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        ForgeButton(enabled = !account.busy && login.isNotBlank() && password.isNotEmpty(), onClick = {
+        ForgeButton(state = ButtonState.of(!account.busy && login.isNotBlank() && password.isNotEmpty()), onClick = {
             sessionModel.login(login, password)
             password = ""
         }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.sign_in")) }
@@ -82,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
     if (problem != null && (login.isNotEmpty() || password.isNotEmpty() || repeat.isNotEmpty())) {
         Text(ui(problem.key, AccountBinding.argument(problem, limits)), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
-    ForgeButton(enabled = !account.busy && problem == null, onClick = {
+    ForgeButton(state = ButtonState.of(!account.busy && problem == null), onClick = {
         sessionModel.bind(login, password)
         password = ""
         repeat = ""

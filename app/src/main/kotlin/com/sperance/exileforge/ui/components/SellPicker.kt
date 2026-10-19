@@ -84,7 +84,7 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 
 /** Чип набора цветом набора [tint]: включённый - выбран. */
 @Composable private fun PresetChip(label: String, tint: Color, on: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, on, onClick, enabled = enabled, accent = tint)
+    ForgeChip(label, on, onClick, state = ButtonState.of(enabled), accent = tint)
 }
 
 /**
@@ -160,9 +160,9 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
         ForgeButton(
             onClick = { onSell(picked.map { it.id }) },
             modifier = Modifier.weight(1f),
-            enabled = enabled && picked.isNotEmpty(),
+            state = ButtonState.of(enabled && picked.isNotEmpty()),
             icon = ForgeGlyphs.Coins,
-            hold = Hold(rearm = true),
+            hold = Hold(),
         ) {
             Text(if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (picked.isNotEmpty()) ButtonFigure("+" + number(pick.total.toDouble()))

@@ -185,7 +185,7 @@ fun ReportsSheet(start: ReportsView, onDismiss: () -> Unit) {
                     ForgeIconButton(Icons.Outlined.Search, ui("feedback.search_open"), onClick = {
                         searching = !searching
                         if (!searching) query = ""
-                    }, style = if (searching) IconButtonStyle.Tonal else IconButtonStyle.Ghost)
+                    }, kind = if (searching) ButtonKind.Secondary else ButtonKind.Text)
                 }
             }
             if (tab == ReportsTab.KNOWN && searching) {
@@ -262,23 +262,23 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 @Composable private fun VoteRow(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
-    VoteButton("+", known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
-    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, LossText, enabled && known.votable) { onVote(Vote.DISLIKE) }
+    VoteButton("+", ui("feedback.vote.like", known.likes), known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
+    VoteButton("−", ui("feedback.vote.dislike", known.dislikes), known.dislikes, known.vote == Vote.DISLIKE, LossText, enabled && known.votable) { onVote(Vote.DISLIKE) }
 }
 
 /** Удаление отчёта - всегда с вопросом: оно жёсткое и не возвращается. */
 @Composable fun ReportDeleteButton(enabled: Boolean, onClick: () -> Unit) {
-    ForgeButton(onClick = onClick, kind = ButtonKind.Danger, size = ButtonSize.Small, icon = Icons.Outlined.Delete, enabled = enabled) { Text(ui("feedback.delete")) }
+    ForgeButton(onClick = onClick, kind = ButtonKind.Danger, size = ButtonSize.Small, icon = Icons.Outlined.Delete, state = ButtonState.of(enabled)) { Text(ui("feedback.delete")) }
 }
 
 /** Вопрос перед удалением отчёта: удержание - [onDelete], отмена - [onDismiss]. */
 @Composable fun ReportDeleteConfirm(busy: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
-    ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, blocked = busy, onConfirm = onDelete)
+    ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, busy = busy, onConfirm = onDelete)
 }
 
-/** Голос «+» или «−» со счётом - чип цвета стороны [tint]: свой голос выбран. */
-@Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip("$sign$count", chosen, onClick, enabled = enabled, accent = tint)
+/** Голос «+» или «−» со счётом - чип цвета стороны [tint]: свой голос выбран; [name] - имя для чтения с экрана («Нравится, 3»). */
+@Composable private fun VoteButton(sign: String, name: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
+    ForgeChip("$sign$count", chosen, onClick, state = ButtonState.of(enabled), accent = tint, contentDescription = name)
 }
 
 /** Длина поиска известных проблем. */

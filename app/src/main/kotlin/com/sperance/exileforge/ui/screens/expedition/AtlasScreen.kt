@@ -223,7 +223,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 @Composable internal fun AtlasMenu(summary: Boolean, reset: Boolean, onSummary: () -> Unit, onReset: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        ForgeIconButton(Icons.Outlined.MoreVert, ui("common.more"), onClick = { open = true }, tint = Sky.text)
+        ForgeIconButton(Icons.Outlined.MoreVert, ui("common.more"), onClick = { open = true }, accent = Sky.text)
         ForgeMenu(expanded = open, onDismissRequest = { open = false }) {
             val entries = listOf(
                 Triple(ui("atlas.summary"), summary, onSummary),

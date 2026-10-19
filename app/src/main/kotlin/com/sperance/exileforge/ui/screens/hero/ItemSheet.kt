@@ -103,7 +103,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                                 ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            ForgeButton(enabled = can && (game.bagAmount(ore) ?: 0L) >= need, onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                            ForgeButton(state = ButtonState.of(can && (game.bagAmount(ore) ?: 0L) >= need), onClick = { model.temper(instance.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                                 Text(ui("temper.go", itemTitle(ore), need, game.bagAmount(ore) ?: 0L))
                             }
                         }
@@ -131,11 +131,11 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             ) {
                 val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
                 when {
-                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = can, accent = look.gold.takeIf { look.legend != null }) {
+                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, state = ButtonState.of(can), accent = look.gold.takeIf { look.legend != null }) {
                         Text(ui("hero.replace"), maxLines = 1)
                     }
 
-                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = offer.enabled, accent = look.gold.takeIf { look.legend != null }) {
+                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, state = ButtonState.of(offer.enabled), accent = look.gold.takeIf { look.legend != null }) {
                         Text(offer.label, maxLines = 1)
                     }
                 }
@@ -143,9 +143,9 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
                     shell.tab(TAB_CRAFT)
-                }, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, kind = ButtonKind.Secondary, size = ButtonSize.Compact, enabled = can) { Text(ui("nav.forge"), maxLines = 1) }
+                }, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(can)) { Text(ui("nav.forge"), maxLines = 1) }
                 Box {
-                    ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, style = IconButtonStyle.Tonal, compact = true)
+                    ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, kind = ButtonKind.Secondary, size = ButtonSize.Compact)
                     ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
                         if (instance.equipped && wornPlace != null) {
                             MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {

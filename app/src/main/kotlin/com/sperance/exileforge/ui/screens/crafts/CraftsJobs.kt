@@ -173,9 +173,9 @@ import kotlinx.coroutines.delay
 /** Отбор работ по группе выхода: «Все N» и каждая группа с числом открытых работ; [selected] null - все. */
 @Composable internal fun JobFilters(groups: JobGroups, selected: String?, onSelect: (String?) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        ForgeChip(ui("crafts.group_all", groups.total), selected == null, { onSelect(null) })
+        ForgeChip(ui("crafts.group_all", groups.total), selected == null, { onSelect(null) }, mode = ChipMode.Choice)
         groups.counts.forEach { (group, count) ->
-            ForgeChip(ui("crafts.group_count", ui("crafts.group.$group"), count), selected == group, { onSelect(group) })
+            ForgeChip(ui("crafts.group_count", ui("crafts.group.$group"), count), selected == group, { onSelect(group) }, mode = ChipMode.Choice)
         }
     }
 }
@@ -254,6 +254,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                                 option.choice == picked,
                                 { picked = option.choice },
                                 leading = if (!profession.opens(option)) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
+                                mode = ChipMode.Choice,
                             )
                         }
                     }
@@ -278,7 +279,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                             ui("crafts.gain", bagCount(game, code), itemTitle(code)).removePrefix("+"),
                             on,
                             { additives = if (on) additives - code else additives + code },
-                            enabled = on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives),
+                            state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),
                         )
                     }
                 }
@@ -286,14 +287,14 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             shortNote(game, job, chosenAdditives)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
             Spacer(Modifier.height(4.dp))
             when {
-                current -> ForgeButton(enabled = !game.busy, onClick = {
+                current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                     onDismiss()
                     vm.stop()
                 }, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
 
-                block != null -> ForgeButton(enabled = false, onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
+                block != null -> ForgeButton(state = ButtonState.of(false), onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
 
-                else -> ForgeButton(enabled = !game.busy, onClick = {
+                else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                     onDismiss()
                     if (smith) SmithChoice.of(job.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
                     vm.start(job.code, if (job.job.targetsItem) item else job.choice, chosenAdditives)

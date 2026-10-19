@@ -51,7 +51,7 @@ import org.koin.compose.viewmodel.koinViewModel
         if (game.isAdmin) {
             ForgePanel {
                 Engraved(ui("admin.screens"))
-                ForgeButton(enabled = !game.busy, onClick = {
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                     vm.openRedemptions()
                     vm.loadRedemptions()
                 }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {

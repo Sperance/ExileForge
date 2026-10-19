@@ -138,7 +138,7 @@ private const val CARD_TOP = .48f
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        ForgeIconButton(ForgeGlyphs.Target, ui("expedition.to_hero"), onClick = onHero, style = IconButtonStyle.Tonal, compact = true, shape = IconButtonShape.Circle)
+        ForgeIconButton(ForgeGlyphs.Target, ui("expedition.to_hero"), onClick = onHero, kind = ButtonKind.Secondary, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
     }
 }
 
@@ -146,9 +146,9 @@ private const val CARD_TOP = .48f
 @Composable private fun ZoomButtons(camera: WorldCamera, modifier: Modifier, onZoom: (Float) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(modifier.background(Abyss.copy(alpha = .88f), shape).border(1.dp, Gold.copy(alpha = .4f), shape)) {
-        ForgeIconButton(ForgeGlyphs.Plus, ui("expedition.zoom_in"), onClick = { onZoom(ZOOM_STEP) }, enabled = camera.canZoomIn, tint = GoldBright)
+        ForgeIconButton(ForgeGlyphs.Plus, ui("expedition.zoom_in"), onClick = { onZoom(ZOOM_STEP) }, state = ButtonState.of(camera.canZoomIn), accent = GoldBright)
         HorizontalDivider(Modifier.width(44.dp), color = Gold.copy(alpha = .25f))
-        ForgeIconButton(ForgeGlyphs.Minus, ui("expedition.zoom_out"), onClick = { onZoom(1 / ZOOM_STEP) }, enabled = camera.canZoomOut, tint = GoldBright)
+        ForgeIconButton(ForgeGlyphs.Minus, ui("expedition.zoom_out"), onClick = { onZoom(1 / ZOOM_STEP) }, state = ButtonState.of(camera.canZoomOut), accent = GoldBright)
     }
 }
 

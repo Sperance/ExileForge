@@ -119,7 +119,7 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 @Composable private fun BackTrail(root: String, levels: List<TrailEntry>) {
     val jump = { keep: Int -> levels.drop(keep).asReversed().forEach { it.back.value() } }
     Row(Modifier.fillMaxWidth().height(TRAIL_HEIGHT).padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, tint = Gold)
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, accent = Gold)
         val data = levels.last().data
         Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.shown }

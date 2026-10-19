@@ -80,7 +80,7 @@ import kotlin.math.abs
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("chars.class.prev"), onClick = { onTurn(-1) }, tint = Gold)
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("chars.class.prev"), onClick = { onTurn(-1) }, accent = Gold)
         ClassPortrait(guide.code, portraits, Modifier.width(72.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(classTitle(guide.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -93,7 +93,7 @@ import kotlin.math.abs
                 )
             }
         }
-        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("chars.class.next"), onClick = { onTurn(1) }, tint = Gold)
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("chars.class.next"), onClick = { onTurn(1) }, accent = Gold)
     }
 }
 

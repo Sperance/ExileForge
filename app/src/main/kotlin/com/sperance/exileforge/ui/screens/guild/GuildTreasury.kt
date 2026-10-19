@@ -54,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
                 }
                 val most = listOfNotNull(left, have).minOrNull()
                 if (most != null && most > 0) {
-                    ForgeButton(enabled = !game.busy, onClick = { amount = most.toString() }, kind = ButtonKind.Text) { Text(ui("guild.give_max", number(most.toDouble()))) }
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = { amount = most.toString() }, kind = ButtonKind.Text) { Text(ui("guild.give_max", number(most.toDouble()))) }
                 }
                 val over = left != null && count > left
                 val bill = game.goldBill(count)
@@ -64,9 +64,9 @@ import com.sperance.exileforge.ui.theme.*
                 ForgeButton(
                     onClick = { vm.contribute(count) { amount = "" } },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !game.busy && count > 0 && !short && !over,
+                    state = ButtonState.of(!game.busy && count > 0 && !short && !over),
                     icon = ForgeGlyphs.Coins,
-                    hold = Hold(rearm = true),
+                    hold = Hold(),
                 ) { Text(ui("guild.give_do")) }
             }
         }

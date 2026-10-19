@@ -108,7 +108,7 @@ import java.util.Locale
         }
         FightFigures(report, logOpen, onBreakdown = { breakdown = true }) { logOpen = !logOpen }
         ForgeButton(
-            enabled = !holding,
+            state = ButtonState.of(!holding),
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth(),
             size = ButtonSize.Wide,

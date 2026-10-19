@@ -68,7 +68,7 @@ import org.koin.compose.viewmodel.koinViewModel
             if (notice.appealed) {
                 MutedText(ui("notice.appealed"))
             } else {
-                ForgeButton(enabled = !activity.held, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal")) }
+                ForgeButton(state = ButtonState.of(!activity.held), onClick = { appealing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal")) }
             }
         }
         ForgeButton(onClick = vm::dismiss, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("notice.switch")) }
@@ -131,7 +131,7 @@ import org.koin.compose.viewmodel.koinViewModel
     ForgeDialog(ui("notice.appeal_title"), onDismiss) {
         MutedText(ui("notice.appeal_note"))
         OutlinedTextField(text, { text = it.take(APPEAL) }, minLines = 3, supportingText = { LengthCounter(text, APPEAL) }, modifier = Modifier.fillMaxWidth())
-        ForgeButton(enabled = text.isNotBlank(), onClick = { onSend(text) }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal_send")) }
+        ForgeButton(state = ButtonState.of(text.isNotBlank()), onClick = { onSend(text) }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal_send")) }
     }
 }
 

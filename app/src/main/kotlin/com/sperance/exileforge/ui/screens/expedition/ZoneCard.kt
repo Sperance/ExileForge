@@ -123,7 +123,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
         ) {
             Box(Modifier.fillMaxWidth().height(28.dp)) {
                 Box(Modifier.align(Alignment.Center).size(38.dp, 4.dp).background(Color(0xFF3A414B), RoundedCornerShape(2.dp)))
-                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd), compact = true)
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd), size = ButtonSize.Compact)
             }
             Header(token, world.campaign.regions.firstOrNull { region -> region.zones.any { it.code == zone.code } }?.code)
             if (token.state == TokenState.LOCKED) {
@@ -141,7 +141,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             val wait = seedWait(seedReadyAt(game, zone.code, launch, forced))
             val mapless = launch.picked == null && !continues(game, zone.code, launch, forced) && zone.needsMap(game.hero?.campaign?.cleared.orEmpty())
             ForgeButton(
-                enabled = game.hero != null && !game.busy && wait == 0L && !mapless,
+                state = ButtonState.of(game.hero != null && !game.busy && wait == 0L && !mapless),
                 onClick = { launchGuarded { vm.startRun(zone.code.value) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
             ) {
@@ -153,7 +153,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             if (game.isTester) TesterMechanics(vm, forced)
             if (game.isTester) {
                 ForgeButton(
-                    enabled = game.hero != null && !game.busy && wait == 0L,
+                    state = ButtonState.of(game.hero != null && !game.busy && wait == 0L),
                     onClick = { launchGuarded { vm.startRun(zone.code.value, toBoss = true) } },
                     modifier = Modifier.fillMaxWidth(),
                     kind = ButtonKind.Secondary,

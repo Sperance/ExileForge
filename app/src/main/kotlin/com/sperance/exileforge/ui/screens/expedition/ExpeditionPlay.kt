@@ -380,7 +380,7 @@ internal const val PENDING_GRACE = 10_000L
 
 /** Кнопка карты: круглая тональная иконка-кнопка, одна на все кнопки поверх карты. */
 @Composable internal fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, shape = IconButtonShape.Circle)
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, shape = IconButtonShape.Circle)
 }
 
 /** How near, in tiles, a tap must land to a fountain to name it. */

@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
@@ -88,7 +90,7 @@ import org.koin.compose.viewmodel.koinViewModel
             FilterButton(state.filters.active, enabled = !account.busy) { filtering = true }
         }
         if (account.isAdmin) {
-            ForgeButton(onClick = { creating = true }, enabled = !account.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            ForgeButton(onClick = { creating = true }, state = ButtonState.of(!account.busy), contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), modifier = Modifier.size(20.dp))
             }
         }
@@ -139,8 +141,8 @@ import org.koin.compose.viewmodel.koinViewModel
         Icons.Outlined.Tune,
         ui("moderation.filters"),
         onClick = onClick,
-        style = if (active > 0) IconButtonStyle.Tonal else IconButtonStyle.Ghost,
-        enabled = enabled,
+        kind = if (active > 0) ButtonKind.Secondary else ButtonKind.Text,
+        state = ButtonState.of(enabled),
         badge = active,
     )
 }
@@ -173,7 +175,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
-            ForgeButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("moderation.filters.reset")) }
+            ForgeButton(onClick = { onApply(ModerationFilters.DEFAULT) }, state = ButtonState.of(resettable), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("moderation.filters.reset")) }
             ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
         },
     ) {
@@ -242,9 +244,9 @@ private const val FATE_COLUMNS = 2
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
     if (pages <= 1 && page == 0) return
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        ForgeButton(onClick = { onPage(page - 1) }, enabled = !busy && page > 0, kind = ButtonKind.Text) { Text("‹") }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("common.prev_page"), onClick = { onPage(page - 1) }, state = ButtonState.of(!busy && page > 0))
         Text(ui("moderation.page", page + 1, pages), color = Muted, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-        ForgeButton(onClick = { onPage(page + 1) }, enabled = !busy && page + 1 < pages, kind = ButtonKind.Text) { Text("›") }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("common.next_page"), onClick = { onPage(page + 1) }, state = ButtonState.of(!busy && page + 1 < pages))
     }
 }
 
@@ -295,7 +297,7 @@ private const val FATE_COLUMNS = 2
             Text(ui("moderation.purge_in", left ?: 0), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         if (!row.protected) {
-            ForgeIconButton(Icons.Outlined.Restore, ui("moderation.restore"), onClick = onRestore, enabled = !account.busy, tint = Gold)
+            ForgeIconButton(Icons.Outlined.Restore, ui("moderation.restore"), onClick = onRestore, state = ButtonState.of(!account.busy), accent = Gold)
         }
     }
 }
@@ -347,7 +349,7 @@ private const val FATE_COLUMNS = 2
         body = SheetBody.Scroll(),
         footer = {
             ForgeButton(
-                enabled = !account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0),
+                state = ButtonState.of(!account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0)),
                 onClick = { onBan(SanctionRequest(target, kind, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment, reason)) },
                 modifier = Modifier.weight(1f),
             ) { Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_for" else "moderation.ban_for", ui("moderation.target.$target"), term?.let(::hoursText) ?: ui("moderation.forever"))) }
@@ -408,7 +410,7 @@ private const val FATE_COLUMNS = 2
                 onClick = { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) },
                 modifier = Modifier.weight(1f),
                 kind = ButtonKind.Danger,
-                enabled = !account.busy && comment.isNotBlank(),
+                state = ButtonState.of(!account.busy && comment.isNotBlank()),
                 icon = Icons.Outlined.DeleteOutline,
                 hold = Hold(),
             ) { Text(ui("moderation.hold_delete")) }
@@ -456,7 +458,7 @@ private const val FATE_COLUMNS = 2
 internal fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
 
 @Composable internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, selected, onClick, accent = LossText)
+    ForgeChip(label, selected, onClick, accent = LossText, mode = ChipMode.Choice)
 }
 
 @Composable internal fun RolePill(role: AccountRole) {
@@ -560,7 +562,7 @@ internal val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
         body = SheetBody.Scroll(spacing = 12.dp),
         footer = {
             if (created == null) {
-                ForgeButton(onClick = { onCreate(login, role) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.weight(1f)) { Text(ui("moderation.tester_create")) }
+                ForgeButton(onClick = { onCreate(login, role) }, state = ButtonState.of(!account.busy && login.isNotBlank()), modifier = Modifier.weight(1f)) { Text(ui("moderation.tester_create")) }
             } else {
                 ForgeButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(ui("tester.ok")) }
             }

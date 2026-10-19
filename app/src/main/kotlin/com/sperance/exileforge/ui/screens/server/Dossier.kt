@@ -211,7 +211,7 @@ private enum class DossierFold(val title: String) {
                             val fate = dossier.account.fate
                             if (fate == null) MutedText(DASH) else FateRibbon(FateCard(fate), ui("moderation.fate.chosen", dossier.account.fateAt?.let(::dayOf) ?: DASH), Modifier.fillMaxWidth())
                             if (dossier.rights.fate) {
-                                ForgeButton(enabled = !account.busy, onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("moderation.fate.change"), color = Gold) }
+                                ForgeButton(state = ButtonState.of(!account.busy), onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, accent = Gold) { Text(ui("moderation.fate.change")) }
                             }
                         }
                     }
@@ -257,7 +257,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
                 if (item.sharedWith.isNotEmpty()) Text(ui("moderation.shared", item.sharedWith.joinToString()), color = Ember, style = MaterialTheme.typography.labelSmall)
             }
             if (dossier.rights.banDevice) {
-                ForgeButton(enabled = !account.busy, onClick = { onBanDevice(item) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(ui("moderation.ban_device")) }
+                ForgeButton(state = ButtonState.of(!account.busy), onClick = { onBanDevice(item) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(ui("moderation.ban_device")) }
             }
         }
     }
@@ -368,7 +368,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     if (actions.isEmpty()) return
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         actions.forEach { (label, act) ->
-            ForgeButton(enabled = !account.busy, onClick = act, modifier = Modifier.weight(1f), kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(label, maxLines = 1) }
+            ForgeButton(state = ButtonState.of(!account.busy), onClick = act, modifier = Modifier.weight(1f), kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(label, maxLines = 1) }
         }
     }
 }
@@ -387,7 +387,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
-            ForgeButton(onClick = { picked?.let { onPick(it, reason) } }, modifier = Modifier.weight(1f), enabled = !account.busy && ready, hold = Hold(fate = true)) {
+            ForgeButton(onClick = { picked?.let { onPick(it, reason) } }, modifier = Modifier.weight(1f), state = ButtonState.of(!account.busy && ready), hold = Hold(tone = HoldTone.Fate)) {
                 Text(ui("moderation.fate.hold"))
             }
         },
@@ -411,7 +411,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(spacing = 12.dp),
         footer = {
-            ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.weight(1f)) {
+            ForgeButton(onClick = { onCreate(code, name) }, state = ButtonState.of(!account.busy && code.isNotBlank() && name.isNotBlank()), modifier = Modifier.weight(1f)) {
                 Text(ui("admin.server_create"))
             }
         },
@@ -458,7 +458,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
             if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
         }
         if (sanction.active) {
-            ForgeButton(enabled = !busy, onClick = onLift, kind = ButtonKind.Text) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift"), color = Gold) }
+            ForgeButton(state = ButtonState.of(!busy), onClick = onLift, kind = ButtonKind.Text, accent = Gold) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift")) }
         } else {
             Text(ui(if (sanction.purgedAt != null) "moderation.purged" else "moderation.inactive"), color = Muted, style = MaterialTheme.typography.labelSmall)
         }

@@ -165,9 +165,9 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
 }
 
 /**
- * The ceiling of a capped figure: the rules' base limit, each raise by the stat that gives it (a tap
- * opens that stat's own breakdown), the limit that stands and the hard ceiling; then what the fight counts
- * and what lies above the limit for nothing.
+ * Предел характеристики: базовый лимит правил, каждая прибавка от характеристики, что её даёт (касание открывает её разбор),
+ * абсолютный потолок и дно; упёршаяся в предел - строкой «предел; набрано N». Действующего лимита и числа боя отдельной строкой
+ * нет: итог уже в шапке разбора.
  */
 @Composable private fun LimitCard(limit: StatLimit, game: GameUi, open: (RowLink) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
@@ -176,19 +176,11 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
         Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("stat.cap.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-        }
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
         limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = RowLink.Stat(stat), better = StatPolarity.better(game.index, limit.stat, amount)), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         limit.floor?.let { SourceLine(ShareRow(ui("stat.cap.floor"), value(it)), open) }
-        Text(
-            ui("stat.cap.counts", value(limit.effective)) + if (limit.clamped) " · " + ui("stat.cap.gathered", value(limit.gathered)) else "",
-            color = if (limit.clamped) Muted else Parchment,
-            style = MaterialTheme.typography.labelSmall,
-        )
+        if (limit.clamped) Text(ui("stat.cap.reached", value(limit.gathered)), color = Caution, style = MaterialTheme.typography.labelSmall)
     }
 }
 

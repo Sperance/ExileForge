@@ -28,7 +28,6 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.partFigure
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
@@ -37,8 +36,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
-import com.sperance.exileforge.core.sheet.reserve
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
@@ -139,7 +136,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
     var unfolded by rememberSaveable(group) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -184,41 +181,28 @@ private val StatSection.glyph: Glyph get() = when (this) {
 /** Строка сводки: касание открывает разбор ([open]). */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String) -> Unit) {
     val lit = if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier
-    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 9.dp))
+    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 6.dp))
 }
 
 /**
- * One figure on one full-width row: its icon, the stat's name, and the number on the right — lit, with the old one, when [was] differs.
- * За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Строка с частями (`partOf`) - итог боя, под
- * именем - из чего он: «12 + 1.5% от максимума».
- *
- * Доля маны, что держат ауры, - под именем, справа - весь запас. Пределы: сводка печатает действующее число, набранное сверх - под именем
- * «предел; набрано N». Уклонение и броня - главным шанс уклонения и снижение физического урона.
+ * Строка сводки в одну линию: значок характеристики, имя и итог справа; при [was] - старое число зачёркнуто, новое подсвечено.
+ * За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Подписей под именем нет: части, доля в резерве, предел
+ * с набранным и рейтинг защиты - только в разборе. Пределы: печатается действующее число, упёршееся в предел - цветом
+ * предупреждения; уклонение и броня - процентом защиты ([StatLimits.defence]).
  */
 @Composable private fun StatRow(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
     Row(
-        modifier,
+        modifier.heightIn(min = 36.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Tipped({ Tip(statTitle(key, game.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, game.index))) }) { StatIcon(key, accent, Modifier.size(18.dp)) }
-        val reserve = remember(key, game.hero, game.index) { ReservePool.entries.firstOrNull { it.stat == key }?.let(game::reserve) }?.takeIf { it.percent > 0 }
-        val parts = remember(key, figures, game.index) { game.index?.let { partsText(key, figures.stats, it) } }
+        StatIcon(key, accent, Modifier.size(18.dp))
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
         val level = game.hero?.level
         val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
         val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
-        Column(Modifier.weight(1f)) {
-            Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            reserve?.let { Text(ui("hero.reserved", number(it.percent)), color = it.pool.tint(), style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-            parts?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-            limit?.takeIf { it.clamped }?.let { Text(ui("stat.cap.reached", statValue(key, it.gathered, game.index)), color = Caution, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-            defence?.let {
-                val raw = ui(if (key == StatLimits.EVASION) "stat.defence_raw.evasion" else "stat.defence_raw.armour", statValue(key, value, game.index), number(it.cap))
-                Text(raw, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            }
-        }
-        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough) }
+        Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.LineThrough) }
         Text(
             defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: statValue(key, limit?.effective ?: value, game.index),
             color = when {
@@ -226,26 +210,14 @@ private val StatSection.glyph: Glyph get() = when (this) {
                 limit?.clamped == true -> Caution
                 else -> Parchment
             },
-            style = MaterialTheme.typography.titleMedium,
-            fontSize = 17.sp,
+            style = MaterialTheme.typography.titleSmall,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
+            maxLines = 1,
         )
         if (key in figures.skilled) Tipped({ Tip(ui("hero.mark.aura"), ui("hero.mark.aura_body"), tint = Rune) }) { GlyphIcon(Glyph.AURA, Rune, Modifier.size(13.dp)) }
         if (key in figures.fated) Tipped({ Tip(ui("hero.mark.fate"), ui("hero.mark.fate_body"), tint = Caution) }) { Text("✦", color = Caution, fontSize = 11.sp) }
     }
-}
-
-/**
- * Из чего строка с частями: своя характеристика и каждая часть (`partOf`) листа боя [stats], словами [partFigure] - доля
- * максимума или «увеличение». Без частей - null.
- */
-private fun partsText(key: String, stats: Map<String, Double>, index: ContentIndex): String? {
-    val registry = index.stats
-    val parts = registry.parts(key).mapNotNull { part -> stats[part]?.takeIf { it != 0.0 }?.let { part to it } }
-    if (parts.isEmpty()) return null
-    val own = stats[key] ?: 0.0
-    val texts = parts.map { (part, value) -> partFigure(key, part, statValue(part, value, index), index) }
-    return (listOfNotNull(statValue(key, own, index).takeIf { own != 0.0 }) + texts).joinToString(" + ")
 }
 
 /** Цвет запаса резерва аур: мана - синим, здоровье - красным. */

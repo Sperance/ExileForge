@@ -11,6 +11,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -19,13 +21,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,7 +40,6 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.mapTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.ShellViewModel
@@ -48,7 +53,6 @@ import com.sperance.exileforge.ui.screens.expedition.arena.LifeFlowSheet
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
 
@@ -115,6 +119,7 @@ import kotlin.math.roundToInt
                             run,
                             hud,
                             live,
+                            docked = dock.occupied,
                             onLeave = if (zone) null else ({ leaving = true }),
                             onGear = { gear = true },
                             onStats = { sheet = true },
@@ -230,10 +235,13 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
 /** Полосы героя одним значением: перекомпоновка - лишь когда сменилось число. */
 private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int, val mana: Int, val maxMana: Int, val reserved: Int, val flow: LifeFlow?, val lifeReserved: Int)
 
+/** Сторона фляги пояса под большим пальцем. */
+private val HAND_FLASK = 44.dp
+
 /** Пояс на карте из живого снимка. */
 @Composable private fun LiveFlasks(live: State<RunHud>, onDrink: (Int) -> Unit) {
     val flasks by remember(live) { derivedStateOf { live.value.flasks } }
-    MapFlasks(flasks, onDrink)
+    MapFlasks(flasks, HAND_FLASK, RoundedCornerShape(10.dp), onDrink)
 }
 
 /** Урон карты над героем из живого снимка. */
@@ -249,17 +257,61 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
 }
 
 /**
- * Life and shield, the map's name and whether its warden still lives, and the way out. Между боями здоровье восстанавливается само
- * (`offCombatRegen`). What the map still holds — foes, chests, fountains — is the walk's to find.
- * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian returns in its time
- * или призывается за золото (один призыв за заход, [GuardianSummon]).
- *
- * Выход - портал в бронзовом кольце в углу, со спросом; меню захода (выход, настройки, жук) - первым в углу. Задания захода - свитком.
- * Призыв павшего стража за золото - в ручном заходе. Под стражем - значок «быстрее», печать стража и ворота кольца - счёт нужного. Жизнь -
- * под именем карты, мана и пояс - под ней, несомое - плитками полки. Мини-карта открывается по мере разведки, со своим масштабом и полной
- * картой по касанию.
+ * Полоса карты в две части: сверху то, что читают, снизу то, что нажимают. Сверху на тёмной вуали - имя карты, метки состояния
+ * ([MapMarks]: страж, печать, ворота, Скверна, журнал), полосы героя с итогом здоровья в секунду на полосе жизни, плитки несомого и
+ * мини-карта со своим масштабом. Снизу слева, под большим пальцем, - призыв павшего стража за золото ([GuardianSummon]), пояс и
+ * ряд кнопок: меню захода (выход, настройки, журнал боя), снаряжение, герой, задания. Пока низ занят нижней панелью ([docked],
+ * [MapDock]), нижней части нет.
  */
 @Composable internal fun MapBar(
+    game: GameUi,
+    run: ExpeditionRun,
+    hud: RunHud,
+    live: State<RunHud>,
+    docked: Boolean,
+    onLeave: (() -> Unit)?,
+    onGear: () -> Unit,
+    onStats: () -> Unit,
+    onDrink: (Int) -> Unit,
+    onRetry: () -> Unit,
+    onQuests: () -> Unit,
+) {
+    Box(Modifier.fillMaxSize()) {
+        MapSurvey(run, hud, live, onRetry, Modifier.align(Alignment.TopCenter))
+        if (!docked) {
+            MapHands(game, run, hud, live, onLeave, onGear, onStats, onDrink, onQuests, Modifier.align(Alignment.BottomStart))
+        }
+    }
+}
+
+/** Верх полосы карты: имя карты, метки, полосы и несомое слева, мини-карта справа - на вуали, что гаснет к карте. */
+@Composable private fun MapSurvey(run: ExpeditionRun, hud: RunHud, live: State<RunHud>, onRetry: () -> Unit, modifier: Modifier) {
+    val zone = VaalZones.isZone(run.zone)
+    Row(
+        modifier.fillMaxWidth().background(Brush.verticalGradient(0f to VeilTop, .7f to VeilMid, 1f to Color.Transparent))
+            .statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 22.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text(
+                if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode),
+                color = if (zone) Color(0xFFFF8A78) else GoldBright,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            MapMarks(run, hud, zone, onRetry)
+            MapVitals(live, Modifier.fillMaxWidth())
+            RoadEffects(live)
+        }
+        MiniMap(run, hud)
+    }
+}
+
+/** Низ полосы карты под большим пальцем: призыв стража, пояс и ряд кнопок в одной бронзовой рамке. */
+@Composable private fun MapHands(
     game: GameUi,
     run: ExpeditionRun,
     hud: RunHud,
@@ -268,64 +320,59 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
     onGear: () -> Unit,
     onStats: () -> Unit,
     onDrink: (Int) -> Unit,
-    onRetry: () -> Unit,
     onQuests: () -> Unit,
+    modifier: Modifier,
 ) {
     val expedition: ExpeditionViewModel = koinViewModel()
-    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val shape = RoundedCornerShape(14.dp)
+    Column(modifier.navigationBarsPadding().padding(start = 12.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        hud.summon?.let { summon ->
+            Box(Modifier.background(HandsWell, RoundedCornerShape(12.dp)).border(1.dp, Bronze, RoundedCornerShape(12.dp)).padding(start = 4.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)) {
+                GuardianSummon(game, run, summon, mapTitle(hud.mapCode), expedition::runCommand)
+            }
+        }
+        Column(Modifier.background(HandsWell, shape).border(1.dp, Bronze, shape).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 RunMenu(
                     items = listOfNotNull(onLeave?.let { RunMenuItem(ForgeGlyphs.Portal, ui("expedition.leave"), danger = true, onClick = it) }),
                     hold = { HoldsRun(run) },
+                    trigger = { open -> HandButton(Icons.Outlined.Menu, ui("run.menu"), open) },
                 )
-                RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
-                RoundButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), onClick = onStats)
-                RoundButton(ForgeGlyphs.Scroll, ui("run.quests"), onClick = onQuests)
+                HandButton(ForgeGlyphs.Helm, ui("expedition.gear"), onGear)
+                HandButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), onStats)
+                HandButton(ForgeGlyphs.Scroll, ui("run.quests"), onQuests)
             }
-            Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                val zone = VaalZones.isZone(run.zone)
-                Text(
-                    if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode),
-                    color = if (zone) Color(0xFFFF8A78) else GoldBright,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                )
-                val guardian = GuardianLine.of(hud, zone)
-                Text(guardian.text, color = guardian.color, style = MaterialTheme.typography.labelMedium)
-                hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
-                if (hud.swift) SwiftBadge(run.index.campaign.expedition.bossSlainSpeed)
-                run.seal?.takeIf { !it.open }?.let { seal ->
-                    Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
-                }
-                run.arenaGate?.takeIf { !it.open }?.let { gate ->
-                    Text(ui("expedition.gate_progress", gate.cleared, gate.need), color = Color(0xFFF2C94C), style = MaterialTheme.typography.labelSmall)
-                }
-                Journal(hud, onRetry)
-                MapVitals(live, Modifier.fillMaxWidth())
-                RoadEffects(live)
-                BlightLine(hud.blight)
-                if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
-            }
-            MiniMap(run, hud)
         }
     }
 }
 
+/** Кнопка низа карты: тональный скруглённый квадрат 44dp - одна на ряд кнопок под большим пальцем. */
+@Composable private fun HandButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Wide)
+}
+
+/** Вуаль под верхом полосы карты: плотная у края экрана, гаснет к карте. */
+private val VeilTop = Color(0xF0080B0E)
+private val VeilMid = Color(0xDB080B0E)
+
+/** Подложка низа полосы карты. */
+private val HandsWell = Color(0xD10A0D12)
+
 /**
  * The belt on the map: a draught on the road brings its life or mana back at once, and a
  * utility flask's lines run as the hero walks. A flask is filled to its charges and ringed while it runs.
+ * [cell] - сторона фляги, [shape] - её форма: на карте - квадрат 44dp под большим пальцем, в листе Бездны - малый круг.
  */
-@Composable internal fun MapFlasks(flasks: List<FlaskView?>, onDrink: (Int) -> Unit) {
-    val expedition: ExpeditionViewModel = koinViewModel()
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+@Composable internal fun MapFlasks(flasks: List<FlaskView?>, cell: Dp = 34.dp, shape: Shape = CircleShape, onDrink: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(if (cell > 34.dp) 6.dp else 8.dp), verticalAlignment = Alignment.CenterVertically) {
         flasks.forEach { view ->
             if (view == null) return@forEach
             val tint = flaskTint(view.kind)
             FlaskGain(view.charges, tint) {
                 Box(
-                    Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
-                        .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+                    Modifier.size(cell).clip(shape).background(Color(0xE60A0D12))
+                        .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, shape)
                         .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
                     contentAlignment = Alignment.Center,
                 ) {
@@ -334,41 +381,12 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
                         drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
                         if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(2.5.dp.toPx()))
                     }
-                    Text("${view.charges}", color = GoldBright, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("${view.charges}", color = GoldBright, fontSize = if (cell > 34.dp) 12.sp else 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
     }
 }
-
-/**
- * The journal, quietly: how many events the server has not taken yet, and how many it refused.
- * Nothing while everything is counted — the run does not talk about its bookkeeping unprompted.
- *
- * Слова стоит лишь старейшее событие, что сервер давно не берёт: пачка в полёте - не новость.
- */
-@Composable internal fun Journal(hud: RunHud, onRetry: (() -> Unit)? = null) {
-    val expedition: ExpeditionViewModel = koinViewModel()
-    var overdue by remember { mutableStateOf(false) }
-    LaunchedEffect(hud.pending > 0, hud.applied) {
-        overdue = false
-        if (hud.pending > 0) {
-            delay(PENDING_GRACE)
-            overdue = true
-        }
-    }
-    val waiting = hud.pending > 0 && overdue
-    if (!waiting && hud.rejected == 0) return
-    Text(
-        listOfNotNull(ui("expedition.pending", hud.pending).takeIf { waiting }, ui("expedition.rejected", hud.rejected).takeIf { hud.rejected > 0 }).joinToString(" · "),
-        color = if (hud.rejected > 0) LifeRed.copy(alpha = .85f) else Muted,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = onRetry?.takeIf { waiting }?.let { Modifier.clickable(onClick = it) } ?: Modifier,
-    )
-}
-
-/** How long the journal's oldest unsent event waits before the run says so. */
-internal const val PENDING_GRACE = 10_000L
 
 /** The run stands still for as long as this is in the composition: a window over the map pauses it. */
 @Composable internal fun HoldsRun(run: ExpeditionRun) {
@@ -376,11 +394,6 @@ internal const val PENDING_GRACE = 10_000L
         run.send(RunCommand.Hold(true))
         onDispose { run.send(RunCommand.Hold(false)) }
     }
-}
-
-/** Кнопка карты: круглая тональная иконка-кнопка, одна на все кнопки поверх карты. */
-@Composable internal fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, shape = IconButtonShape.Circle)
 }
 
 /** How near, in tiles, a tap must land to a fountain to name it. */
@@ -423,15 +436,3 @@ internal const val FOUNTAIN_TAP = .9
 
 /** Доля высоты экрана, выше которой панель забега не растёт. */
 private const val PANEL_SHARE = .6f
-
-/** Значок «быстрее» под стражем: босс карты пал - шаг героя × [factor] до конца захода. */
-@Composable private fun SwiftBadge(factor: Double) {
-    Text(
-        ui("run.swift", number(factor)),
-        color = Rune,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.background(Rune.copy(alpha = .12f), RoundedCornerShape(50)).border(1.dp, Rune.copy(alpha = .4f), RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 2.dp),
-    )
-}

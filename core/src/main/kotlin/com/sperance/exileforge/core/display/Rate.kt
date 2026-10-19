@@ -95,18 +95,18 @@ fun flowParts(flow: LifeFlow): String = listOfNotNull(
     ui("fight.flow.shielded", flow.shielded.roundToInt()).takeIf { flow.shielded >= .5 },
 ).joinToString(" · ")
 
-/** Что меняется в строке итога под полосами героя: здоровье или, когда недуги едят только его, щит. */
+/** Что меняется в итоге на полосе жизни героя: здоровье или, когда недуги едят только его, щит. */
 enum class FlowSubject { LIFE, SHIELD }
 
-/** Строка итога под полосами героя: что меняется [subject], текст [text] и тон [tone]; причину строка не пишет - её видно по ореолу и полке. */
+/** Итог на полосе жизни героя: что меняется [subject], текст [text] и тон [tone]; причину итог не пишет - её видно по ореолу и полке. */
 data class FlowLine(val subject: FlowSubject, val text: String, val tone: FlowTone)
 
 /**
- * Строка итога героя с здоровьем [life] из [max]: «Здоровье −14/с» (прибыль - «+8/с»), пока здоровье меняется ([LifeFlow.moves]);
- * «Щит −8/с», когда недуги едят только щит ([LifeFlow.drainsShieldOnly]); покой - null.
+ * Итог героя с здоровьем [life] из [max]: «−14/с» (прибыль - «+8/с»), пока здоровье меняется ([LifeFlow.moves]); то же число
+ * убыли щита, когда недуги едят только щит ([LifeFlow.drainsShieldOnly]): что меняется - [FlowLine.subject], его цвет; покой - null.
  */
 fun flowLine(flow: LifeFlow, life: Double, max: Double): FlowLine? = when {
-    flow.moves(life, max) -> FlowLine(FlowSubject.LIFE, ui("fight.flow.line_life", flowRate(flow.net)), FlowTone.of(flow.net))
-    flow.drainsShieldOnly(life, max) -> FlowLine(FlowSubject.SHIELD, ui("fight.flow.line_shield", flowRate(-flow.shielded)), FlowTone.LOSS)
+    flow.moves(life, max) -> FlowLine(FlowSubject.LIFE, flowRate(flow.net), FlowTone.of(flow.net))
+    flow.drainsShieldOnly(life, max) -> FlowLine(FlowSubject.SHIELD, flowRate(-flow.shielded), FlowTone.LOSS)
     else -> null
 }

@@ -98,14 +98,13 @@ import kotlin.math.cos
         )
         if (leader) {
             Spacer(Modifier.height(6.dp))
-            HoldButton(
-                label = ui("guild.tree_reset_hold"),
-                accent = LifeRed,
-                enabled = !game.busy && ready && guild.tree.isNotEmpty(),
-                rearm = true,
-                millis = RESET_HOLD_MS,
-                onHeld = vm::resetTree,
-            )
+            ForgeButton(
+                onClick = vm::resetTree,
+                modifier = Modifier.fillMaxWidth(),
+                kind = ButtonKind.Danger,
+                state = ButtonState.of(!game.busy && ready && guild.tree.isNotEmpty()),
+                hold = Hold(Hold.RESET_MS),
+            ) { Text(ui("guild.tree_reset_hold")) }
         }
         Spacer(Modifier.height(6.dp))
         MutedText(if (leader) ui("guild.tree_hint_leader", rule.rowGate) else ui("guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
@@ -119,9 +118,6 @@ private fun resetLeft(millis: Long): String {
     val time = ui("merchant.time", minutes / 60 % 24, minutes % 60)
     return if (days > 0) ui("guild.tree_reset_days", days, time) else time
 }
-
-/** Удержание сброса древа - дольше обычного подтверждения: сброс снимает все узлы гильдии. */
-private const val RESET_HOLD_MS = 1_200
 
 /** Шаг живого таймера до сброса. */
 private const val RESET_TICK_MS = 1_000L
@@ -269,7 +265,7 @@ private fun breath(phase: Float): Float = (1f - cos(phase * 2f * PI.toFloat())) 
                 style = MaterialTheme.typography.bodySmall,
             )
             if (bar == null) {
-                ForgeButton(enabled = !busy, onClick = onTake, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.tree_take")) }
+                ForgeButton(state = ButtonState.of(!busy), onClick = onTake, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.tree_take")) }
             } else {
                 MutedText(bar.text(rule))
             }

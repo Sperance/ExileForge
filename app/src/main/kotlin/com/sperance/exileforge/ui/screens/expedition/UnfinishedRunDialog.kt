@@ -9,10 +9,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.DialogShape
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
@@ -38,7 +39,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(ui("expedition.unfinished_title").uppercase(), style = MaterialTheme.typography.titleMedium)
         },
         text = { Text(ui("expedition.unfinished_text", mapTitle(offer.zone)), color = Parchment) },
-        confirmButton = { ForgeButton(model::continueUnfinished, enabled = !activity.busy) { Text(ui("expedition.unfinished_continue")) } },
-        dismissButton = { ForgeTextButton(model::abandonUnfinished, enabled = !activity.busy) { Text(ui("expedition.unfinished_leave")) } },
+        confirmButton = { ForgeButton(model::continueUnfinished, state = ButtonState.of(!activity.busy)) { Text(ui("expedition.unfinished_continue")) } },
+        dismissButton = { ForgeButton(model::abandonUnfinished, state = ButtonState.of(!activity.busy), kind = ButtonKind.Text) { Text(ui("expedition.unfinished_leave")) } },
     )
 }

@@ -24,9 +24,9 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
@@ -115,19 +115,16 @@ import com.sperance.exileforge.ui.theme.*
  * Отойти можно только от неоткрытой трещины: никогда - с копилкой на кону.
  */
 @Composable private fun Actions(view: AbyssView, onCommand: (RunCommand) -> Unit) {
-    val deep = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A1F66), contentColor = GoldBright)
     val away: @Composable () -> Unit = {
-        ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui(if (view.open) "abyss.leave" else "abyss.later"), color = Muted)
+        ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text, accent = Muted) {
+            Text(ui(if (view.open) "abyss.leave" else "abyss.later"))
         }
     }
     when {
         view.hoard != null -> ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("abyss.leave")) }
 
         !view.open -> {
-            ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.fillMaxWidth(), colors = deep) {
-                Icon(ForgeGlyphs.Rift, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
+            ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.fillMaxWidth(), icon = ForgeGlyphs.Rift, accent = AbyssDeep) {
                 Text(ui("abyss.descend"))
             }
             away()
@@ -136,11 +133,11 @@ import com.sperance.exileforge.ui.theme.*
         view.fallen -> away()
 
         else -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeOutlinedButton(enabled = view.cleared > 0, onClick = { onCommand(RunCommand.TakeHoard) }, modifier = Modifier.weight(1f)) {
+            ForgeButton(state = ButtonState.of(view.cleared > 0), onClick = { onCommand(RunCommand.TakeHoard) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
                 Text(ui("abyss.take"))
             }
             if (view.next != null) {
-                ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f), colors = deep) {
+                ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f), accent = AbyssDeep) {
                     Text(ui("abyss.deeper"))
                 }
             }

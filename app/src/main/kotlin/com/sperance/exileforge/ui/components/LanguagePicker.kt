@@ -11,7 +11,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -76,10 +75,8 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun LanguageButton(current: Lang, offered: List<Lang>, modifier: Modifier = Modifier, enabled: Boolean = true, onLanguage: (Lang) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
-        TextButton(onClick = { open = true }, enabled = enabled) {
-            Icon(Icons.Outlined.Language, null, tint = Gold, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(current.short, color = Parchment, style = MaterialTheme.typography.labelLarge)
+        ForgeButton(onClick = { open = true }, kind = ButtonKind.Text, state = ButtonState.of(enabled), icon = Icons.Outlined.Language) {
+            Text(current.short)
         }
         ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             offered.forEach { option ->

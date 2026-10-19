@@ -63,9 +63,7 @@ import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.server.ModerationViewModel
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
-import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
@@ -133,10 +131,10 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 onLots = { vm.sellerLots(card) },
             )
             extra?.let { action ->
-                SmallAction(null, action.label, onClick = {
+                ForgeButton(onClick = {
                     vm.close()
                     action.run()
-                }, enabled = !game.busy, modifier = Modifier.align(Alignment.CenterHorizontally))
+                }, state = ButtonState.of(!game.busy), modifier = Modifier.align(Alignment.CenterHorizontally), size = ButtonSize.Small, kind = ButtonKind.Secondary) { Text(action.label, maxLines = 1) }
             }
             card.rights.moderation?.takeIf { it.any }?.let { rights ->
                 val moderation = koinViewModel<ModerationViewModel>().model
@@ -225,9 +223,9 @@ private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () 
     val guildNeed = guildEntryLevel(game.index?.rules)
     val guildLow = card.level < guildNeed
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (letter != null) SmallAction(Icons.Outlined.Mail, ui("player.write"), onWrite, primary = true, enabled = !game.busy && letter == MailGate.OPEN)
-        if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy && !guildLow)
-        SmallAction(Icons.Outlined.Gavel, ui("player.lots", card.lots), onLots, enabled = !game.busy)
+        if (letter != null) ForgeButton(onWrite, size = ButtonSize.Small, kind = ButtonKind.Primary, icon = Icons.Outlined.Mail, state = ButtonState.of(!game.busy && letter == MailGate.OPEN)) { Text(ui("player.write"), maxLines = 1) }
+        if (rights.invite) ForgeButton(onInvite, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.Flag, state = ButtonState.of(!game.busy && !guildLow)) { Text(ui("player.invite"), maxLines = 1) }
+        ForgeButton(onLots, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.Gavel, state = ButtonState.of(!game.busy)) { Text(ui("player.lots", card.lots), maxLines = 1) }
     }
     if (rights.invite && guildLow) MutedText(ui("guild.recruit_low", guildNeed))
     letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
@@ -247,11 +245,11 @@ private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> U
         HorizontalDivider(color = Bronze, thickness = 1.dp)
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val free = !game.busy
-            if (rights.banHero || rights.banAccount || rights.banDevice) SmallAction(Icons.Outlined.Block, ui("moderation.ban"), onDossier, tint = LifeRed, enabled = free)
-            if (rights.mute) SmallAction(Icons.Outlined.VolumeOff, ui("moderation.mute"), onDossier, tint = Caution, enabled = free)
-            onMail?.let { SmallAction(Icons.Outlined.MarkEmailUnread, ui("player.write_admin"), it, tint = Rune, enabled = free) }
-            if (rights.delete) SmallAction(Icons.Outlined.DeleteOutline, ui("moderation.delete"), onDossier, tint = LifeRed, enabled = free)
-            SmallAction(Icons.Outlined.FolderOpen, ui("moderation.dossier"), onDossier, tint = Gold, enabled = free)
+            if (rights.banHero || rights.banAccount || rights.banDevice) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Danger, icon = Icons.Outlined.Block, state = ButtonState.of(free)) { Text(ui("moderation.ban"), maxLines = 1) }
+            if (rights.mute) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.VolumeOff, state = ButtonState.of(free), accent = Caution) { Text(ui("moderation.mute"), maxLines = 1) }
+            onMail?.let { ForgeButton(it, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.MarkEmailUnread, state = ButtonState.of(free), accent = Rune) { Text(ui("player.write_admin"), maxLines = 1) } }
+            if (rights.delete) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Danger, icon = Icons.Outlined.DeleteOutline, state = ButtonState.of(free)) { Text(ui("moderation.delete"), maxLines = 1) }
+            ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.FolderOpen, state = ButtonState.of(free)) { Text(ui("moderation.dossier"), maxLines = 1) }
         }
     }
 }

@@ -21,7 +21,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -60,17 +59,20 @@ import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.StashTakePrice
 import com.sperance.exileforge.ui.components.AccordionGroup
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChoiceChips
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ForgeSheetDefaults
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.GoldPrice
-import com.sperance.exileforge.ui.components.HoldButton
+import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.MutedText
@@ -86,7 +88,6 @@ import com.sperance.exileforge.ui.screens.auction.ActiveFilter
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
 import com.sperance.exileforge.ui.screens.auction.TradeRow
 import com.sperance.exileforge.ui.screens.auction.templateSlots
-import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.rarityColor
@@ -116,7 +117,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
                 if (stash.tabs.size > 1) {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(stash.tabs.indices.toList(), key = { it }) { i ->
-                            FilterChip(selected = i == tab, onClick = { tab = i }, label = { Text(ui("guild.stash_tab", i + 1)) })
+                            ForgeChip(ui("guild.stash_tab", i + 1), i == tab, { tab = i }, mode = ChipMode.Choice)
                         }
                     }
                 }
@@ -133,7 +134,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
                         vm.tabRank(tab, it.toInt())
                     }
                 }
-                ForgeButton(enabled = !game.busy && inTab.size < stash.tabSize, onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
+                ForgeButton(state = ButtonState.of(!game.busy && inTab.size < stash.tabSize), onClick = { depositing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.stash_put")) }
             }
         }
         if (inTab.isNotEmpty()) item { StashSearch(game, filter) { filter = it } }
@@ -164,7 +165,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
             singleLine = true,
             modifier = Modifier.weight(1f),
         )
-        ForgeOutlinedButton(onClick = { sheet = true }, contentPadding = PaddingValues(horizontal = 12.dp)) {
+        ForgeButton(onClick = { sheet = true }, contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
             Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
             if (active.isNotEmpty()) {
                 Spacer(Modifier.width(6.dp))
@@ -311,7 +312,11 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
     val putStack: (@Composable RowScope.() -> Unit)? = if (chosen == null) {
         null
     } else {
-        { HoldButton(put, Gold, Modifier.weight(1f), enabled = !game.busy && count in 1..(hero.bag[chosen] ?: 0L)) { onPut(null, chosen, count) } }
+        {
+            ForgeButton(onClick = { onPut(null, chosen, count) }, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy && count in 1..(hero.bag[chosen] ?: 0L)), hold = Hold()) {
+                Text(put)
+            }
+        }
     }
     ForgeSheet(
         onDismissRequest = onDismiss,

@@ -69,15 +69,13 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            HoldButton(
-                bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble())),
-                Gold,
-                Modifier.weight(1f),
-                enabled = !game.busy && refusal == null,
+            ForgeButton(
+                onClick = { onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor)) },
+                modifier = Modifier.weight(1f),
+                state = ButtonState.of(!game.busy && refusal == null),
                 icon = ForgeGlyphs.Banner,
-            ) {
-                onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor))
-            }
+                hold = Hold(),
+            ) { Text(bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble()))) }
         },
     ) {
         Engraved(ui("guild.found_title"))

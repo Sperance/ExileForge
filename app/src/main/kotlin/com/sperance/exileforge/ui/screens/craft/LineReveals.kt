@@ -48,8 +48,12 @@ import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.FateBoon
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.FateInk
-import com.sperance.exileforge.ui.components.HoldToAccept
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.Hold
+import com.sperance.exileforge.ui.components.HoldTone
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.SIGIL
 import com.sperance.exileforge.ui.components.relicName
@@ -128,11 +132,13 @@ internal val REVEALS: List<LineReveal> = listOf(VeiledReveal, FatedReveal)
         offers.forEachIndexed { i, boon ->
             EmberRow(boonFigure(index, boon) ?: SIGIL, boonText(index, boon), selected = picked == i, delayMs = i * BURN_STEP_MS, key = item.id to offers) { picked = i }
         }
-        HoldToAccept(
-            ui(if (picked == null) "fate.reveal_pick_first" else "fate.reveal_hold"),
-            Modifier.fillMaxWidth().padding(top = 4.dp),
-            enabled = enabled && picked != null,
-        ) { picked?.let { onChoose(item.id, it) } }
+        ForgeButton(
+            onClick = { picked?.let { onChoose(item.id, it) } },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+            size = ButtonSize.Wide,
+            state = ButtonState.of(enabled && picked != null),
+            hold = Hold(Hold.FATE_MS, HoldTone.Fate),
+        ) { Text(ui(if (picked == null) "fate.reveal_pick_first" else "fate.reveal_hold")) }
     }
 }
 

@@ -10,7 +10,6 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -38,7 +37,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
@@ -292,13 +290,9 @@ fun SkillTreePanel(
 
 internal val PILL = RoundedCornerShape(16.dp)
 
-/** A round button floating over the map, with a count in its corner when [badge] is given. */
+/** Кнопка поверх древа: круглая тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
-    BadgedBox(badge = { badge?.let { Badge(containerColor = Vital, contentColor = Ink) { Text(it.toString(), fontSize = 9.sp) } } }) {
-        IconButton(onClick = onClick, modifier = Modifier.size(size).background(Panel.copy(alpha = .9f), CircleShape).border(1.dp, Bronze, CircleShape)) {
-            Icon(icon, label, tint = tint, modifier = Modifier.size(20.dp))
-        }
-    }
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = if (size < 44.dp) ButtonSize.Compact else ButtonSize.Wide, accent = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
 }
 
 /**
@@ -311,7 +305,7 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
 }
 
 /**
- * Сброс всего дерева - лист с ценой в Сферах сожаления и кнопкой удержания на [TREE_RESET_HOLD_MS], как сброс древа гильдии, без отката;
+ * Сброс всего дерева - лист с ценой в Сферах сожаления и кнопкой удержания на [Hold.RESET_MS], как сброс древа гильдии, без отката;
  * старт не возвращается и не оплачивается.
  */
 @Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
@@ -330,10 +324,9 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
             ledger = regretLines(returned) + LedgerLine(ui("confirm.returns"), ui("confirm.plus_count", returned, nodes(returned)), Tone.GAIN),
             note = ui("tree.reset_confirm"), warning = shortage(returned), blocked = shortage(returned) != null, danger = true,
-            confirm = ui("tree.reset_do"), onDismiss = onClear, holdMillis = TREE_RESET_HOLD_MS,
+            confirm = ui("tree.reset_do"), onDismiss = onClear, holdMillis = Hold.RESET_MS,
         ) { onReset() }
     }
 }
 
 /** Сколько держать кнопку сброса всего дерева, мс: дольше обычного подтверждения. */
-private const val TREE_RESET_HOLD_MS = 1_200

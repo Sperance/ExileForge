@@ -126,8 +126,8 @@ jobs:
           cache-read-only: false
           cache-cleanup: on-success
       # Отладочной сборки нет нигде (4.12.x): lint - по релизному варианту, APK - только R8-сборки ниже
-      # Сторож :app: каждый файл с Android или @Composable - расчёты и модели экранов в :core
-      - run: bash gradlew :app:ktlintCheck :app:androidOnly
+      # Сторожа :app: каждый файл с Android или @Composable - расчёты и модели экранов в :core; кнопки и чипы Material - только в ui/components
+      - run: bash gradlew :app:ktlintCheck :app:androidOnly :app:forgeButtonsOnly
       # Android Lint - перед релизом и по ручному запуску: на обычном пуше хватает ktlint
       - if: ${{ needs.changes.outputs.release == 'true' || github.event_name == 'workflow_dispatch' }}
         run: bash gradlew :app:lintRelease

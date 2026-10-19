@@ -153,8 +153,8 @@ import org.koin.compose.viewmodel.koinViewModel
             RewardLines(game, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
             AtlasBlock(model.state.collectAsStateWithLifecycle().value.atlasPoints)
         }
-        hud.report?.let { ForgeOutlinedButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("run.menu.log")) } }
-        ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
+        hud.report?.let { ForgeButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("run.menu.log")) } }
+        ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) { Text(ui("expedition.back_to_camp")) }
     }
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
     hud.report?.takeIf { journal }?.let { FightLogSheet(it) { journal = false } }

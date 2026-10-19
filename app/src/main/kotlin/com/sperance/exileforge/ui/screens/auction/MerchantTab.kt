@@ -117,7 +117,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
                 Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = { notes = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("merchant.notes"), tint = Muted) }
+                ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact)
             }
             money?.let { MerchantPurse(it) }
         }
@@ -244,7 +244,7 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
                 bill?.takeUnless { it.affordable || orb.soldOut }?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
         }
-        ForgeOutlinedButton(enabled = enabled, onClick = onBuy) { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }
+        ForgeButton(state = ButtonState.of(enabled), onClick = onBuy, kind = ButtonKind.Secondary) { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }
     }
 }
 
@@ -273,13 +273,9 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
                     MutedText(ui("merchant.gold"), Modifier.weight(1f))
                     bill?.let { GoldCost(it) } ?: GoldPrice(price)
                 }
-                HoldButton(
-                    bill?.payLabel(ui("merchant.buy_for", number(price.toDouble()))) ?: ui("merchant.buy_for", number(price.toDouble())),
-                    Gold,
-                    Modifier.fillMaxWidth(),
-                    enabled = !game.busy && bill?.affordable == true,
-                    onHeld = onBuy,
-                )
+                ForgeButton(onClick = onBuy, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(!game.busy && bill?.affordable == true), hold = Hold()) {
+                    Text(bill?.payLabel(ui("merchant.buy_for", number(price.toDouble()))) ?: ui("merchant.buy_for", number(price.toDouble())))
+                }
             }
         }
     }

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +43,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.motionPhase
@@ -173,8 +173,8 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
             Spacer(Modifier.weight(1f))
             ForgeButton(
                 onClick = onDone,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink),
+                modifier = Modifier.fillMaxWidth(),
+                size = ButtonSize.Wide,
             ) {
                 Text(ui("expedition.continue"), style = MaterialTheme.typography.titleMedium)
             }

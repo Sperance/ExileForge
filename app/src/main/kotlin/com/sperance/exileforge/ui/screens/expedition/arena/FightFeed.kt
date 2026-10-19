@@ -60,11 +60,10 @@ internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LogKind.entries.forEach { kind ->
             val on = kind in shown
-            FilterChip(
-                selected = on,
-                onClick = { onChange(if (on) shown - kind else shown + kind) },
-                label = { Text(ui("fight.log_shelf.${kind.name}"), style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.height(26.dp),
+            ForgeChip(
+                ui("fight.log_shelf.${kind.name}"),
+                on,
+                { onChange(if (on) shown - kind else shown + kind) },
             )
         }
     }

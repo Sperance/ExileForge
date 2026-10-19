@@ -11,8 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +36,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.ui.components.ClassPortrait
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ModifierLine
 import com.sperance.exileforge.ui.components.MutedText
@@ -81,7 +80,7 @@ import kotlin.math.abs
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        IconButton(onClick = { onTurn(-1) }) { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("chars.class.prev"), tint = Gold) }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("chars.class.prev"), onClick = { onTurn(-1) }, accent = Gold)
         ClassPortrait(guide.code, portraits, Modifier.width(72.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(classTitle(guide.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -94,7 +93,7 @@ import kotlin.math.abs
                 )
             }
         }
-        IconButton(onClick = { onTurn(1) }) { Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("chars.class.next"), tint = Gold) }
+        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("chars.class.next"), onClick = { onTurn(1) }, accent = Gold)
     }
 }
 

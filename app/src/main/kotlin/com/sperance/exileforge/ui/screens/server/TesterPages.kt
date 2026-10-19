@@ -2,6 +2,8 @@ package com.sperance.exileforge.ui.screens.server
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -70,7 +72,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Spinner(ui("tester.zone"), zone, index.zones.values.sortedBy { it.level }.associate { it.code.value to "${mapTitle(it.code)} · ${it.level}" }, enabled) { zone = it }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             rarities.forEach { r ->
-                FilterChip(selected = rarity == r, onClick = { rarity = r }, label = { Text(ui("enum.rarity.${r.name}")) })
+                ForgeChip(ui("enum.rarity.${r.name}"), rarity == r, { rarity = r }, mode = ChipMode.Choice)
             }
         }
         GrantButton(ui("tester.give_map"), enabled && zone.isNotBlank()) { heroModel.testerGrant("map", "zone" to zone, "rarity" to rarity.name) }
@@ -115,15 +117,15 @@ import org.koin.compose.viewmodel.koinViewModel
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
         )
-        ForgeButton(enabled = enabled && value.isNotBlank(), onClick = { onGrant(value) }) { Text(ui("tester.give")) }
+        ForgeButton(state = ButtonState.of(enabled && value.isNotBlank()), onClick = { onGrant(value) }) { Text(ui("tester.give")) }
     }
 }
 
 @Composable private fun GrantButton(label: String, enabled: Boolean, danger: Boolean = false, onClick: () -> Unit) {
     if (danger) {
-        ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label, color = LifeRed) }
+        ForgeButton(state = ButtonState.of(enabled), onClick = onClick, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(label) }
     } else {
-        ForgeOutlinedButton(enabled = enabled, onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(label) }
+        ForgeButton(state = ButtonState.of(enabled), onClick = onClick, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(label) }
     }
 }
 

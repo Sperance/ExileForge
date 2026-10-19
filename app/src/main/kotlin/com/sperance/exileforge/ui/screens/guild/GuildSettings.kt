@@ -36,7 +36,7 @@ private enum class Exit(val label: String, val question: String) {
     var open by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) { Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = Muted) }
+        ForgeIconButton(Icons.Outlined.MoreVert, ui("common.more"), onClick = { open = true })
         ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = { Text(ui(way.label), color = LifeRed) },
@@ -59,7 +59,7 @@ private enum class Exit(val label: String, val question: String) {
                 Exit.DISBAND -> ui("guild.disband_note")
             },
             danger = true,
-            blocked = game.busy,
+            busy = game.busy,
             onConfirm = {
                 when (way) {
                     Exit.LEAVE -> vm.leave()
@@ -113,7 +113,7 @@ private enum class Exit(val label: String, val question: String) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (leader) {
-                    ForgeButton(enabled = !game.busy, onClick = {
+                    ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                         val floor = guildEntryLevel(game.index?.rules)
                         vm.settings(mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor), emblem, color, announcement.trim())
                     }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }

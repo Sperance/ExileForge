@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
@@ -47,6 +48,9 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatReading
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -112,7 +116,9 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
         ) {
             if (trail.size > 1) {
                 item {
-                    AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], game.lang)}") })
+                    ForgeButton(onClick = { trail = trail.dropLast(1) }, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.AutoMirrored.Outlined.ArrowBack) {
+                        Text(statTitle(trail[trail.size - 2], game.lang), maxLines = 1)
+                    }
                 }
             }
             val defence = game.index?.let { index -> game.hero?.level?.let { StatLimits.defence(current, stats, it, index) } }

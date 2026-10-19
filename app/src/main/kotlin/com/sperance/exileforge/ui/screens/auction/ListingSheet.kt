@@ -55,7 +55,7 @@ fun ListingSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
+            ForgeButton(state = ButtonState.of(closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0), onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
                 Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
             }
         },
@@ -86,11 +86,11 @@ fun ListingSheet(
             modifier = Modifier.fillMaxWidth(),
         )
         recent?.let { h ->
-            TextButton(onClick = {
+            ForgeButton(onClick = {
                 orb = h.priceOrb
                 price = (h.price * count.coerceAtLeast(1)).toString()
-            }, contentPadding = PaddingValues(0.dp)) {
-                Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
+            }, kind = ButtonKind.Text, contentPadding = PaddingValues(0.dp)) {
+                Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), style = MaterialTheme.typography.bodySmall)
             }
         }
         bill?.let {

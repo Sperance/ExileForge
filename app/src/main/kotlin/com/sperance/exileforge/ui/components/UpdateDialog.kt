@@ -105,9 +105,9 @@ import com.sperance.exileforge.update.UpdateInstaller
                 s.error?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
                 ForgeButton(onClick = onInstall, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
                 if (s.error != null) {
-                    ForgeOutlinedButton(onClick = {
+                    ForgeButton(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
+                    }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("update.browser")) }
                 }
                 if (update.info.size > 0) Caption(ui("update.size", megabytes(update.info.size)))
             }

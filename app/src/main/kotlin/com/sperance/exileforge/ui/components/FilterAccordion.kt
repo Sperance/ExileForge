@@ -62,7 +62,7 @@ fun FilterAccordionSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            ForgeOutlinedButton(onClick = onReset, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("filter.reset")) }
+            ForgeButton(onClick = onReset, state = ButtonState.of(resettable), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("filter.reset")) }
             ForgeButton(onClick = onShow, modifier = Modifier.weight(1f)) { Text(show, maxLines = 1) }
         },
     ) {
@@ -72,7 +72,7 @@ fun FilterAccordionSheet(
             onQuery,
             placeholder = { Text(queryHint) },
             leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Outlined.Close, ui("common.clear")) } },
+            trailingIcon = { if (query.isNotEmpty()) ForgeIconButton(Icons.Outlined.Close, ui("common.clear"), onClick = { onQuery("") }) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(onSearch = { onShow() }),

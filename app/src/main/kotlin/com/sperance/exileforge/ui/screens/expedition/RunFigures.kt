@@ -22,7 +22,8 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locFirst
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.text.LocaleKey
-import com.sperance.exileforge.ui.components.ForgeTextButton
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.theme.*
 
@@ -40,7 +41,7 @@ import com.sperance.exileforge.ui.theme.*
         Figure(ui("run.kpm"), number(summary.killsPerMinute))
     }
     var breakdown by remember { mutableStateOf(false) }
-    ForgeTextButton(onClick = { breakdown = true }) { Text(ui("breakdown.open")) }
+    ForgeButton(onClick = { breakdown = true }, kind = ButtonKind.Text) { Text(ui("breakdown.open")) }
     if (breakdown) FightStatsSheet(null, summary.fights) { breakdown = false }
 }
 

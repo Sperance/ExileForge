@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.MonsterCode
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.FateInk
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgePanel
@@ -52,7 +53,7 @@ import com.sperance.exileforge.ui.theme.Parchment
                     Text(ui("fate.trophies_count", have, price ?: 0), color = Muted, style = MaterialTheme.typography.labelSmall)
                     reason?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.labelSmall) }
                 }
-                ForgeButton(onClick = { onTrade(boss) }, enabled = !busy && reason == null) { Text(ui("fate.trophies_trade")) }
+                ForgeButton(onClick = { onTrade(boss) }, state = ButtonState.of(!busy && reason == null)) { Text(ui("fate.trophies_trade")) }
             }
         }
     }

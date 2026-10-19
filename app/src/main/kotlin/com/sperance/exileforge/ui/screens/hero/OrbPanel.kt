@@ -75,7 +75,7 @@ import org.koin.compose.viewmodel.koinViewModel
     PropertyRow(ui("orb.copy_rarity"), rarityTitle(instance.rarity, game.lang), Glyph.RARITY)
     if (instance.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
     ForgeButton(
-        enabled = enabled && !instance.corrupted && selected.isNotBlank(),
+        state = ButtonState.of(enabled && !instance.corrupted && selected.isNotBlank()),
         onClick = { onApply(instance.id, selected) },
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -85,10 +85,11 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     game.holding.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
     if (onGrant != null) {
-        ForgeOutlinedButton(
-            enabled = enabled && game.isAdmin && selected.isNotBlank(),
+        ForgeButton(
+            state = ButtonState.of(enabled && game.isAdmin && selected.isNotBlank()),
             onClick = { onGrant(selected) },
             modifier = Modifier.fillMaxWidth(),
+            kind = ButtonKind.Secondary,
         ) {
             Text(ui("orb.top_up", ORB_TOP_UP))
         }

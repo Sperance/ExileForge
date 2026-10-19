@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
@@ -14,7 +13,6 @@ import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -39,8 +37,14 @@ import com.sperance.exileforge.core.market.SellLot
 import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SlotGroup
+import com.sperance.exileforge.ui.components.ButtonFigure
+import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChordOverWindow
-import com.sperance.exileforge.ui.components.HoldButton
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeChip
+import com.sperance.exileforge.ui.components.ForgeIconButton
+import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.relicLook
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -70,7 +74,7 @@ internal fun StashWindow(game: GameUi, rules: AutoSell, lots: List<SellLot>, mod
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(20.dp))
                 Text(ui("autosell.title"), color = GoldBright, fontFamily = Display, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted) }
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss)
             }
             MutedText(ui("autosell.note"), style = MaterialTheme.typography.labelSmall)
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -81,15 +85,16 @@ internal fun StashWindow(game: GameUi, rules: AutoSell, lots: List<SellLot>, mod
             BelowRule(rules, (steps + listOfNotNull(rules.below?.levels)).distinct().sorted(), enabled = !busy, model)
             RuleSwitch(ui("autosell.unwearable"), ui("autosell.unwearable_hint"), rules.unwearable, enabled = !busy) { model.autoSellUnwearable(it) }
             Text(ui("autosell.never"), color = relicLook(Rarity.UNIQUE).name, style = MaterialTheme.typography.labelSmall)
-            HoldButton(
-                ui("autosell.sell_now", matching.size),
-                Gold,
-                Modifier.fillMaxWidth(),
-                enabled = !busy && matching.isNotEmpty(),
-                rearm = true,
+            ForgeButton(
+                onClick = { model.sellMany(matching.map { it.id }) },
+                modifier = Modifier.fillMaxWidth(),
+                state = ButtonState.of(!busy && matching.isNotEmpty()),
                 icon = ForgeGlyphs.Coins,
-                figure = matching.takeIf { it.isNotEmpty() }?.let { "+" + number(it.sumOf(SellLot::price).toDouble()) },
-            ) { model.sellMany(matching.map { it.id }) }
+                hold = Hold(),
+            ) {
+                Text(ui("autosell.sell_now", matching.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (matching.isNotEmpty()) ButtonFigure("+" + number(matching.sumOf(SellLot::price).toDouble()))
+            }
             StashPlacesBar(game, model)
         }
     }
@@ -150,15 +155,10 @@ private fun BelowRule(rules: AutoSell, steps: List<Int>, enabled: Boolean, model
     }
 }
 
-/** Фишка выбора: у выбранной - рамка и заливка [tint], у прочих - тусклая рамка. */
+/** Чип выбора порога или редкости автопродажи; [accent] - цвет редкости. */
 @Composable
-private fun StepChip(label: String, selected: Boolean, enabled: Boolean, tint: Color = Gold, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(8.dp)
-    Box(
-        Modifier.heightIn(min = 36.dp).clip(shape).background(if (selected) tint.copy(alpha = .15f) else Abyss, shape)
-            .border(1.dp, if (selected) tint else Bronze, shape).clickable(enabled = enabled, role = Role.RadioButton, onClick = onClick).padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, color = if (selected) GoldBright else Muted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+private fun StepChip(label: String, selected: Boolean, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
+    ForgeChip(label, selected, onClick, state = ButtonState.of(enabled), accent = accent, mode = ChipMode.Choice)
 }
 
 /** Строка правила: название, подпись мелко и переключатель справа. */

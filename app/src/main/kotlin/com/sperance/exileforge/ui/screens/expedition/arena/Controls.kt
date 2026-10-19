@@ -1,6 +1,8 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.DisposableEffect
@@ -27,26 +29,27 @@ import com.sperance.exileforge.ui.theme.*
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ForgeButton(
                 onClick = { onCommand(RunCommand.Begin) },
-                modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+                modifier = Modifier.weight(1f),
+                kind = ButtonKind.Danger,
+                size = ButtonSize.Wide,
+                icon = ForgeGlyphs.Swords,
             ) {
-                Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
         }
         return
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ForgeOutlinedButton(
-            enabled = live,
+        ForgeButton(
+            state = ButtonState.of(live),
             onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp),
+            kind = ButtonKind.Secondary,
         ) {
             Text(ui(if (fight.paused) "fight.resume" else "fight.pause"), style = MaterialTheme.typography.labelMedium)
         }
-        ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+        ForgeButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp), kind = ButtonKind.Secondary) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
         RunMenu(
@@ -57,8 +60,8 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (fight.paused && live) {
         var asking by remember { mutableStateOf(false) }
-        ForgeTextButton(onClick = { asking = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("fight.surrender"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+        ForgeButton(onClick = { asking = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger, icon = Icons.Outlined.Flag) {
+            Text(ui("fight.surrender"))
         }
         if (asking) {
             ConfirmSheet(

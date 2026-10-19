@@ -30,8 +30,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,8 +94,8 @@ import kotlin.math.roundToInt
             drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ZoomButton("−", ui("expedition.zoom_out")) { cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX) }
-            ZoomButton("+", ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
+            ZoomButton(ForgeGlyphs.Minus, ui("expedition.zoom_out")) { cells = (cells * 1.4f).coerceAtMost(MINIMAP_MAX) }
+            ZoomButton(ForgeGlyphs.Plus, ui("expedition.zoom_in")) { cells = (cells / 1.4f).coerceAtLeast(MINIMAP_MIN) }
         }
     }
     if (full) {
@@ -106,14 +104,9 @@ import kotlin.math.roundToInt
     }
 }
 
-@Composable internal fun ZoomButton(sign: String, label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.size(28.dp).clip(CircleShape).background(Color(0xE60A0D12)).border(1.dp, Bronze, CircleShape)
-            .clickable(onClick = onClick).semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(sign, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    }
+/** «+»/«−» мини-карты: компактная круглая тональная иконка-кнопка. */
+@Composable internal fun ZoomButton(icon: ImageVector, label: String, onClick: () -> Unit) {
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
 }
 
 /**
@@ -197,7 +190,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Gold) }
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onClose)
             }
             Canvas(
                 Modifier.fillMaxWidth().aspectRatio(MapProjection.FITTED_ASPECT).background(Color(0xFF07090C), RoundedCornerShape(8.dp))

@@ -149,7 +149,7 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
         if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.draughtLine(it.stat, it.op, it.value, index) })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("skills.drunk_when"), color = Muted, style = MaterialTheme.typography.labelMedium)
-            AssistChip(onClick = onCondition, label = { Text(conditionTitle(flask.condition)) })
+            ForgeButton(onClick = onCondition, size = ButtonSize.Small, kind = ButtonKind.Secondary) { Text(conditionTitle(flask.condition), maxLines = 1) }
         }
     }
     ItemCard(view, enabled = false, detailed = true)
@@ -235,7 +235,7 @@ internal fun Exchange(
             }
             val ready = chosen.size == rule.books && target != null && bill?.affordable == true && !game.busy
             ForgeButton(
-                enabled = ready,
+                state = ButtonState.of(ready),
                 onClick = {
                     target?.let {
                         vm.exchangeBooks(chosen, it)
@@ -244,7 +244,7 @@ internal fun Exchange(
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+                accent = Blood,
             ) { Text(bill?.payLabel(ui("skills.exchange")) ?: ui("skills.exchange")) }
         }
     }

@@ -13,9 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -134,14 +136,13 @@ import org.koin.compose.viewmodel.koinViewModel
             if (ready) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
             if (collapsed) MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())), style = MaterialTheme.typography.labelSmall)
             if (folding) {
-                IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
-                    Icon(
-                        if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
-                        ui(if (collapsed) "common.expand" else "common.collapse"),
-                        tint = Gold,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                ForgeIconButton(
+                    if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
+                    ui(if (collapsed) "common.expand" else "common.collapse"),
+                    onClick = { onFold(!collapsed) },
+                    size = ButtonSize.Compact,
+                    accent = Gold,
+                )
             }
         }
         if (collapsed) {
@@ -229,16 +230,22 @@ private val RING_EDGE = Color(0xFF121A16)
     var open by remember { mutableStateOf(false) }
     val ready = law || quest?.let { it.done && !it.claimed } == true
     val share = quest?.let { (it.progress.toFloat() / it.target.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 1f
-    val shape = RoundedCornerShape(12.dp)
-    Box(modifier.size(40.dp)) {
-        Box(
-            Modifier.fillMaxSize().clip(shape).background(Abyss.copy(alpha = .88f)).border(1.dp, (if (law) GoldBright else Gold).copy(alpha = .5f), shape)
-                .clickable(role = Role.Button, onClickLabel = ui("story.button")) { open = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            CircularProgressIndicator(progress = { share }, Modifier.size(32.dp), color = Caution, trackColor = Bronze, strokeWidth = 2.dp)
-            Icon(ForgeGlyphs.Tome, ui("story.button"), tint = GoldBright, modifier = Modifier.size(16.dp))
-        }
+    Box(modifier) {
+        ForgeIconButton(
+            ForgeGlyphs.Tome,
+            ui("story.button"),
+            onClick = { open = true },
+            modifier = Modifier.drawWithContent {
+                drawContent()
+                val stroke = 2.dp.toPx()
+                val inset = 8.dp.toPx()
+                val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
+                drawArc(Bronze, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
+                drawArc(Caution, -90f, 360f * share, false, Offset(inset, inset), arc, style = Stroke(stroke))
+            },
+            kind = ButtonKind.Secondary,
+            accent = if (law) GoldBright else null,
+        )
         if (ready) Box(Modifier.align(Alignment.TopEnd).padding(3.dp).size(8.dp).clip(CircleShape).background(Vital))
     }
     if (open) {

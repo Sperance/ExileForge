@@ -70,7 +70,7 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
             note?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-            ForgeOutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("lore.ok")) }
+            ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("lore.ok")) }
         }
     }
 }

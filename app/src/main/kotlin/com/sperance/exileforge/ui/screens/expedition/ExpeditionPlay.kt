@@ -378,11 +378,9 @@ internal const val PENDING_GRACE = 10_000L
     }
 }
 
-/** A glyph in a bronze ring on dark glass: the map's buttons share one look. */
+/** Кнопка карты: круглая тональная иконка-кнопка, одна на все кнопки поверх карты. */
 @Composable internal fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(44.dp).background(Color(0xE60A0D12), CircleShape).border(1.5.dp, Bronze, CircleShape)) {
-        Icon(icon, label, tint = GoldBright, modifier = Modifier.size(24.dp))
-    }
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, shape = IconButtonShape.Circle)
 }
 
 /** How near, in tiles, a tap must land to a fountain to name it. */
@@ -397,7 +395,7 @@ internal const val FOUNTAIN_TAP = .9
         RunPanel(Modifier, ShieldCyan) {
             Text(ui("fountain.offer", fountain.heal.roundToInt(), fountain.flasks.roundToInt()), color = ShieldCyan, style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ForgeOutlinedButton(onClick = onLeave, modifier = Modifier.weight(1f)) { Text(ui("fountain.leave")) }
+                ForgeButton(onClick = onLeave, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("fountain.leave")) }
                 ForgeButton(onClick = onTake, modifier = Modifier.weight(1f)) { Text(ui("fountain.take")) }
             }
         }

@@ -23,7 +23,8 @@ import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
@@ -71,7 +72,7 @@ internal fun LootSheet(
 
                 LootPresence.HELD -> if (markable && (item.id in expedition.saleMarks || game.saleMarkable(item.id))) {
                     val marked = item.id in expedition.saleMarks
-                    ForgeOutlinedButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth()) {
+                    ForgeButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                         Icon(ForgeGlyphs.Coins, null, tint = if (marked) GoldBright else Gold, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(ui(if (marked) "sell.unmark" else "sell.mark"))

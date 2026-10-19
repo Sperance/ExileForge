@@ -2795,6 +2795,8 @@
   "stat.apart.kind.MAP": "К шансу карт",
   "stat.apart.kind.BOOK": "К шансу книг умений",
   "common.more": "Ещё",
+  "common.prev_page": "Предыдущая страница",
+  "common.next_page": "Следующая страница",
   "common.read_more": "Ещё…",
   "nav.city": "Город",
   "city.merchant_idle": "Товары за золото, подобранные под ваш уровень",
@@ -4377,6 +4379,8 @@
   "feedback.none_known": "Открытых известных проблем нет.",
   "feedback.issue_number": "#{0}",
   "feedback.score": "+{0} / −{1}",
+  "feedback.vote.like": "Нравится, {0}",
+  "feedback.vote.dislike": "Не нравится, {0}",
   "feedback.who.developer": "Разработчик",
   "feedback.who.moderation": "Модерация",
   "feedback.who.author": "Вы",
@@ -5376,5 +5380,9 @@
   "crafts.ledger.no_tool_hint": "наденьте инструмент в слот профессии",
   "crafts.ledger.tool_mark": "⚒ инструмент",
   "crafts.ledger.more": "Подробнее",
-  "crafts.ledger.open": "{0}: {1}. Показать разбор"
+  "crafts.ledger.open": "{0}: {1}. Показать разбор",
+  "button.busy": "Выполняется",
+  "button.hold": "Подтвердить удержанием",
+  "button.hold_progress": "Удержание {0}%",
+  "button.count": "Счётчик: {0}"
 }

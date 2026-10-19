@@ -1,11 +1,10 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,7 +15,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.filter.FilterFacet
@@ -57,18 +55,19 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
     return remember(shelf) { FilterState(shelf, prefs.itemFilters.value[shelf]) { next: ItemFilter -> scope.launch { prefs.saveItemFilter(shelf, next) } } }
 }
 
-/**
- * Значок фильтра списка (общий): маленький круг, золотой и с числом того, что сужает список; его размер
- * обязателен, строка его не сжимает.
- */
+/** Значок фильтра списка (общий): компактная круглая иконка-кнопка, при суженном списке - тональная, светлая и со счётчиком сужений. */
 @Composable fun ItemFilterButton(tweaks: Int, onClick: () -> Unit) {
-    val tint = filterTint(tweaks)
-    BadgedBox(badge = { if (tweaks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(tweaks.toString(), fontSize = 9.sp, maxLines = 1) } }) {
-        Box(
-            Modifier.requiredSize(30.dp).clip(CircleShape).border(1.dp, tint.copy(alpha = .6f), CircleShape).clickable(role = Role.Button, onClickLabel = ui("filter.title"), onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.Outlined.FilterList, ui("filter.title"), tint = tint, modifier = Modifier.size(16.dp)) }
-    }
+    ForgeIconButton(
+        Icons.Outlined.FilterList,
+        ui("filter.title"),
+        onClick = onClick,
+        kind = if (tweaks > 0) ButtonKind.Secondary else ButtonKind.Text,
+        size = ButtonSize.Compact,
+        accent = filterTint(tweaks),
+        shape = IconButtonShape.Circle,
+        badge = tweaks,
+        badgeColor = Vital,
+    )
 }
 
 /**
@@ -109,10 +108,7 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         )
         Text(shown.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
         onClear?.let { clear ->
-            Box(
-                Modifier.requiredSize(30.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = ui("filter.reset"), onClick = clear),
-                contentAlignment = Alignment.Center,
-            ) { Text("✕", color = Muted, style = MaterialTheme.typography.labelMedium) }
+            ForgeIconButton(Icons.Outlined.Close, ui("filter.reset"), onClick = clear, size = ButtonSize.Compact)
         }
         ItemFilterButton(tweaks, onOpen)
     }

@@ -3,12 +3,15 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
@@ -17,6 +20,7 @@ import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.PanelRaised
+import com.sperance.exileforge.ui.theme.Parchment
 
 /**
  * A picker: [glyph] says what is being picked, and [optionGlyph], when given, draws each option —
@@ -36,13 +40,13 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 ) {
     var expanded by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
-    ForgeOutlinedButton(onClick = {
+    ForgeButton(onClick = {
         search = ""
         expanded = true
-    }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+    }, state = ButtonState.of(enabled), modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
         if (optionArt != null && value.isNotBlank()) optionArt(value, 24.dp) else Icon(glyph.vector, null, modifier = Modifier.size(20.dp), tint = Gold)
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall)
             Text(options[value] ?: value.ifBlank { ui("common.choose") }, style = MaterialTheme.typography.bodyMedium)
         }
         Icon(Icons.Outlined.ExpandMore, null, tint = Gold)
@@ -54,16 +58,19 @@ import com.sperance.exileforge.ui.theme.PanelRaised
             if (filtered.isEmpty()) Text(ui("common.no_options"), color = Muted)
             LazyColumn(Modifier.fillMaxWidth().heightIn(max = 400.dp)) {
                 items(filtered, key = { it.first }) { (key, title) ->
-                    ForgeTextButton(enabled = enabled, onClick = {
-                        expanded = false
-                        onChange(key)
-                    }, modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(key == value, enabled = enabled, role = Role.RadioButton) {
+                            expanded = false
+                            onChange(key)
+                        }.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         if (optionArt != null) {
                             optionArt(key, 26.dp)
                         } else {
                             optionGlyph?.let { Icon(it(key).vector, null, tint = Gold, modifier = Modifier.size(22.dp)) }
                         }
-                        Text(title, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+                        Text(title, color = Parchment, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
                         if (key == value) Icon(Icons.Outlined.CheckCircle, ui("common.chosen"), tint = Gold)
                     }
                 }
@@ -88,6 +95,6 @@ val DialogShape = RoundedCornerShape(22.dp)
             Text(title.uppercase(), style = MaterialTheme.typography.titleMedium)
         },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
-        confirmButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.close")) } },
+        confirmButton = { ForgeButton(onClick = onDismiss, kind = ButtonKind.Text) { Text(ui("common.close")) } },
     )
 }

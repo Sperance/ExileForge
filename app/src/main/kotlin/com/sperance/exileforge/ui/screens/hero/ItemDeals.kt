@@ -20,10 +20,12 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.ShellViewModel
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.ConfirmSheet
 import com.sperance.exileforge.ui.components.DialogShape
-import com.sperance.exileforge.ui.components.ForgeTextButton
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LedgerLine
 import com.sperance.exileforge.ui.components.Tone
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -118,12 +120,12 @@ private val ItemInstance.loose: Boolean get() = !equipped && !socketed
             },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
             confirmButton = {
-                ForgeTextButton(enabled = can, onClick = {
+                ForgeButton(state = ButtonState.of(can), onClick = {
                     deals.close()
                     if (instance.socketed) model.unsocketJewel(instance.id) else model.unequip(instance.id)
-                }) { Text(ui("hero.unequip")) }
+                }, kind = ButtonKind.Text) { Text(ui("hero.unequip")) }
             },
-            dismissButton = { ForgeTextButton(onClick = deals::close) { Text(ui("common.close")) } },
+            dismissButton = { ForgeButton(onClick = deals::close, kind = ButtonKind.Text) { Text(ui("common.close")) } },
         )
     }
 }

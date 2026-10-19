@@ -24,9 +24,9 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -70,20 +70,20 @@ import com.sperance.exileforge.ui.theme.*
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
             if (view.awaiting) Text(ui("crystal.vaal_waiting"), color = Rune, style = MaterialTheme.typography.bodySmall)
             if (!view.vaal) {
-                ForgeOutlinedButton(enabled = vaalOrbs > 0 && !view.awaiting, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(state = ButtonState.of(vaalOrbs > 0 && !view.awaiting), onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(ui("crystal.vaal"))
                 }
             }
             ForgeButton(
-                enabled = !view.awaiting,
+                state = ButtonState.of(!view.awaiting),
                 onClick = { onCommand(RunCommand.Release) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
+                accent = Blood,
             ) { Text(ui("crystal.release")) }
-            ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)
+            ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally), kind = ButtonKind.Text, accent = Muted) {
+                Text(ui("crystal.later"), textAlign = TextAlign.Center)
             }
         }
     }

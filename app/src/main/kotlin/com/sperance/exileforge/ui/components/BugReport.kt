@@ -5,12 +5,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -100,7 +97,7 @@ fun BugSheet(
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
             ForgeButton(
-                enabled = text.isNotBlank(),
+                state = ButtonState.of(text.isNotBlank()),
                 modifier = Modifier.weight(1f),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind, topic = topic))
@@ -122,19 +119,17 @@ fun BugSheet(
             minLines = 4,
             supportingText = { Text(ui("bug.count", text.length, limit)) },
             trailingIcon = {
-                IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
-                    Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
-                }
+                ForgeIconButton(Icons.Outlined.ContentCopy, ui("bug.copy"), onClick = { clipboard.setText(AnnotatedString(text)) }, state = ButtonState.of(text.isNotBlank()), accent = Gold)
             },
             modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
         )
         if (game.session.signedIn) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ReportsTab.entries.forEach { tab ->
-                    ForgeOutlinedButton(onClick = {
+                    ForgeButton(onClick = {
                         onDismiss()
                         onReports(tab)
-                    }, modifier = Modifier.weight(1f)) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
+                    }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
                 }
             }
         }

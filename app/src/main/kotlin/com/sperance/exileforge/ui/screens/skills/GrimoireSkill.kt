@@ -12,6 +12,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -184,9 +186,9 @@ internal fun SkillSheet(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (0 until open).forEach { at ->
             val here = at == standing
-            ForgeOutlinedButton(enabled = !game.busy, onClick = {
+            ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                 onSlot(skill.kind, at, !here)
-            }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp)) {
+            }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 6.dp), kind = ButtonKind.Secondary) {
                 Text(if (here) ui("skills.take_out") else ui("skills.to_slot", at + 1), style = MaterialTheme.typography.labelMedium, maxLines = 1)
             }
         }
@@ -230,7 +232,7 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                     Text(ui("skills.level_short", skills.level(skill.code)), color = Gold)
                 }
             }
-            ForgeTextButton(enabled = !game.busy, onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth()) { Text(ui("skills.empty_it"), color = LifeRed) }
+            ForgeButton(state = ButtonState.of(!game.busy), onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(ui("skills.empty_it")) }
         }
     }
 }
@@ -261,7 +263,7 @@ internal fun ConditionPicker(title: String, current: SlotCondition?, flask: Bool
                     Text(condition?.let(::conditionTitle) ?: ui("skills.condition.KIND"), color = if (on) GoldBright else Parchment)
                 }
             }
-            onSwap?.let { ForgeTextButton(onClick = it, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(ui("skills.swap_skill"), color = Rune) } }
+            onSwap?.let { ForgeButton(onClick = it, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), kind = ButtonKind.Text, accent = Rune) { Text(ui("skills.swap_skill")) } }
         }
     }
 }

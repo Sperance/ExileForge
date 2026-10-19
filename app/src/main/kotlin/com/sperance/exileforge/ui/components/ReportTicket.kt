@@ -188,13 +188,14 @@ internal fun reportThread(issue: IssueView?, reason: String): List<Pair<NoteAuth
     var text by rememberSaveable { mutableStateOf("") }
     Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
-        ForgeTextButton(
-            enabled = text.isNotBlank(),
+        ForgeButton(
+            state = ButtonState.of(text.isNotBlank()),
             onClick = {
                 onSend(text.trim())
                 text = ""
             },
-        ) { Text(ui("feedback.answer_send"), color = Gold, style = MaterialTheme.typography.labelMedium) }
+            kind = ButtonKind.Text,
+        ) { Text(ui("feedback.answer_send"), style = MaterialTheme.typography.labelMedium) }
     }
 }
 

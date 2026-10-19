@@ -1,12 +1,7 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,28 +10,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.launch
-
-/** How long the confirm button has to be held. Long enough to mean it, short enough not to wait. */
-const val HOLD_TO_CONFIRM_MS = 700
 
 /** Whether a line of the ledger is taken away, handed over, or only said. */
 enum class Tone { PLAIN, SPEND, GAIN }
@@ -54,13 +34,14 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  *
  * The price is the thing being confirmed, so it is a ledger rather than a sentence: what is taken,
  * what is left, what comes back. And the button is held rather than tapped. A tap is what a player
- * does without looking; holding for [HOLD_TO_CONFIRM_MS] is what they do on purpose, and the band
+ * does without looking; holding for [Hold.CONFIRM_MS] is what they do on purpose, and the band
  * filling under the thumb shows the moment it becomes real. A screen reader cannot hold, so the
  * same button answers an accessibility click at once — that tap is deliberate by construction.
  *
  * It is deliberately not on everything. A question in front of an ordinary action stops being read.
  *
- * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
+ * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена; [busy] - запрос уже идёт,
+ * кнопка занята (спиннер). [options] - выбор под счётом (оплата
  * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
  * погашена, а [warning] без своего говорит недостачу. [holdMillis] - сколько держать кнопку (сброс всего дерева держат дольше).
  * Тело листается, кнопка удержания и «Отмена» закреплены в подвале листа: поле в [options] с клавиатурой их не прячет. Полоса редкости
@@ -78,10 +59,11 @@ fun ConfirmSheet(
     warning: String? = null,
     danger: Boolean = false,
     blocked: Boolean = false,
+    busy: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
     options: (@Composable () -> Unit)? = null,
     gold: GoldBill? = null,
-    holdMillis: Int = HOLD_TO_CONFIRM_MS,
+    holdMillis: Int = Hold.CONFIRM_MS,
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
@@ -97,17 +79,17 @@ fun ConfirmSheet(
         },
         footer = {
             Column(Modifier.weight(1f).padding(start = SPINE + 2.dp, end = 2.dp)) {
-                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked && gold?.affordable != false, millis = holdMillis) {
-                    onDismiss()
-                    onConfirm()
-                }
-                Text(
-                    ui("common.cancel").uppercase(),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onDismiss).padding(vertical = 8.dp),
-                )
+                ForgeButton(
+                    onClick = {
+                        onDismiss()
+                        onConfirm()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    kind = if (danger) ButtonKind.Danger else ButtonKind.Primary,
+                    state = ButtonState.of(!blocked && gold?.affordable != false, busy),
+                    hold = Hold(millis = holdMillis),
+                ) { Text(ui("confirm.hold", confirm.lowercase()), textAlign = TextAlign.Center) }
+                ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) { Text(ui("common.cancel").uppercase()) }
             }
         },
         contentModifier = Modifier.raritySpine(accent, SPINE),
@@ -157,122 +139,6 @@ private val SPINE = 5.dp
                     textAlign = TextAlign.End,
                     modifier = Modifier.weight(1f),
                 )
-            }
-        }
-    }
-}
-
-/**
- * A button that has to be held.
- *
- * The band fills from the left while the finger is down and drains when it lifts early; reaching
- * the end is the confirmation, with a knock of haptics so the hand knows as well as the eye.
- *
- * In a sheet it fires once, because the sheet goes with it. [rearm] is for a button that stays —
- * the forge's, where the same orb is spent again and again — and empties the band after each hold.
- *
- * [millis] is how long the hold lasts (the tree's refunds ask a full second).
- *
- * An [icon] and a [figure] make it a ribbon: a rounded gilt frame, the icon on the left
- * and the figure — a price — in a coin chip on the right.
- */
-@Composable fun HoldButton(
-    label: String,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    rearm: Boolean = false,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    figure: String? = null,
-    millis: Int = HOLD_TO_CONFIRM_MS,
-    onHeld: () -> Unit,
-) {
-    val progress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
-    val held by rememberUpdatedState(onHeld)
-    val live by rememberUpdatedState(enabled)
-    var fired by remember { mutableStateOf(false) }
-    val fire = {
-        if (!fired && live) {
-            fired = true
-            held()
-            if (rearm) {
-                fired = false
-                scope.launch { progress.animateTo(0f, tween(180)) }
-            }
-        }
-    }
-    val tint = if (enabled) accent else Muted.copy(alpha = .45f)
-    val ribbon = icon != null || figure != null
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
-    Box(
-        modifier.fillMaxWidth().height(44.dp).clip(shape)
-            .background(tint.copy(alpha = if (ribbon) .18f else .14f))
-            .drawBehind {
-                drawRect(
-                    Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),
-                    size = Size(size.width * progress.value, size.height),
-                )
-            }
-            .semantics(mergeDescendants = true) {
-                role = Role.Button
-                if (!enabled) disabled()
-                onClick(label) {
-                    fire()
-                    true
-                }
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(onPress = {
-                    if (!live) return@detectTapGestures
-                    val filling = scope.launch {
-                        progress.animateTo(1f, tween(millis, easing = LinearEasing))
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        fire()
-                    }
-                    tryAwaitRelease()
-                    if (progress.value < 1f) {
-                        filling.cancel()
-                        scope.launch { progress.animateTo(0f, tween(180)) }
-                    }
-                })
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        val ink = if (!enabled) {
-            Muted
-        } else if (accent == LifeRed) {
-            Parchment
-        } else {
-            GoldBright
-        }
-        if (!ribbon) {
-            Text(
-                label,
-                color = ink,
-                style = MaterialTheme.typography.labelLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 12.dp),
-            )
-        } else {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                icon?.let { androidx.compose.material3.Icon(it, null, tint = if (enabled) GoldBright else Muted, modifier = Modifier.size(22.dp)) }
-                Text(label.uppercase(), color = ink, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                figure?.let {
-                    val chip = androidx.compose.foundation.shape.RoundedCornerShape(50)
-                    Text(
-                        it,
-                        color = if (enabled) Ink else Muted,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.background(Brush.verticalGradient(listOf(GoldBright, Gold)), chip).padding(horizontal = 10.dp, vertical = 2.dp),
-                    )
-                }
             }
         }
     }

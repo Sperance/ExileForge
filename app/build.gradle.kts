@@ -89,32 +89,46 @@ dependencies {
 }
 
 /**
- * Сторож границы модулей (`RULES.md` → «Архитектура»): в `:app` нет файла Kotlin без Android. Каждый файл `src/main` импортирует
- * `android.*` или `androidx.*` (DI-граф - привязку Koin к Android) либо объявляет `@Composable`; расчёты, модели экранов и сервисы
- * лежат в `:core`. Падение перечисляет нарушителей.
+ * Сторож исходников `:app`: проходит файлы Kotlin [sources] и падает, если [offenses] нашёл нарушения; пути в отчёте - от корня
+ * модуля [root]. Наследник задаёт проверку файла и текст падения.
  */
-abstract class AndroidOnlyCheck : DefaultTask() {
+abstract class SourceGuard : DefaultTask() {
     /** Исходники Kotlin приложения. */
     @get:InputFiles
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val sources: ConfigurableFileCollection
 
-    /** Корень модуля: пути в отчёте - от него. */
+    /** Корень модуля: пути в отчёте и проверке - от него. */
     @get:Internal
     abstract val root: DirectoryProperty
+
+    /** Нарушения файла [text] по пути [path] от корня модуля; пусто - файл чист. */
+    protected abstract fun offenses(path: String, text: String): List<String>
+
+    /** Первая строка падения при [count] файлах-нарушителях. */
+    protected abstract fun failure(count: Int): String
 
     @TaskAction
     fun check() {
         val base = root.get().asFile
-        val android = Regex("""^import (android|androidx|org\.koin\.androidx?)\.""", RegexOption.MULTILINE)
-        val offenders = sources.files.filter { it.extension == "kt" }
-            .filterNot { file -> file.readText().let { android.containsMatchIn(it) || "@Composable" in it } }
-            .map { it.relativeTo(base).path }
+        val offenders = sources.files.map { it.relativeTo(base).invariantSeparatorsPath to it }
+            .mapNotNull { (path, file) -> offenses(path, file.readText()).takeIf { it.isNotEmpty() }?.let { "$path: ${it.joinToString()}" } }
             .sorted()
-        if (offenders.isNotEmpty()) {
-            throw GradleException("Files in :app without Android or @Composable belong to :core (RULES.md, «Архитектура»): ${offenders.size}\n" + offenders.joinToString("\n"))
-        }
+        if (offenders.isNotEmpty()) throw GradleException(failure(offenders.size) + "\n" + offenders.joinToString("\n"))
     }
+}
+
+/**
+ * Сторож границы модулей (`RULES.md` → «Архитектура»): в `:app` нет файла Kotlin без Android. Каждый файл `src/main` импортирует
+ * `android.*` или `androidx.*` (DI-граф - привязку Koin к Android) либо объявляет `@Composable`; расчёты, модели экранов и сервисы
+ * лежат в `:core`.
+ */
+abstract class AndroidOnlyCheck : SourceGuard() {
+    private val android = Regex("""^import (android|androidx|org\.koin\.androidx?)\.""", RegexOption.MULTILINE)
+
+    override fun offenses(path: String, text: String): List<String> = if (android.containsMatchIn(text) || "@Composable" in text) emptyList() else listOf("no Android")
+
+    override fun failure(count: Int) = "Files in :app without Android or @Composable belong to :core (RULES.md, «Архитектура»): $count"
 }
 
 /** Сторож `:app` рядом с `:app:ktlintCheck` в job `app` CI. */
@@ -124,3 +138,51 @@ val androidOnly by tasks.registering(AndroidOnlyCheck::class) {
     sources.from(fileTree("src/main") { include("**/*.kt") })
     root.set(layout.projectDirectory)
 }
+
+/**
+ * Сторож кнопок (`RULES.md` → «Вёрстка»): кнопки, переключатели и чипы Material 2 и 3 зовёт только `ui/components` - экраны берут
+ * `ForgeButton`, `ForgeIconButton` и `ForgeChip`. Вне `ui/components` нарушение - импорт запрещённого имени, его вызов при
+ * `material.*`/`material3.*` или полным именем, `Surface`/`Card` с `onClick`. Комментарии и строки перед поиском вырезаются.
+ * Самодельные кнопки на `clickable` сторож не видит - их ловит ревью.
+ */
+abstract class ForgeButtonsCheck : SourceGuard() {
+    private val banned = listOf(
+        "Button", "TextButton", "OutlinedButton", "ElevatedButton", "FilledTonalButton",
+        "IconButton", "FilledIconButton", "FilledTonalIconButton", "OutlinedIconButton",
+        "IconToggleButton", "FilledIconToggleButton", "FilledTonalIconToggleButton", "OutlinedIconToggleButton",
+        "FloatingActionButton", "SmallFloatingActionButton", "LargeFloatingActionButton", "ExtendedFloatingActionButton",
+        "SegmentedButton", "SingleChoiceSegmentedButtonRow", "MultiChoiceSegmentedButtonRow",
+        "Chip", "FilterChip", "AssistChip", "InputChip", "SuggestionChip", "ElevatedFilterChip", "ElevatedAssistChip", "ElevatedSuggestionChip",
+    ).joinToString("|")
+    private val material = """androidx\.compose\.material3?"""
+    private val named = Regex("""^import $material\.($banned)\b""", RegexOption.MULTILINE)
+    private val wildcard = Regex("""^import $material\.\*$""", RegexOption.MULTILINE)
+    private val call = Regex("""(?<![\w.])($banned)\s*[({]""")
+    private val qualified = Regex("""$material\.($banned)\s*[({]""")
+    private val clickableSurface = Regex("""(?<![\w.])(Surface|Card|ElevatedCard|OutlinedCard)\s*\((?:[^()]|\([^()]*\))*?\bonClick\s*=""")
+    private val noise = Regex(""""{3}[\s\S]*?"{3}|/\*[\s\S]*?\*/|//[^\n]*|"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\])'""")
+    private val own = Regex("""\bfun\s+(?:<[^>]*>\s*)?(?:[\w.]+\.)?($banned)\s*\(""")
+    private val exempt = "src/main/kotlin/com/sperance/exileforge/ui/components/"
+
+    override fun offenses(path: String, text: String): List<String> {
+        if (path.startsWith(exempt)) return emptyList()
+        val code = noise.replace(text, " ")
+        val owned = own.findAll(code).map { it.groupValues[1] }.toSet()
+        val calls = if (wildcard.containsMatchIn(code)) call.findAll(code).map { it.groupValues[1] }.filterNot { it in owned } else emptySequence()
+        return (named.findAll(code).map { it.groupValues[1] } + qualified.findAll(code).map { it.groupValues[1] } + calls + clickableSurface.findAll(code).map { "${it.groupValues[1]}(onClick)" })
+            .toSortedSet().toList()
+    }
+
+    override fun failure(count: Int) = "Material buttons and chips outside ui/components - use ForgeButton, ForgeIconButton, ForgeChip (RULES.md, «Вёрстка»): $count"
+}
+
+/** Сторож кнопок рядом с `:app:androidOnly` в job `app` CI. */
+val forgeButtonsOnly by tasks.registering(ForgeButtonsCheck::class) {
+    group = "verification"
+    description = "Fails if a file outside ui/components uses Material buttons, toggles or chips."
+    sources.from(fileTree("src/main") { include("**/*.kt") })
+    root.set(layout.projectDirectory)
+}
+
+/** Оба сторожа - и в локальном `check`. */
+tasks.named("check") { dependsOn(androidOnly, forgeButtonsOnly) }

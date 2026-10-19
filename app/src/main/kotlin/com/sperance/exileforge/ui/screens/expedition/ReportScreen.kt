@@ -108,10 +108,11 @@ import java.util.Locale
         }
         FightFigures(report, logOpen, onBreakdown = { breakdown = true }) { logOpen = !logOpen }
         ForgeButton(
-            enabled = !holding,
+            state = ButtonState.of(!holding),
             onClick = onContinue,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment),
+            modifier = Modifier.fillMaxWidth(),
+            size = ButtonSize.Wide,
+            accent = if (won) null else LifeRed,
         ) {
             Text(ui(if (won) "expedition.continue" else "expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
         }
@@ -290,18 +291,8 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Figure(ForgeGlyphs.Helm, report.taken.toString())
         Figure(ForgeGlyphs.Portal, ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)))
         Figure(ForgeGlyphs.Sigil, report.crits.toString())
-        Text(
-            ui("breakdown.open"),
-            color = Rune,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.clickable(role = Role.Button, onClick = onBreakdown).padding(4.dp),
-        )
-        Text(
-            ui(if (logOpen) "expedition.log_less" else "expedition.log"),
-            color = Rune,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.clickable(role = Role.Button, onClick = onLog).padding(4.dp),
-        )
+        ForgeButton(onClick = onBreakdown, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui("breakdown.open")) }
+        ForgeButton(onClick = onLog, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui(if (logOpen) "expedition.log_less" else "expedition.log")) }
     }
 }
 

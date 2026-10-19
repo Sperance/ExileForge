@@ -69,7 +69,7 @@ import com.sperance.exileforge.ui.theme.*
         if (i > 0) OrMedallion()
         LawOption(index, law, selected = law == chosen, dim = chosen != null && law != chosen) { picked = law.code }
     }
-    ForgeButton({ asked = chosen }, enabled = !busy && chosen != null, modifier = Modifier.fillMaxWidth()) {
+    ForgeButton({ asked = chosen }, state = ButtonState.of(!busy && chosen != null), modifier = Modifier.fillMaxWidth()) {
         Text(chosen?.let { ui("story.law.take_named", loc(LocaleKey.lawName(it.code))) } ?: ui("story.law.pick"), maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
     chosen?.let { law ->

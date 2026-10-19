@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -282,7 +283,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
             val shape = RoundedCornerShape(10.dp)
             Row(
                 Modifier.fillMaxWidth().clip(shape).background(if (chosen) Rune.copy(alpha = .10f) else Panel, shape)
-                    .border(1.dp, if (chosen) Rune else PanelRaised, shape).clickable(role = Role.Button) { onSelect(if (chosen) "" else omen.code) }
+                    .border(1.dp, if (chosen) Rune else PanelRaised, shape).selectable(chosen, role = Role.RadioButton) { onSelect(if (chosen) "" else omen.code) }
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,

@@ -136,8 +136,8 @@ internal fun BossDossier(
         }
         Spacer(Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeOutlinedButton(onClick = { gear = true }, modifier = Modifier.weight(1f)) { Text(ui("challenge.gear")) }
-            ForgeOutlinedButton(onClick = { scout = true }, modifier = Modifier.weight(1f)) { Text(ui("challenge.scout")) }
+            ForgeButton(onClick = { gear = true }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("challenge.gear")) }
+            ForgeButton(onClick = { scout = true }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("challenge.scout")) }
         }
         ForgeButton(onClick = onFight, modifier = Modifier.fillMaxWidth()) { Text(ui("challenge.fight")) }
     }

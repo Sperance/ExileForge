@@ -47,7 +47,8 @@ import com.sperance.exileforge.core.expedition.presentLoot
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -89,7 +90,7 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
     BackHandler(onBack = onClose)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = SCRIM_ALPHA)).clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClose))
-        RunPanel(Modifier, GoldBright, footer = { ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) } }) {
+        RunPanel(Modifier, GoldBright, footer = { ForgeButton(onClick = onClose, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("common.close")) } }) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(ui("expedition.bag.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 Text(ui("expedition.bag.count", pieces, bag.size), color = Muted, style = MaterialTheme.typography.labelSmall)

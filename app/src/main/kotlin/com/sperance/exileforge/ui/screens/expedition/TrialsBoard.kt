@@ -90,7 +90,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui(if (open.kind == TrialKind.RUSH) "trials.open_rush" else "trials.open_tower", if (open.kind == TrialKind.RUSH) regionTitle(open.region) else open.floor))
-                ForgeOutlinedButton(onClick = vm::abandonTrial, enabled = idle, modifier = Modifier.fillMaxWidth()) { Text(ui("trials.abandon")) }
+                ForgeButton(onClick = vm::abandonTrial, enabled = idle, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("trials.abandon")) }
             }
         }
         val toggle = { mode: TrialMode -> opened = mode.takeIf { it != opened } }
@@ -131,7 +131,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     Text(ui("trials.rush_locked", regionTitle(near.code), near.zones.count { it.code !in cleared }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
             } else {
-                ForgeOutlinedButton(onClick = vm::forgeRushKey, enabled = idle && crests >= rules.rush.key, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(onClick = vm::forgeRushKey, enabled = idle && crests >= rules.rush.key, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     Text(ui("trials.key_forge_count", minOf(crests, rules.rush.key.toLong()), rules.rush.key))
                 }
                 if (crests < rules.rush.key) MutedText(ui("trials.key_short", rules.rush.key - crests), style = MaterialTheme.typography.labelSmall)
@@ -191,7 +191,7 @@ import org.koin.compose.viewmodel.koinViewModel
         RushTierFacts(rules.rush.tier(tier))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("trials.rush_tier", roman(tier + 1)), color = Parchment, fontFamily = RelicSerif, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            ForgeButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null, contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
                 Text(ui("trials.rush_enter"))
                 Spacer(Modifier.width(6.dp))
                 BagIcon(TrialRules.KEY, Modifier.size(16.dp))

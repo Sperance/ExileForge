@@ -28,9 +28,8 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
-import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.theme.*
 
 /** The Vaal zone's own reds (the owner's mockup I «Кровавый алтарь»). */
@@ -91,16 +90,15 @@ private object Altar {
             zone?.let { Reward(it) }
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(
+                ForgeButton(
                     onClick = onBack,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted),
+                    kind = ButtonKind.Secondary,
                 ) { Text(ui(if (zone != null) "vaal.later" else "common.close")) }
                 ForgeButton(
                     onClick = onEnter,
                     enabled = zone != null,
                     modifier = Modifier.weight(1.4f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Altar.deed, contentColor = Color.White),
                 ) { Text(ui("vaal.enter")) }
             }
         }

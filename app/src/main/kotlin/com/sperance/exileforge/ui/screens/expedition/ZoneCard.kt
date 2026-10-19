@@ -123,9 +123,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
         ) {
             Box(Modifier.fillMaxWidth().height(28.dp)) {
                 Box(Modifier.align(Alignment.Center).size(38.dp, 4.dp).background(Color(0xFF3A414B), RoundedCornerShape(2.dp)))
-                IconButton(onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd).size(32.dp)) {
-                    Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(20.dp))
-                }
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = vm::closeZone, modifier = Modifier.align(Alignment.CenterEnd), compact = true)
             }
             Header(token, world.campaign.regions.firstOrNull { region -> region.zones.any { it.code == zone.code } }?.code)
             if (token.state == TokenState.LOCKED) {
@@ -154,10 +152,11 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             if (mapless) MutedText(ui("expedition.launch_needs_map"), style = MaterialTheme.typography.bodySmall)
             if (game.isTester) TesterMechanics(vm, forced)
             if (game.isTester) {
-                ForgeOutlinedButton(
+                ForgeButton(
                     enabled = game.hero != null && !game.busy && wait == 0L,
                     onClick = { launchGuarded { vm.startRun(zone.code.value, toBoss = true) } },
                     modifier = Modifier.fillMaxWidth(),
+                    kind = ButtonKind.Secondary,
                 ) { Text(ui("expedition.launch_boss")) }
             }
         }
@@ -205,9 +204,9 @@ private const val SEED_TICK_MS = 1000L
         MutedText(ui("tester.mechanics_hint"), style = MaterialTheme.typography.bodySmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val all = forced.size == MapMechanic.entries.size
-            FilterChip(selected = all, onClick = { vm.forceAll(!all) }, label = { Text(ui("tester.mechanics_all")) })
+            ForgeChip(ui("tester.mechanics_all"), all, { vm.forceAll(!all) })
             MapMechanic.entries.forEach { mechanic ->
-                FilterChip(selected = mechanic in forced, onClick = { vm.toggleForced(mechanic) }, label = { Text(ui("tester.mechanic.${mechanic.name}")) })
+                ForgeChip(ui("tester.mechanic.${mechanic.name}"), mechanic in forced, { vm.toggleForced(mechanic) })
             }
         }
     }

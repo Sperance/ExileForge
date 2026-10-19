@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -16,10 +17,12 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.SummonView
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ConfirmSheet
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.SmallAction
 import com.sperance.exileforge.ui.components.payLabel
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 
@@ -34,12 +37,13 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
     var asking by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SmallAction(
-                ForgeGlyphs.Portal,
-                if (summon.spent) ui("expedition.summon") else bill.payLabel(ui("expedition.summon")),
+            ForgeButton(
                 onClick = { asking = true },
+                size = ButtonSize.Small,
+                kind = ButtonKind.Secondary,
+                icon = ForgeGlyphs.Portal,
                 enabled = !summon.spent && bill.affordable,
-            )
+            ) { Text(if (summon.spent) ui("expedition.summon") else bill.payLabel(ui("expedition.summon")), maxLines = 1) }
             GoldCost(bill)
         }
         if (summon.spent) MutedText(ui("expedition.summon_spent", summon.perRun), style = MaterialTheme.typography.labelSmall)

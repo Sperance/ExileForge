@@ -148,7 +148,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     ) {
         Box(Modifier.fillMaxWidth()) {
             Text(ui("rift.title").uppercase(), color = RiftColors.Rift, style = relicName(19), modifier = Modifier.align(Alignment.Center))
-            ForgeTextButton(onClick = model::closeRift, modifier = Modifier.align(Alignment.CenterEnd)) { Text(ui("rift.close"), color = RiftColors.Muted) }
+            ForgeButton(onClick = model::closeRift, modifier = Modifier.align(Alignment.CenterEnd), kind = ButtonKind.Text) { Text(ui("rift.close"), color = RiftColors.Muted) }
         }
         val open = game.unlocked(Feature.RIFT)
         val riftLevel = board.progress.level.takeIf { it > 0 } ?: hero.level
@@ -184,11 +184,11 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             board.free <= 0 && keys < 1 -> ui("rift.start_locked")
             else -> null
         }
-        ForgeButton(onClick = model::startRift, enabled = idle && reason == null, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+        ForgeButton(onClick = model::startRift, enabled = idle && reason == null, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
             Text((if (board.free > 0) ui("rift.start") else ui("rift.start_key", itemTitle(RiftRules.KEY))).uppercase(), style = relicName(15))
         }
         reason?.let { Text(it, color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall) }
-        ForgeOutlinedButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.preview")) }
+        ForgeButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("rift.preview")) }
     }
     if (preview) {
         var looking by remember { mutableStateOf<RiftNode?>(null) }
@@ -196,7 +196,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             RiftAscent(rules, engine, null, idle = false, top = 80.dp, bottom = 40.dp) { looking = it }
             Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(ui("rift.preview").uppercase(), color = RiftColors.Rift, style = relicName(16), modifier = Modifier.weight(1f))
-                ForgeTextButton(onClick = { preview = false }) { Text(ui("rift.close"), color = RiftColors.Muted) }
+                ForgeButton(onClick = { preview = false }, kind = ButtonKind.Text) { Text(ui("rift.close"), color = RiftColors.Muted) }
             }
         }
         looking?.let { node -> NodeSheet(rules, engine, null, node, idle = false, onDismiss = { looking = null }) {} }
@@ -480,7 +480,7 @@ private const val SPARKS = 14
                 offer.options.forEachIndexed { i, code ->
                     Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) { BoonLine(rules, code) }
                 }
-                ForgeTextButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle) { Text(ui("rift.skip"), color = RiftColors.Muted) }
+                ForgeButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle, kind = ButtonKind.Text) { Text(ui("rift.skip"), color = RiftColors.Muted) }
             }
 
             is RiftOffer.Altar -> {
@@ -492,7 +492,7 @@ private const val SPARKS = 14
                         CurseLine(pact.curse)
                     }
                 }
-                ForgeTextButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle) { Text(ui("rift.skip"), color = RiftColors.Muted) }
+                ForgeButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle, kind = ButtonKind.Text) { Text(ui("rift.skip"), color = RiftColors.Muted) }
             }
 
             RiftOffer.Rest -> RestChoices(rules, run, idle, onAct)
@@ -581,10 +581,10 @@ private const val SPARKS = 14
         }
     }
     val mergeable = run.boons.groupBy { rules.boonsByCode[it.code]?.rarity }.any { (rarity, held) -> rarity?.next != null && held.size >= 2 }
-    ForgeOutlinedButton(onClick = { merging = true }, enabled = idle && mergeable && run.echo >= rules.nodes.merge, modifier = Modifier.fillMaxWidth()) {
+    ForgeButton(onClick = { merging = true }, enabled = idle && mergeable && run.echo >= rules.nodes.merge, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
         Text(ui("rift.forge_merge", rules.nodes.merge))
     }
-    ForgeTextButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle) { Text(ui("rift.forge_leave"), color = RiftColors.Muted) }
+    ForgeButton(onClick = { onAct(RiftAct.Leave) }, enabled = idle, kind = ButtonKind.Text) { Text(ui("rift.forge_leave"), color = RiftColors.Muted) }
     if (merging) {
         var first by remember { mutableStateOf<Int?>(null) }
         val rarityOf = { i: Int -> rules.boonsByCode[run.boons[i].code]?.rarity }
@@ -699,7 +699,7 @@ private const val SPARKS = 14
             when (delivery) {
                 is RiftDelivery.Refused -> {
                     Text(ui("rift.delivery.refused", delivery.reason), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-                    ForgeOutlinedButton(onClick = onLeave) { Text(ui("rift.delivery.leave"), color = RiftColors.Text) }
+                    ForgeButton(onClick = onLeave, kind = ButtonKind.Secondary) { Text(ui("rift.delivery.leave"), color = RiftColors.Text) }
                 }
 
                 else -> {
@@ -743,6 +743,6 @@ private const val SPARKS = 14
 @Composable private fun FightLogButton() {
     val report = LocalFightReport.current ?: return
     var open by remember { mutableStateOf(false) }
-    ForgeOutlinedButton(onClick = { open = true }) { Text(ui("run.menu.log"), color = RiftColors.Text) }
+    ForgeButton(onClick = { open = true }, kind = ButtonKind.Secondary) { Text(ui("run.menu.log"), color = RiftColors.Text) }
     if (open) FightLogSheet(report) { open = false }
 }

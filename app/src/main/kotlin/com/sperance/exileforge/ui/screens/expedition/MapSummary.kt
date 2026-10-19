@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +52,7 @@ import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ItemCode
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
@@ -184,8 +184,8 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         ForgeButton(
             onClick = { onDone(emptyList()) },
             enabled = armed,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = head.accent, contentColor = if (head.accent == LifeRed) Parchment else Ink),
+            modifier = Modifier.fillMaxWidth(),
+            size = ButtonSize.Wide,
         ) {
             Text(head.done, style = MaterialTheme.typography.titleMedium)
         }

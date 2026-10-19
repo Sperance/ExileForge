@@ -9,7 +9,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -51,8 +50,10 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.GoldCost
+import com.sperance.exileforge.ui.components.IconButtonStyle
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
@@ -155,9 +156,7 @@ private fun FeatureCard(
                     Text(name, color = GoldBright, style = relicName(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (facts.isNotEmpty()) Text(summary(facts), style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp).border(1.dp, Parchment.copy(alpha = .12f), CircleShape)) {
-                    Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp))
-                }
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, style = IconButtonStyle.Tonal, compact = true)
             }
             if (action != null || lead != null || blocked != null) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

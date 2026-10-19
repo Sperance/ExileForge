@@ -3,10 +3,11 @@ package com.sperance.exileforge.ui.screens.guild
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -66,6 +67,7 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.ForgeSheetDefaults
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.HoldButton
@@ -292,7 +294,8 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 /**
  * What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием.
  *
- * Касание - карточка, положить в хранилище - её кнопка удержанием.
+ * Касание - карточка, положить в хранилище - её кнопка удержанием. Выбранная стопка - сверху над списком с полем «сколько», её
+ * «Положить» удержанием - в подвале листа.
  */
 @Composable
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
@@ -303,11 +306,20 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
     var amount by remember { mutableStateOf("1") }
     val inspect = rememberInspect()
     val put = ui("guild.stash_put")
-    ForgeSheet(onDismissRequest = onDismiss) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Engraved(put) }
-            stack?.let { code ->
-                item {
+    val count = amount.toLongOrNull() ?: 0L
+    val chosen = stack
+    val putStack: (@Composable RowScope.() -> Unit)? = if (chosen == null) {
+        null
+    } else {
+        { HoldButton(put, Gold, Modifier.weight(1f), enabled = !game.busy && count in 1..(hero.bag[chosen] ?: 0L)) { onPut(null, chosen, count) } }
+    }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = ForgeSheetDefaults.Bare,
+        header = {
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Engraved(put)
+                chosen?.let { code ->
                     ForgePanel {
                         Text(itemTitle(code), color = Parchment, style = MaterialTheme.typography.titleSmall)
                         OutlinedTextField(
@@ -318,11 +330,13 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        val count = amount.toLongOrNull() ?: 0L
-                        HoldButton(put, Gold, enabled = !game.busy && count in 1..(hero.bag[code] ?: 0L)) { onPut(null, code, count) }
                     }
                 }
             }
+        },
+        footer = putStack,
+    ) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(loose, key = { it.id }) { item ->
                 val view = game.view(item) ?: return@items
                 Row(

@@ -208,7 +208,7 @@ private val ManaTop = Color(0xFF9CCFFF)
 private val ManaDeep = Color(0xFF3F86D6)
 
 /**
- * The stick: wherever the thumb lands in the lower part of the screen, dragging from there walks.
+ * The stick: wherever the thumb lands in the lower part of the screen (below [STICK_FROM] of its height), dragging from there walks.
  * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
  * drag lands on the map: on a fountain still full, it names it to [onFountain].
  *
@@ -234,7 +234,7 @@ private val ManaDeep = Color(0xFF3F86D6)
         Modifier.fillMaxSize().onSizeChanged { area = it }.pointerInput(run) {
             awaitEachGesture {
                 val down = awaitFirstDown()
-                val walks = down.position.y >= area.height * .35f
+                val walks = down.position.y >= area.height * STICK_FROM
                 if (walks) {
                     centre = down.position
                     knob = down.position
@@ -271,3 +271,6 @@ private val ManaDeep = Color(0xFF3F86D6)
         }
     }
 }
+
+/** Доля высоты экрана, ниже которой касание ведёт стик: нижние 55% - под палец, верх - шапка карты. */
+private const val STICK_FROM = .45f

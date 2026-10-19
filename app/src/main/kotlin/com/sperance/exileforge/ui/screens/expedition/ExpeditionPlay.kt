@@ -67,7 +67,7 @@ import kotlin.math.roundToInt
  * Снимок захода живьём - для арены; тело экрана видит его без полей кадра боя ([screenOnly]), тикающее на карте читают листовые элементы из
  * [live]. Уход с карты отдаёт оставшееся, поэтому спрашивается; зона Ваал выхода не имеет, кроме стража или гибели. Конец карты - итоги
  * перед лагерем, их закрытие закрывает заход один раз; «Продать и вернуться» продаёт отмеченную добычу уже после захода. Сундук не
- * останавливает героя: добыча летит в сумку, её лист - по плашке. Бой
+ * останавливает героя: добыча летит в сумку, её лист - по кнопке сумки в шапке. Бой
  * кончен - его отчёт; гибель - сперва отчёт, затем итоги. Перед стражем - экран-вызов. Отказ снаряжения читается здесь: у захода нет плашки
  * и шапки.
  */
@@ -112,60 +112,55 @@ import kotlin.math.roundToInt
             if (hud.phase == RunPhase.MAP) LiveHazards(live)
             when (hud.phase) {
                 RunPhase.MAP -> {
-                    MapDockHost { dock ->
-                        Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
-                        MapBar(
-                            game,
-                            run,
-                            hud,
-                            live,
-                            docked = dock.occupied,
-                            onLeave = if (zone) null else ({ leaving = true }),
-                            onGear = { gear = true },
-                            onStats = { sheet = true },
-                            onDrink = { model.runCommand(RunCommand.Drink(it)) },
-                            onRetry = model::flushRun,
-                            onQuests = { questsOpen = true },
-                        )
-                        if (questsOpen) {
-                            HoldsRun(run)
-                            RunQuestsSheet(board, hud.questTally) { questsOpen = false }
-                        }
-                        if (gear) {
-                            HoldsRun(run)
-                            GearSheet(game) { gear = false }
-                        }
-                        if (sheet) {
-                            HoldsRun(run)
-                            StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
-                        }
-                        hud.fountain?.let { DockPanel { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } } }
-                        if (!dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
-                        if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
-                        val action = hud.action
-                        if (action != null) {
-                            DockPanel {
-                                ObjectActionPanel(action, {
-                                    clock.floatValue
-                                    run.pulse.action
-                                }) { live.value.action?.progress }
-                            }
-                        } else {
-                            hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
-                        }
-                        if (leaving) {
-                            DockPanel {
-                                ConfirmSheet(
-                                    title = ui("expedition.leave_q"),
-                                    confirm = ui("expedition.leave"),
-                                    danger = true,
-                                    subtitle = mapTitle(hud.mapCode),
-                                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
-                                    note = ui("expedition.leave_note"),
-                                    onDismiss = { leaving = false },
-                                ) { model.runCommand(RunCommand.Leave) }
-                            }
-                        }
+                    val flight = rememberBagFlight(hud.drops)
+                    Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
+                    MapBar(
+                        game,
+                        run,
+                        hud,
+                        live,
+                        bag = { MapBag(flight, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces(), MINIMAP_SIDE) { bagOpen = true } },
+                        onLeave = if (zone) null else ({ leaving = true }),
+                        onGear = { gear = true },
+                        onStats = { sheet = true },
+                        onDrink = { model.runCommand(RunCommand.Drink(it)) },
+                        onRetry = model::flushRun,
+                        onQuests = { questsOpen = true },
+                    )
+                    BagFan(flight)
+                    if (questsOpen) {
+                        HoldsRun(run)
+                        RunQuestsSheet(board, hud.questTally) { questsOpen = false }
+                    }
+                    if (gear) {
+                        HoldsRun(run)
+                        GearSheet(game) { gear = false }
+                    }
+                    if (sheet) {
+                        HoldsRun(run)
+                        StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
+                    }
+                    hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
+                    if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
+                    val action = hud.action
+                    if (action != null) {
+                        ObjectActionPanel(action, {
+                            clock.floatValue
+                            run.pulse.action
+                        }) { live.value.action?.progress }
+                    } else {
+                        hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
+                    }
+                    if (leaving) {
+                        ConfirmSheet(
+                            title = ui("expedition.leave_q"),
+                            confirm = ui("expedition.leave"),
+                            danger = true,
+                            subtitle = mapTitle(hud.mapCode),
+                            ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
+                            note = ui("expedition.leave_note"),
+                            onDismiss = { leaving = false },
+                        ) { model.runCommand(RunCommand.Leave) }
                     }
                 }
 
@@ -235,13 +230,13 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
 /** Полосы героя одним значением: перекомпоновка - лишь когда сменилось число. */
 private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int, val mana: Int, val maxMana: Int, val reserved: Int, val flow: LifeFlow?, val lifeReserved: Int)
 
-/** Сторона фляги пояса под большим пальцем. */
-private val HAND_FLASK = 44.dp
+/** Сторона фляги пояса в шапке карты. */
+private val BELT_FLASK = 40.dp
 
 /** Пояс на карте из живого снимка. */
 @Composable private fun LiveFlasks(live: State<RunHud>, onDrink: (Int) -> Unit) {
     val flasks by remember(live) { derivedStateOf { live.value.flasks } }
-    MapFlasks(flasks, HAND_FLASK, RoundedCornerShape(10.dp), onDrink)
+    MapFlasks(flasks, BELT_FLASK, RoundedCornerShape(10.dp), onDrink)
 }
 
 /** Урон карты над героем из живого снимка. */
@@ -257,18 +252,17 @@ private val HAND_FLASK = 44.dp
 }
 
 /**
- * Полоса карты в две части: сверху то, что читают, снизу то, что нажимают. Сверху на тёмной вуали - имя карты, метки состояния
- * ([MapMarks]: страж, печать, ворота, Скверна, журнал), полосы героя с итогом здоровья в секунду на полосе жизни, плитки несомого и
- * мини-карта со своим масштабом. Снизу слева, под большим пальцем, - призыв павшего стража за золото ([GuardianSummon]), пояс и
- * ряд кнопок: меню захода (выход, настройки, журнал боя), снаряжение, герой, задания. Пока низ занят нижней панелью ([docked],
- * [MapDock]), нижней части нет.
+ * Шапка карты - пульт и сведения на одной вуали, что гаснет к карте; низ экрана целиком под стик ([Stick]). Первый ряд - пульт:
+ * меню захода (выход), имя карты, снаряжение, герой, задания. Ниже слева - метки состояния ([MapMarks]: страж, печать, ворота,
+ * Скверна, журнал), призыв павшего стража за золото ([GuardianSummon]), полосы героя с итогом здоровья в секунду, пояс и плитки
+ * несомого; справа - мини-карта со своим масштабом и кнопка сумки ([bag]). Нижние панели карты шапку не прячут.
  */
 @Composable internal fun MapBar(
     game: GameUi,
     run: ExpeditionRun,
     hud: RunHud,
     live: State<RunHud>,
-    docked: Boolean,
+    bag: @Composable () -> Unit,
     onLeave: (() -> Unit)?,
     onGear: () -> Unit,
     onStats: () -> Unit,
@@ -276,93 +270,87 @@ private val HAND_FLASK = 44.dp
     onRetry: () -> Unit,
     onQuests: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
-        MapSurvey(run, hud, live, onRetry, Modifier.align(Alignment.TopCenter))
-        if (!docked) {
-            MapHands(game, run, hud, live, onLeave, onGear, onStats, onDrink, onQuests, Modifier.align(Alignment.BottomStart))
-        }
-    }
-}
-
-/** Верх полосы карты: имя карты, метки, полосы и несомое слева, мини-карта справа - на вуали, что гаснет к карте. */
-@Composable private fun MapSurvey(run: ExpeditionRun, hud: RunHud, live: State<RunHud>, onRetry: () -> Unit, modifier: Modifier) {
     val zone = VaalZones.isZone(run.zone)
-    Row(
-        modifier.fillMaxWidth().background(Brush.verticalGradient(0f to VeilTop, .7f to VeilMid, 1f to Color.Transparent))
+    val expedition: ExpeditionViewModel = koinViewModel()
+    Column(
+        Modifier.fillMaxWidth().background(Brush.verticalGradient(0f to VeilTop, .72f to VeilMid, 1f to Color.Transparent))
             .statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 22.dp),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text(
-                if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode),
-                color = if (zone) Color(0xFFFF8A78) else GoldBright,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            MapMarks(run, hud, zone, onRetry)
-            MapVitals(live, Modifier.fillMaxWidth())
-            RoadEffects(live)
+        MapPult(run, hud, zone, onLeave, onGear, onStats, onQuests)
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                MapMarks(run, hud, zone, onRetry)
+                hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
+                MapVitals(live, Modifier.fillMaxWidth())
+                if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
+                RoadEffects(live)
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                MiniMap(run, hud)
+                bag()
+            }
         }
-        MiniMap(run, hud)
     }
 }
 
-/** Низ полосы карты под большим пальцем: призыв стража, пояс и ряд кнопок в одной бронзовой рамке. */
-@Composable private fun MapHands(
-    game: GameUi,
+/** Пульт шапки карты: меню захода, имя карты (до двух строк, полное - подсказкой по касанию), снаряжение, герой, задания. */
+@Composable private fun MapPult(
     run: ExpeditionRun,
     hud: RunHud,
-    live: State<RunHud>,
+    zone: Boolean,
     onLeave: (() -> Unit)?,
     onGear: () -> Unit,
     onStats: () -> Unit,
-    onDrink: (Int) -> Unit,
     onQuests: () -> Unit,
-    modifier: Modifier,
 ) {
-    val expedition: ExpeditionViewModel = koinViewModel()
-    val shape = RoundedCornerShape(14.dp)
-    Column(modifier.navigationBarsPadding().padding(start = 12.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        hud.summon?.let { summon ->
-            Box(Modifier.background(HandsWell, RoundedCornerShape(12.dp)).border(1.dp, Bronze, RoundedCornerShape(12.dp)).padding(start = 4.dp, end = 10.dp, top = 4.dp, bottom = 4.dp)) {
-                GuardianSummon(game, run, summon, mapTitle(hud.mapCode), expedition::runCommand)
-            }
-        }
-        Column(Modifier.background(HandsWell, shape).border(1.dp, Bronze, shape).padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                RunMenu(
-                    items = listOfNotNull(onLeave?.let { RunMenuItem(ForgeGlyphs.Portal, ui("expedition.leave"), danger = true, onClick = it) }),
-                    hold = { HoldsRun(run) },
-                    trigger = { open -> HandButton(Icons.Outlined.Menu, ui("run.menu"), open) },
-                )
-                HandButton(ForgeGlyphs.Helm, ui("expedition.gear"), onGear)
-                HandButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), onStats)
-                HandButton(ForgeGlyphs.Scroll, ui("run.quests"), onQuests)
-            }
-        }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        RunMenu(
+            items = listOfNotNull(onLeave?.let { RunMenuItem(ForgeGlyphs.Portal, ui("expedition.leave"), danger = true, onClick = it) }),
+            hold = { HoldsRun(run) },
+            trigger = { open -> PultButton(Icons.Outlined.Menu, ui("run.menu"), ButtonSize.Compact, open) },
+        )
+        MapName(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), if (zone) VaalName else GoldBright, Modifier.weight(1f))
+        PultButton(ForgeGlyphs.Helm, ui("expedition.gear"), ButtonSize.Wide, onGear)
+        PultButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), ButtonSize.Wide, onStats)
+        PultButton(ForgeGlyphs.Scroll, ui("run.quests"), ButtonSize.Wide, onQuests)
     }
 }
 
-/** Кнопка низа карты: тональный скруглённый квадрат 44dp - одна на ряд кнопок под большим пальцем. */
-@Composable private fun HandButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Wide)
+/** Имя карты в пульте: мельче заголовка, до двух строк; касание - полное имя подсказкой. */
+@Composable private fun MapName(name: String, tint: Color, modifier: Modifier) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier.heightIn(min = 44.dp).clickable { open = true }.padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
+        Text(
+            name,
+            color = tint,
+            style = MaterialTheme.typography.titleSmall,
+            fontSize = 13.5.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (open) TipCallout(Tip(name, tint = tint)) { open = false }
+    }
 }
 
-/** Вуаль под верхом полосы карты: плотная у края экрана, гаснет к карте. */
+/** Кнопка пульта: тональный скруглённый квадрат [size] в зоне касания 44 dp. */
+@Composable private fun PultButton(icon: ImageVector, label: String, size: ButtonSize, onClick: () -> Unit) {
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = size)
+}
+
+/** Вуаль под шапкой карты: плотная у края экрана, гаснет к карте. */
 private val VeilTop = Color(0xF0080B0E)
 private val VeilMid = Color(0xDB080B0E)
 
-/** Подложка низа полосы карты. */
-private val HandsWell = Color(0xD10A0D12)
+/** Имя карты зоны Ваал. */
+private val VaalName = Color(0xFFFF8A78)
 
 /**
  * The belt on the map: a draught on the road brings its life or mana back at once, and a
  * utility flask's lines run as the hero walks. A flask is filled to its charges and ringed while it runs.
- * [cell] - сторона фляги, [shape] - её форма: на карте - квадрат 44dp под большим пальцем, в листе Бездны - малый круг.
+ * [cell] - сторона фляги, [shape] - её форма: на карте - квадрат 40dp в шапке, в листе Бездны - малый круг.
  */
 @Composable internal fun MapFlasks(flasks: List<FlaskView?>, cell: Dp = 34.dp, shape: Shape = CircleShape, onDrink: (Int) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(if (cell > 34.dp) 6.dp else 8.dp), verticalAlignment = Alignment.CenterVertically) {

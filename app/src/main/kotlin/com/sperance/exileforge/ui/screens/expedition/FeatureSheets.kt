@@ -80,9 +80,9 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
-        is MapFeature.Altar -> DockPanel { AltarSheet(game, feature, onLeave = { onCommand(RunCommand.StepOff) }) { onCommand(RunCommand.Choose(it)) } }
-        is MapFeature.Merchant -> DockPanel { MerchantSheet(game, feature, view.taken, onCommand) }
-        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.guarded, onCommand) }
+        is MapFeature.Altar -> AltarSheet(game, feature, onLeave = { onCommand(RunCommand.StepOff) }) { onCommand(RunCommand.Choose(it)) }
+        is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, onCommand)
+        is MapFeature.Node -> NodeSheet(game, feature, view.guarded, onCommand)
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }

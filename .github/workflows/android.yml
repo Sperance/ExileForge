@@ -519,11 +519,9 @@ jobs:
           for n in $issues; do
             state=$(gh issue view "$n" --json state --jq .state 2>/dev/null) || { echo "::warning::issue #$n not found"; continue; }
             [ "$state" = OPEN ] || continue
-            word="Закрыто"
-            gh issue comment "$n" --body "$word в ${tag#v}"
             gh issue edit "$n" --add-label "$tag"
             gh issue close "$n" --reason completed
-            echo "closed #$n: $word в ${tag#v}"
+            echo "closed #$n in ${tag#v}"
           done
       # Сервер с новым API ждёт этот релиз (1.81.5): опубликовали - запускаем его деплой, он выкатит проверенный образ
       # головы рабочей ветки сервера. SERVER_DEPLOY_TOKEN - токен с Actions: write на ktor-bestgame.

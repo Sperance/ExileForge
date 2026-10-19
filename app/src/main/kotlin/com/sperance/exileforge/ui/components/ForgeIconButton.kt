@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,30 +24,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.OnPrimary
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
 
-/** Вид иконки-кнопки. */
-enum class IconButtonStyle {
-    /** Тёмная заливка в окантовке - как вторичная кнопка: «−»/«+», поиск у поля. */
-    Tonal,
-
-    /** Без фона: закрыть, «⋮», назад, шестерёнка шапки; на нажатие - лёгкая подложка. */
-    Ghost,
-
-    /** Главное действие значком: зелёная заливка. */
-    Primary,
-
-    /** Опасное значком: тёмно-красная заливка. */
-    Danger,
-}
-
-/** Форма иконки-кнопки. */
+/** Форма значка-кнопки. */
 enum class IconButtonShape {
     /** Скруглённый квадрат - в панелях, шапках и строках. */
     Rounded,
@@ -53,58 +44,74 @@ enum class IconButtonShape {
     Circle,
 }
 
-/** Сторона зоны касания иконки-кнопки: и обычной, и компактной. */
+/** Сторона зоны касания значка-кнопки любого размера. */
 private val TouchSide = 44.dp
 
-/** Сторона компактной иконки-кнопки внутри зоны 44 dp. */
-private val CompactSide = 36.dp
+/** Сторона видимой кнопки и значка по размеру: [ButtonSize.Auto] - как широкая. */
+private val ButtonSize.side: Dp get() = if (this == ButtonSize.Auto) ButtonSize.Wide.height else height
+private val ButtonSize.glyph: Dp get() = when (this) {
+    ButtonSize.Auto, ButtonSize.Wide -> 20.dp
+    ButtonSize.Compact -> 18.dp
+    ButtonSize.Small -> 16.dp
+}
 
 /**
- * Иконка-кнопка игры: значок [icon] (подпись для чтения с экрана - [contentDescription]) в скруглённом квадрате 44 dp, [compact] -
- * 36 dp в той же зоне касания 44. [style] - вид ([IconButtonStyle]); [tint] - свой цвет значка поверх цвета вида (только там, где
- * цвет несёт смысл: открытое, мир экрана). [shape] - форма ([IconButtonShape]). [badge] - счётчик в углу цветом [badgeColor], ноль
- * не показывается. Погашенная - штриховка (у [IconButtonStyle.Ghost] - приглушённый значок).
+ * Значок-кнопка игры: значок [icon] в скруглённом квадрате или круге ([shape]) размера [size] (44/36/30 dp) в зоне касания 44.
+ * [contentDescription] - обязательное имя для чтения с экрана. Оси - как у [ForgeButton]: [kind] ([ButtonKind.Secondary] -
+ * тональная, [ButtonKind.Text] - без фона), [state], [accent] (цвет значка и окантовки - открытое, мир экрана). [badge] - счётчик
+ * в углу цветом [badgeColor] (ноль не показывается), для чтения с экрана - в описании состояния.
  */
 @Composable fun ForgeIconButton(
     icon: ImageVector,
-    contentDescription: String?,
+    contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    style: IconButtonStyle = IconButtonStyle.Ghost,
-    compact: Boolean = false,
-    enabled: Boolean = true,
-    tint: Color = Color.Unspecified,
+    kind: ButtonKind = ButtonKind.Text,
+    size: ButtonSize = ButtonSize.Auto,
+    state: ButtonState = ButtonState.Enabled,
+    accent: Color? = null,
     shape: IconButtonShape = IconButtonShape.Rounded,
     badge: Int? = null,
     badgeColor: Color = ButtonInk.Badge,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
-    val look = remember(style, enabled) { style.look(enabled) }
+    val disabled = state is ButtonState.Disabled
+    val look = remember(kind, disabled, accent) {
+        if (disabled) offLook(kind) else liveLook(kind, accent ?: Parchment.takeIf { kind == ButtonKind.Text }, secondaryInk = Parchment)
+    }
+    val shown = badge?.takeIf { it > 0 }
+    val count = shown?.let { ui("button.count", it) }
+    val busyText = ui("button.busy")
     Box(
-        modifier.size(TouchSide).clickable(source, indication = null, enabled = enabled, role = Role.Button, onClick = onClick),
+        modifier.size(TouchSide)
+            .clickable(source, indication = null, enabled = state == ButtonState.Enabled || state == ButtonState.Busy, role = Role.Button) {
+                if (state == ButtonState.Enabled) onClick()
+            }
+            .semantics {
+                when {
+                    state == ButtonState.Busy -> stateDescription = busyText
+                    state is ButtonState.Done -> stateDescription = state.label
+                    count != null -> stateDescription = count
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.size(if (compact) CompactSide else TouchSide).pressShift(pressed).forgeSurface(look, pressed, circle = shape == IconButtonShape.Circle),
+            Modifier.size(size.side).pressShift(pressed).forgeSurface(look, pressed, circle = shape == IconButtonShape.Circle),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription, Modifier.size(20.dp), tint = if (enabled && tint != Color.Unspecified) tint else look.ink)
+            when (state) {
+                ButtonState.Busy -> CircularProgressIndicator(Modifier.size(size.glyph - 2.dp), color = look.ink, strokeWidth = 2.dp)
+                is ButtonState.Done -> Icon(Icons.Outlined.Check, contentDescription, Modifier.size(size.glyph), tint = look.ink)
+                else -> Icon(icon, contentDescription, Modifier.size(size.glyph), tint = look.ink)
+            }
         }
-        badge?.takeIf { it > 0 }?.let { CornerCount(it, badgeColor, Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-3).dp)) }
+        shown?.let { CornerCount(it, badgeColor, Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-3).dp)) }
     }
 }
 
-/** Окраска вида: погашенная - штриховка, у кнопки без фона - лишь приглушённый значок. */
-private fun IconButtonStyle.look(enabled: Boolean): SurfaceLook = when {
-    !enabled -> if (this == IconButtonStyle.Ghost) bareLook(Muted, Color.Transparent) else OffLook
-    this == IconButtonStyle.Tonal -> SurfaceLook(SecondaryLook.rim, SecondaryLook.fill, Parchment, SecondaryLook.pressedRim, SecondaryLook.pressedFill)
-    this == IconButtonStyle.Ghost -> bareLook(Parchment, ButtonInk.GhostPressed)
-    this == IconButtonStyle.Primary -> solidLook(PrimaryLook.rim, PrimaryLook.rim, OnPrimary)
-    else -> DangerLook
-}
-
-/** Счётчик в углу иконки-кнопки: таблетка цвета [fill] с числом, «99+» сверх; слова - по яркости заливки. */
+/** Счётчик в углу значка-кнопки: таблетка цвета [fill] с числом, «99+» сверх; слова - по яркости заливки; читает его состояние кнопки. */
 @Composable private fun CornerCount(count: Int, fill: Color, modifier: Modifier) {
     val shape = RoundedCornerShape(9.dp)
     Text(
@@ -114,7 +121,7 @@ private fun IconButtonStyle.look(enabled: Boolean): SurfaceLook = when {
         lineHeight = 18.sp,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
-        modifier = modifier.defaultMinSize(minWidth = 18.dp).height(18.dp)
+        modifier = modifier.clearAndSetSemantics {}.defaultMinSize(minWidth = 18.dp).height(18.dp)
             .border(2.dp, Panel, shape).background(fill, shape).padding(horizontal = 5.dp),
     )
 }

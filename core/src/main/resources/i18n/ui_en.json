@@ -2795,6 +2795,8 @@
   "stat.apart.kind.MAP": "To the chance of maps",
   "stat.apart.kind.BOOK": "To the chance of skill books",
   "common.more": "More",
+  "common.prev_page": "Previous page",
+  "common.next_page": "Next page",
   "common.read_more": "More…",
   "nav.city": "City",
   "city.merchant_idle": "Goods for gold, picked for your level",
@@ -4377,6 +4379,8 @@
   "feedback.none_known": "No open known issues.",
   "feedback.issue_number": "#{0}",
   "feedback.score": "+{0} / −{1}",
+  "feedback.vote.like": "Like, {0}",
+  "feedback.vote.dislike": "Dislike, {0}",
   "feedback.who.developer": "Developer",
   "feedback.who.moderation": "Moderation",
   "feedback.who.author": "You",
@@ -5376,5 +5380,9 @@
   "crafts.ledger.no_tool_hint": "put a tool in the profession's slot",
   "crafts.ledger.tool_mark": "⚒ tool",
   "crafts.ledger.more": "Learn more",
-  "crafts.ledger.open": "{0}: {1}. Show the breakdown"
+  "crafts.ledger.open": "{0}: {1}. Show the breakdown",
+  "button.busy": "In progress",
+  "button.hold": "Confirm by holding",
+  "button.hold_progress": "Holding {0}%",
+  "button.count": "Count: {0}"
 }

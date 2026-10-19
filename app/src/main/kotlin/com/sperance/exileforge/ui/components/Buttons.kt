@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -32,7 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -58,12 +61,14 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
@@ -72,147 +77,222 @@ import com.sperance.exileforge.ui.theme.OnDanger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Вид кнопки - что действие значит для игрока. */
+/** Вид кнопки, значка-кнопки - что действие значит для игрока. */
 enum class ButtonKind {
-    /** Главное действие места: плотная зелёная заливка. Одно на экран, лист или строку. */
+    /** Главное действие места: плотная заливка (зелёная или цвета места). Одно на экран, лист или строку. */
     Primary,
 
-    /** Второй выбор: тёмная заливка в светлой окантовке («Отмена», «Ответить»). */
+    /** Второй выбор: тёмная заливка в светлой окантовке («Отмена», «Ответить»); у значка - тональный квадрат. */
     Secondary,
 
-    /** Слово-действие без фона, зелёным; погашенное - зачёркнуто. */
+    /** Слово-действие без фона; погашенное - зачёркнуто. У значка - значок без фона. */
     Text,
 
-    /** Опасное или необратимое: тёмно-красная заливка и всегда значок (корзина, крестик). */
+    /** Опасное или необратимое: тёмно-красная заливка и всегда значок (без своего - корзина). */
     Danger,
 }
 
-/** Размер кнопки: высота [height], поля по бокам [padding], значок [icon] и его отступ [gap]; скругление - по высоте. */
+/**
+ * Размер кнопки: высота [height], поля по бокам [padding], значок [icon] и его отступ [gap]; скругление - по высоте. Зона касания
+ * любого размера - не меньше 44 dp.
+ */
 enum class ButtonSize(val height: Dp, internal val padding: Dp, internal val icon: Dp, internal val gap: Dp) {
+    /**
+     * По месту: родитель задал ширину (`fillMaxWidth`, `weight`) - как [Wide], иначе - как [Compact]. У значка-кнопки - как [Wide].
+     */
+    Auto(Dp.Unspecified, 16.dp, 18.dp, 8.dp),
+
     /** Широкая 44 dp: подвал листа, кнопка во всю ширину. */
     Wide(44.dp, 20.dp, 18.dp, 8.dp),
 
     /** Компактная 36 dp: в строке, рядом с текстом. */
     Compact(36.dp, 16.dp, 18.dp, 8.dp),
 
-    /** Малая 30 dp: плотные строки (карточка игрока, модерация); касание добирает до 44 dp сама разметка Compose. */
+    /** Малая 30 dp: плотные строки (карточка игрока, модерация). */
     Small(30.dp, 10.dp, 15.dp, 6.dp),
 }
 
+/** Состояние кнопки, значка-кнопки и чипа. */
+@Immutable
+sealed interface ButtonState {
+    /** Касание действует. */
+    data object Enabled : ButtonState
+
+    /** Погашена: штриховка и приглушённые слова; касание зовёт лишь `onDisabledClick`, если он есть. */
+    data object Disabled : ButtonState
+
+    /** Занято: действие уже идёт - спиннер на месте значка, ширина та же, касание не срабатывает, вид не гаснет. */
+    data object Busy : ButtonState
+
+    /** Выполнено: галочка и подпись результата [label] («Удалено», «Дар принят»), касания нет. */
+    data class Done(val label: String) : ButtonState
+
+    companion object {
+        /** Состояние из флагов места: [busy] - занято, иначе живая при [enabled] или погашенная. */
+        fun of(enabled: Boolean, busy: Boolean = false): ButtonState = when {
+            busy -> Busy
+            enabled -> Enabled
+            else -> Disabled
+        }
+    }
+}
+
 /**
- * Режим удержания: действие срабатывает, только когда палец продержал кнопку [millis]; шкала с засечками по четвертям
- * наполняется слева и пустеет, если отпустить раньше, конец - отклик вибрацией.
- *
- * [rearm] - кнопка остаётся (кузница: та же сфера снова и снова) и после срабатывания пустеет; без него срабатывает один раз
- * (лист уходит вместе с ней). [fate] - золото Предначертания, только для выбора дара. [done] - подпись результата на 100%
- * («Удалено», «Дар принят»). [onRefused] - касание погашенной кнопки (например, «сначала выбери карту»).
+ * Тон шкалы удержания, если он не следует из вида и акцента кнопки: окантовка, фон, слова, шкала и засечки; [ribbon] - лента:
+ * плотная подпись без значка руки. Новый тон - новое значение рядом с [Fate], кнопка о нём не знает.
  */
 @Immutable
-data class Hold(
-    val millis: Int = HOLD_TO_CONFIRM_MS,
-    val rearm: Boolean = false,
-    val fate: Boolean = false,
-    val done: String? = null,
-    val onRefused: (() -> Unit)? = null,
-)
+class HoldTone internal constructor(internal val surface: SurfaceLook, internal val bar: Color, internal val ticks: Color, internal val ribbon: Boolean = false) {
+    companion object {
+        /** Золото Предначертания - только выбор дара. */
+        val Fate = HoldTone(
+            SurfaceLook(FateInk.Gold, Brush.horizontalGradient(0f to FateInk.GoldDeep, .35f to FateInk.Brass, .65f to FateInk.Gold, 1f to FateInk.Brass), FateInk.OnGold),
+            Color.White.copy(alpha = .35f),
+            FateInk.OnGold.copy(alpha = .45f),
+            ribbon = true,
+        )
+    }
+}
 
-/** Поля по бокам кнопки без заданного размера - как у компактной. */
-private val AutoPadding = PaddingValues(horizontal = ButtonSize.Compact.padding)
+/**
+ * Режим удержания: действие срабатывает, только когда палец продержал кнопку [millis]; шкала с засечками по четвертям наполняется
+ * слева и пустеет, если отпустить раньше, конец - отклик вибрацией, после срабатывания кнопка снова пуста. Итог показывает
+ * место: [ButtonState.Busy] на время запроса, [ButtonState.Done] с подписью результата. [tone] - свой тон шкалы ([HoldTone.Fate]);
+ * без него - зелёный у главной, красный у опасной, тона акцента у кнопки с `accent`.
+ */
+@Immutable
+data class Hold(val millis: Int = CONFIRM_MS, val tone: HoldTone? = null) {
+    companion object {
+        /** Подтверждение листом и действия кузницы. */
+        const val CONFIRM_MS = 700
+
+        /** Возврат узла древа. */
+        const val REFUND_MS = 1_000
+
+        /** Сброс всего древа - героя или гильдии. */
+        const val RESET_MS = 1_200
+
+        /** Выбор дара Предначертания. */
+        const val FATE_MS = 1_200
+    }
+}
 
 /** Наименьшая ширина кнопки: короткая подпись («ОК») не сжимает её в квадрат. */
 private val MinWidth = 58.dp
 
-/** Сколько видна подпись результата у кнопки удержания, что остаётся ([Hold.rearm]). */
-private const val DONE_SHOW_MS = 600L
+/** Пауза полной шкалы после срабатывания удержания, до того как она опустеет. */
+private const val FULL_PAUSE_MS = 300L
+
+/** Живая ли кнопка, в которой рисуется содержимое: сумма [ButtonFigure] гаснет вместе с ней. */
+private val LocalButtonLive = staticCompositionLocalOf { true }
 
 /**
  * Кнопка игры - единственная: экраны зовут её, а не кнопки Material (сторож сборки `:app:forgeButtonsOnly`).
  *
- * [kind] - вид ([ButtonKind]), [size] - размер ([ButtonSize]); без размера - по месту: ширину задал родитель - широкая 44 dp, иначе
- * компактная 36 dp. Форма - скруглённый прямоугольник (10/9/7 dp по высоте). [icon] - значок слева от подписи; [busy] - «занято»:
- * спиннер на месте значка, касание не срабатывает, вид не гаснет. Погашенная ([enabled] false) - штриховка и приглушённые слова.
- * [hold] - режим удержания ([Hold]): [onClick] срабатывает по полному удержанию; цвета шкалы - зелёный ([ButtonKind.Primary]),
- * опасный ([ButtonKind.Danger]) или золото Предначертания ([Hold.fate]).
+ * [kind] - вид ([ButtonKind]), [size] - размер ([ButtonSize]), [state] - состояние ([ButtonState]). Форма - скруглённый прямоугольник
+ * (10/9/7 dp по высоте), зона касания - не меньше 44 dp. [icon] - значок слева от подписи. [accent] - цвет места из темы (Бездна,
+ * алтарь Ваал, атлас, сущности кузницы): у главной - заливка и окантовка, у вторичной и текстовой - окантовка и слова, у удержания -
+ * окантовка, фон и шкала; слова на заливке система подбирает по яркости, опасную акцент не красит. [hold] - режим удержания ([Hold]):
+ * [onClick] срабатывает по полному удержанию. [onDisabledClick] - касание погашенной кнопки (например, «сначала выбери карту»).
  *
- * [accent] - цвет места из темы (Бездна, алтарь Ваал, атлас, сущности кузницы): у главной - заливка и окантовка, у вторичной и
- * текстовой - окантовка и слова, у удержания - окантовка, фон и шкала; слова на заливке система подбирает по яркости. Опасную
- * акцент не красит. Малая кнопка отводит себе зону касания 44 dp.
- *
- * Подпись - [content]: цвет и стиль слов задаёт кнопка ([LocalContentColor], стиль подписи), свой цвет у `Text` их перебивает.
+ * Подпись - [content]: цвет и стиль слов задаёт кнопка ([LocalContentColor] и стиль подписи); свой цвет у `Text` не ставится -
+ * погашенная кнопка его не приглушила бы, цвет места - [accent].
  */
 @Composable fun ForgeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     kind: ButtonKind = ButtonKind.Primary,
-    size: ButtonSize? = null,
+    size: ButtonSize = ButtonSize.Auto,
+    state: ButtonState = ButtonState.Enabled,
     icon: ImageVector? = null,
-    enabled: Boolean = true,
-    busy: Boolean = false,
-    hold: Hold? = null,
     accent: Color? = null,
+    hold: Hold? = null,
+    onDisabledClick: (() -> Unit)? = null,
     contentPadding: PaddingValues? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val lead = icon ?: Icons.Outlined.DeleteOutline.takeIf { kind == ButtonKind.Danger }
     if (hold != null) {
-        HoldFace(onClick, modifier, kind, size, icon, enabled, hold, accent, contentPadding, content)
+        HoldFace(onClick, modifier, kind, size, state, lead, accent, hold, onDisabledClick, contentPadding, content)
         return
     }
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
-    val look = remember(kind, enabled, accent) { kind.look(enabled, accent) }
+    val look = remember(kind, state is ButtonState.Disabled, accent) { if (state is ButtonState.Disabled) offLook(kind) else liveLook(kind, accent) }
+    val busyText = ui("button.busy")
     ButtonRow(
-        modifier.clickable(source, indication = null, enabled = enabled && !busy, role = Role.Button, onClick = onClick)
-            .then(if (size == ButtonSize.Small) Modifier.touchZone() else Modifier)
-            .forgeHeight(size).pressShift(pressed).forgeSurface(look, pressed),
+        modifier
+            .clickable(
+                source,
+                indication = null,
+                enabled = state is ButtonState.Enabled || state is ButtonState.Busy || (state is ButtonState.Disabled && onDisabledClick != null),
+                role = Role.Button,
+            ) {
+                when (state) {
+                    ButtonState.Enabled -> onClick()
+                    ButtonState.Disabled -> onDisabledClick?.invoke()
+                    else -> Unit
+                }
+            }
+            .semantics {
+                when (state) {
+                    ButtonState.Disabled -> disabled()
+                    ButtonState.Busy -> stateDescription = busyText
+                    is ButtonState.Done -> stateDescription = state.label
+                    ButtonState.Enabled -> Unit
+                }
+            }
+            .touchZone()
+            .forgeHeight(size)
+            .pressShift(pressed)
+            .forgeSurface(look, pressed),
         size,
         contentPadding,
         look.ink,
-        labelStyle(size, strike = kind == ButtonKind.Text && !enabled),
+        labelStyle(size, strike = kind == ButtonKind.Text && state is ButtonState.Disabled),
+        live = state !is ButtonState.Disabled,
     ) {
-        Lead(if (busy) null else icon, busy, size)
-        content()
+        Lead(state, lead, size)
+        if (state is ButtonState.Done) Text(state.label, maxLines = 1) else content()
     }
 }
 
-/**
- * Сумма на кнопке: число в золотой плашке справа от подписи («+1 250» продажи, цена действия карточки).
- */
-@Composable fun ButtonFigure(text: String, enabled: Boolean = true) {
+/** Плашка суммы на кнопке: золотая; на погашенной кнопке - приглушена. */
+private val FigureBrush = Brush.verticalGradient(listOf(GoldBright, Gold))
+
+/** Сумма на кнопке: число в золотой плашке справа от подписи («+1 250» продажи, цена действия карточки). */
+@Composable fun ButtonFigure(text: String) {
+    val live = LocalButtonLive.current
     Text(
         text,
-        color = if (enabled) Ink else Muted,
+        color = if (live) Ink else Muted,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.labelLarge,
         maxLines = 1,
         modifier = Modifier.padding(start = 8.dp)
-            .background(Brush.verticalGradient(listOf(GoldBright, Gold)), RoundedCornerShape(7.dp))
+            .then(if (live) Modifier.background(FigureBrush, RoundedCornerShape(7.dp)) else Modifier)
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
 }
 
-/** Окраска вида с акцентом места [accent]: погашенная - общая штриховка, у текстовой - без фона. */
-private fun ButtonKind.look(enabled: Boolean, accent: Color?): SurfaceLook = when {
-    !enabled -> if (this == ButtonKind.Text) bareLook(Muted, Color.Transparent) else OffLook
-    this == ButtonKind.Primary -> accent?.let(::accentPrimary) ?: PrimaryLook
-    this == ButtonKind.Secondary -> accent?.let(::accentSecondary) ?: SecondaryLook
-    this == ButtonKind.Text -> bareLook(accent ?: Gold, (accent ?: Gold).copy(alpha = .16f))
-    else -> DangerLook
-}
-
-/** Стиль подписи: малая - мельче; погашенная текстовая - зачёркнута. */
-@Composable private fun labelStyle(size: ButtonSize?, strike: Boolean = false, fate: Boolean = false): TextStyle {
+/** Стиль подписи: малая - мельче; погашенная текстовая - зачёркнута; [strong] - плотнее (золото Предначертания). */
+@Composable private fun labelStyle(size: ButtonSize, strike: Boolean = false, strong: Boolean = false): TextStyle {
     val base = if (size == ButtonSize.Small) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge
     return when {
-        fate -> base.copy(fontWeight = FontWeight.SemiBold, letterSpacing = .6.sp)
+        strong -> base.copy(fontWeight = FontWeight.SemiBold, letterSpacing = .6.sp)
         strike -> base.copy(textDecoration = TextDecoration.LineThrough)
         else -> base
     }
 }
 
-/** Высота по размеру; без размера - по месту: задана ширина - 44 dp, иначе 36 dp. Содержимое выше - кнопка растёт. */
-private fun Modifier.forgeHeight(size: ButtonSize?): Modifier = layout { measurable, constraints ->
-    val wanted = (size?.height ?: if (constraints.hasFixedWidth) ButtonSize.Wide.height else ButtonSize.Compact.height).roundToPx()
-    val minHeight = wanted.coerceIn(constraints.minHeight, constraints.maxHeight)
+/** Высота по размеру; [ButtonSize.Auto] - задана ширина - 44 dp, иначе 36 dp. Содержимое выше - кнопка растёт. */
+private fun Modifier.forgeHeight(size: ButtonSize): Modifier = layout { measurable, constraints ->
+    val height = when {
+        size != ButtonSize.Auto -> size.height
+        constraints.hasFixedWidth -> ButtonSize.Wide.height
+        else -> ButtonSize.Compact.height
+    }
+    val minHeight = height.roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
     val minWidth = MinWidth.roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
     val placeable = measurable.measure(constraints.copy(minHeight = minHeight, minWidth = minWidth))
     layout(placeable.width, placeable.height) { placeable.place(0, 0) }
@@ -221,44 +301,50 @@ private fun Modifier.forgeHeight(size: ButtonSize?): Modifier = layout { measura
 /** Строка кнопки: подпись по центру, цвет и стиль слов - кнопки. */
 @Composable private fun ButtonRow(
     modifier: Modifier,
-    size: ButtonSize?,
+    size: ButtonSize,
     contentPadding: PaddingValues?,
     ink: Color,
     style: TextStyle,
+    live: Boolean,
     content: @Composable RowScope.() -> Unit,
 ) {
     Row(
-        modifier.padding(contentPadding ?: size?.let { PaddingValues(horizontal = it.padding) } ?: AutoPadding),
+        modifier.padding(contentPadding ?: PaddingValues(horizontal = size.padding)),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        CompositionLocalProvider(LocalContentColor provides ink) {
+        CompositionLocalProvider(LocalContentColor provides ink, LocalButtonLive provides live) {
             ProvideTextStyle(style) { content() }
         }
     }
 }
 
-/** Значок слева от подписи или спиннер «занято» на его месте. */
-@Composable private fun Lead(icon: ImageVector?, busy: Boolean, size: ButtonSize?) {
-    val side = (size ?: ButtonSize.Compact).icon
+/** Значок слева от подписи: спиннер у занятой, галочка у выполненной, иначе [icon]. */
+@Composable private fun Lead(state: ButtonState, icon: ImageVector?, size: ButtonSize) {
     when {
-        busy -> CircularProgressIndicator(Modifier.size(side - 2.dp), color = LocalContentColor.current, strokeWidth = 2.dp)
-        icon != null -> Icon(icon, null, Modifier.size(side))
+        state is ButtonState.Busy -> CircularProgressIndicator(Modifier.size(size.icon - 2.dp), color = LocalContentColor.current, strokeWidth = 2.dp)
+        state is ButtonState.Done -> Icon(Icons.Outlined.Check, null, Modifier.size(size.icon))
+        icon != null -> Icon(icon, null, Modifier.size(size.icon))
         else -> return
     }
-    Spacer(Modifier.width((size ?: ButtonSize.Compact).gap))
+    Spacer(Modifier.width(size.gap))
 }
 
-/** Окраска удержания: поверхность, шкала и засечки; золото Предначертания - по [fate]. */
-private class HoldLook(val surface: SurfaceLook, val bar: Color, val ticks: Color)
+private val GreenHold = HoldTone(SurfaceLook(ButtonInk.HoldGreenRim, SolidColor(ButtonInk.HoldGreenFill), GoldBright), ButtonInk.HoldGreenBar, ButtonInk.Ticks)
+private val RedHold = HoldTone(SurfaceLook(ButtonInk.HoldRedRim, SolidColor(ButtonInk.HoldRedFill), OnDanger), ButtonInk.HoldRedBar, ButtonInk.Ticks)
+private val OffHold = HoldTone(OffLook, Color.Transparent, Color.Transparent)
 
-private val GreenHold = HoldLook(SurfaceLook(ButtonInk.HoldGreenRim, SolidColor(ButtonInk.HoldGreenFill), GoldBright), ButtonInk.HoldGreenBar, ButtonInk.Ticks)
-private val RedHold = HoldLook(SurfaceLook(ButtonInk.HoldRedRim, SolidColor(ButtonInk.HoldRedFill), OnDanger), ButtonInk.HoldRedBar, ButtonInk.Ticks)
-private val FateHold = HoldLook(SurfaceLook(ButtonInk.FateRim, ButtonInk.FateFill, ButtonInk.FateInk), ButtonInk.FateBar, ButtonInk.FateTicks)
-private val OffHold = HoldLook(OffLook, Color.Transparent, Color.Transparent)
+/** Тон удержания цветом места [accent]: тёмный фон и шкала его тонами, окантовка ярче. */
+private fun accentHold(accent: Color) = HoldTone(SurfaceLook(accent.onPanel(.6f), SolidColor(accent.onPanel(.15f)), GoldBright), accent.onPanel(.45f), ButtonInk.Ticks)
 
-/** Удержание цветом места [accent]: тёмный фон и шкала его тонами, окантовка ярче. */
-private fun accentHold(accent: Color) = HoldLook(SurfaceLook(accent.onPanel(.6f), SolidColor(accent.onPanel(.15f)), GoldBright), accent.onPanel(.45f), ButtonInk.Ticks)
+/** Тон удержания кнопки: погашенная - штриховка, иначе свой тон [Hold.tone], опасный, акцента или зелёный. */
+private fun holdTone(kind: ButtonKind, accent: Color?, hold: Hold, disabled: Boolean): HoldTone = when {
+    disabled -> OffHold
+    hold.tone != null -> hold.tone
+    kind == ButtonKind.Danger -> RedHold
+    accent != null -> accentHold(accent)
+    else -> GreenHold
+}
 
 /** Шкала удержания: полоса [bar] на долю [progress] ширины и засечки по четвертям у нижнего края; читается в рисовании. */
 private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, ticks: Color): DrawScope.(Size) -> Unit = { inner ->
@@ -282,90 +368,94 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
     onHeld: () -> Unit,
     modifier: Modifier,
     kind: ButtonKind,
-    size: ButtonSize?,
+    size: ButtonSize,
+    state: ButtonState,
     icon: ImageVector?,
-    enabled: Boolean,
-    hold: Hold,
     accent: Color?,
+    hold: Hold,
+    onDisabledClick: (() -> Unit)?,
     contentPadding: PaddingValues?,
     content: @Composable RowScope.() -> Unit,
 ) {
     val progress = remember { Animatable(0f) }
+    val holding = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
     val held by rememberUpdatedState(onHeld)
-    val spec by rememberUpdatedState(hold)
-    var fired by remember { mutableStateOf(false) }
-    val live by rememberUpdatedState(enabled && !fired)
+    val refused by rememberUpdatedState(onDisabledClick)
+    val millis by rememberUpdatedState(hold.millis)
+    val current by rememberUpdatedState(state)
     val fire = {
-        if (live) {
-            if (!spec.rearm) fired = true
+        if (current == ButtonState.Enabled) {
             held()
-            if (spec.rearm) {
-                scope.launch {
-                    if (spec.done != null) delay(DONE_SHOW_MS)
-                    progress.animateTo(0f, tween(180))
-                }
+            scope.launch {
+                delay(FULL_PAUSE_MS)
+                progress.animateTo(0f, tween(180))
             }
         }
     }
-    val full by remember { derivedStateOf { progress.value >= 1f } }
-    val look = when {
-        !enabled && !fired -> OffHold
-        hold.fate -> FateHold
-        kind == ButtonKind.Danger -> RedHold
-        accent != null -> accentHold(accent)
-        else -> GreenHold
-    }
+    LaunchedEffect(state) { if (state !is ButtonState.Done && progress.value >= 1f) progress.snapTo(0f) }
+    val quarter by remember { derivedStateOf { (progress.value * 4).toInt() } }
+    val tone = remember(kind, accent, hold, state is ButtonState.Disabled) { holdTone(kind, accent, hold, state is ButtonState.Disabled) }
+    val bar = remember(tone, progress) { holdBar(progress, tone.bar, tone.ticks) }
+    val done = state as? ButtonState.Done
+    val busyText = ui("button.busy")
+    val holdText = ui("button.hold")
+    val progressText = ui("button.hold_progress", quarter * 25)
     ButtonRow(
         modifier
             .semantics(mergeDescendants = true) {
                 role = Role.Button
-                if (!live) disabled()
-                onClick {
-                    fire()
-                    true
+                when {
+                    state == ButtonState.Disabled -> disabled()
+                    state == ButtonState.Busy -> stateDescription = busyText
+                    done != null -> stateDescription = done.label
+                    quarter in 1..3 -> stateDescription = progressText
+                }
+                if (state == ButtonState.Enabled) {
+                    onClick(holdText) {
+                        fire()
+                        true
+                    }
                 }
             }
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    awaitFirstDown()
-                    if (!live) {
-                        spec.onRefused?.invoke()
-                        waitForUpOrCancellation()
+                    awaitFirstDown().consume()
+                    if (current != ButtonState.Enabled) {
+                        if (current == ButtonState.Disabled) refused?.invoke()
+                        waitForUpOrCancellation()?.consume()
                         return@awaitEachGesture
                     }
+                    holding.value = true
                     val filling = scope.launch {
-                        val left = ((1f - progress.value) * spec.millis).toInt().coerceAtLeast(1)
+                        val left = ((1f - progress.value) * millis).toInt().coerceAtLeast(1)
                         progress.animateTo(1f, tween(left, easing = LinearEasing))
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         fire()
                     }
-                    waitForUpOrCancellation()
+                    waitForUpOrCancellation()?.consume()
+                    holding.value = false
                     if (progress.value < 1f) {
                         filling.cancel()
                         scope.launch { progress.animateTo(0f, tween(180)) }
                     }
                 }
             }
-            .then(if (size == ButtonSize.Small) Modifier.touchZone() else Modifier)
+            .touchZone()
             .forgeHeight(size)
-            .forgeSurface(look.surface, Unpressed, extra = holdBar(progress, look.bar, look.ticks)),
+            .pressShift(holding)
+            .forgeSurface(tone.surface, holding, extra = if (done != null) fullBar(tone.bar) else bar),
         size,
         contentPadding,
-        look.surface.ink,
-        labelStyle(size, fate = hold.fate),
+        tone.surface.ink,
+        labelStyle(size, strong = tone.ribbon),
+        live = state != ButtonState.Disabled,
     ) {
-        val done = hold.done?.takeIf { full }
-        val lead = when {
-            full -> Icons.Outlined.Check
-            hold.fate -> icon
-            else -> icon ?: Icons.Outlined.TouchApp
-        }
-        Lead(lead, busy = false, size)
-        if (done != null) Text(done, maxLines = 1) else content()
+        Lead(state, if (tone.ribbon) icon else icon ?: Icons.Outlined.TouchApp, size)
+        if (done != null) Text(done.label, maxLines = 1) else content()
     }
 }
 
-/** Пустое «нажато» для поверхностей, что не опускаются (удержание). */
-internal val Unpressed: State<Boolean> = mutableStateOf(false)
+/** Полная шкала выполненного удержания. */
+private fun fullBar(bar: Color): DrawScope.(Size) -> Unit = { inner -> drawRect(bar, Offset(1.dp.toPx(), 1.dp.toPx()), inner) }

@@ -34,8 +34,8 @@ import kotlin.math.sqrt
 
 /**
  * Окраска поверхности кнопки, иконки-кнопки и чипа: окантовка [rim] в 1 dp, заливка [fill] внутри неё и цвет слов [ink];
- * нажатая - [pressedRim] и [pressedFill]. [ledge] - кромка тени снизу и блик сверху (только у главной), [hatched] - погашенная:
- * косая штриховка вместо заливки.
+ * нажатая - [pressedRim] и [pressedFill]. [ledge] - кромка тени по нижнему краю и блик сверху (только у главной), [hatched] -
+ * погашенная: косая штриховка вместо заливки.
  */
 @Immutable
 internal class SurfaceLook(
@@ -56,7 +56,6 @@ internal object ButtonInk {
     val DangerRim = Color(0xFF9A3533)
     val OffRim = Color(0xFF2B3944)
     val HatchLine = Color(0xFF18222A)
-    val TextPressed = Gold.copy(alpha = .16f)
     val GhostPressed = Parchment.copy(alpha = .12f)
     val Badge = Color(0xFFB23A35)
 
@@ -66,12 +65,7 @@ internal object ButtonInk {
     val HoldRedRim = Color(0xFF8A3A36)
     val HoldRedFill = Color(0xFF2E1E21)
     val HoldRedBar = Color(0xFF7E3431)
-    val FateRim = Color(0xFFF0C76A)
-    val FateInk = Color(0xFF1B1306)
-    val FateFill = Brush.horizontalGradient(0f to Color(0xFFA88236), .35f to Color(0xFFC99A3C), .65f to Color(0xFFF0C76A), 1f to Color(0xFFC99A3C))
-    val FateBar = Color.White.copy(alpha = .35f)
     val Ticks = GoldBright.copy(alpha = .4f)
-    val FateTicks = FateInk.copy(alpha = .45f)
 
     val ChipOnFill = Color(0xFF173029)
     val CountFill = Color(0xFF24323C)
@@ -100,11 +94,23 @@ internal fun inkOn(fill: Color): Color = if (fill.luminance() > .3f) Ink else Go
 /** Тон акцента на тёмной панели: [share] - доля акцента в смеси с [Panel]. */
 internal fun Color.onPanel(share: Float): Color = lerp(Panel, this, share)
 
-/** Главная цветом места [accent]: заливка и окантовка акцентом, кромка тени - его тёмный тон, слова - по яркости. */
-internal fun accentPrimary(accent: Color) = solidLook(accent, accent, inkOn(accent), accent.onPanel(.55f))
+/**
+ * Окраска вида [kind] с цветом места [accent] (живая; погашенную даёт [OffLook]). Главная - заливка и окантовка, вторичная -
+ * окантовка и слова [secondaryInk] без акцента, текстовая - слова и подложка нажатия; опасную акцент не красит.
+ */
+internal fun liveLook(kind: ButtonKind, accent: Color?, secondaryInk: Color = GoldBright): SurfaceLook = when (kind) {
+    ButtonKind.Primary -> accent?.let { solidLook(it, it, inkOn(it), it.onPanel(.55f)) } ?: PrimaryLook
 
-/** Вторичная цветом места [accent]: тёмная заливка, окантовка и слова акцентом. */
-internal fun accentSecondary(accent: Color) = SurfaceLook(accent.copy(alpha = .55f), SolidColor(PanelRaised), accent, accent, SolidColor(ButtonInk.SecondaryPressed))
+    ButtonKind.Secondary -> accent?.let { SurfaceLook(it.copy(alpha = .55f), SolidColor(PanelRaised), it, it, SolidColor(ButtonInk.SecondaryPressed)) }
+        ?: SurfaceLook(SecondaryLook.rim, SecondaryLook.fill, secondaryInk, SecondaryLook.pressedRim, SecondaryLook.pressedFill)
+
+    ButtonKind.Text -> (accent ?: Gold).let { bareLook(it, it.copy(alpha = .16f)) }
+
+    ButtonKind.Danger -> DangerLook
+}
+
+/** Погашенная окраска вида: у текстовой - без фона, у прочих - штриховка. */
+internal fun offLook(kind: ButtonKind): SurfaceLook = if (kind == ButtonKind.Text) bareLook(Muted, Color.Transparent) else OffLook
 
 /** Скругление по высоте: 44 - 10 dp, 36 - 9, чип 32 - 8, малая 30 - 7; выросшая по содержимому кнопка остаётся при 10. */
 internal fun cornerFor(height: Dp): Dp = when {
@@ -118,12 +124,12 @@ internal fun cornerFor(height: Dp): Dp = when {
 internal fun Modifier.pressShift(pressed: State<Boolean>): Modifier = graphicsLayer { translationY = if (pressed.value) 1.dp.toPx() else 0f }
 
 /**
- * Поверхность [look] скруглённым прямоугольником по высоте ([cornerFor]) или кругом ([circle]); [pressed] читается только в рисовании.
- * [extra] рисуется поверх заливки внутри окантовки (шкала удержания).
+ * Поверхность [look] скруглённым прямоугольником по высоте ([cornerFor]) или кругом ([circle]); [pressed] читается только в
+ * рисовании (null - поверхность не нажимается). [extra] рисуется поверх заливки внутри окантовки (шкала удержания). Всё рисуется в своих границах.
  */
 internal fun Modifier.forgeSurface(
     look: SurfaceLook,
-    pressed: State<Boolean>,
+    pressed: State<Boolean>?,
     circle: Boolean = false,
     extra: (DrawScope.(inner: Size) -> Unit)? = null,
 ): Modifier = drawWithCache {
@@ -132,29 +138,33 @@ internal fun Modifier.forgeSurface(
     val inner = CornerRadius((radius - border).coerceAtLeast(0f))
     val innerSize = Size(size.width - 2 * border, size.height - 2 * border)
     val clip = Path().apply { addRoundRect(RoundRect(border, border, size.width - border, size.height - border, inner)) }
-    val hatch = if (look.hatched) hatchLines(size, 5.dp.toPx()) else emptyList()
     val stripe = 5.dp.toPx()
+    val hatch = if (look.hatched) hatchLines(size, stripe) else FloatArray(0)
     val ledge = 2.dp.toPx()
     onDrawBehind {
-        val down = pressed.value
-        if (look.ledge != null && !down) drawRoundRect(look.ledge, Offset(0f, ledge), size, CornerRadius(radius))
+        val down = pressed?.value == true
         val rim = if (down) look.pressedRim else look.rim
         if (rim.alpha > 0f) drawRoundRect(rim, cornerRadius = CornerRadius(radius))
         val fill = if (down) look.pressedFill else look.fill
-        if (look.hatched) {
-            clipPath(clip) {
+        clipPath(clip) {
+            if (look.hatched) {
                 drawRect(Panel)
-                hatch.forEach { (from, to) -> drawLine(ButtonInk.HatchLine, from, to, stripe) }
+                var i = 0
+                while (i < hatch.size) {
+                    drawLine(ButtonInk.HatchLine, Offset(hatch[i], hatch[i + 1]), Offset(hatch[i + 2], hatch[i + 3]), stripe)
+                    i += 4
+                }
+            } else if (fill != null) {
+                drawRect(fill)
             }
-        } else if (fill != null) {
-            drawRoundRect(fill, Offset(border, border), innerSize, inner)
+            if (look.ledge != null && !down) drawRect(look.ledge, Offset(0f, size.height - border - ledge), Size(size.width, ledge))
+            extra?.invoke(this, innerSize)
         }
-        extra?.let { clipPath(clip) { it(innerSize) } }
         if (look.ledge != null && !down) drawLine(Color.White.copy(alpha = .35f), Offset(radius, border * 1.5f), Offset(size.width - radius, border * 1.5f), border)
     }
 }
 
-/** Наименьшая зона касания малой кнопки и чипа. */
+/** Наименьшая зона касания кнопки, значка и чипа. */
 private val TouchZone = 44.dp
 
 /**
@@ -169,14 +179,17 @@ internal fun Modifier.touchZone(): Modifier = layout { measurable, constraints -
     layout(width, height) { placeable.place((width - placeable.width) / 2, (height - placeable.height) / 2) }
 }
 
-/** Косые полосы штриховки «/» шагом 10 dp поперёк: концы отрезков, что перекрывают всю поверхность [size]. */
-private fun hatchLines(size: Size, stripe: Float): List<Pair<Offset, Offset>> {
+/** Косые полосы штриховки «/» шагом 10 dp поперёк: концы отрезков подряд (x0, y0, x1, y1), что перекрывают всю поверхность [size]. */
+private fun hatchLines(size: Size, stripe: Float): FloatArray {
     val step = 2 * stripe * sqrt(2f)
-    val lines = ArrayList<Pair<Offset, Offset>>()
-    var x = -size.height
-    while (x < size.width + step) {
-        lines += Offset(x, size.height) to Offset(x + size.height, 0f)
-        x += step
+    val count = ((size.width + size.height) / step).toInt() + 2
+    return FloatArray(count * 4).also { lines ->
+        for (i in 0 until count) {
+            val x = -size.height + i * step
+            lines[i * 4] = x
+            lines[i * 4 + 1] = size.height
+            lines[i * 4 + 2] = x + size.height
+            lines[i * 4 + 3] = 0f
+        }
     }
-    return lines
 }

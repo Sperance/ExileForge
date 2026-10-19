@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.fateDescription
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import kotlin.math.PI
 import kotlin.math.cos
@@ -89,7 +90,11 @@ object FateInk {
     val Text = Color(0xFFD7DBE4)
     val Parchment = listOf(Color(0xFF2E1C10), Color(0xFF1E120A), Color(0xFF2A190D))
     val Warn = Color(0xFFE8A35A)
-    val Accepted = Color(0xFF3FB67A)
+
+    /** Золотая лента удержания выбора дара: тёмное золото, латунь и слова на ней. */
+    val GoldDeep = Color(0xFFA88236)
+    val Brass = Color(0xFFC99A3C)
+    val OnGold = Color(0xFF1B1306)
 
     /** Осквернение («Руническая печать» и «Тлеющие письмена»): тлеющий уголь, сургуч печати, пепел спящей строки. */
     val Cinder = Color(0xFFE0743A)
@@ -414,6 +419,3 @@ private val RIBBON_SIGIL = 20.dp
 private const val SCROLL_MS = 900
 private const val SCROLL_RISE = .35f
 private val SCROLL_MAX = 190.dp
-
-/** Сколько держать кнопку принятия, мс. */
-const val HOLD_MS = 1_200

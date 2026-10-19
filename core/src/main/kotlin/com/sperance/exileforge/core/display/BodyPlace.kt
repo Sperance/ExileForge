@@ -32,3 +32,6 @@ val bodyPlaces: List<BodyPlace> = listOf(
     listOf(BodyPlace(Slot.RING.name, listOf(Slot.RING), Slot.RING), BodyPlace(Slot.RING_2.name, listOf(Slot.RING), Slot.RING_2)) +
     listOf(Slot.BELT, Slot.WINGS).map { BodyPlace(it.name, listOf(it)) } +
     Slot.FLASKS.map { BodyPlace(it.name, listOf(Slot.FLASK), it) }
+
+/** Места инструментов ремёсел по порядку слотов: по одному на ремесло, каждое берёт только свой инструмент. */
+val toolPlaces: List<BodyPlace> = Slot.entries.filter { it.isTool }.map { BodyPlace(it.name, listOf(it)) }

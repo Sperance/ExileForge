@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.bodyPlaces
+import com.sperance.exileforge.core.display.toolPlaces
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
@@ -50,7 +51,7 @@ import com.sperance.exileforge.ui.components.accountRole
     val spare: Int,
 )
 
-/** What the hero wears, every place of the body in order, and what the lines need beside it. */
+/** What the hero wears, every place of the body in order and then the crafts' tools, and what the lines need beside it. */
 @Immutable data class EquipmentState(val places: List<PlaceState>, val lang: Lang, val signedIn: Boolean)
 
 /** One line of the stash with what the rules say of it, counted once rather than on every pass over the list. */
@@ -79,7 +80,7 @@ import com.sperance.exileforge.ui.components.accountRole
     return remember(hero.items, hero.inactive, index, game.lang, game.session.signedIn) {
         val loose = hero.stash.filter { !it.socketed }.mapNotNull { index.template(it.template)?.slot }.groupingBy { it }.eachCount()
         val equipped = hero.equipped
-        val places = bodyPlaces.map { place ->
+        val places = (bodyPlaces + toolPlaces).map { place ->
             val worn = place.wornIn(equipped)
             PlaceState(
                 place,

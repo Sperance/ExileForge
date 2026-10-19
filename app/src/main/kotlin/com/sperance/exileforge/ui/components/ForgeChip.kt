@@ -22,6 +22,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -43,8 +44,8 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
 /**
  * Чип фильтра или выбора игры: подпись [label] в скруглённом прямоугольнике 32 dp. Выбранный ([selected]) - зелёная окантовка и
  * галочка слева; [leading] - свой знак слева вместо галочки (замок, герб фракции, крестик снятия фильтра) 15 dp, цвет - чипа;
- * [count] - число справа в таблетке. Погашенный ([enabled] false) - штриховка.
- * Касание добирает до 44 dp сама разметка Compose.
+ * [count] - число справа в таблетке. Погашенный ([enabled] false) - штриховка. [accent] - цвет места из темы (сторона голоса,
+ * фракция, опасный отбор): окантовка и слова акцентом, у выбранного - и фон его тоном. Зона касания - не меньше 44 dp.
  */
 @Composable fun ForgeChip(
     label: String,
@@ -54,16 +55,15 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
     enabled: Boolean = true,
     count: Int? = null,
     leading: (@Composable () -> Unit)? = null,
+    accent: Color? = null,
 ) {
     val source = remember { MutableInteractionSource() }
-    val look = when {
-        !enabled -> OffLook
-        selected -> ChipOn
-        else -> ChipOff
-    }
+    val look = remember(enabled, selected, accent) { chipLook(enabled, selected, accent) }
     Row(
-        modifier.height(32.dp).forgeSurface(look, Unpressed)
-            .selectable(selected, source, indication = null, enabled = enabled, role = Role.Checkbox, onClick = onClick)
+        modifier.selectable(selected, source, indication = null, enabled = enabled, role = Role.Checkbox, onClick = onClick)
+            .touchZone()
+            .height(32.dp)
+            .forgeSurface(look, Unpressed)
             .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -75,14 +75,23 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
             }
         }
         Text(label, color = look.ink, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        count?.let { ChipCount(it, selected, enabled) }
+        count?.let { ChipCount(it, selected, enabled, accent) }
     }
 }
 
-/** Число чипа: таблетка, у выбранного - зелёная. */
-@Composable private fun ChipCount(count: Int, selected: Boolean, enabled: Boolean) {
+/** Окраска чипа: погашенный - штриховка; с акцентом - окантовка и слова его цветом, выбранный - и фон его тоном. */
+private fun chipLook(enabled: Boolean, selected: Boolean, accent: Color?): SurfaceLook = when {
+    !enabled -> OffLook
+    accent == null -> if (selected) ChipOn else ChipOff
+    selected -> SurfaceLook(accent, SolidColor(accent.onPanel(.2f)), accent)
+    else -> SurfaceLook(accent.copy(alpha = .45f), SolidColor(Panel), accent)
+}
+
+/** Число чипа: таблетка, у выбранного - зелёная или цвета акцента. */
+@Composable private fun ChipCount(count: Int, selected: Boolean, enabled: Boolean, accent: Color?) {
     val (fill, ink) = when {
         !enabled -> ButtonInk.CountOffFill to Muted
+        selected && accent != null -> accent to inkOn(accent)
         selected -> Gold to OnPrimary
         else -> ButtonInk.CountFill to Parchment
     }

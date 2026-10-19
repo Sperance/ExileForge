@@ -66,6 +66,9 @@ val ShieldCyan = Color(0xFF63B7C4)
 /** Тёмно-красная заливка опасной кнопки: подпись [OnDanger] на ней читается не ниже 4.5:1, в отличие от [LifeRed]. */
 val Blood = Color(0xFF8A2E2E)
 
+/** Глубокий фиолет Бездны: заливка кнопок спуска в трещину. */
+val AbyssDeep = Color(0xFF3A1F66)
+
 /** Слова на заливке главной кнопки ([Gold]). */
 val OnPrimary = Color(0xFF04210F)
 

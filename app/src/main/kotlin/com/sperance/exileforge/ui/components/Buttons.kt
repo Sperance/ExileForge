@@ -134,6 +134,10 @@ private const val DONE_SHOW_MS = 600L
  * [hold] - режим удержания ([Hold]): [onClick] срабатывает по полному удержанию; цвета шкалы - зелёный ([ButtonKind.Primary]),
  * опасный ([ButtonKind.Danger]) или золото Предначертания ([Hold.fate]).
  *
+ * [accent] - цвет места из темы (Бездна, алтарь Ваал, атлас, сущности кузницы): у главной - заливка и окантовка, у вторичной и
+ * текстовой - окантовка и слова, у удержания - окантовка, фон и шкала; слова на заливке система подбирает по яркости. Опасную
+ * акцент не красит. Малая кнопка отводит себе зону касания 44 dp.
+ *
  * Подпись - [content]: цвет и стиль слов задаёт кнопка ([LocalContentColor], стиль подписи), свой цвет у `Text` их перебивает.
  */
 @Composable fun ForgeButton(
@@ -145,19 +149,21 @@ private const val DONE_SHOW_MS = 600L
     enabled: Boolean = true,
     busy: Boolean = false,
     hold: Hold? = null,
+    accent: Color? = null,
     contentPadding: PaddingValues? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     if (hold != null) {
-        HoldFace(onClick, modifier, kind, size, icon, enabled, hold, contentPadding, content)
+        HoldFace(onClick, modifier, kind, size, icon, enabled, hold, accent, contentPadding, content)
         return
     }
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
-    val look = remember(kind, enabled) { kind.look(enabled) }
+    val look = remember(kind, enabled, accent) { kind.look(enabled, accent) }
     ButtonRow(
-        modifier.forgeHeight(size).pressShift(pressed).forgeSurface(look, pressed)
-            .clickable(source, indication = null, enabled = enabled && !busy, role = Role.Button, onClick = onClick),
+        modifier.clickable(source, indication = null, enabled = enabled && !busy, role = Role.Button, onClick = onClick)
+            .then(if (size == ButtonSize.Small) Modifier.touchZone() else Modifier)
+            .forgeHeight(size).pressShift(pressed).forgeSurface(look, pressed),
         size,
         contentPadding,
         look.ink,
@@ -184,12 +190,13 @@ private const val DONE_SHOW_MS = 600L
     )
 }
 
-/** Окраска вида: погашенная - общая штриховка, у текстовой - без фона. */
-private fun ButtonKind.look(enabled: Boolean): SurfaceLook = when (this) {
-    ButtonKind.Primary -> if (enabled) PrimaryLook else OffLook
-    ButtonKind.Secondary -> if (enabled) SecondaryLook else OffLook
-    ButtonKind.Text -> if (enabled) bareLook(Gold, ButtonInk.TextPressed) else bareLook(Muted, Color.Transparent)
-    ButtonKind.Danger -> if (enabled) DangerLook else OffLook
+/** Окраска вида с акцентом места [accent]: погашенная - общая штриховка, у текстовой - без фона. */
+private fun ButtonKind.look(enabled: Boolean, accent: Color?): SurfaceLook = when {
+    !enabled -> if (this == ButtonKind.Text) bareLook(Muted, Color.Transparent) else OffLook
+    this == ButtonKind.Primary -> accent?.let(::accentPrimary) ?: PrimaryLook
+    this == ButtonKind.Secondary -> accent?.let(::accentSecondary) ?: SecondaryLook
+    this == ButtonKind.Text -> bareLook(accent ?: Gold, (accent ?: Gold).copy(alpha = .16f))
+    else -> DangerLook
 }
 
 /** Стиль подписи: малая - мельче; погашенная текстовая - зачёркнута. */
@@ -250,6 +257,9 @@ private val RedHold = HoldLook(SurfaceLook(ButtonInk.HoldRedRim, SolidColor(Butt
 private val FateHold = HoldLook(SurfaceLook(ButtonInk.FateRim, ButtonInk.FateFill, ButtonInk.FateInk), ButtonInk.FateBar, ButtonInk.FateTicks)
 private val OffHold = HoldLook(OffLook, Color.Transparent, Color.Transparent)
 
+/** Удержание цветом места [accent]: тёмный фон и шкала его тонами, окантовка ярче. */
+private fun accentHold(accent: Color) = HoldLook(SurfaceLook(accent.onPanel(.6f), SolidColor(accent.onPanel(.15f)), GoldBright), accent.onPanel(.45f), ButtonInk.Ticks)
+
 /** Шкала удержания: полоса [bar] на долю [progress] ширины и засечки по четвертям у нижнего края; читается в рисовании. */
 private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, ticks: Color): DrawScope.(Size) -> Unit = { inner ->
     val border = 1.dp.toPx()
@@ -276,6 +286,7 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
     icon: ImageVector?,
     enabled: Boolean,
     hold: Hold,
+    accent: Color?,
     contentPadding: PaddingValues?,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -303,11 +314,11 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
         !enabled && !fired -> OffHold
         hold.fate -> FateHold
         kind == ButtonKind.Danger -> RedHold
+        accent != null -> accentHold(accent)
         else -> GreenHold
     }
     ButtonRow(
-        modifier.forgeHeight(size)
-            .forgeSurface(look.surface, Unpressed, holdBar(progress, look.bar, look.ticks))
+        modifier
             .semantics(mergeDescendants = true) {
                 role = Role.Button
                 if (!live) disabled()
@@ -336,7 +347,10 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
                         scope.launch { progress.animateTo(0f, tween(180)) }
                     }
                 }
-            },
+            }
+            .then(if (size == ButtonSize.Small) Modifier.touchZone() else Modifier)
+            .forgeHeight(size)
+            .forgeSurface(look.surface, Unpressed, extra = holdBar(progress, look.bar, look.ticks)),
         size,
         contentPadding,
         look.surface.ink,

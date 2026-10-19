@@ -44,6 +44,15 @@ enum class IconButtonStyle {
     Danger,
 }
 
+/** Форма иконки-кнопки. */
+enum class IconButtonShape {
+    /** Скруглённый квадрат - в панелях, шапках и строках. */
+    Rounded,
+
+    /** Круг - плавающие поверх карты, древа и боя (меню забега, масштаб, «к герою»). */
+    Circle,
+}
+
 /** Сторона зоны касания иконки-кнопки: и обычной, и компактной. */
 private val TouchSide = 44.dp
 
@@ -53,8 +62,8 @@ private val CompactSide = 36.dp
 /**
  * Иконка-кнопка игры: значок [icon] (подпись для чтения с экрана - [contentDescription]) в скруглённом квадрате 44 dp, [compact] -
  * 36 dp в той же зоне касания 44. [style] - вид ([IconButtonStyle]); [tint] - свой цвет значка поверх цвета вида (только там, где
- * цвет несёт смысл: открытое, мир экрана). [badge] - счётчик в углу, ноль не показывается. Погашенная - штриховка (у [IconButtonStyle.Ghost] -
- * приглушённый значок).
+ * цвет несёт смысл: открытое, мир экрана). [shape] - форма ([IconButtonShape]). [badge] - счётчик в углу цветом [badgeColor], ноль
+ * не показывается. Погашенная - штриховка (у [IconButtonStyle.Ghost] - приглушённый значок).
  */
 @Composable fun ForgeIconButton(
     icon: ImageVector,
@@ -65,7 +74,9 @@ private val CompactSide = 36.dp
     compact: Boolean = false,
     enabled: Boolean = true,
     tint: Color = Color.Unspecified,
+    shape: IconButtonShape = IconButtonShape.Rounded,
     badge: Int? = null,
+    badgeColor: Color = ButtonInk.Badge,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
@@ -75,12 +86,12 @@ private val CompactSide = 36.dp
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.size(if (compact) CompactSide else TouchSide).pressShift(pressed).forgeSurface(look, pressed),
+            Modifier.size(if (compact) CompactSide else TouchSide).pressShift(pressed).forgeSurface(look, pressed, circle = shape == IconButtonShape.Circle),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription, Modifier.size(20.dp), tint = if (enabled && tint != Color.Unspecified) tint else look.ink)
         }
-        badge?.takeIf { it > 0 }?.let { CornerCount(it, Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-3).dp)) }
+        badge?.takeIf { it > 0 }?.let { CornerCount(it, badgeColor, Modifier.align(Alignment.TopEnd).offset(x = 5.dp, y = (-3).dp)) }
     }
 }
 
@@ -93,17 +104,17 @@ private fun IconButtonStyle.look(enabled: Boolean): SurfaceLook = when {
     else -> DangerLook
 }
 
-/** Счётчик в углу иконки-кнопки: красная таблетка с числом, «99+» сверх. */
-@Composable private fun CornerCount(count: Int, modifier: Modifier) {
+/** Счётчик в углу иконки-кнопки: таблетка цвета [fill] с числом, «99+» сверх; слова - по яркости заливки. */
+@Composable private fun CornerCount(count: Int, fill: Color, modifier: Modifier) {
     val shape = RoundedCornerShape(9.dp)
     Text(
         if (count > 99) "99+" else count.toString(),
-        color = Color.White,
+        color = inkOn(fill),
         fontSize = 11.sp,
         lineHeight = 18.sp,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         modifier = modifier.defaultMinSize(minWidth = 18.dp).height(18.dp)
-            .border(2.dp, Panel, shape).background(ButtonInk.Badge, shape).padding(horizontal = 5.dp),
+            .border(2.dp, Panel, shape).background(fill, shape).padding(horizontal = 5.dp),
     )
 }

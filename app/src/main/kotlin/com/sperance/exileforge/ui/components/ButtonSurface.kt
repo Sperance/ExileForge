@@ -15,11 +15,15 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.Blood
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
+import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.OnDanger
 import com.sperance.exileforge.ui.theme.OnPrimary
@@ -90,6 +94,18 @@ internal val PrimaryLook = solidLook(Gold, Gold, OnPrimary, ButtonInk.PrimaryLed
 internal val SecondaryLook = SurfaceLook(ButtonInk.SecondaryRim, SolidColor(PanelRaised), GoldBright, Gold, SolidColor(ButtonInk.SecondaryPressed))
 internal val DangerLook = solidLook(Blood, ButtonInk.DangerRim, OnDanger)
 
+/** Слова на заливке [fill]: на светлой - тёмные [Ink], на тёмной - светлые [GoldBright]. */
+internal fun inkOn(fill: Color): Color = if (fill.luminance() > .3f) Ink else GoldBright
+
+/** Тон акцента на тёмной панели: [share] - доля акцента в смеси с [Panel]. */
+internal fun Color.onPanel(share: Float): Color = lerp(Panel, this, share)
+
+/** Главная цветом места [accent]: заливка и окантовка акцентом, кромка тени - его тёмный тон, слова - по яркости. */
+internal fun accentPrimary(accent: Color) = solidLook(accent, accent, inkOn(accent), accent.onPanel(.55f))
+
+/** Вторичная цветом места [accent]: тёмная заливка, окантовка и слова акцентом. */
+internal fun accentSecondary(accent: Color) = SurfaceLook(accent.copy(alpha = .55f), SolidColor(PanelRaised), accent, accent, SolidColor(ButtonInk.SecondaryPressed))
+
 /** Скругление по высоте: 44 - 10 dp, 36 - 9, чип 32 - 8, малая 30 - 7; выросшая по содержимому кнопка остаётся при 10. */
 internal fun cornerFor(height: Dp): Dp = when {
     height >= 43.5.dp -> 10.dp
@@ -102,12 +118,17 @@ internal fun cornerFor(height: Dp): Dp = when {
 internal fun Modifier.pressShift(pressed: State<Boolean>): Modifier = graphicsLayer { translationY = if (pressed.value) 1.dp.toPx() else 0f }
 
 /**
- * Поверхность [look] скруглённым прямоугольником по высоте ([cornerFor]); [pressed] читается только в рисовании. [extra] рисуется
- * поверх заливки внутри окантовки (шкала удержания).
+ * Поверхность [look] скруглённым прямоугольником по высоте ([cornerFor]) или кругом ([circle]); [pressed] читается только в рисовании.
+ * [extra] рисуется поверх заливки внутри окантовки (шкала удержания).
  */
-internal fun Modifier.forgeSurface(look: SurfaceLook, pressed: State<Boolean>, extra: (DrawScope.(inner: Size) -> Unit)? = null): Modifier = drawWithCache {
+internal fun Modifier.forgeSurface(
+    look: SurfaceLook,
+    pressed: State<Boolean>,
+    circle: Boolean = false,
+    extra: (DrawScope.(inner: Size) -> Unit)? = null,
+): Modifier = drawWithCache {
     val border = 1.dp.toPx()
-    val radius = cornerFor(size.height.toDp()).toPx()
+    val radius = if (circle) size.minDimension / 2 else cornerFor(size.height.toDp()).toPx()
     val inner = CornerRadius((radius - border).coerceAtLeast(0f))
     val innerSize = Size(size.width - 2 * border, size.height - 2 * border)
     val clip = Path().apply { addRoundRect(RoundRect(border, border, size.width - border, size.height - border, inner)) }
@@ -131,6 +152,21 @@ internal fun Modifier.forgeSurface(look: SurfaceLook, pressed: State<Boolean>, e
         extra?.let { clipPath(clip) { it(innerSize) } }
         if (look.ledge != null && !down) drawLine(Color.White.copy(alpha = .35f), Offset(radius, border * 1.5f), Offset(size.width - radius, border * 1.5f), border)
     }
+}
+
+/** Наименьшая зона касания малой кнопки и чипа. */
+private val TouchZone = 44.dp
+
+/**
+ * Явная зона касания 44 dp: меньшее содержимое встаёт по центру, разметка отводит ему 44 dp. Стоит в цепочке после обработчика
+ * касания и до поверхности - касается вся зона, рисуется только содержимое.
+ */
+internal fun Modifier.touchZone(): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val side = TouchZone.roundToPx()
+    val width = maxOf(placeable.width, side).coerceAtMost(constraints.maxWidth)
+    val height = maxOf(placeable.height, side).coerceAtMost(constraints.maxHeight)
+    layout(width, height) { placeable.place((width - placeable.width) / 2, (height - placeable.height) / 2) }
 }
 
 /** Косые полосы штриховки «/» шагом 10 dp поперёк: концы отрезков, что перекрывают всю поверхность [size]. */

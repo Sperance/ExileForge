@@ -69,7 +69,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 onQuery = { query = it },
                 onOrder = { order = it },
                 action = if (recruits) {
-                    { ToolButton(Icons.Outlined.Add, ui("guild.invite"), Gold, enabled = !game.busy) { inviting = true } }
+                    {
+                        ToolButton(Icons.Outlined.Add, ui("guild.invite"), Gold, enabled = !game.busy) {
+                            vm.openInvite()
+                            inviting = true
+                        }
+                    }
                 } else {
                     null
                 },
@@ -87,7 +92,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
         if (shown.isEmpty()) item { MutedText(ui("guild.roster_empty"), Modifier.fillMaxWidth().padding(vertical = 16.dp)) }
         item { RosterFooter(guild.members) }
     }
-    if (inviting) InviteSheet(game, vm, guild) { inviting = false }
+    if (inviting) {
+        InviteSheet(game, vm, guild) {
+            vm.closeInvite()
+            inviting = false
+        }
+    }
     chosen?.let { member ->
         MemberSheet(game, member, commandsOn(me, member), officerSeat, onDismiss = { chosen = null }) { command ->
             chosen = null
@@ -112,17 +122,13 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
  * или имя и «Найти» - одно чтение превью (имя, класс, уровень, номер). Подвал - «Пригласить «Имя…»»: пока героя нет, он
  * в чужой гильдии или ниже порога гильдии, кнопка погашена, причина под ней. Приглашение закрывает лист.
  *
- * Лист открывается заново: поле живёт с ним, найденный герой сбрасывается при открытии и закрытии.
+ * Поле живёт с листом; найденного героя забывают [GuildViewModel.openInvite] и [GuildViewModel.closeInvite] у зовущего.
  */
 @Composable private fun InviteSheet(game: GameUi, vm: GuildViewModel, guild: GuildView, onDismiss: () -> Unit) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     var target by remember { mutableStateOf("") }
     val found = guilds.recruit
     val need = guildEntryLevel(game.index?.rules, guild.minLevel)
-    DisposableEffect(Unit) {
-        vm.clearRecruit()
-        onDispose { vm.clearRecruit() }
-    }
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),

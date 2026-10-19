@@ -45,6 +45,13 @@ class GuildViewModel(
     fun invite(target: String) = actions.invite(target)
     fun lookup(target: String) = actions.lookup(target)
     fun clearRecruit() = actions.clearRecruit()
+
+    /** Лист приглашения открывается пустым: найденный прежде герой забыт. */
+    fun openInvite() = actions.clearRecruit()
+
+    /** Лист приглашения закрыт: найденный герой не переживает его. */
+    fun closeInvite() = actions.clearRecruit()
+
     fun renewCode() = actions.renewCode()
     fun joinByCode(code: String) = actions.joinByCode(code)
     fun member(command: MemberCommand, memberId: String) = actions.member(command, memberId)

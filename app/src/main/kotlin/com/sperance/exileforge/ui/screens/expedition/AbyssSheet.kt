@@ -123,7 +123,7 @@ import com.sperance.exileforge.ui.theme.*
         view.hoard != null -> ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("abyss.leave")) }
 
         !view.open -> {
-            ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.fillMaxWidth(), icon = ForgeGlyphs.Rift) {
+            ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.fillMaxWidth(), icon = ForgeGlyphs.Rift, accent = AbyssDeep) {
                 Text(ui("abyss.descend"))
             }
             away()
@@ -136,7 +136,7 @@ import com.sperance.exileforge.ui.theme.*
                 Text(ui("abyss.take"))
             }
             if (view.next != null) {
-                ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f)) {
+                ForgeButton(onClick = { onCommand(RunCommand.Descend) }, modifier = Modifier.weight(1f), accent = AbyssDeep) {
                     Text(ui("abyss.deeper"))
                 }
             }

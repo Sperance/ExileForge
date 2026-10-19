@@ -32,6 +32,7 @@ import com.sperance.exileforge.ui.theme.*
                 modifier = Modifier.weight(1f),
                 size = ButtonSize.Wide,
                 icon = ForgeGlyphs.Swords,
+                accent = Blood,
             ) {
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }

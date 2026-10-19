@@ -53,6 +53,7 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.GoldCost
+import com.sperance.exileforge.ui.components.IconButtonShape
 import com.sperance.exileforge.ui.components.IconButtonStyle
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalLore
@@ -156,7 +157,7 @@ private fun FeatureCard(
                     Text(name, color = GoldBright, style = relicName(15), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (facts.isNotEmpty()) Text(summary(facts), style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, style = IconButtonStyle.Tonal, compact = true)
+                ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onDismiss, style = IconButtonStyle.Tonal, compact = true, shape = IconButtonShape.Circle)
             }
             if (action != null || lead != null || blocked != null) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

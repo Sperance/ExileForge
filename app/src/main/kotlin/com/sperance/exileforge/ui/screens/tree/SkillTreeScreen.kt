@@ -290,9 +290,9 @@ fun SkillTreePanel(
 
 internal val PILL = RoundedCornerShape(16.dp)
 
-/** Кнопка поверх древа: тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
+/** Кнопка поверх древа: круглая тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = size < 44.dp, tint = tint, badge = badge)
+    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = size < 44.dp, tint = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
 }
 
 /**

@@ -112,6 +112,7 @@ import java.util.Locale
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth(),
             size = ButtonSize.Wide,
+            accent = if (won) null else LifeRed,
         ) {
             Text(ui(if (won) "expedition.continue" else "expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
         }

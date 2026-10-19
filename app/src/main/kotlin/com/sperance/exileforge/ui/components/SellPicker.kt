@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
@@ -76,14 +77,14 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
                 SellPreset.Rules -> ui("sell.preset_rules") to GoldBright
                 is SellPreset.OfRarity -> ui("stash.rarity_many.${preset.rarity.name}") to rarityColor(preset.rarity.name)
             }
-            PresetChip(label, on = pick.covers(preset), enabled = pick.offers(preset)) { pick.flip(preset) }
+            PresetChip(label, tint, on = pick.covers(preset), enabled = pick.offers(preset)) { pick.flip(preset) }
         }
     }
 }
 
-/** Чип набора: включённый - выбран. */
-@Composable private fun PresetChip(label: String, on: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, on, onClick, enabled = enabled)
+/** Чип набора цветом набора [tint]: включённый - выбран. */
+@Composable private fun PresetChip(label: String, tint: Color, on: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    ForgeChip(label, on, onClick, enabled = enabled, accent = tint)
 }
 
 /**

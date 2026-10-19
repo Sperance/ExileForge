@@ -377,7 +377,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 @Composable private fun LetterMenu(name: String, ignored: Boolean, reported: Boolean, enabled: Boolean, onIgnore: () -> Unit, onReport: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { open = true }, style = if (open) IconButtonStyle.Tonal else IconButtonStyle.Ghost, compact = true)
+        ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { open = true }, style = if (open) IconButtonStyle.Tonal else IconButtonStyle.Ghost, compact = true, shape = IconButtonShape.Circle)
         ForgeMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = {

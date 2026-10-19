@@ -456,11 +456,7 @@ private const val FATE_COLUMNS = 2
 internal fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
 
 @Composable internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
-    ForgeChip(
-        label,
-        selected,
-        onClick,
-    )
+    ForgeChip(label, selected, onClick, accent = LossText)
 }
 
 @Composable internal fun RolePill(role: AccountRole) {

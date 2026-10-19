@@ -55,7 +55,7 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
     return remember(shelf) { FilterState(shelf, prefs.itemFilters.value[shelf]) { next: ItemFilter -> scope.launch { prefs.saveItemFilter(shelf, next) } } }
 }
 
-/** Значок фильтра списка (общий): компактная иконка-кнопка, при суженном списке - тональная, светлая и со счётчиком сужений. */
+/** Значок фильтра списка (общий): компактная круглая иконка-кнопка, при суженном списке - тональная, светлая и со счётчиком сужений. */
 @Composable fun ItemFilterButton(tweaks: Int, onClick: () -> Unit) {
     ForgeIconButton(
         Icons.Outlined.FilterList,
@@ -64,7 +64,9 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         style = if (tweaks > 0) IconButtonStyle.Tonal else IconButtonStyle.Ghost,
         compact = true,
         tint = filterTint(tweaks),
+        shape = IconButtonShape.Circle,
         badge = tweaks,
+        badgeColor = Vital,
     )
 }
 

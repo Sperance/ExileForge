@@ -244,6 +244,7 @@ internal fun Exchange(
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),
+                accent = Blood,
             ) { Text(bill?.payLabel(ui("skills.exchange")) ?: ui("skills.exchange")) }
         }
     }

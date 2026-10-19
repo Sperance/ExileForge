@@ -68,6 +68,7 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -245,8 +246,8 @@ private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> U
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val free = !game.busy
             if (rights.banHero || rights.banAccount || rights.banDevice) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Danger, icon = Icons.Outlined.Block, enabled = free) { Text(ui("moderation.ban"), maxLines = 1) }
-            if (rights.mute) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.VolumeOff, enabled = free) { Text(ui("moderation.mute"), maxLines = 1) }
-            onMail?.let { ForgeButton(it, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.MarkEmailUnread, enabled = free) { Text(ui("player.write_admin"), maxLines = 1) } }
+            if (rights.mute) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.VolumeOff, enabled = free, accent = Caution) { Text(ui("moderation.mute"), maxLines = 1) }
+            onMail?.let { ForgeButton(it, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.MarkEmailUnread, enabled = free, accent = Rune) { Text(ui("player.write_admin"), maxLines = 1) } }
             if (rights.delete) ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Danger, icon = Icons.Outlined.DeleteOutline, enabled = free) { Text(ui("moderation.delete"), maxLines = 1) }
             ForgeButton(onDossier, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.FolderOpen, enabled = free) { Text(ui("moderation.dossier"), maxLines = 1) }
         }

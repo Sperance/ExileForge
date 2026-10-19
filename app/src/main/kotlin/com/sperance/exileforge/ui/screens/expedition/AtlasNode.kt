@@ -135,11 +135,12 @@ import kotlin.math.sin
                 canTake -> ForgeButton(
                     onClick = onTake,
                     enabled = enabled && available > 0,
+                    accent = Sky.take,
                 ) { Text(ui("atlas.take")) }
 
                 canRefund -> {
                     refund?.let { GoldCost(it) }
-                    ForgeButton(onClick = onRefund, enabled = enabled, kind = ButtonKind.Secondary) { Text(ui("atlas.refund"), color = Sky.text) }
+                    ForgeButton(onClick = onRefund, enabled = enabled, kind = ButtonKind.Secondary, accent = Sky.text) { Text(ui("atlas.refund")) }
                 }
 
                 blocker != null -> ForgeButton(onClick = {}, enabled = false) { Text(ui("atlas.take")) }

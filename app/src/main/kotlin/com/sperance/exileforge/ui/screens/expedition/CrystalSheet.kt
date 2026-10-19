@@ -79,6 +79,7 @@ import com.sperance.exileforge.ui.theme.*
                 enabled = !view.awaiting,
                 onClick = { onCommand(RunCommand.Release) },
                 modifier = Modifier.fillMaxWidth(),
+                accent = Blood,
             ) { Text(ui("crystal.release")) }
             ForgeButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.align(Alignment.CenterHorizontally), kind = ButtonKind.Text) {
                 Text(ui("crystal.later"), color = Muted, textAlign = TextAlign.Center)

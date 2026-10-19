@@ -129,7 +129,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
             item(key = "tools") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CompactSearchField(guilds.query, { vm.query(it.take(game.inputs.search)) }, ui("guild.search"), Modifier.weight(1f), onSearch = { vm.search(0) })
-                    ToolButton(Icons.Outlined.Tag, ui("guild.tool_code"), enabled = waiting == null) { coding = true }
+                    ToolButton(Icons.Outlined.Tag, ui("guild.tool_code"), enabled = waiting == null, accent = Rune) { coding = true }
                     ToolButton(Icons.Outlined.Add, ui("guild.tool_found"), enabled = !game.busy) { founding = true }
                 }
             }
@@ -217,6 +217,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                 { onChoose(faction.code) },
                 enabled = enabled,
                 leading = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) },
+                accent = factionColor(faction),
             )
         }
     }

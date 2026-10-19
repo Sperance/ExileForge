@@ -104,9 +104,9 @@ import kotlin.math.roundToInt
     }
 }
 
-/** «+»/«−» мини-карты: компактная тональная иконка-кнопка. */
+/** «+»/«−» мини-карты: компактная круглая тональная иконка-кнопка. */
 @Composable internal fun ZoomButton(icon: ImageVector, label: String, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = true)
+    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = true, shape = IconButtonShape.Circle)
 }
 
 /**

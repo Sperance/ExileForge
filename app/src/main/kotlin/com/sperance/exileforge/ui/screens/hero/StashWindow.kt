@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -143,7 +144,7 @@ private fun BelowRule(rules: AutoSell, steps: List<Int>, enabled: Boolean, model
                 MutedText(ui("autosell.below_for"), style = MaterialTheme.typography.labelSmall)
                 AutoSell.SELLABLE.sortedBy { it.ordinal }.forEach { rarity ->
                     val on = rarity in below.rarities
-                    StepChip(ui("autosell.column.${rarity.name}"), on, enabled) {
+                    StepChip(ui("autosell.column.${rarity.name}"), on, enabled, rarityColor(rarity.name)) {
                         model.autoSellBelow(below.levels, if (on) below.rarities - rarity else below.rarities + rarity)
                     }
                 }
@@ -152,10 +153,10 @@ private fun BelowRule(rules: AutoSell, steps: List<Int>, enabled: Boolean, model
     }
 }
 
-/** Чип выбора порога или редкости автопродажи. */
+/** Чип выбора порога или редкости автопродажи; [accent] - цвет редкости. */
 @Composable
-private fun StepChip(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, selected, onClick, enabled = enabled)
+private fun StepChip(label: String, selected: Boolean, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
+    ForgeChip(label, selected, onClick, enabled = enabled, accent = accent)
 }
 
 /** Строка правила: название, подпись мелко и переключатель справа. */

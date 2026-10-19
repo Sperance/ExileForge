@@ -186,6 +186,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             enabled = armed,
             modifier = Modifier.fillMaxWidth(),
             size = ButtonSize.Wide,
+            accent = head.accent,
         ) {
             Text(head.done, style = MaterialTheme.typography.titleMedium)
         }

@@ -63,6 +63,7 @@ import com.sperance.exileforge.ui.components.NeonHue
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.theme.Abyss
+import com.sperance.exileforge.ui.theme.Blood
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -127,6 +128,7 @@ internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: Skil
         enabled = reason == null && !game.busy,
         onClick = onRead,
         modifier = Modifier.fillMaxWidth(),
+        accent = Blood,
     ) {
         Text(if (view.level == 0) ui("skills.learn", books) else ui("skills.read_xp", number(view.bookXp), books))
     }

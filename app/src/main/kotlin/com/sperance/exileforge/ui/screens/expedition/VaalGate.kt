@@ -94,11 +94,13 @@ private object Altar {
                     onClick = onBack,
                     modifier = Modifier.weight(1f),
                     kind = ButtonKind.Secondary,
+                    accent = Altar.muted,
                 ) { Text(ui(if (zone != null) "vaal.later" else "common.close")) }
                 ForgeButton(
                     onClick = onEnter,
                     enabled = zone != null,
                     modifier = Modifier.weight(1.4f),
+                    accent = Altar.deed,
                 ) { Text(ui("vaal.enter")) }
             }
         }

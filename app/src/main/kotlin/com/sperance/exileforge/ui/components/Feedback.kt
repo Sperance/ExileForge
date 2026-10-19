@@ -262,8 +262,8 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 @Composable private fun VoteRow(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
-    VoteButton("+", known.likes, known.vote == Vote.LIKE, enabled && known.votable) { onVote(Vote.LIKE) }
-    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, enabled && known.votable) { onVote(Vote.DISLIKE) }
+    VoteButton("+", known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
+    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, LossText, enabled && known.votable) { onVote(Vote.DISLIKE) }
 }
 
 /** Удаление отчёта - всегда с вопросом: оно жёсткое и не возвращается. */
@@ -276,9 +276,9 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
     ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, blocked = busy, onConfirm = onDelete)
 }
 
-/** Голос «+» или «−» со счётом - чип: свой голос выбран. */
-@Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip("$sign$count", chosen, onClick, enabled = enabled)
+/** Голос «+» или «−» со счётом - чип цвета стороны [tint]: свой голос выбран. */
+@Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
+    ForgeChip("$sign$count", chosen, onClick, enabled = enabled, accent = tint)
 }
 
 /** Длина поиска известных проблем. */

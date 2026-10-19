@@ -75,6 +75,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
+            val look = relicLook(view.rarity)
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
                     ItemCard(
@@ -130,11 +131,11 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             ) {
                 val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
                 when {
-                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = can) {
+                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = can, accent = look.gold.takeIf { look.legend != null }) {
                         Text(ui("hero.replace"), maxLines = 1)
                     }
 
-                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = offer.enabled) {
+                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, enabled = offer.enabled, accent = look.gold.takeIf { look.legend != null }) {
                         Text(offer.label, maxLines = 1)
                     }
                 }

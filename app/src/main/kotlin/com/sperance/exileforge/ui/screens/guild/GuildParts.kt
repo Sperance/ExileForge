@@ -146,7 +146,7 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
 /** An epoch-millisecond moment by the device's clock, «dd.MM HH:mm». */
 internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM HH:mm"))
 
-/** Кнопка строки инструментов: компактная вторичная со значком. */
-@Composable internal fun ToolButton(icon: ImageVector, text: String, enabled: Boolean, onClick: () -> Unit) {
-    ForgeButton(onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = icon, enabled = enabled) { Text(text, maxLines = 1) }
+/** Кнопка строки инструментов: компактная вторичная со значком, [accent] - цвет инструмента. */
+@Composable internal fun ToolButton(icon: ImageVector, text: String, enabled: Boolean, accent: Color? = null, onClick: () -> Unit) {
+    ForgeButton(onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = icon, enabled = enabled, accent = accent) { Text(text, maxLines = 1) }
 }

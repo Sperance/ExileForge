@@ -138,7 +138,7 @@ private const val CARD_TOP = .48f
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        ForgeIconButton(ForgeGlyphs.Target, ui("expedition.to_hero"), onClick = onHero, style = IconButtonStyle.Tonal, compact = true)
+        ForgeIconButton(ForgeGlyphs.Target, ui("expedition.to_hero"), onClick = onHero, style = IconButtonStyle.Tonal, compact = true, shape = IconButtonShape.Circle)
     }
 }
 

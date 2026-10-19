@@ -162,31 +162,32 @@ import org.koin.compose.viewmodel.koinViewModel
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
     ToastLayer(game, shell::dismissMessage, shell::dismissNotice) {
-        key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
-            CompositionLocalProvider(
-                LocalMailOpen provides { mailOpen = true },
-                com.sperance.exileforge.ui.components.LocalContentIndex provides game.index,
-                com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
-                com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
-                com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
-            ) {
-                com.sperance.exileforge.ui.components.FateSightHost(game) {
-                    com.sperance.exileforge.ui.components.LoreHost(game) {
-                        com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                            com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
-                                com.sperance.exileforge.ui.components.PlayerCardHost(game) {
-                                    Box(Modifier.fillMaxSize()) {
-                                        val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                                        val run = expedition
-                                        val arena = trial
-                                        val notice = game.session.notice
-                                        when {
-                                            notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
-                                            warming != null -> Box(Modifier.fillMaxSize().background(Ink))
-                                            run != null -> ExpeditionPlay(run)
-                                            arena != null -> TrialScreen(arena)
-                                            rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
-                                            else -> Shell(game, route, navigator)
+        CompositionLocalProvider(com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets) {
+            key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
+                CompositionLocalProvider(
+                    LocalMailOpen provides { mailOpen = true },
+                    com.sperance.exileforge.ui.components.LocalContentIndex provides game.index,
+                    com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
+                    com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
+                ) {
+                    com.sperance.exileforge.ui.components.FateSightHost(game) {
+                        com.sperance.exileforge.ui.components.LoreHost(game) {
+                            com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
+                                com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                                    com.sperance.exileforge.ui.components.PlayerCardHost(game) {
+                                        Box(Modifier.fillMaxSize()) {
+                                            val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                                            val run = expedition
+                                            val arena = trial
+                                            val notice = game.session.notice
+                                            when {
+                                                notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+                                                warming != null -> Box(Modifier.fillMaxSize().background(Ink))
+                                                run != null -> ExpeditionPlay(run)
+                                                arena != null -> TrialScreen(arena)
+                                                rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
+                                                else -> Shell(game, route, navigator)
+                                            }
                                         }
                                     }
                                 }
@@ -195,28 +196,24 @@ import org.koin.compose.viewmodel.koinViewModel
                     }
                 }
             }
-        }
-        if (sheets.settings) {
-            CompositionLocalProvider(com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets) {
-                com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
+            if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
+            if (sheets.bug) {
+                BugSheet(
+                    game,
+                    route,
+                    expedition,
+                    drafts,
+                    onDismiss = { sheets.bug = false },
+                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
+                    onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
+                )
             }
+            if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+            sheets.reports?.let { view -> ReportsSheet(view) { sheets.reports = null } }
+            if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
+            if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
+            if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
         }
-        if (sheets.bug) {
-            BugSheet(
-                game,
-                route,
-                expedition,
-                drafts,
-                onDismiss = { sheets.bug = false },
-                onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
-                onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
-            )
-        }
-        if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-        sheets.reports?.let { view -> ReportsSheet(view) { sheets.reports = null } }
-        if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
-        if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
-        if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
     }
 }
 

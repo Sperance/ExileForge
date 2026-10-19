@@ -245,7 +245,8 @@ fun ItemCard(
  * (цена торговца копии, иначе шаблона); [serial] - номер экземпляра легенды последней плашкой.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: Boolean = false, serial: Boolean = false) {
+@Composable
+private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: Boolean = false, serial: Boolean = false) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -290,7 +291,8 @@ fun ItemCard(
  * для поиска на аукционе), тип, плашки и разделитель; база сверх ряда гнезда - под разделителем.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
+@Composable
+private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
     val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
     val mapLevel = item.mapLevel.takeIf { figures.isEmpty() }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

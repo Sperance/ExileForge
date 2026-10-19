@@ -171,7 +171,19 @@ val appModule = module {
     single { LanguageRepository() }
     single { LinkRepository() }
     single { AdminRepository() }
-    single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single {
+        GameSlice(
+            sessions = get(),
+            commands = get(),
+            languages = get(),
+            worlds = get(),
+            heroes = get(),
+            links = get(),
+            prefs = get(),
+            notices = get(),
+            scope = get(named(APP_SCOPE)),
+        )
+    }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)

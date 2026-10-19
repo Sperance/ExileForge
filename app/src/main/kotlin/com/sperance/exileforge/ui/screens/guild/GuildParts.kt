@@ -12,12 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -28,6 +25,10 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.GuildFaction
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
@@ -120,7 +121,7 @@ internal fun factionColor(faction: GuildFaction?): Color = faction?.color?.let(:
 @Composable
 internal fun ModePicker(mode: GuildMode, enabled: Boolean, onChange: (GuildMode) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        GuildMode.entries.forEach { FilterChip(selected = it == mode, enabled = enabled, onClick = { onChange(it) }, label = { Text(GuildText.mode(it)) }) }
+        GuildMode.entries.forEach { ForgeChip(GuildText.mode(it), it == mode, { onChange(it) }, enabled = enabled) }
     }
     Text(modeHint(mode), color = Muted, style = MaterialTheme.typography.bodySmall)
 }
@@ -145,16 +146,7 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
 /** An epoch-millisecond moment by the device's clock, «dd.MM HH:mm». */
 internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM HH:mm"))
 
-/** Кнопка строки инструментов (40dp): значок и слово цветом [tint] на его же тусклой заливке. */
-@Composable internal fun ToolButton(icon: ImageVector, text: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.height(40.dp).alpha(if (enabled) 1f else .45f).clip(shape).background(tint.copy(alpha = .09f), shape).border(1.dp, tint.copy(alpha = .4f), shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))
-        Text(text, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
-    }
+/** Кнопка строки инструментов: компактная вторичная со значком. */
+@Composable internal fun ToolButton(icon: ImageVector, text: String, enabled: Boolean, onClick: () -> Unit) {
+    ForgeButton(onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = icon, enabled = enabled) { Text(text, maxLines = 1) }
 }

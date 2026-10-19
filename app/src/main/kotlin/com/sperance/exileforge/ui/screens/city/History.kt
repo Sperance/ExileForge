@@ -250,7 +250,7 @@ private sealed interface AlbumPick {
 }
 
 @Composable private fun PoolChip(label: String, on: Boolean, onClick: () -> Unit) {
-    FilterChip(selected = on, onClick = onClick, label = { Text(label, maxLines = 1) })
+    ForgeChip(label, on, onClick)
 }
 
 @Composable private fun TemplateIcon(template: ItemTemplate) {

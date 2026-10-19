@@ -92,7 +92,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (Reads.GUILD in game.loading) {
                     MutedText(ui("guild.loading"))
                 } else {
-                    ForgeOutlinedButton(enabled = !game.busy, onClick = vm::load, modifier = Modifier.fillMaxWidth()) { Text(ui("auction.check_again")) }
+                    ForgeButton(enabled = !game.busy, onClick = vm::load, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("auction.check_again")) }
                 }
             }
         }
@@ -129,8 +129,8 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
             item(key = "tools") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CompactSearchField(guilds.query, { vm.query(it.take(game.inputs.search)) }, ui("guild.search"), Modifier.weight(1f), onSearch = { vm.search(0) })
-                    ToolButton(Icons.Outlined.Tag, ui("guild.tool_code"), Rune, enabled = waiting == null) { coding = true }
-                    ToolButton(Icons.Outlined.Add, ui("guild.tool_found"), Gold, enabled = !game.busy) { founding = true }
+                    ToolButton(Icons.Outlined.Tag, ui("guild.tool_code"), enabled = waiting == null) { coding = true }
+                    ToolButton(Icons.Outlined.Add, ui("guild.tool_found"), enabled = !game.busy) { founding = true }
                 }
             }
             game.index?.guilds?.takeIf { it.factions.isNotEmpty() }?.let { rules -> item(key = "factions") { FactionFilter(guilds.faction, rules, !game.busy, vm::filterFaction) } }
@@ -201,9 +201,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                 )
             }
         }
-        IconButton(onClick = { vm.declineInvite(card.id) }, enabled = !game.busy, modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Outlined.Close, ui("guild.decline"), tint = DECLINE_TINT, modifier = Modifier.size(18.dp))
-        }
+        ForgeIconButton(Icons.Outlined.Close, ui("guild.decline"), onClick = { vm.declineInvite(card.id) }, compact = true, enabled = !game.busy, tint = DECLINE_TINT)
         ForgeButton(enabled = !game.busy, onClick = { vm.acceptInvite(card.id) }) { Text(ui("guild.accept")) }
     }
 }
@@ -211,14 +209,14 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
 /** The list's faction chips: all, then each faction under its sign and name in its colour. */
 @Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        item { FilterChip(selected = chosen.isBlank(), enabled = enabled, onClick = { onChoose("") }, label = { Text(ui("common.all")) }) }
+        item { ForgeChip(ui("common.all"), chosen.isBlank(), { onChoose("") }, enabled = enabled) }
         items(rules.factions, key = { it.code }) { faction ->
-            FilterChip(
-                selected = chosen == faction.code,
+            ForgeChip(
+                GuildText.faction(faction.code),
+                chosen == faction.code,
+                { onChoose(faction.code) },
                 enabled = enabled,
-                onClick = { onChoose(faction.code) },
-                leadingIcon = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) },
-                label = { Text(GuildText.faction(faction.code), color = factionColor(faction)) },
+                leading = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) },
             )
         }
     }
@@ -302,7 +300,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
                 card.mode == GuildMode.OPEN -> ForgeButton(enabled = !game.busy, onClick = onJoin) { Text(ui("guild.join")) }
 
                 else -> Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    ForgeOutlinedButton(enabled = !game.busy, onClick = onJoin) { Text(ui("guild.apply"), color = Gold) }
+                    ForgeButton(enabled = !game.busy, onClick = onJoin, kind = ButtonKind.Secondary) { Text(ui("guild.apply"), color = Gold) }
                     if (price > 0) GoldPrice(price)
                 }
             }
@@ -336,10 +334,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 }
 
 @Composable private fun PageButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(9.dp)
-    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp).alpha(if (enabled) 1f else .35f).background(Abyss.copy(alpha = .4f), shape).border(1.dp, Bronze, shape)) {
-        Icon(icon, label, tint = Muted, modifier = Modifier.size(18.dp))
-    }
+    ForgeIconButton(icon, label, onClick = onClick, style = IconButtonStyle.Tonal, compact = true, enabled = enabled)
 }
 
 /** Шторка «Вступить по коду»: шесть ячеек цифр и «Вступить», пока код не полон - погашена. */

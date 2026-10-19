@@ -70,7 +70,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 onOrder = { order = it },
                 trailing = if (recruits) {
                     {
-                        ToolButton(Icons.Outlined.Add, ui("guild.invite"), Gold, enabled = !game.busy) {
+                        ToolButton(Icons.Outlined.Add, ui("guild.invite"), enabled = !game.busy) {
                             vm.openInvite()
                             inviting = true
                         }
@@ -156,7 +156,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
         guild.code?.let { code ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ShortCodeChip(ui("guild.code"), code, Modifier.weight(1f, fill = false))
-                ForgeTextButton(onClick = vm::renewCode, enabled = !game.busy) { Text(ui("guild.code_renew"), color = Muted) }
+                ForgeButton(onClick = vm::renewCode, enabled = !game.busy, kind = ButtonKind.Text) { Text(ui("guild.code_renew"), color = Muted) }
             }
             MutedText(ui("guild.code_hint"))
         }
@@ -171,7 +171,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
-            ForgeOutlinedButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }) { Text(ui("guild.find")) }
+            ForgeButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }, kind = ButtonKind.Secondary) { Text(ui("guild.find")) }
         }
         found?.let { hero ->
             ForgePanel {
@@ -193,7 +193,7 @@ private fun MemberSheet(game: GameUi, member: GuildMember, commands: List<Member
             MutedText(ui("guild.member_joined", clockText(member.joinedAt), number(member.contribution.toDouble())))
             commands.forEach { command ->
                 val seatless = command == MemberCommand.PROMOTE && !officerSeat
-                ForgeOutlinedButton(enabled = !game.busy && !seatless, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth()) { Text(commandTitle(command)) }
+                ForgeButton(enabled = !game.busy && !seatless, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(commandTitle(command)) }
                 if (seatless) MutedText(ui("guild.officers_full", game.index?.guilds?.officers ?: 0))
             }
         }
@@ -229,7 +229,7 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
                 Text(applicant.name, color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.opensPlayer(applicant.heroId))
                 MutedText(ui("guild.applicant_line", applicant.level, classTitle(applicant.heroClass), clockText(applicant.at)))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ForgeOutlinedButton(enabled = !game.busy, onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }
+                    ForgeButton(enabled = !game.busy, onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("guild.decline")) }
                     ForgeButton(enabled = !game.busy, onClick = { vm.acceptApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.accept")) }
                 }
             }

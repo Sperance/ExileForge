@@ -71,7 +71,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 ForgeButton(enabled = !activity.held, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal")) }
             }
         }
-        ForgeOutlinedButton(onClick = vm::dismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.switch")) }
+        ForgeButton(onClick = vm::dismiss, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("notice.switch")) }
     }
     sanction?.takeIf { appealing }?.let { notice ->
         AppealDialog(onDismiss = { appealing = false }) { text ->

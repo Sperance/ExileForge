@@ -21,8 +21,9 @@ import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.InfoCard
 import com.sperance.exileforge.ui.components.LengthCounter
@@ -73,7 +74,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 ForgeButton(enabled = !game.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
             }
 
-            ForgeButton(enabled = !game.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+            ForgeButton(enabled = !game.busy, onClick = vm::playOnThisDevice, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
                 Icon(ForgeGlyphs.Portal, null, Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(ui("auth.play"), style = MaterialTheme.typography.titleMedium)
@@ -144,7 +145,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable private fun ServerReset(game: GameUi, vm: SessionViewModel) {
     if (game.session.server == DEFAULT_SERVER) return
     MutedText(ui("auth.other_server", game.session.server), style = MaterialTheme.typography.labelSmall)
-    ForgeOutlinedButton(enabled = !game.busy, onClick = vm::resetServer, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.server_reset")) }
+    ForgeButton(enabled = !game.busy, onClick = vm::resetServer, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("auth.server_reset")) }
 }
 
 /** The language switch, which on this screen has no banner to live in. */

@@ -98,14 +98,13 @@ import kotlin.math.cos
         )
         if (leader) {
             Spacer(Modifier.height(6.dp))
-            HoldButton(
-                label = ui("guild.tree_reset_hold"),
-                accent = LifeRed,
+            ForgeButton(
+                onClick = vm::resetTree,
+                modifier = Modifier.fillMaxWidth(),
+                kind = ButtonKind.Danger,
                 enabled = !game.busy && ready && guild.tree.isNotEmpty(),
-                rearm = true,
-                millis = RESET_HOLD_MS,
-                onHeld = vm::resetTree,
-            )
+                hold = Hold(millis = RESET_HOLD_MS, rearm = true),
+            ) { Text(ui("guild.tree_reset_hold")) }
         }
         Spacer(Modifier.height(6.dp))
         MutedText(if (leader) ui("guild.tree_hint_leader", rule.rowGate) else ui("guild.tree_hint"), style = MaterialTheme.typography.bodySmall)

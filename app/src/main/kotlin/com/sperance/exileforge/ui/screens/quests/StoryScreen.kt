@@ -15,7 +15,6 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -134,14 +133,13 @@ import org.koin.compose.viewmodel.koinViewModel
             if (ready) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
             if (collapsed) MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())), style = MaterialTheme.typography.labelSmall)
             if (folding) {
-                IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
-                    Icon(
-                        if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
-                        ui(if (collapsed) "common.expand" else "common.collapse"),
-                        tint = Gold,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                ForgeIconButton(
+                    if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
+                    ui(if (collapsed) "common.expand" else "common.collapse"),
+                    onClick = { onFold(!collapsed) },
+                    compact = true,
+                    tint = Gold,
+                )
             }
         }
         if (collapsed) {

@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
@@ -92,7 +91,7 @@ import org.koin.compose.viewmodel.koinViewModel
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     InfoCard(ui("auction.showcase_failed"), ui("auction.showcase_failed_hint"), failure = true)
-                    ForgeOutlinedButton(enabled = Reads.AUCTION !in game.loading, onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                    ForgeButton(enabled = Reads.AUCTION !in game.loading, onClick = onRetry, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                         Text(ui("auction.showcase_retry"))
                     }
                 }
@@ -111,7 +110,7 @@ import org.koin.compose.viewmodel.koinViewModel
         val showcase = market.showcase
         if (showcase.next != null) {
             item {
-                ForgeOutlinedButton(enabled = !game.busy && Reads.AUCTION !in game.loading, onClick = onMore, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(enabled = !game.busy && Reads.AUCTION !in game.loading, onClick = onMore, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                     Text(ui("auction.more", showcase.items.size, showcase.totalItems))
                 }
             }
@@ -190,7 +189,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
             )
-            ForgeOutlinedButton(onClick = { sheet = true }, enabled = !game.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            ForgeButton(onClick = { sheet = true }, enabled = !game.busy, contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
                 Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
                 if (count > 0) {
                     Spacer(Modifier.width(6.dp))
@@ -227,13 +226,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** A filter that is set, named by its value, with a cross that drops it. */
 @Composable internal fun ActiveFilter(label: String, onClear: () -> Unit) {
-    InputChip(
-        selected = true,
-        onClick = onClear,
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        trailingIcon = { Icon(Icons.Outlined.Close, ui("auction.remove_filter"), modifier = Modifier.size(16.dp)) },
-        colors = InputChipDefaults.inputChipColors(selectedContainerColor = Gold, selectedLabelColor = Ink, selectedTrailingIconColor = Ink),
-    )
+    ForgeChip(label, selected = true, onClick = onClear, leading = { Icon(Icons.Outlined.Close, ui("auction.remove_filter")) })
 }
 
 internal fun chipLabel(game: GameUi, field: FilterField, value: String, sellerName: String = ""): String = when (field) {

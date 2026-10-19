@@ -86,11 +86,11 @@ fun ListingSheet(
             modifier = Modifier.fillMaxWidth(),
         )
         recent?.let { h ->
-            TextButton(onClick = {
+            ForgeButton(onClick = {
                 orb = h.priceOrb
                 price = (h.price * count.coerceAtLeast(1)).toString()
-            }, contentPadding = PaddingValues(0.dp)) {
-                Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
+            }, kind = ButtonKind.Text, contentPadding = PaddingValues(0.dp)) {
+                Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), style = MaterialTheme.typography.bodySmall)
             }
         }
         bill?.let {

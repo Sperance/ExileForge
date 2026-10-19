@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.quests
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -34,8 +33,6 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
@@ -170,7 +167,7 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
             QuestRow(offer, Modifier.pinned()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     BoardIcon(Icons.Outlined.Refresh, ui("quest.reset"), Muted, !busy) { vm.reset(offer.id) }
-                    if (!full) BoardPill(ui("quest.take"), null, TAKE_BRUSH, !busy) { vm.take(offer.id) }
+                    if (!full) ForgeButton(onClick = { vm.take(offer.id) }, size = ButtonSize.Compact, enabled = !busy) { Text(ui("quest.take"), maxLines = 1) }
                 }
             }
         }
@@ -236,28 +233,14 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     }
 }
 
-/** «Сдать»: низкая мятная пилюля 32dp с галочкой (касание - 40dp), справа в строке задания. */
+/** «Сдать»: компактная главная кнопка с галочкой справа в строке задания. */
 @Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
-    if (quest.done && !quest.claimed) BoardPill(ui("quest.claim"), Icons.Outlined.Check, CLAIM_BRUSH, !busy) { vm.claim(quest.id) }
+    if (quest.done && !quest.claimed) ForgeButton(onClick = { vm.claim(quest.id) }, size = ButtonSize.Compact, icon = Icons.Outlined.Check, enabled = !busy) { Text(ui("quest.claim"), maxLines = 1) }
 }
 
-/** Низкая пилюля действия строки задания: 32dp, заливка [brush], тёмные слова; выключенная - вполсилы. */
-@Composable private fun BoardPill(text: String, icon: ImageVector?, brush: Brush, enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(8.dp)
-    Row(
-        Modifier.sizeIn(minHeight = 40.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).alpha(if (enabled) 1f else .45f)
-            .padding(vertical = 4.dp).height(32.dp).clip(shape).background(brush, shape).padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        icon?.let { Icon(it, null, tint = Ink, modifier = Modifier.size(14.dp)) }
-        Text(text, color = Ink, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-    }
-}
-
-/** Значок действия строки задания 36dp: отказаться, сбросить листок. */
+/** Значок действия строки задания (компактная иконка-кнопка): отказаться, сбросить листок. */
 @Composable private fun BoardIcon(icon: ImageVector, label: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) { Icon(icon, label, tint = if (enabled) tint else Muted, modifier = Modifier.size(18.dp)) }
+    ForgeIconButton(icon, label, onClick = onClick, compact = true, enabled = enabled, tint = tint)
 }
 
 /** Внутренняя латунная кромка доски и заклёпки по углам. */
@@ -301,12 +284,6 @@ private val LOCK_TINT = Color(0xFFCDB98A)
 
 /** Приглушённый красный «Отказаться». */
 private val ABANDON_TINT = Color(0xFFB06A66)
-
-/** Заливка «Сдать»: светлая мята. */
-private val CLAIM_BRUSH = Brush.verticalGradient(listOf(Color(0xFF8FF0B9), Color(0xFF46B979)))
-
-/** Заливка «Взять»: изумруд. */
-private val TAKE_BRUSH = Brush.verticalGradient(listOf(Color(0xFF4CC888), Color(0xFF2F9561)))
 
 private const val HOUR_MS = 3_600_000L
 

@@ -99,7 +99,7 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
 /** «Рассылка гильдии» под шапкой Зала: окно письма всей гильдии; пределы и право решает сервер. */
 @Composable private fun BroadcastButton(game: GameUi) {
     val letters = koinInject<LetterActions>()
-    ForgeOutlinedButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) {
+    ForgeButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
         Text(ui("guild.broadcast"))
     }
 }

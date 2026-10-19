@@ -146,7 +146,7 @@ import org.koin.compose.viewmodel.koinViewModel
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(game.session.title, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    ForgeTextButton(enabled = !game.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
+                    ForgeButton(enabled = !game.busy, onClick = onLogout, kind = ButtonKind.Text) { Text(ui("chars.sign_out")) }
                 }
             }
         }
@@ -212,13 +212,13 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
         when {
             voluntary -> MarkedActions(game, onRestore, onErase)
 
-            sanction != null -> ForgeOutlinedButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth()) {
+            sanction != null -> ForgeButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                 Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
             }
 
             else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-                ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
+                ForgeButton(enabled = !game.busy, onClick = onDelete, kind = ButtonKind.Secondary) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
             }
         }
     }
@@ -243,7 +243,7 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
     val slot = game.characterSlotsLeft > 0
     ForgeButton(enabled = !game.busy && slot, onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
     if (!slot) Text(ui("chars.restore_no_slot"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-    ForgeOutlinedButton(enabled = !game.busy, onClick = onErase, modifier = Modifier.fillMaxWidth()) {
+    ForgeButton(enabled = !game.busy, onClick = onErase, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
         Text(ui("chars.erase_do"), color = MaterialTheme.colorScheme.error)
     }
 }
@@ -300,11 +300,11 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
                 Text(ui("chars.create"))
             }
             if (canGoBack) {
-                ForgeTextButton(enabled = !game.busy, onClick = onBack, modifier = Modifier.fillMaxWidth()) {
+                ForgeButton(enabled = !game.busy, onClick = onBack, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
                     Text(ui("chars.back"))
                 }
             }
-            ForgeTextButton(enabled = !game.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
+            ForgeButton(enabled = !game.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
                 Text(ui("chars.other_account"))
             }
         }

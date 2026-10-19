@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,11 +45,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.ui.components.AltarGlow
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.EmberField
 import com.sperance.exileforge.ui.components.FateInk
 import com.sperance.exileforge.ui.components.FateScroll
 import com.sperance.exileforge.ui.components.FateTarot
-import com.sperance.exileforge.ui.components.HoldToAccept
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.HOLD_MS
+import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.components.LanguageButton
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.ashGround
@@ -97,7 +100,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
                     game.busy || game.reading -> CircularProgressIndicator(color = Gold)
 
-                    else -> TextButton(onClick = vm::refresh) { Text(ui("fate.retry"), color = FateInk.GoldLight) }
+                    else -> ForgeButton(onClick = vm::refresh, kind = ButtonKind.Text) { Text(ui("fate.retry"), color = FateInk.GoldLight) }
                 }
             }
             offers.firstOrNull { it.code == (picked ?: chosen?.code) }?.let { card ->
@@ -108,7 +111,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         FateFlash(chosen != null, motion, onDone = vm::accepted)
-        TextButton(onClick = vm::logout, modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp), enabled = !game.busy) {
+        ForgeButton(onClick = vm::logout, modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp), kind = ButtonKind.Text, enabled = !game.busy) {
             Text(ui("fate.sign_out"), color = Muted, style = MaterialTheme.typography.labelMedium)
         }
         LanguageButton(game.lang, game.world.languages, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 6.dp, end = 6.dp), enabled = !game.busy, onLanguage = vm::language)
@@ -228,12 +231,14 @@ private val FAN = listOf(FanSpot(-1f, 22f, -9f), FanSpot(0f, 0f, 0f), FanSpot(1f
         },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        val label = when {
-            accepted -> ui("fate.accepted")
-            hint && !picked -> ui("fate.pick_first")
-            else -> ui("fate.hold")
-        }
-        HoldToAccept(label, Modifier.fillMaxWidth(), enabled = picked && dealt, done = accepted, onRefused = { onHold(true) }) { onHold(false) }
+        val label = if (hint && !picked) ui("fate.pick_first") else ui("fate.hold")
+        ForgeButton(
+            onClick = { onHold(false) },
+            modifier = Modifier.fillMaxWidth(),
+            size = ButtonSize.Wide,
+            enabled = picked && dealt && !accepted,
+            hold = Hold(millis = HOLD_MS, fate = true, done = ui("fate.accepted"), onRefused = { onHold(true) }),
+        ) { Text(label) }
         Text(ui("fate.warning"), color = FateInk.Warn, fontSize = 11.sp, modifier = Modifier.padding(top = 12.dp))
     }
 }

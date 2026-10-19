@@ -1,31 +1,21 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.campaign.NoteKind
-import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
 import kotlin.math.sin
 
@@ -68,13 +58,13 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
 
 /**
  * Фон боя с боссом «Кино»: небо биома зоны, медленные частицы его погоды и свечение фазы снизу; к третьей фазе
- * свет уходит в её цвет. Без анимаций частицы стоят.
+ * свет уходит в её цвет. Без анимаций частицы стоят; частицы разгораются по воротам эффектов [fx] - после входа стража.
  */
-@Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame) {
+@Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame, fx: ArenaFxGate) {
     val sky = SKIES[biome] ?: DEFAULT_SKY
     val phase = phaseNumber(boss)
     val tint by animateFloatAsState((phase - 1).coerceIn(0, 2) / 2f, tween(1600), label = "phaseTint")
-    val motion = LocalSettings.current.animations
+    val motion = LocalMotion.current
     Canvas(Modifier.fillMaxSize()) {
         val t = if (motion) frame.time else 0f
         drawRect(Brush.verticalGradient(listOf(sky.top, sky.bottom)))
@@ -88,33 +78,29 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
                 Drift.FALL -> size.width * ((seed * 5.1f) % 1f) + sin(t * .5f + k) * 14.dp.toPx() to size.height * phaseOf
                 Drift.SIDE -> size.width * phaseOf to size.height * ((seed * 3.7f) % 1f) + sin(t + k) * 6.dp.toPx()
             }
-            val fade = sin(phaseOf * Math.PI).toFloat()
+            val fade = sin(phaseOf * Math.PI).toFloat() * fx.effects
             drawCircle(sky.mote.copy(alpha = .45f * fade), (1f + 1.6f * seed).dp.toPx(), Offset(x, y))
         }
     }
 }
 
 /**
- * Кино поверх боя: вход стража - чёрные шторки сверху и снизу и его имя, расходятся за пару секунд; новая фаза -
- * виньетка её цвета по краям (держится до конца фазы) и короткая светлая вспышка; победа - золотая вспышка. Вспышек нет
- * при упрощённых эффектах.
+ * Кино поверх боя: сцена входа стража [intro] в границах поля [bounds]; каждая новая фаза - виньетка её цвета по краям (держится до
+ * конца фазы) и короткая светлая вспышка; победа - золотая вспышка. Вспышек нет без анимаций и при упрощённых эффектах.
  *
- * Поиск по журналу - по новой строке, не каждый кадр; имя - авторазмером.
+ * Вспышка фазы - по счёту пройденных порогов: окно журнала её не теряет.
  */
-@Composable internal fun BossCinema(fight: FightHud, boss: BossHud) {
-    val simple = LocalSettings.current.simpleEffects
+@Composable internal fun BossCinema(fight: FightHud, boss: BossHud, intro: BossIntro?, bounds: IntroBounds) {
+    val simple = LocalSettings.current.simpleEffects || !LocalMotion.current
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
-    val curtain = remember(boss.index) { Animatable(1f) }
-    LaunchedEffect(boss.index) {
-        kotlinx.coroutines.delay(900)
-        curtain.animateTo(0f, tween(900, easing = FastOutSlowInEasing))
-    }
     val phase = phaseNumber(boss)
     val vignette by animateFloatAsState(((phase - 1).coerceIn(0, 2)) * .18f, tween(1200), label = "vignette")
-    val phaseAt = remember(fight.events, boss.index) { fight.events.firstOrNull { it.foe == boss.index && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }?.time }
-    val flash = remember { Animatable(0f) }
-    LaunchedEffect(phaseAt) {
-        if (phaseAt != null && !simple) {
+    val flash = remember(boss.index) { Animatable(0f) }
+    var seen by remember(boss.index) { mutableIntStateOf(phase) }
+    LaunchedEffect(boss.index, phase) {
+        if (phase <= seen) return@LaunchedEffect
+        seen = phase
+        if (!simple) {
             flash.snapTo(.16f)
             flash.animateTo(0f, tween(420, easing = LinearEasing))
         }
@@ -132,20 +118,10 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
                 drawRect(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, phaseAura(phase).copy(alpha = vignette)), center, size.maxDimension * .72f))
             }
         }
-        if (flash.value > 0f) Canvas(Modifier.fillMaxSize()) { drawRect(Color.White.copy(alpha = flash.value)) }
-        if (win.value > 0f) Canvas(Modifier.fillMaxSize()) { drawRect(FrameGoldBright.copy(alpha = win.value)) }
-        val c = curtain.value
-        if (c > 0f) {
-            BoxWithConstraints(Modifier.fillMaxSize()) {
-                val bar = maxHeight * .16f * c
-                Box(Modifier.fillMaxWidth().height(bar).align(Alignment.TopCenter).background(Color.Black))
-                Box(Modifier.fillMaxWidth().height(bar).align(Alignment.BottomCenter).background(Color.Black), contentAlignment = Alignment.Center) {
-                    Column(Modifier.alpha(c).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(ui("boss.intro"), color = Color(0xFF9A8B7A), fontSize = 10.sp, letterSpacing = 3.sp)
-                        FittedName(monsterTitle(foe.monster.code), FrameGold, 22.sp, 13.sp, Modifier.fillMaxWidth(), TextAlign.Center)
-                    }
-                }
-            }
+        Canvas(Modifier.fillMaxSize()) {
+            flash.value.takeIf { it > 0f }?.let { drawRect(Color.White.copy(alpha = it)) }
+            win.value.takeIf { it > 0f }?.let { drawRect(FrameGoldBright.copy(alpha = it)) }
         }
+        intro?.Stage(monsterTitle(foe.monster.code), bounds)
     }
 }

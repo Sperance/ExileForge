@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -87,9 +89,14 @@ private const val HERO_CARD = -1
         if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
     }
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
-    CompositionLocalProvider(LocalFightMight provides might) {
-        Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-            fight.boss?.let { BossBackdrop(biome, it, frame) }
+    val intro = rememberBossIntro(fight.boss?.index)
+    val fx = intro ?: ArenaFxGate.OPEN
+    val introBounds = remember { IntroBounds() }
+    val onIntroFrame: (LayoutCoordinates) -> Unit = remember(intro) { { if (intro?.staged == true) introBounds.frame(it) } }
+    val introField = remember(intro) { if (intro == null) Modifier else Modifier.onGloballyPositioned { if (intro.staged) introBounds.field(it) } }
+    CompositionLocalProvider(LocalFightMight provides might, LocalArenaFx provides fx) {
+        Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }.graphicsLayer { alpha = intro?.entry ?: 1f }) {
+            fight.boss?.let { BossBackdrop(biome, it, frame, fx) }
             Spacer(Modifier.fillMaxSize().sideTint())
             Column(
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
@@ -97,7 +104,7 @@ private const val HERO_CARD = -1
             ) {
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }, onIntroFrame) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -136,14 +143,14 @@ private const val HERO_CARD = -1
                         FightFeed(game, fight, names, onCommand, onLogFilter)
                     }
                 }
-                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD), large, mods, onCommand)
+                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD).then(introField), large, mods, onCommand)
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
                 Controls(fight, onCommand)
             }
             StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
             HitVignette(fight, frame)
             SkillFx(fight, frame, bounds[HERO_CARD], bounds::get, origin)
-            fight.boss?.let { BossCinema(fight, it) }
+            fight.boss?.let { BossCinema(fight, it, intro, introBounds) }
             inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
                 FoeSheet(
                     foe,

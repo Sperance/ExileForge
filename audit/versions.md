@@ -4,7 +4,6 @@
 
 ## API_REVISION (сервер `Constants.kt`, клиент `core/model/sync/Sync.kt`)
 
-- 83 - 0.13.0 - числа в шаблонах строк - плейсхолдеры `{p:…}`/`{r:…}` (`TextNumbers`), флаги фляги - единица `FLAG`, тексты отказов без id.
 - 84 - 0.14.0 - сняты урон крита, `combat.borrowedMana`, `MonsterSkill.mana`, `loot.uniqueReach`; новые `combat.cast`, общие умения, метки, `POST hero/quests/book`.
 - 85 - 0.14.1 - отчёты в GitHub Issues (`BugReport.issue*` вместо `asana*`, `bugreport/known`, `admin/feedback/issue`), без снимков экрана, `abyss.leaderPower`.
 - 86 - 0.14.2 - вид отчёта `CRASH`, `BugReportRequest.traces|trail|heroSheet`; без предложений: сняты `SUGGESTION`, `IssueState.DONE`, `Suggestion` → `KnownReport`.
@@ -14,6 +13,7 @@
 - 90 - 0.16.2 - стек падения с версией сборки, отчёты модерации без системных данных, место на доске Мощи, раздел `CHARGES`, `{r:…}` по пути правил.
 - 91 - 0.16.3 - `RunStart.chestStock`, `EventReward.chestStock`, `ActiveMap.sources`, `AuctionLot.returned`, `WorkGains/WorkTally.missed`, `FountainRule.flasks`.
 - 92 - 0.16.5 - `Received.overflowSold|autoSold` (`Sale`) вместо `sold/gold/shards`, `ProfessionView.layers` вместо `bonus`, `POST admin/fate?user=&reason=`, `GET admin/feedback/detail`.
+- 93 - 0.16.6 - снят `GET admin/feedback/detail` (`ReportDetail`); `BugReportRequest.topic` (улучшение администратора), `CrashTrace.count` (склейка падений отчёта).
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 

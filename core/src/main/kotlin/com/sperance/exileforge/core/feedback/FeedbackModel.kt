@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
-import com.sperance.exileforge.core.model.feedback.ReportDetail
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.core.network.GameApi
@@ -19,11 +18,9 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 
 /** Виденные ответы на свои отчёты на устройстве: по id отчёта - отпечаток последнего виденного ответа. */
 interface SeenReplies {
@@ -92,31 +89,6 @@ class FeedbackModel(
         feedback { it.copy(reports = reports) }
     }
 
-    private val detailsState = MutableStateFlow<Map<String, DetailLoad>>(emptyMap())
-
-    /** Техническое раскрытых отчётов модерации по id: читается раз на отчёт, пока жив экран ([forgetDetails]). */
-    val details: StateFlow<Map<String, DetailLoad>> = detailsState
-
-    /**
-     * Техническое отчёта [id]: уже прочитанное и идущее чтение не повторяются, неудача - [DetailLoad.Failed] (экран зовёт снова по
-     * «Повторить»). Чтение своим ключом на отчёт - не гасит список и соседние отчёты.
-     */
-    fun loadDetail(id: String) {
-        if (detailsState.value[id].let { it is DetailLoad.Ready || it is DetailLoad.Loading }) return
-        detailsState.update { it + (id to DetailLoad.Loading) }
-        commands.read(Reads.FEEDBACK_DETAIL + id) {
-            var detail: ReportDetail? = null
-            try {
-                detail = api.feedback.detail(id)
-            } finally {
-                detailsState.update { it + (id to (detail?.let { found -> DetailLoad.Ready(found) } ?: DetailLoad.Failed)) }
-            }
-        }
-    }
-
-    /** Экран модерации закрыт: прочитанное техническое забывается. */
-    fun forgetDetails() = detailsState.update { emptyMap() }
-
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
 
     /** Ответ автора в Issue своего отчёта: уходит комментарием; отчёт возвращается с перепиской. */
@@ -142,12 +114,10 @@ class FeedbackModel(
         notices.toast(ui("feedback.deleted"))
     }
 
-    /** Ответ модерации на действие: отчёт встаёт на место в списке; сменился статус - его техническое (время отправки) читается заново. */
+    /** Ответ модерации на действие: отчёт встаёт на место в списке. */
     private fun answer(done: String, call: suspend () -> AdminReport) = commands.task(writing = true) {
         val answered = call()
-        val was = feedback.value.reports.firstOrNull { it.report.id == answered.report.id }?.report?.status
         feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == answered.report.id) answered else it }) }
-        if (was != answered.report.status) detailsState.update { it - answered.report.id }
         notices.toast(done)
     }
 

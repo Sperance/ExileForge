@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
-import com.sperance.exileforge.core.model.feedback.ReportDetail
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Vote
 import kotlinx.serialization.json.encodeToJsonElement
@@ -45,9 +44,6 @@ class FeedbackClient internal constructor(private val http: Transport) {
             status?.let { put("status", it.name) }
         },
     )
-
-    /** Техническое отчёта [id] для модерации - тот же состав, что в теле Issue; читается при раскрытии отчёта. */
-    suspend fun detail(id: String): ReportDetail = http.get("$ADMIN/feedback/detail", mapOf("id" to id))
 
     suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport = http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
 

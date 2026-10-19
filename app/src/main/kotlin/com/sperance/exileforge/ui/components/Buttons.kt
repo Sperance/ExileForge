@@ -24,11 +24,14 @@ val CompactPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 private val MinHeight = 36.dp
 private val WideHeight = 44.dp
 
-/** Высота по месту: ширину кнопке задал родитель - она широкая, 44 dp; иначе компактная, 36 dp. */
+/**
+ * Высота по месту: ширину кнопке задал родитель - она широкая, 44 dp; иначе компактная, 36 dp. Тесное место кнопку не сжимает:
+ * подпись не съезжает, лишнее место ищет вёрстка вокруг (подвал [ForgeSheet]).
+ */
 private fun Modifier.forgeHeight(): Modifier = layout { measurable, constraints ->
     val wanted = (if (constraints.hasFixedWidth) WideHeight else MinHeight).roundToPx()
-    val minHeight = wanted.coerceIn(constraints.minHeight, constraints.maxHeight)
-    val placeable = measurable.measure(constraints.copy(minHeight = minHeight))
+    val minHeight = maxOf(wanted, constraints.minHeight)
+    val placeable = measurable.measure(constraints.copy(minHeight = minHeight, maxHeight = maxOf(minHeight, constraints.maxHeight)))
     layout(placeable.width, placeable.height) { placeable.place(0, 0) }
 }
 

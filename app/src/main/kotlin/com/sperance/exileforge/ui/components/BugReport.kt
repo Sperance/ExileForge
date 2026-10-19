@@ -6,11 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -100,8 +97,20 @@ fun BugSheet(
     }
     val clipboard = LocalClipboardManager.current
     val limit = game.inputs.report
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = {
+            ForgeButton(
+                enabled = text.isNotBlank(),
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))
+                    onDismiss()
+                },
+            ) { Text(ui("bug.send")) }
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
             OutlinedTextField(
@@ -120,14 +129,6 @@ fun BugSheet(
                 },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
             )
-            ForgeButton(
-                enabled = text.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))
-                    onDismiss()
-                },
-            ) { Text(ui("bug.send")) }
             if (game.session.signedIn) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ReportsTab.entries.forEach { tab ->

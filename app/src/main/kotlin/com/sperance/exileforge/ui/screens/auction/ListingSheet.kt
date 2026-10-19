@@ -48,8 +48,18 @@ fun ListingSheet(
     val count = if (owned == null) 1L else amount.toLongOrNull() ?: 0L
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     val recent by produceState<PriceHint?>(null, hint) { value = hint?.invoke() }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
+    val bill = game.goldBill(fee).takeIf { fee > 0 }
+    val closed = auctionClosed(game)
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = {
+            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
+                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
+            }
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("sell.list"))
             Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
             if (owned != null) {
@@ -83,8 +93,6 @@ fun ListingSheet(
                     Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
-            val bill = game.goldBill(fee).takeIf { fee > 0 }
             bill?.let {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
@@ -92,10 +100,6 @@ fun ListingSheet(
                 }
             }
             MutedText(ui("sell.note"))
-            val closed = auctionClosed(game)
-            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
-                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
-            }
             closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
         }
     }

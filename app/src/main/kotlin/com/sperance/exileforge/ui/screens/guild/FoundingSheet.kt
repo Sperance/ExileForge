@@ -4,9 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -67,9 +65,22 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         faction.isBlank() -> ui("guild.api.faction")
         else -> null
     }
-    ForgeSheet(onDismissRequest = onDismiss) {
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = {
+            HoldButton(
+                bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble())),
+                Gold,
+                Modifier.weight(1f),
+                enabled = !game.busy && refusal == null,
+                icon = ForgeGlyphs.Banner,
+            ) {
+                onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor))
+            }
+        },
+    ) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Engraved(ui("guild.found_title"))
@@ -104,15 +115,6 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             }
             PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
             refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
-            HoldButton(
-                bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble())),
-                Gold,
-                Modifier.fillMaxWidth(),
-                enabled = !game.busy && refusal == null,
-                icon = ForgeGlyphs.Banner,
-            ) {
-                onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor))
-            }
         }
     }
 }

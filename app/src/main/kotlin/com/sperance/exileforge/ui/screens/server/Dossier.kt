@@ -383,8 +383,12 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
     val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
     var picked by remember { mutableStateOf(current) }
     var reason by remember { mutableStateOf("") }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val ready = picked != null && picked != current && (other == null || reason.isNotBlank())
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = { HoldButton(ui("moderation.fate.hold"), Gold, Modifier.weight(1f), enabled = !account.busy && ready) { picked?.let { onPick(it, reason) } } },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(other?.let { ui("moderation.fate.change_for", it) } ?: ui("moderation.fate.change_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("moderation.fate.change_note"))
             if (other != null) MutedText(ui("moderation.fate.letter_note"))
@@ -400,8 +404,6 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
                 Text("«${FateCard(code).text}»", color = Muted, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic)
             }
             if (other != null) ModerationText(account, reason, ui("moderation.fate.reason")) { reason = it }
-            val ready = picked != null && picked != current && (other == null || reason.isNotBlank())
-            HoldButton(ui("moderation.fate.hold"), Gold, Modifier.fillMaxWidth(), enabled = !account.busy && ready) { picked?.let { onPick(it, reason) } }
         }
     }
 }
@@ -409,8 +411,15 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
 @Composable private fun ServerSheet(account: AccountUi, onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
     var code by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = {
+            ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.weight(1f)) {
+                Text(ui("admin.server_create"))
+            }
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("admin.server_new"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             OutlinedTextField(
                 code,
@@ -426,9 +435,6 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                Text(ui("admin.server_create"))
-            }
         }
     }
 }

@@ -63,6 +63,7 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
  * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
  * погашена, а [warning] без своего говорит недостачу. [holdMillis] - сколько держать кнопку (сброс всего дерева держат дольше).
+ * Тело листается: поле в [options] с клавиатурой не сжимает кнопку, а уводит её под прокрутку.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,7 +84,7 @@ fun ConfirmSheet(
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
-    ForgeSheet(onDismissRequest = onDismiss, dragHandle = null) {
+    ForgeSheet(onDismissRequest = onDismiss, dragHandle = null, scroll = true) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             RaritySpine(accent, 5.dp)
             Column(

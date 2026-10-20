@@ -286,6 +286,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
                 count = counts[power.stat] ?: 0,
                 cooldown = power.cooldown.coerceAtLeast(0.0),
                 ready = if (ready == Double.MAX_VALUE) 0.0 else (ready - battle.time).coerceAtLeast(0.0),
+                once = power.cooldown < 0,
                 spent = ready == Double.MAX_VALUE,
                 holders = holders(power.stat),
             )

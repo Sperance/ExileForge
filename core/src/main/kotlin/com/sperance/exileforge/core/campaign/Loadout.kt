@@ -293,11 +293,47 @@ data class Draught(
     val toMana: Double = 0.0,
     val toShield: Double = 0.0,
 ) {
-    /** Gives nothing but life: such a draught stops at full life and is not drunk on a full bar. */
+    /** Gives nothing but life: such a draught stops at full life. */
     val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && toMana <= 0 && toShield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
 
-    /** Глоток впустую: он только лечит, а здоровье [life] уже полное ([maxLife]) - как в PoE, его не пьют ни касанием, ни сами. */
-    fun wasted(life: Double, maxLife: Double): Boolean = lifeOnly && life >= maxLife
+    /**
+     * Что глоток даёт сверх восполнения полос: строки на время (и силы «при глотке» - они тоже строки фляги), строки с условием и
+     * неуязвимость. Доли от вылеченного ([toMana], [toShield]) сюда не входят: на полном здоровье они ничего не дают.
+     */
+    val boons: Boolean get() = lines.isNotEmpty() || conditional.isNotEmpty() || invulnerable > 0
+
+    /** Восполняет ли глоток сам полосу [bar]: сразу или за время. */
+    fun refills(bar: HeroBar): Boolean = when (bar) {
+        HeroBar.LIFE -> life > 0 || lifeRate > 0
+        HeroBar.MANA -> mana > 0 || manaRate > 0
+        HeroBar.SHIELD -> shield > 0
+    }
+
+    /**
+     * Полосы, из-за которых глоток впустую при полосах [bars]: он не даёт ничего сверх восполнения ([boons]), а всё, что он
+     * восполняет, уже полно. Пусто - глоток не впустую (и глоток, что не восполняет ничего, - тоже).
+     */
+    fun waste(bars: HeroBars): List<HeroBar> {
+        if (boons) return emptyList()
+        val refilled = HeroBar.entries.filter(::refills)
+        return refilled.takeIf { it.all(bars::full) }.orEmpty()
+    }
+
+    /** Глоток впустую ([waste]) - как в PoE, его не пьют ни касанием, ни сами. */
+    fun wasted(bars: HeroBars): Boolean = waste(bars).isNotEmpty()
+}
+
+/** Полоса героя, что восполняет глоток фляги. */
+enum class HeroBar { LIFE, MANA, SHIELD }
+
+/** Полосы героя в миг глотка: сколько в каждой и её предел (у маны - свободное от аур). */
+data class HeroBars(val life: Double, val maxLife: Double, val mana: Double, val maxMana: Double, val shield: Double, val maxShield: Double) {
+    /** Полна ли полоса [bar]. */
+    fun full(bar: HeroBar): Boolean = when (bar) {
+        HeroBar.LIFE -> life >= maxLife
+        HeroBar.MANA -> mana >= maxMana
+        HeroBar.SHIELD -> shield >= maxShield
+    }
 }
 
 /**

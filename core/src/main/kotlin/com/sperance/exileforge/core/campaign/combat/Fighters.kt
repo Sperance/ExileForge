@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.combat
 
+import com.sperance.exileforge.core.campaign.HeroBar
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuffStack
@@ -172,16 +173,21 @@ data class FlaskView(
     val condition: SlotCondition,
     /** Сколько ещё секунд флакон заперт «Запечатыванием» Стража Врат; 0 - свободен. */
     val locked: Double = 0.0,
+    /** Полные полосы, из-за которых глоток сейчас впустую ([com.sperance.exileforge.core.campaign.Draught.waste]); пусто - глоток не впустую. */
+    val full: List<HeroBar> = emptyList(),
 ) {
-    val usable: Boolean get() = charges >= perUse && active <= 0f && locked <= 0.0
+    /** Глоток сейчас впустую: плитка гаснет, а касание называет полные полосы. */
+    val wasted: Boolean get() = full.isNotEmpty()
+
+    val usable: Boolean get() = charges >= perUse && active <= 0f && locked <= 0.0 && !wasted
 }
 
 /**
  * Сила уникального предмета героя плиткой боя: [stat] - код силы, [value] - её ролл на листе. [standing] - постоянная (строки листа,
  * силы слотов, строки «пока держится условие»): плитка на рельсе «на весь бой». Сила-событие - на временной полке: [flash] - доля
  * вспышки срабатывания (1 - только что, 0 - нет), [fired] - сколько раз сработала за бой, [every] - «каждое N-е» (0 - без счёта) и
- * [count] - счёт к нему, [cooldown] - перезарядка в секундах (0 - нет), [ready] - сколько секунд до готовности, [spent] - раз на бой и
- * уже сработала. [holders] - источник силы: id надетых вещей, что её несут (лист эффектов называет вещь по имени); пусто - носитель
+ * [count] - счёт к нему, [cooldown] - перезарядка в секундах (0 - нет), [ready] - сколько секунд до готовности, [once] - срабатывает раз
+ * за бой, [spent] - раз за бой и уже сработала. [holders] - источник силы: id надетых вещей, что её несут (лист эффектов называет вещь по имени); пусто - носитель
  * не найден.
  */
 data class PowerView(
@@ -194,6 +200,7 @@ data class PowerView(
     val count: Int = 0,
     val cooldown: Double = 0.0,
     val ready: Double = 0.0,
+    val once: Boolean = false,
     val spent: Boolean = false,
     val holders: List<String> = emptyList(),
 ) {

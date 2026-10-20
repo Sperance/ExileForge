@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.TICK
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
-import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuffLayer
@@ -55,7 +54,7 @@ internal fun Battle.step(dt: Double) {
             autoDrunk = true
             if (hero.body.flasksAuto) {
                 kit.flasks.forEachIndexed { i, flask ->
-                    if (flask != null && draughtOf(i) == null && !flask.sheet.draught(hero.body, hero.life, manaCap()).wasted(hero.life, hero.body.maxLife)) {
+                    if (flask != null && draughtOf(i) == null && waste(flask).isEmpty()) {
                         flaskOpened[i] = true
                         drink(i, flask, free = true)
                     }

@@ -476,7 +476,7 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
 /**
  * The belt in order: a flask whose condition holds, that was tapped, or that drinks itself at low life, is drunk if it has the charges and is not running.
  *
- * Как в PoE: глоток, что только лечит, не тратится на полной полосе.
+ * Как в PoE: глоток, что только восполняет уже полные полосы ([Battle.waste]), не тратится.
  */
 internal fun Battle.useFlasks() {
     val hero = heroFighter
@@ -486,7 +486,7 @@ internal fun Battle.useFlasks() {
         val auto = flask.sheet.own(FlaskStat.AUTO_LOW_LIFE.code).let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
-        if (flask.sheet.draught(hero.body, hero.life, manaCap()).wasted(hero.life, hero.body.maxLife)) return@forEachIndexed
+        if (waste(flask).isNotEmpty()) return@forEachIndexed
         flaskOpened[i] = true
         drink(i, flask)
     }

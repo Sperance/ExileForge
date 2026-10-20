@@ -68,6 +68,9 @@ class FateRun(killed: Collection<Int> = emptyList(), vaalKilled: Collection<Int>
         won = run.fightsWon(killed, vaalKilled, bosses)
     }
 
+    /** Засчитывает ли только что выигранный бой забега [run] заход в задания на заходы по карте - правило сервера [Run.countsMapRun]. */
+    fun countsMapRun(run: Run): Boolean = run.countsMapRun(killed, vaalKilled, bosses)
+
     /** Бой испытания или узел Разлома выигран: у них нет жетонов, счёт [won] - их победы подряд в заходе. */
     fun victory() {
         won++

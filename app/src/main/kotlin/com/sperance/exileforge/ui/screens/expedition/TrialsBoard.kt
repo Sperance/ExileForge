@@ -67,7 +67,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Тестировщику замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
  *
  * Разлом недели - своя доска на весь экран. Покорённая башня печать не тратит. Закрытый раш не показывается (тестировщику открыты все
- * регионы); ключ не куётся, пока ни один раш не открыт; ближайший закрытый регион - один, с тем, что осталось зачистить.
+ * регионы); фрагменты герба сами собираются в ключ на сервере - доска показывает, сколько их к следующему ключу; ближайший закрытый регион -
+ * один, с тем, что осталось зачистить.
  */
 @Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
@@ -85,7 +86,14 @@ import org.koin.compose.viewmodel.koinViewModel
     val rift by vm.riftState.collectAsState()
     var opened by rememberSaveable { mutableStateOf<TrialMode?>(null) }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KeyGrid(listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals, RiftRules.KEY to (hero.bag[RiftRules.KEY] ?: 0L)))
+        KeyGrid(
+            listOf(
+                TrialRules.CREST to "$crests/${rules.rush.key}",
+                TrialRules.KEY to compactCount(keys),
+                TrialRules.SEAL to compactCount(seals),
+                RiftRules.KEY to compactCount(hero.bag[RiftRules.KEY] ?: 0L),
+            ),
+        )
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -130,11 +138,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 index.campaign.regions.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
                     Text(ui("trials.rush_locked", regionTitle(near.code), near.zones.count { it.code !in cleared }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
-            } else {
-                ForgeButton(onClick = vm::forgeRushKey, state = ButtonState.of(idle && crests >= rules.rush.key), modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                    Text(ui("trials.key_forge_count", minOf(crests, rules.rush.key.toLong()), rules.rush.key))
-                }
-                if (crests < rules.rush.key) MutedText(ui("trials.key_short", rules.rush.key - crests), style = MaterialTheme.typography.labelSmall)
             }
             unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, free) }
             index.campaign.regions.filterNot { it in unlocked }.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
@@ -278,24 +281,27 @@ private val TagShape = RoundedCornerShape(6.dp)
     }
 }
 
-/** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
-@Composable private fun KeyGrid(stacks: List<Pair<String, Long>>) {
+/**
+ * Ключи под рукой компактной сеткой, [KEYS_PER_ROW] в ряд: значок и подпись - число стопки или, у фрагментов герба, сколько их
+ * к следующему ключу; касание открывает лист стопки.
+ */
+@Composable private fun KeyGrid(stacks: List<Pair<String, String>>) {
     val inspect = rememberInspect()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.chunked(KEYS_PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
-                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) { inspect(Inspect.Stack(code)) } }
+                row.forEach { (code, label) -> Key(code, label, Modifier.weight(1f)) { inspect(Inspect.Stack(code)) } }
                 repeat(KEYS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
-@Composable private fun Key(code: String, count: Long, modifier: Modifier, onClick: () -> Unit) {
+@Composable private fun Key(code: String, label: String, modifier: Modifier, onClick: () -> Unit) {
     Box(modifier.clickable(onClickLabel = itemTitle(code), onClick = onClick)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             BagIcon(code, Modifier.size(22.dp))
-            Text(compactCount(count), color = Parchment, style = MaterialTheme.typography.labelLarge)
+            Text(label, color = Parchment, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

@@ -93,7 +93,6 @@ class ExpeditionViewModel(
     fun resetAtlas(regret: Boolean = false) = expedition.resetAtlas(regret)
     fun enterRush(region: String, tier: Int = 0) = trial.rush(region, tier)
     fun enterTower() = trial.tower()
-    fun forgeRushKey() = trial.forgeKey()
     fun abandonTrial() = trial.abandon()
     fun trialCommand(command: RunCommand) = trial.send(command)
     fun closeTrial() = trial.close()

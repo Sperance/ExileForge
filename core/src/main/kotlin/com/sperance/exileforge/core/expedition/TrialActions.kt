@@ -68,16 +68,6 @@ class TrialActions(
     /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (с 0). */
     fun rush(region: String, tier: Int = 0) = enter { api.trials.rush(it, region, tier) }
 
-    /** «Собрать ключ»: пять обломков герба становятся ключом раша. */
-    fun forgeKey() {
-        if (commands.state.value.busy) return
-        commands.task(writing = true, touches = setOf(Reads.HERO)) {
-            api.trials.forgeKey(heroes.heroId)
-            notices.toast(ui("trials.key_forged"))
-            if (heroes.state.value.readAt == 0L) heroSync.readHero()
-        }
-    }
-
     /** «Башня»: печать тратится, башня начинается с последней контрольной точки. */
     fun tower() = enter { api.trials.tower(it) }
 

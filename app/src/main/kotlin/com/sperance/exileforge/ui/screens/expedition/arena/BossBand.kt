@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,15 +52,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.TraitView
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.HitKind
-import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.CastState
+import com.sperance.exileforge.core.campaign.run.CastView
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.SlotView
@@ -71,16 +71,12 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.totemTitle
-import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.TotemKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
-import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -99,6 +95,7 @@ private val LifeLow = Color(0xFF7A1210)
 private val LifeTrail = Color(0xFFF2B8A8)
 private val LifeTrack = Color(0xFF2A0B09)
 private val CastTint = Color(0xFFA26BFF)
+private val CastText = Color(0xFFD4B6FF)
 private val PortalTint = Color(0xFFB07CFF)
 private val StoneLight = Color(0xFF8A7458)
 private val StoneDark = Color(0xFF2A2018)
@@ -127,10 +124,9 @@ internal fun totemTint(slot: SlotView.Totem): Color = when (slot.kind) {
 internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 
 /**
- * Бой с боссом «Кино»: сверху - кованая рамка с именем, номером фазы, полосой здоровья со шлейфом и
- * кристаллами порогов, щитом и барьером, нитью маны, накоплениями и кастом; ниже - крупный портрет в ауре фазы и по три ниши
- * склепа с каждой стороны: в них встаёт свита из портала и тотемы со своим сроком. Касание приспешника выбирает его целью,
- * а на паузе открывает его лист; касание тотема - его справку.
+ * Бой с боссом «Кино»: сверху - кованая рамка в три ряда ([BossFrame]); ниже - крупный портрет в ауре фазы с лентой эффектов над
+ * головой и по три ниши склепа с каждой стороны: в них встаёт свита из портала и тотемы со своим сроком. Касание приспешника
+ * выбирает его целью, а на паузе открывает его лист; касание тотема - его справку.
  *
  * Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам.
  */
@@ -154,7 +150,7 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
-                PortraitStage(foe, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
+                PortraitStage(foe, name, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
                 others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
             }
         } else {
@@ -167,79 +163,64 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
 
 /**
- * Имя на всю ширину сжимается до минимума, дальше многоточие. Фаза и ярость - табулярными цифрами: ширина не прыгает. Ярость - сколько
- * прибавила и когда следующая ступень. Нить каста мерцает в рисовании кадра.
+ * Рамка босса в три ряда, одна для любого босса: имя (сжимается до минимума, дальше многоточие) с чипами фазы, ярости, Разлома и
+ * Скверны; слой здоровья - полоса с уровнем и Мощью внутри справа, под ней тонкие нити маны и накоплений; каст. Эффекты босса -
+ * не здесь, а лентой над его головой на арене ([EffectRibbon]).
  */
 @Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, modifier: Modifier) {
-    val lore = LocalLore.current
     val shape = RoundedCornerShape(10.dp)
     Column(
         modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(FrameDeep, FrameInk))).border(1.dp, Color(0xFF7A5C26), shape)
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.heightIn(min = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
-            foe.monster.level.takeIf { it > 0 }?.let { level ->
+            if (boss.marks.isNotEmpty()) PhaseChip(boss, name)
+            if (foe.alive) {
+                fight.rage?.let { RageChip(it) }
+                boss.rift?.let { RiftChip(boss, it, frame) }
+            }
+            if (boss.tainted && boss.marks.isNotEmpty()) BlightChip(boss, foe.alive)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            LifeBar(foe, boss, frame, Modifier.zIndex(1f))
+            if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
+            foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
+        }
+        boss.cast?.let { CastRow(it, name, fight, frame) }
+    }
+}
+
+/** Каст босса тонкой строкой: знак мерцает в рисовании, пока умение применяется; имя, отсчёт и нить хода. Касание - справка умения. */
+@Composable private fun CastRow(cast: CastView, name: String, fight: FightHud, frame: FightFrame) {
+    val lore = LocalLore.current
+    val casting = cast.state == CastState.CASTING
+    Row(
+        Modifier.fillMaxWidth().then(if (lore != null) Modifier.clickable { lore(Lore.Skill(cast.code, name, null, fight.heroBody)) } else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF2A1840))
+                .drawWithContent {
+                    drawContent()
+                    roundEdge(4.dp, 1.dp, if (casting) CastTint.copy(alpha = .6f + .4f * sin(frame.time * 9f)) else CastTint.copy(alpha = .5f))
+                },
+            contentAlignment = Alignment.Center,
+        ) { Text("✦", color = CastText.copy(alpha = if (cast.state.held) .5f else 1f), fontSize = 9.5.sp) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
+                Text(SkillText.title(cast.code), color = CastText, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    level.toString(),
-                    color = Muted,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(start = 6.dp).border(1.dp, Color(0xFF5A4632), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
+                    if (cast.state.held) ui("boss.cast.${cast.state.name}") else ui("boss.cast.${cast.state.name}", fineNumber(cast.left)),
+                    color = if (casting) Color(0xFFFFB0B0) else Muted,
+                    fontSize = 10.5.sp,
+                    style = TabularDigits,
+                    maxLines = 1,
                 )
             }
-            FoeMightMark(foe.monster, Modifier.padding(start = 6.dp))
-        }
-        LifeBar(foe, boss, frame)
-        if (boss.marks.isNotEmpty() || foe.alive) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (boss.marks.isNotEmpty()) {
-                    Text(
-                        ui("boss.phase_number", roman(phaseNumber(boss))),
-                        color = FrameGoldBright,
-                        fontSize = 9.sp,
-                        letterSpacing = 2.5.sp,
-                        modifier = if (lore != null && boss.phase != null) Modifier.clickable { lore(Lore.Phase(boss.phase!!, name)) } else Modifier,
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                val rage = fight.rage
-                if (foe.alive && rage != null) RageMark(rage)
-            }
-        }
-        if (boss.rift != null && foe.alive) RiftStrip(boss, frame)
-        if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, frame)
-        if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
-        foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
-        if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects)
-        boss.cast?.let { cast ->
-            Row(
-                Modifier.fillMaxWidth().then(if (lore != null) Modifier.clickable { lore(Lore.Skill(cast.code, name, null, fight.heroBody)) } else Modifier),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val casting = cast.state == CastState.CASTING
-                Box(
-                    Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF2A1840))
-                        .drawWithContent {
-                            drawContent()
-                            roundEdge(5.dp, 1.dp, if (casting) CastTint.copy(alpha = .6f + .4f * sin(frame.time * 9f)) else CastTint.copy(alpha = .5f))
-                        },
-                    contentAlignment = Alignment.Center,
-                ) { Text("✦", color = Color(0xFFD4B6FF).copy(alpha = if (cast.state.held) .5f else 1f), fontSize = 11.sp) }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(SkillText.title(cast.code), color = Color(0xFFD4B6FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
-                            if (cast.state.held) ui("boss.cast.${cast.state.name}") else ui("boss.cast.${cast.state.name}", fineNumber(cast.left)),
-                            color = if (casting) Color(0xFFFFB0B0) else Muted,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                        )
-                    }
-                    ThinBar(cast.progress, if (cast.state.held) CastTint.copy(alpha = .35f) else CastTint, 4.dp)
-                }
-            }
+            ThinBar(cast.progress, if (cast.state.held) CastTint.copy(alpha = .35f) else CastTint, 3.dp)
         }
     }
 }
@@ -286,17 +267,20 @@ private fun DrawScope.cornerFlourish(tint: Color) {
 private val LifeFill = Brush.verticalGradient(listOf(LifeTop, LifeMid, LifeLow))
 
 /** Погасший кристалл порога. */
-private val GemPassed = Brush.linearGradient(listOf(Color(0xFF3A2A16), Color(0xFF2A1E10)))
+private val GemPassed = Brush.linearGradient(listOf(Color(0xFF6A5030), Color(0xFF3A2A16)))
 private val GemHalo = FrameGoldBright.copy(alpha = .35f)
 private val GemEdge = Color(0xFF7A5A1E)
 
+/** Черта порога фазы поперёк полосы. */
+private val MarkTick = FrameGoldBright.copy(alpha = .55f)
+
 /**
- * Кристаллы порогов фаз [marks] (проценты здоровья) на полосе: ромбы и кисти горящих собираются раз на размер полосы,
- * кадр только рисует их.
+ * Кристаллы порогов фаз [marks] (проценты здоровья) на нижней кромке полосы: ромбы и кисти горящих собираются раз на размер
+ * полосы, кадр только рисует их.
  */
 private class PhaseGems(private val marks: List<Double>) {
     private var size = Size.Unspecified
-    var radius = 0f
+    var halo = 0f
         private set
     var paths: List<Path> = emptyList()
         private set
@@ -305,33 +289,33 @@ private class PhaseGems(private val marks: List<Double>) {
     var lit: List<Brush> = emptyList()
         private set
 
-    fun fit(bar: Size) {
+    /** Ромбы полуширины [rx] и полувысоты [ry] с центром на нижней кромке полосы [bar]; свечение - радиуса [glow]. */
+    fun fit(bar: Size, rx: Float, ry: Float, glow: Float) {
         if (bar == size) return
         size = bar
-        val h = bar.height
-        val r = h * .36f
-        radius = r
-        centres = marks.map { Offset(bar.width * (it / 100).toFloat(), h / 2) }
+        halo = glow
+        centres = marks.map { Offset(bar.width * (it / 100).toFloat(), bar.height) }
         paths = centres.map { c ->
             Path().apply {
-                moveTo(c.x, c.y - r)
-                lineTo(c.x + r, c.y)
-                lineTo(c.x, c.y + r)
-                lineTo(c.x - r, c.y)
+                moveTo(c.x, c.y - ry)
+                lineTo(c.x + rx, c.y)
+                lineTo(c.x, c.y + ry)
+                lineTo(c.x - rx, c.y)
                 close()
             }
         }
-        lit = centres.map { c -> Brush.linearGradient(listOf(Color(0xFFFFF3C4), Color(0xFFE8B04A)), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)) }
+        lit = centres.map { c -> Brush.linearGradient(listOf(Color(0xFFFFF0B0), Color(0xFFE3A93A)), Offset(c.x - rx, c.y - ry), Offset(c.x + rx, c.y + ry)) }
     }
 }
 
 /**
- * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, кристаллы порогов фаз (сработавшие
- * гаснут), щит - штриховкой поверх, барьер - золотым свечением и числом, здоровье числом на тёмной плашке.
+ * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, черты порогов фаз поперёк и кристаллы
+ * на нижней кромке поверх соседних нитей (сработавшие гаснут), щит - штриховкой поверх, барьер - золотым свечением. Внутри слева -
+ * здоровье (щит и барьер) числом на тёмной плашке, справа - уровень и Мощь.
  *
- * Кристаллы порогов считаются раз на пороги и размер полосы.
+ * Кристаллы порогов считаются раз на пороги и размер полосы; блик и свечение барьера - в рисовании.
  */
-@Composable private fun LifeBar(foe: FoeView, boss: BossHud, frame: FightFrame) {
+@Composable private fun LifeBar(foe: FoeView, boss: BossHud, frame: FightFrame, modifier: Modifier) {
     val share = if (foe.maxLife > 0) (foe.life / foe.maxLife.toFloat()).coerceIn(0f, 1f) else 0f
     val trail by animateFloatAsState(share, tween(700, delayMillis = 260, easing = FastOutSlowInEasing), label = "trail")
     val shield = if (foe.maxShield > 0) (foe.shield / foe.maxShield.toFloat()).coerceIn(0f, 1f) else 0f
@@ -339,8 +323,21 @@ private class PhaseGems(private val marks: List<Double>) {
     val shape = RoundedCornerShape(8.dp)
     val gems = remember(boss.marks) { PhaseGems(boss.marks) }
     Box(
-        Modifier.fillMaxWidth().height(18.dp)
+        modifier.fillMaxWidth().height(18.dp)
             .drawBehind { if (foe.barrier > 0) drawRoundRect(FrameGoldBright.copy(alpha = .35f + .2f * sin(frame.time * 3f)), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()), style = Stroke(4.dp.toPx()), topLeft = Offset(-2.dp.toPx(), -2.dp.toPx()), size = Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx())) }
+            .drawWithContent {
+                drawContent()
+                if (boss.marks.isEmpty()) return@drawWithContent
+                gems.fit(size, 4.dp.toPx(), 5.dp.toPx(), 6.dp.toPx())
+                val edge = Stroke(1.dp.toPx())
+                for (i in boss.marks.indices) {
+                    val passed = boss.passed.getOrElse(i) { false }
+                    val gem = gems.paths[i]
+                    if (!passed) drawCircle(GemHalo, gems.halo, gems.centres[i])
+                    drawPath(gem, if (passed) GemPassed else gems.lit[i])
+                    drawPath(gem, GemEdge, style = edge)
+                }
+            }
             .clip(shape).background(LifeTrack).border(1.dp, Color(0xFF6A4A1A), shape),
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -363,32 +360,48 @@ private class PhaseGems(private val marks: List<Double>) {
                     }
                 }
             }
-            gems.fit(size)
-            val edge = Stroke(1.dp.toPx())
-            for (i in boss.marks.indices) {
-                val passed = boss.passed.getOrElse(i) { false }
-                val gem = gems.paths[i]
-                if (!passed) drawCircle(GemHalo, gems.radius * 1.7f, gems.centres[i])
-                drawPath(gem, if (passed) GemPassed else gems.lit[i])
-                drawPath(gem, GemEdge, style = edge)
+            boss.marks.forEach { mark ->
+                val x = w * (mark / 100).toFloat()
+                drawLine(MarkTick, Offset(x, 0f), Offset(x, h), 1.dp.toPx())
             }
         }
-        val text = buildString {
-            append(number(foe.life.toDouble()))
-            append(" / ")
-            append(number(foe.maxLife.toDouble()))
-            if (foe.maxShield > 0 && foe.shield > 0) append("  ·  ⛨ ").append(number(foe.shield.toDouble()))
-            if (foe.barrier > 0) append("  ·  ◈ ").append(number(foe.barrier.toDouble()))
-        }
-        Text(
-            text,
-            color = Color.White,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(6.dp)).background(Color(0x8C0A0404)).padding(horizontal = 7.dp),
-        )
+        LifeFigures(foe)
     }
 }
+
+/** Тёмная плашка числа на полосе здоровья. */
+private val FigurePlate = Color(0x8C0A0404)
+
+/** Числа на полосе здоровья босса: слева здоровье, щит и барьер; справа уровень и Мощь (нет обоих - здоровье по центру). */
+@Composable private fun BoxScope.LifeFigures(foe: FoeView) {
+    val level = foe.monster.level
+    val might = LocalFightMight.current?.let { fight -> fight.of(foe.monster)?.let { it to fight.standing(it) } }
+    val side = level > 0 || might != null
+    val plate = Modifier.clip(RoundedCornerShape(6.dp)).background(FigurePlate).padding(horizontal = 5.dp)
+    val life = buildString {
+        append(number(foe.life.toDouble()))
+        append(" / ")
+        append(number(foe.maxLife.toDouble()))
+        if (foe.maxShield > 0 && foe.shield > 0) append("  ·  ⛨ ").append(number(foe.shield.toDouble()))
+        if (foe.barrier > 0) append("  ·  ◈ ").append(number(foe.barrier.toDouble()))
+    }
+    Row(
+        Modifier.matchParentSize().padding(horizontal = 4.dp),
+        horizontalArrangement = if (side) Arrangement.SpaceBetween else Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(life, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, style = TabularDigits, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false).then(plate))
+        if (side) {
+            Row(Modifier.padding(start = 4.dp).then(plate), verticalAlignment = Alignment.CenterVertically) {
+                if (level > 0) Text(ui("fight.level_short", level), color = LevelInk, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                if (level > 0 && might != null) Text(" · ", color = LevelInk, fontSize = 10.sp, maxLines = 1)
+                might?.let { (reading, standing) -> FoeMight(reading, standing, seal = 10.dp) }
+            }
+        }
+    }
+}
+
+private val LevelInk = Color(0xFFE8D9C8)
 
 @Composable private fun ThinBar(share: Float, tint: Color, height: androidx.compose.ui.unit.Dp) {
     Box(Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(height)).background(Color(0xFF1A1414))) {
@@ -396,9 +409,9 @@ private class PhaseGems(private val marks: List<Double>) {
     }
 }
 
-/** Накопления босса: оглушение, заморозка, электрошок - узкими полосами со знаком. */
+/** Накопления босса: оглушение, заморозка, электрошок - тонкими нитями со знаком в слое здоровья. */
 @Composable private fun Buildups(bars: List<Float>) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         Buildup.entries.forEachIndexed { i, kind ->
             val share = bars.getOrElse(i) { 0f }
             if (share <= 0.005f) return@forEachIndexed
@@ -407,15 +420,13 @@ private class PhaseGems(private val marks: List<Double>) {
                 Buildup.FREEZE -> "❄" to FreezeCyan
                 Buildup.ELECTROCUTE -> "ϟ" to ShockViolet
             }
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(sign, color = tint, fontSize = 10.sp)
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(sign, color = tint, fontSize = 9.sp, lineHeight = 9.sp, textAlign = TextAlign.Center, modifier = Modifier.width(9.dp))
                 Box(Modifier.weight(1f)) { ThinBar(share, tint, 3.dp) }
             }
         }
     }
 }
-
-private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").getOrElse(n - 1) { n.toString() }
 
 /**
  * Портрет босса между двумя колоннами ниш: слева слоты первой половины, справа - второй. Нити тянутся от тотемов: к боссу -
@@ -431,6 +442,7 @@ private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").ge
             NicheColumn(0 until half, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
             PortraitStage(
                 foe,
+                name,
                 boss,
                 fight,
                 frame,
@@ -681,13 +693,13 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
 }
 
 /**
- * Портрет босса: двойная золотая рамка, аура цвета фазы дышит за ним (разгорается после входа стража), удар - вспышкой, крит -
+ * Портрет босса [name]: двойная золотая рамка, аура цвета фазы дышит за ним (разгорается после входа стража), удар - вспышкой, крит -
  * коротким толчком (без него при упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза -
- * титулом поверх, павший босс растворяется искрами.
+ * титулом поверх, павший босс растворяется искрами. Над головой живого босса - лента всех его эффектов ([EffectRibbon]).
  *
  * Толчок крита - к часам кадра, в рисовании; Матерь показывает порванные пуповины.
  */
-@Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
+@Composable private fun PortraitStage(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
     val gate = LocalArenaFx.current
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
@@ -725,6 +737,9 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         boss.cast?.takeIf { foe.alive && it.state == CastState.CASTING }?.let { cast -> Telegraph(cast.progress, frame) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
+        if (foe.alive) {
+            EffectRibbon(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
+        }
     }
 }
 
@@ -788,7 +803,7 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
         },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(ui("boss.phase_number", roman(phaseNumber(boss))), color = FrameGoldBright, fontFamily = FontFamily.Serif, fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+        Text(ui("boss.phase_number", phaseRoman(phaseNumber(boss))), color = FrameGoldBright, fontFamily = FontFamily.Serif, fontSize = 26.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         Text(phaseTitle(note.ref), color = Parchment, fontFamily = FontFamily.Serif, fontSize = 13.sp, letterSpacing = 2.sp)
     }
 }
@@ -811,179 +826,4 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
             }
         }
     }
-}
-
-/** Палитра Разлома (RULES.md, «Стражи Разлома»): панель, черта, ядовитая зелень, текст, тревога. */
-private val RiftPanel = Color(0xFF0E1812)
-private val RiftPanelDeep = Color(0xFF0A120D)
-private val RiftLine = Color(0xFF1F3427)
-private val RiftLineBright = Color(0xFF2F5A3F)
-private val RiftGreen = Color(0xFF39FF88)
-
-/** Печать Разлома на запертом слоте героя - та же ядовитая зелень. */
-internal val RiftSeal = RiftGreen
-private val RiftSoft = Color(0xFF9DFFB8)
-private val RiftHot = Color(0xFFD4FF6A)
-private val RiftDeep = Color(0xFF0B3A21)
-private val RiftText = Color(0xFFDBE8DC)
-private val RiftMuted = Color(0xFF7F9686)
-private val RiftDim = Color(0xFF4B5E51)
-private val RiftAlarm = Color(0xFFFF6B4A)
-
-/** Сколько длится разгорание печати и её раскол, мс. */
-private const val SEAL_GROW_MS = 2400
-private const val SEAL_BREAK_MS = 700
-
-/** Пульс печатей и мигание тревоги знамения, секунды периода. */
-private const val SEAL_PULSE_SECONDS = 2.4f
-private const val ALARM_SECONDS = .5f
-
-/** Сколько въезжает новая плашка украденного дара, мс. */
-private const val CHIP_MS = 500
-
-/** Полоса механики стража Разлома под здоровьем: печати Стража, Законы Владыки или украденное Поглотителем. */
-@Composable private fun RiftStrip(boss: BossHud, frame: FightFrame) {
-    val shape = RoundedCornerShape(6.dp)
-    Column(
-        Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(RiftPanel, RiftPanelDeep))).border(1.dp, RiftLine, shape)
-            .padding(horizontal = 8.dp, vertical = 5.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        when (boss.rift) {
-            RiftGuard.WARDEN -> Seals(boss, frame)
-            RiftGuard.DEVOURER -> Stolen(boss)
-            RiftGuard.LORD -> Laws(boss, frame)
-            null -> Unit
-        }
-    }
-}
-
-/** Подпись полосы Разлома: заглавные серифы, мягкая зелень. */
-@Composable private fun RiftCaption(text: String, modifier: Modifier = Modifier, tint: Color = RiftSoft) {
-    Text(text, color = tint, fontFamily = FontFamily.Serif, fontSize = 10.sp, letterSpacing = 1.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
-}
-
-/** Печати брони: ромб на печать - горит, пока стоит, гаснет с расколом и разгорается вновь; ниже - попадания до следующей. */
-@Composable private fun Seals(boss: BossHud, frame: FightFrame) {
-    val motion = LocalMotion.current
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        RiftCaption(ui("boss.rift_seals", boss.seals, boss.sealsMax).uppercase(), Modifier.weight(1f, fill = false))
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(boss.sealsMax) { i -> SealPip(i < boss.seals) { if (motion) .75f + .25f * sin(frame.time * 2 * PI.toFloat() / SEAL_PULSE_SECONDS + i) else 1f } }
-        }
-    }
-    if (boss.sealEvery > 0 && boss.seals > 0) {
-        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(RiftDeep)) {
-            Box(Modifier.fillMaxWidth((boss.sealHits / boss.sealEvery.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(RiftGreen.copy(alpha = .6f), RiftHot))))
-        }
-    }
-}
-
-/** Ромб печати: [lit] - стоит; [pulse] - дыхание свечения, читается в рисовании. Раскол - быстрая вспышка, возврат - медленное разгорание. */
-@Composable private fun SealPip(lit: Boolean, pulse: () -> Float) {
-    val glow by animateFloatAsState(if (lit) 1f else 0f, tween(if (lit) SEAL_GROW_MS else SEAL_BREAK_MS, easing = FastOutSlowInEasing), label = "seal")
-    Canvas(Modifier.size(12.dp)) {
-        val c = center
-        val r = size.minDimension / 2
-        val gem = Path().apply {
-            moveTo(c.x, c.y - r)
-            lineTo(c.x + r * .72f, c.y)
-            lineTo(c.x, c.y + r)
-            lineTo(c.x - r * .72f, c.y)
-            close()
-        }
-        if (glow > 0f) drawCircle(RiftGreen.copy(alpha = .45f * glow * pulse()), r * 1.1f, c)
-        drawPath(gem, Brush.linearGradient(listOf(RiftHot.copy(alpha = glow), RiftGreen.copy(alpha = .25f + .75f * glow), RiftDeep), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)))
-        drawPath(gem, if (glow > .5f) RiftSoft else RiftLineBright, style = Stroke(1.dp.toPx()))
-        if (glow < 1f) drawLine(RiftDim.copy(alpha = 1 - glow), Offset(c.x - r * .4f, c.y - r * .3f), Offset(c.x + r * .35f, c.y + r * .4f), 1.dp.toPx())
-    }
-}
-
-/** Название Закона по словарю сервера; «Одна стихия» - с её стихией. */
-private fun lawName(law: RiftLaw, element: String?): String {
-    val name = locOr("rift.law.${law.name}.name", law.name)
-    return if (law == RiftLaw.ONE_ELEMENT && element != null) ui("boss.rift_law_element", name, ui("enum.damage.$element")) else name
-}
-
-/**
- * Законы Владыки: скрижаль с Законами в силе; в знамение - тревога, отсчёт и имя следующего.
- *
- * Мигание тревоги - ступенями по часам кадра: полоса перекомпонуется лишь со сменой ступени.
- */
-@Composable private fun Laws(boss: BossHud, frame: FightFrame) {
-    val motion = LocalMotion.current
-    val omen = boss.lawNext.isNotEmpty()
-    val flash by remember(frame, omen, motion) {
-        derivedStateOf {
-            when {
-                !omen -> 0f
-                motion -> if ((frame.time / ALARM_SECONDS).toInt() % 2 == 0) 1f else .35f
-                else -> 1f
-            }
-        }
-    }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        RiftCaption(ui("boss.rift_law").uppercase(), tint = RiftMuted)
-        val now = boss.law.joinToString(" · ") { lawName(it, boss.lawElement) }.ifEmpty { ui("boss.rift_law_none") }
-        Text(
-            now.uppercase(),
-            color = if (boss.law.isEmpty()) RiftDim else RiftGreen,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            letterSpacing = 1.5.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-    }
-    val seconds = ceil(boss.lawIn).toInt()
-    if (omen) {
-        val shape = RoundedCornerShape(4.dp)
-        Text(
-            ui("boss.rift_law_omen", seconds, boss.lawNext.joinToString(" · ") { lawName(it, boss.lawNextElement) }),
-            color = RiftAlarm.copy(alpha = .55f + .45f * flash),
-            fontFamily = FontFamily.Serif,
-            fontSize = 10.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().clip(shape).background(RiftAlarm.copy(alpha = .12f * flash)).border(1.dp, RiftAlarm.copy(alpha = .7f * flash), shape)
-                .padding(horizontal = 6.dp, vertical = 1.dp),
-        )
-    } else {
-        RiftCaption(ui("boss.rift_law_in", seconds), tint = RiftMuted)
-    }
-}
-
-/** Поглотитель: его сила от Эха, счёт украденных даров и их плашки - новая въезжает слева. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun Stolen(boss: BossHud) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        RiftCaption(ui("boss.rift_stolen", boss.stolen.size).uppercase(), Modifier.weight(1f, fill = false))
-        Spacer(Modifier.weight(1f))
-        if (boss.devoured > 0) RiftCaption(ui("boss.rift_devoured", number(boss.devoured)), tint = RiftHot)
-    }
-    if (boss.stolen.isNotEmpty()) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            boss.stolen.forEach { code -> key(code) { StolenChip(code) } }
-        }
-    }
-}
-
-@Composable private fun StolenChip(code: String) {
-    val arrive = remember { Animatable(0f) }
-    LaunchedEffect(Unit) { arrive.animateTo(1f, tween(CHIP_MS, easing = FastOutSlowInEasing)) }
-    val shape = RoundedCornerShape(4.dp)
-    Text(
-        loc("rift.boon.$code.name"),
-        color = RiftText,
-        fontFamily = FontFamily.Serif,
-        fontSize = 9.sp,
-        maxLines = 1,
-        modifier = Modifier.graphicsLayer {
-            translationX = (1 - arrive.value) * -16.dp.toPx()
-            alpha = arrive.value
-        }.clip(shape).background(RiftDeep).border(1.dp, RiftLineBright, shape).padding(horizontal = 5.dp, vertical = 1.dp),
-    )
 }

@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
-import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
@@ -61,9 +60,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
 internal data class StashMap(val item: ItemInstance, val view: ItemView)
-
-/** A line of the picked map: its sentence, what it is, and what it pays if it is a harm; [note] - пояснение её характеристики по касанию. */
-internal data class MapLine(val text: String, val kind: MapLineKind, val risk: Double, val note: String? = null)
 
 /**
  * How many maps of each zone the stash holds. Read off the items' zone alone: building a full view of every

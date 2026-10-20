@@ -30,13 +30,11 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
-import com.sperance.exileforge.core.display.ItemLine
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.MapCapture
+import com.sperance.exileforge.core.display.MapLine
+import com.sperance.exileforge.core.display.MapLines
 import com.sperance.exileforge.core.display.influenceTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.lineNote
-import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.signedNumber
@@ -164,7 +162,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
             Figure(bonus.quantity, ui("expedition.launch_loot"))
             Figure(bonus.rarity, ui("expedition.launch_rarity"))
         }
-        lines(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
+        MapLines.of(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
         capture?.let { CaptureLine(it) }
     }
 }
@@ -211,34 +209,6 @@ internal fun tierGate(index: ContentIndex, level: Int?): String? {
     if (cap >= tiers.max) return null
     val next = tiers.heroTiers.filter { (from, tier) -> from > level && tier > cap }.minByOrNull { it.key } ?: return null
     return ui("expedition.launch_tier_gate", cap, next.value, next.key)
-}
-
-/**
- * The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one.
- *
- * Атлас усиливает только строки `scalable` (печать, флаги и счётные - как есть); риск строки с условием платится, только если условие на
- * карте есть.
- */
-internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> {
-    val roller = LootRoller(index)
-    val bound = map.lines.map { line -> line.definition?.let { def -> def to roller.mapValues(def, line.values, atlasEffect) } }
-    val all = bound.filterNotNull().flatMap { (def, values) -> def.bind(values) }.groupingBy { it.first.stat }.fold(0.0) { sum, (_, value) -> sum + value }
-    return map.lines.mapIndexed { i, line -> line(index, line, bound[i]?.second, all) }
-}
-
-/** Строка карты [line] со значениями [values] (null - как выпала) и меткой риска среди всех строк карты [all]. */
-private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all: Map<String, Double>): MapLine {
-    val effects = line.definition?.effects.orEmpty()
-    val kinds = effects.map { MapLineKind.of(index, it.stat) }
-    val kind = when {
-        MapLineKind.HARM in kinds -> MapLineKind.HARM
-        MapLineKind.REWARD in kinds -> MapLineKind.REWARD
-        else -> MapLineKind.CONTENT
-    }
-    val def = line.definition
-    val shown = values ?: line.values
-    val risk = def?.bind(shown).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value, all) }
-    return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk, lineNote(index, def))
 }
 
 /**

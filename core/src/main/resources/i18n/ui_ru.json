@@ -3228,8 +3228,6 @@
   "enum.stat.STOCK_WORK_RARITY": "Редкость изделий",
   "enum.stat.STOCK_WORK_ITEM_LEVEL": "Уровень изделий",
   "enum.stat.STOCK_WORK_UNIQUE": "Шанс шедевра",
-  "enum.stat.MAP_HERO_ENFEEBLE": "Герой ослаблен",
-  "enum.stat.MAP_HERO_VULNERABILITY": "Герой уязвим",
   "enum.stat.MAP_HERO_FLASK_EFFECT": "Слабые фляги",
   "enum.stat.MAP_HERO_BUFF_DURATION": "Короткие усиления",
   "enum.stat.MAP_MONSTER_ONSLAUGHT": "Монстры под Натиском",

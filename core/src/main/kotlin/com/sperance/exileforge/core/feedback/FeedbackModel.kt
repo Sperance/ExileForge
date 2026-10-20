@@ -92,7 +92,7 @@ class FeedbackModel(
 
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
 
-    /** Ответ автора в Issue своего отчёта: уходит комментарием; отчёт возвращается с перепиской. */
+    /** Ответ автора к своему отчёту: с Issue уходит комментарием, до Issue копится в отчёте; отчёт возвращается с перепиской. */
     fun answerReport(id: String, text: String) = commands.task(writing = true) {
         val answered = api.feedback.answer(id, text)
         feedback { f -> f.copy(mine = f.mine.map { if (it.id == id) answered else it }) }

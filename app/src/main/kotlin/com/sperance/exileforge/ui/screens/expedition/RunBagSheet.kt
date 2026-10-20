@@ -28,8 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,11 +44,13 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.expedition.presentLoot
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.LocalBuzzes
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Bronze
@@ -82,9 +82,9 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
     }
     val pieces = remember(bag) { bag.sumOf { entry -> entry.reward?.let { it.equipment.size + it.items.values.sum().toInt() } ?: 0 } }
     val dressed = rememberRunGame(game, vm)
-    val haptics = LocalHapticFeedback.current
+    val buzzes = LocalBuzzes.current
     val mark = { id: String ->
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        buzzes?.buzz(Buzz.BUTTON)
         vm.toggleSaleMark(id)
     }
     HoldsRun(run)

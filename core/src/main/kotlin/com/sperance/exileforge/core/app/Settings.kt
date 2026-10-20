@@ -22,7 +22,7 @@ data class GameSettings(
     /** Упрощённые эффекты боя: без тряски и вспышек - для чувствительных глаз и слабого телефона. */
     val simpleEffects: Boolean = false,
     val buzzDanger: Boolean = true,
-    val buzzButtons: Boolean = false,
+    val buzzButtons: Boolean = true,
     /** Где стояла камера карты «Похода» у каждого героя: по id героя; вход на вкладку возвращает её туда же. */
     val worldViews: Map<String, WorldView> = emptyMap(),
     /**

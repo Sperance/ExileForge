@@ -49,6 +49,7 @@ import com.sperance.exileforge.core.app.KeepScreen
 import com.sperance.exileforge.core.app.TextSize
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.session.SessionViewModel
@@ -187,8 +188,15 @@ internal enum class SettingsPage(val title: String) {
         SwitchRow(Icons.Outlined.AutoAwesome, ui("settings.simple_effects"), ui("settings.simple_effects_note"), set.simpleEffects) { change { copy(simpleEffects = it) } }
     }
     RowGroup(ui("settings.vibration")) {
-        SwitchRow(Icons.Outlined.Vibration, ui("settings.buzz_danger"), ui("settings.buzz_danger_note"), set.buzzDanger) { change { copy(buzzDanger = it) } }
-        SwitchRow(Icons.Outlined.TouchApp, ui("settings.buzz_buttons"), ui("settings.buzz_buttons_note"), set.buzzButtons) { change { copy(buzzButtons = it) } }
+        val buzzes = LocalBuzzes.current
+        SwitchRow(Icons.Outlined.Vibration, ui("settings.buzz_danger"), ui("settings.buzz_danger_note"), set.buzzDanger) { on ->
+            change { copy(buzzDanger = on) }
+            if (on) buzzes?.probe(Buzz.DANGER)
+        }
+        SwitchRow(Icons.Outlined.TouchApp, ui("settings.buzz_buttons"), ui("settings.buzz_buttons_note"), set.buzzButtons) { on ->
+            change { copy(buzzButtons = on) }
+            if (on) buzzes?.probe(Buzz.BUTTON)
+        }
     }
 }
 

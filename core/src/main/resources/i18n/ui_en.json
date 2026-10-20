@@ -4544,7 +4544,6 @@
   "feedback.admin.failures_hint": "Request failures: {0}",
   "feedback.admin.plus_minus": "+{0} / −{1}",
   "feedback.search_open": "Search",
-  "feedback.step.accepted": "Received",
   "feedback.fate.moderation": "In moderation",
   "feedback.fate.rejected": "Rejected by moderation",
   "feedback.fate.rejected_short": "Rejected",

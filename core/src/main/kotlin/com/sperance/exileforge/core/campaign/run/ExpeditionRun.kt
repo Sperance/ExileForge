@@ -300,7 +300,8 @@ class ExpeditionRun(
 
     /**
      * Счёт боевых заданий по ходу захода: что записанные события прибавят счётчикам летописи, когда сервер их примет, -
-     * для листа «Задания» на карте. Сам заход уже сосчитан входом.
+     * для листа «Задания» на карте. Вход в зону сервер уже сосчитал; заход по карте-предмету идёт в задания на заходы с первым
+     * выигранным боем ([com.sperance.exileforge.rules.content.Counter.MAP_RUNS]).
      */
     internal val questTally = hashMapOf(com.sperance.exileforge.rules.content.Counter.RUNS to 1L)
 
@@ -585,6 +586,10 @@ class ExpeditionRun(
             is RunEvent.Boss -> add(com.sperance.exileforge.rules.content.Counter.BOSSES)
 
             is RunEvent.Crystal -> add(com.sperance.exileforge.rules.content.Counter.CRYSTALS)
+
+            is RunEvent.Fight -> if (event.fight.won && run.context.active != null && com.sperance.exileforge.rules.content.Counter.MAP_RUNS !in questTally) {
+                add(com.sperance.exileforge.rules.content.Counter.MAP_RUNS)
+            }
 
             else -> Unit
         }

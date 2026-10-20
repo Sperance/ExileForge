@@ -1530,6 +1530,7 @@
   "chronicle.counter.DEATHS": "Гибелей",
   "chronicle.counter.ABYSS_DEPTH": "Глубина Бездны (рекорд)",
   "chronicle.counter.RUNS": "Заходов",
+  "chronicle.counter.MAP_RUNS": "Заходов по картам с боем",
   "chronicle.counter.CHESTS": "Сундуков открыто",
   "chronicle.counter.CRYSTALS": "Кристаллов освобождено",
   "chronicle.counter.ITEMS_MAGIC": "Волшебных вещей найдено",

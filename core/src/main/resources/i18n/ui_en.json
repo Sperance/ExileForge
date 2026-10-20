@@ -1530,6 +1530,7 @@
   "chronicle.counter.DEATHS": "Deaths",
   "chronicle.counter.ABYSS_DEPTH": "Abyss depth (record)",
   "chronicle.counter.RUNS": "Runs",
+  "chronicle.counter.MAP_RUNS": "Map runs with a fight",
   "chronicle.counter.CHESTS": "Chests opened",
   "chronicle.counter.CRYSTALS": "Crystals released",
   "chronicle.counter.ITEMS_MAGIC": "Magic items found",

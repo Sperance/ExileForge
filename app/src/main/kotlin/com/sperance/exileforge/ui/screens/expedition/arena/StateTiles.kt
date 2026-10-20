@@ -4,10 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -54,6 +56,36 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (open) EffectsSheet(title, timed, lasting, null) { open = false }
 }
+
+/**
+ * Лента эффектов босса над его головой на арене: все плитки состояний и эффектов стороной 22dp на полупрозрачной подложке, по
+ * шесть в строке, лишние - следующей строкой, без «+N». Касание плитки - её выноска, касание ленты - лист эффектов [title].
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun EffectRibbon(title: String, ailments: List<AilmentView>, held: Boolean, effects: List<EffectView>, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    val timed = timedShelf(held, ailments, effects)
+    val lasting = effects.filter { it.lasting }.map { Shelved.Effect(it) }
+    if (timed.isNotEmpty() || lasting.isNotEmpty()) {
+        FlowRow(
+            modifier.clip(RibbonShape).background(RibbonVeil).clickable { open = true }.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            maxItemsInEachRow = RIBBON_ROW,
+        ) {
+            timed.forEach { ShelfTile(it, RIBBON_TILE) }
+            lasting.forEach { ShelfTile(it, RIBBON_TILE) }
+        }
+    }
+    if (open) EffectsSheet(title, timed, lasting, null) { open = false }
+}
+
+/** Плиток в строке ленты эффектов босса, их сторона, подложка и её форма. */
+private const val RIBBON_ROW = 6
+private val RIBBON_TILE = 22.dp
+private val RibbonVeil = Color(0x9E06080A)
+private val RibbonShape = RoundedCornerShape(6.dp)
 
 /**
  * Действующий рычаг дара: ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,

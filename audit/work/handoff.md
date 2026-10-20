@@ -22,5 +22,10 @@
 - Порядок выкатки: сервер раньше клиента.
 - Closes в финальном коммите клиента для всех решённых.
 
+## Хвосты к ревью
+- InfoHint (ForgeIconButton Small) и InfoMark (Tipped, 36 dp) в components/InfoTip.kt - два ⓘ; свести к одному.
+- Срок лота аукциона без цвета Caution (макет A).
+- Зона касания InfoMark 36 dp < 44.
+
 ## Дальше
 Вопросы и макеты закрыты по всем 22 Issue (#334 закрыт wontfix). Влито в wip: пакеты 1-6, #341. В работе: #308 (5 экранов, 2 исполнителя), #336 (сервер+клиент), ревью 4b/5/6/341. Затем: правки по ревью, финальная сборка (клиент: тесты/ktlint/commentStyle/компиляция/mobBal trials; сервер: команда проверок deploy.yml), API_REVISION 95 + RULES_VERSION + audit/versions.md, закрепление backend/, versionCode/versionName 0.16.9, RELEASE_NOTES, удалить audit/work, Closes всех кроме #308 (остаётся открытым, остаток - Разлом), dev-notes в Issue.

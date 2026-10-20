@@ -256,7 +256,8 @@ private val TagShape = RoundedCornerShape(6.dp)
 
 /**
  * Цифры выбранной ступени раша из её записи в контенте - строками «подпись - значение»: здоровье и урон боссов со знаком
- * (ниже обычного - зелёным, выше - красным, ноль - «как обычно»), насколько раньше ярость боссов и множитель сфер сундука.
+ * (ниже обычного - зелёным, выше - красным, ноль - «как обычно»), насколько раньше ярость боссов, множитель сфер сундука и шанс
+ * уникалки за полную зачистку.
  */
 @Composable private fun RushTierFacts(tier: RushTier) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -270,6 +271,7 @@ private val TagShape = RoundedCornerShape(6.dp)
         val enrage = if (tier.enrage > 0) ui("trials.rush_enrage_value", number(tier.enrage)) else ui("trials.rush_enrage_usual")
         TierFact(ui("trials.rush_enrage_label"), enrage, if (tier.enrage > 0) Ember else Parchment)
         TierFact(ui("trials.rush_reward_label"), ui("trials.rush_reward_value", number(tier.reward)), GoldBright)
+        TierFact(ui("trials.rush_unique_label"), ui("trials.rush_unique_value", number(tier.unique)), GoldBright)
     }
 }
 

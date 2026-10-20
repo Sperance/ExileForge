@@ -4289,6 +4289,8 @@
   "trials.rush_enrage_usual": "on schedule",
   "trials.rush_reward_label": "Orbs in the chest",
   "trials.rush_reward_value": "×{0} vs. normal",
+  "trials.rush_unique_label": "Unique for a full clear",
+  "trials.rush_unique_value": "{0}%",
   "trials.tower_choice_title": "Floor {0}: choose the threat line of the ten",
   "trials.tower_choice_hint": "The line holds to the top of the tower. A stronger line, a bigger hoard",
   "trials.tower_choice_hoard": "+{0}% to the hoard",

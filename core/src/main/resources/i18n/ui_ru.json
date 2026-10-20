@@ -4289,6 +4289,8 @@
   "trials.rush_enrage_usual": "в обычный срок",
   "trials.rush_reward_label": "Сферы в сундуке",
   "trials.rush_reward_value": "×{0} к обычному",
+  "trials.rush_unique_label": "Уникалка за зачистку",
+  "trials.rush_unique_value": "{0}%",
   "trials.tower_choice_title": "Этаж {0}: выберите угрозу на следующие 10 этажей",
   "trials.tower_choice_hint": "Строка действует до конца башни. Сильнее строка — больше клад",
   "trials.tower_choice_hoard": "+{0}% к кладу",

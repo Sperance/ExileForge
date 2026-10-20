@@ -243,6 +243,7 @@ private fun AdminReport.matches(query: String): Boolean {
         focused = true,
         onHeader = onCollapse,
         topic = report.topic,
+        issueLink = true,
         author = { AuthorLine(entry, onDossier) },
         extra = {
             if (!report.kind.exported) Circumstances(report.context)
@@ -283,7 +284,6 @@ private fun AdminReport.matches(query: String): Boolean {
 
                 issue != null -> {
                     if (issue.state.open) ForgeButton(state = ButtonState.of(!account.busy), onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
-                    IssueLink(issue)
                 }
             }
             if (entry.deletable) {

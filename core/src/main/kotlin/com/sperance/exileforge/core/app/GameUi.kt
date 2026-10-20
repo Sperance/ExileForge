@@ -67,6 +67,9 @@ data class GameUi(
 
     /** Модератор или администратор: ему открыты инструменты администратора; права проверяет сервер. */
     val isModerator: Boolean get() = session.isModerator
+
+    /** Ссылка «Issue #N ↗» на GitHub в своих и известных отчётах: герою-тестировщику и модерации. */
+    val seesIssues: Boolean get() = isTester || isModerator
     val sessionEpoch: Int get() = session.sessionEpoch
     val index: ContentIndex? get() = world.content
     val heroId: String get() = holding.heroId

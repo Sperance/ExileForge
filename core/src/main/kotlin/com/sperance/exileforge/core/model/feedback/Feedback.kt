@@ -47,7 +47,10 @@ import kotlinx.serialization.Serializable
     val comment: String = "",
     val duplicate: Int = 0,
     val notes: List<IssueNote> = emptyList(),
-)
+) {
+    /** Адрес Issue уже есть: пока Issue выгружается, его нет и ссылка погашена. */
+    val hasUrl: Boolean get() = url.startsWith("http")
+}
 
 /** Кто написал в Issue: разработчик в GitHub, модерация из игры или автор отчёта из игры. */
 @Serializable enum class NoteAuthor { DEVELOPER, MODERATION, AUTHOR }

@@ -4448,7 +4448,7 @@
   "feedback.admin.accept": "Принять",
   "feedback.admin.reject": "Отклонить",
   "feedback.admin.steer": "Закрыть…",
-  "feedback.admin.issue_link": "Issue #{0} ↗",
+  "feedback.issue_link": "Issue #{0} ↗",
   "feedback.admin.score": "▲{0} ▼{1}",
   "feedback.admin.hero_line": "{0}, {1} ур.",
   "feedback.read_all": "Читать целиком",

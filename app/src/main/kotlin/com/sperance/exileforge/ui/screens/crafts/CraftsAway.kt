@@ -83,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
                             onSeen()
                             heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true))
                         },
-                        modifier = Modifier.weight(1f).height(44.dp),
+                        modifier = Modifier.weight(1f),
                         kind = ButtonKind.Secondary,
                     ) {
                         Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))

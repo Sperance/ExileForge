@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
@@ -195,7 +194,7 @@ fun SkillTreePanel(
                 }
             }
             Spacer(Modifier.height(16.dp))
-            MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, size = 34.dp, onClick = view::reset)
+            MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, onClick = view::reset)
         }
         if (nodeOpen) {
             val shape = RoundedCornerShape(12.dp)
@@ -290,9 +289,9 @@ fun SkillTreePanel(
 
 internal val PILL = RoundedCornerShape(16.dp)
 
-/** Кнопка поверх древа: круглая тональная иконка-кнопка, со счётчиком [badge] в углу; [size] меньше 44 dp - компактная. */
-@Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, size: Dp = 40.dp, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = if (size < 44.dp) ButtonSize.Compact else ButtonSize.Wide, accent = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
+/** Кнопка поверх древа: круглая тональная компактная иконка-кнопка, со счётчиком [badge] в углу. */
+@Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, onClick: () -> Unit) {
+    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, accent = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
 }
 
 /**

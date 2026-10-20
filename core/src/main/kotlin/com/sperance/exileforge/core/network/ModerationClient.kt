@@ -245,12 +245,10 @@ sealed interface ModerationFate {
      */
     val fateChange: Pair<String?, String>? get() = comment.takeIf { action == ModerationAction.FATE }?.split(FATE_ARROW, limit = 2)
         ?.takeIf { it.size == 2 }?.let { (from, to) -> from.ifBlank { null } to to }
-
-    private companion object {
-        /** Разделитель прежнего и нового дара в заметке строки [ModerationAction.FATE]. */
-        const val FATE_ARROW = " → "
-    }
 }
+
+/** Разделитель прежнего и нового дара в заметке строки [ModerationAction.FATE]. */
+private const val FATE_ARROW = " → "
 
 /** Бан: цель - герой [heroId], аккаунт [userId] или устройство [hardware] аккаунта [userId]; [hours] null - бессрочно. */
 @Serializable data class SanctionRequest(

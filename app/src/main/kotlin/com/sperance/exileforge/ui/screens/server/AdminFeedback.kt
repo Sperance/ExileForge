@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -55,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск [ReportSearch] - как у игрока, плюс логин автора, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
+ * Отчёты для модерации: строка поиска ([SearchBar], [ReportSearch]) - как у игрока, плюс логин автора, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
  * выбором, ниже - порядок сегментами без подписи ([Order]: новые, рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
  * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
  * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
@@ -84,14 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
     val search = remember(query) { ReportSearch(query) }
     val found = feedback.reports.filter { search.matches(it.report.text, it.report.issue, author = it.login) }
-    OutlinedTextField(
-        query,
-        { query = it.take(SEARCH) },
-        placeholder = { Text(ui("feedback.admin.search")) },
-        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    SearchBar(query, { query = it.take(SEARCH) }, ui("feedback.admin.search"))
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         Queue.entries.forEach { q ->
             CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {

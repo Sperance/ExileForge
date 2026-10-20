@@ -461,32 +461,32 @@ class StatExplainer(private val game: GameUi) {
             Op.SET -> "= ${statNumber(stat, value)}$unit"
         }
     }
-}
 
-/**
- * Вклады источников строки-потока [b] в её итог в мере [measure], без замены значения: плоская часть - как есть, увеличение - его доля
- * плоской суммы, «больше» - доля прироста за все «больше» по логарифму своего множителя. С частями чтения боя (сдвигами) сумма вкладов
- * сходится с итогом.
- */
-private class FlowGains(private val measure: FlowMeasure, private val b: StatBreakdown) {
-    private val logMore = ln(b.moreFactor)
-    private val gain = b.flatSum * (1 + b.increasedSum / 100) * (b.moreFactor - 1)
+    /**
+     * Вклады источников строки-потока [b] в её итог в мере [measure], без замены значения: плоская часть - как есть, увеличение - его доля
+     * плоской суммы, «больше» - доля прироста за все «больше» по логарифму своего множителя. С частями чтения боя (сдвигами) сумма вкладов
+     * сходится с итогом.
+     */
+    private class FlowGains(private val measure: FlowMeasure, private val b: StatBreakdown) {
+        private val logMore = ln(b.moreFactor)
+        private val gain = b.flatSum * (1 + b.increasedSum / 100) * (b.moreFactor - 1)
 
-    /** Вклад источника [share] в итог. */
-    fun of(share: Share): Double = when {
-        share.op == Op.ADD || b.percent && share.op == Op.INCREASED -> share.value
-        share.op == Op.INCREASED -> b.flatSum * share.value / 100
-        share.op == Op.MORE && logMore != 0.0 -> gain * ln(1 + share.value / 100) / logMore
-        else -> 0.0
+        /** Вклад источника [share] в итог. */
+        fun of(share: Share): Double = when {
+            share.op == Op.ADD || b.percent && share.op == Op.INCREASED -> share.value
+            share.op == Op.INCREASED -> b.flatSum * share.value / 100
+            share.op == Op.MORE && logMore != 0.0 -> gain * ln(1 + share.value / 100) / logMore
+            else -> 0.0
+        }
+
+        /** Значение строки источника [share] с числом [figure] его операции: плоская - вкладом, увеличение и «больше» - «число ≈ вклад». */
+        fun row(share: Share, figure: String): String = when (share.op) {
+            Op.ADD -> text(of(share))
+            Op.INCREASED -> measure.gives(b.stat, ui("stat.flow.increased", figure), of(share))
+            else -> measure.gives(b.stat, figure, of(share))
+        }
+
+        /** Вклад [value] в мере строки: «+0.1/с». */
+        fun text(value: Double): String = measure.text(b.stat, value)
     }
-
-    /** Значение строки источника [share] с числом [figure] его операции: плоская - вкладом, увеличение и «больше» - «число ≈ вклад». */
-    fun row(share: Share, figure: String): String = when (share.op) {
-        Op.ADD -> text(of(share))
-        Op.INCREASED -> measure.gives(b.stat, ui("stat.flow.increased", figure), of(share))
-        else -> measure.gives(b.stat, figure, of(share))
-    }
-
-    /** Вклад [value] в мере строки: «+0.1/с». */
-    fun text(value: Double): String = measure.text(b.stat, value)
 }

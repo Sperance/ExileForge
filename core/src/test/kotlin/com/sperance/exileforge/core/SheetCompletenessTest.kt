@@ -87,11 +87,11 @@ class SheetCompletenessTest {
         val plain: Map<String, Double> = SheetModel(hero.base, base, index).plain
         val before: Map<String, Double> = summary(emptyList())
 
-        /** Сводка эталона со строками [extra] сверх него. */
+        /** Сводка эталона со строками [extra] сверх него: итог боя поверх итога характеристик (строки вне боя - радиус света, добыча - берут его). */
         fun summary(extra: List<StatOperation>): Map<String, Double> {
             val model = SheetModel(hero.base, base + extra, index)
             val kit = Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), model.plain, index.powers, index.rules.charges)
-            return CombatSheet(index, model, LEVEL, kit).values
+            return model.plain + CombatSheet(index, model, LEVEL, kit).values
         }
     }
 

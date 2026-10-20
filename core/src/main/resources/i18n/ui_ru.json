@@ -4544,7 +4544,6 @@
   "feedback.admin.failures_hint": "Ошибок запросов: {0}",
   "feedback.admin.plus_minus": "+{0} / −{1}",
   "feedback.search_open": "Поиск",
-  "feedback.step.accepted": "Принят",
   "feedback.fate.moderation": "На модерации",
   "feedback.fate.rejected": "Отклонён модератором",
   "feedback.fate.rejected_short": "Отклонён",

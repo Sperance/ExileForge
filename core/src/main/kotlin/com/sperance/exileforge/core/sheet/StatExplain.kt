@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.campaign.FlowMeasure
 import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.campaign.ReadingPart
@@ -114,7 +113,7 @@ class StatExplainer(private val game: GameUi) {
         apart: List<Pair<WorldPart, WorldKind>> = emptyList(),
     ): StatExplanation {
         val stat = breakdown.stat
-        val measure = FightReading.measure(stat)
+        val measure = FlowMeasure.of(stat)
         val gains = measure?.takeIf { breakdown.set == null }?.let { FlowGains(it, breakdown) }
         val cards = mutableListOf<ShareCard>()
         if (breakdown.base != 0.0) {

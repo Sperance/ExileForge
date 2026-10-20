@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.display
 
-import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.campaign.FlowMeasure
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -120,5 +119,5 @@ fun FlowMeasure.text(stat: String, value: Double): String = ui(key, signedNumber
 /** Число [figure] источника строки-потока [stat] с его вкладом [value] в её мере: «+4% увеличения ≈ +0.1/с». */
 fun FlowMeasure.gives(stat: String, figure: String, value: Double): String = ui("stat.flow.gives", figure, text(stat, value))
 
-/** Итог строки сводки [stat]: строка-поток ([FightReading.measure]) - со знаком и мерой, прочие - [statValue]. */
-fun rowValue(stat: String, value: Double, index: ContentIndex? = null): String = FightReading.measure(stat)?.text(stat, value) ?: statValue(stat, value, index)
+/** Итог строки сводки [stat]: строка-поток ([FlowMeasure.of]) - со знаком и мерой, прочие - [statValue]. */
+fun rowValue(stat: String, value: Double, index: ContentIndex? = null): String = FlowMeasure.of(stat)?.text(stat, value) ?: statValue(stat, value, index)

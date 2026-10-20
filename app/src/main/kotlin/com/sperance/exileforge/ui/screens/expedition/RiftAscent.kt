@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.loc
+import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftEngine
@@ -55,7 +56,8 @@ import kotlin.math.sin
 /**
  * Карта Разлома «Восхождение»: все акты одной лентой снизу вверх, страж ведёт дальше
  * без разрывов. Узлы - шестигранники-руны, путь - жила с текущей энергией, доступные узлы дышат и пускают кольцо. Дальше
- * обзора ([RiftEngine.seen]) клубится туман, в нём видны только силуэты стражей. Лента сама держит героя в нижней трети.
+ * обзора ([RiftEngine.seen]) клубится туман, в нём видны только силуэты стражей; ключ захода на видимом непройденном узле - знак его
+ * металла у руны. Лента сама держит героя в нижней трети.
  * Декор стоит при выключенном `LocalMotion`.
  *
  * Фазы декора читаются в рисовании: лента перерисовывается шагом часов, жилы и фон собираются раз на раскладку. Герой - в нижней трети,
@@ -140,6 +142,7 @@ import kotlin.math.sin
                         walked = node.id in walked,
                         hero = node == here,
                         silhouette = !visible,
+                        key = node.key?.takeIf { visible && node.id !in walked },
                         breath = breath,
                         name = if (guardian && !visible) rules.guardians.monsters.getOrNull(node.act)?.let { loc("monster.${it.value}.name") } else null,
                         modifier = Modifier.offset(x(node) - NODE_BOX / 2, y(node) - NODE_BOX / 2),
@@ -206,7 +209,8 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
 }
 
 /**
- * Узел-руна: шестигранник цвета вида, знак вида внутри; доступный дышит и пускает кольцо, над героем - огонёк.
+ * Узел-руна: шестигранник цвета вида, знак вида внутри; доступный дышит и пускает кольцо, над героем - огонёк; [key] - ключ на узле,
+ * кружок его металла у верхнего правого угла.
  *
  * Дыхание читается в рисовании и в слое: силуэт - слоем с обрезкой по рамке, прочие без слоя.
  */
@@ -216,6 +220,7 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
     walked: Boolean,
     hero: Boolean,
     silhouette: Boolean,
+    key: RiftMetal?,
     breath: State<Float>,
     name: String?,
     modifier: Modifier,
@@ -251,6 +256,11 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
                         drawPath(hex, if (open) RiftColors.Rift else tint.copy(alpha = if (walked && !hero) .55f else .9f), style = Stroke((if (open) 2.2 else 1.3).dp.toPx()))
                     }
                     if (hero) drawCircle(RiftColors.Hot, 4.5.dp.toPx(), Offset(center.x, center.y - r - 8.dp.toPx()), alpha = .6f + .4f * pulse())
+                    key?.let { metal ->
+                        val at = Offset(center.x + r * .85f, center.y - r * .85f)
+                        drawCircle(metal.color(), KEY_DOT.toPx(), at)
+                        drawCircle(RiftColors.Ground, KEY_DOT.toPx(), at, style = Stroke(1.5.dp.toPx()))
+                    }
                 }
             },
         )
@@ -317,6 +327,9 @@ internal fun RiftNodeKind.glyph(): ImageVector = when (this) {
 private val ROW = 74.dp
 private val SIDE = 34.dp
 private val NODE_BOX = 56.dp
+
+/** Радиус знака ключа у руны. */
+private val KEY_DOT = 5.dp
 private const val MIST = 9
 private const val FLOW_MS = 1200
 private const val BREATH_MS = 2400

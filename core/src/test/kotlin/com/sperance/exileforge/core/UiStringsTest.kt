@@ -307,6 +307,11 @@ class UiStringsTest {
             com.sperance.exileforge.core.network.SanctionTarget.entries.forEach { add("moderation.target.${it.name}") }
             com.sperance.exileforge.rules.content.Catalyst.entries.forEach { add("enum.catalyst.${it.name}") }
             com.sperance.exileforge.rules.rift.RiftRest.entries.forEach { add("rift.rest.${it.name}") }
+            com.sperance.exileforge.rules.content.RiftMetal.entries.forEach {
+                add("rift.metal.${it.name}")
+                add("rift.coffer.${it.name}")
+            }
+            com.sperance.exileforge.rules.content.RiftReward.entries.forEach { add("rift.reward.${it.name}") }
             Rarity.entries.forEach {
                 add("quest.rarity.${it.name}")
                 add("stash.rarity_many.${it.name}")

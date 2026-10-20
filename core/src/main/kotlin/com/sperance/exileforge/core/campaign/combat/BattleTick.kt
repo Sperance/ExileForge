@@ -538,8 +538,9 @@ private fun Battle.end(how: Outcome) {
     fateEnds()
 }
 
-/** Низшая доля здоровья героя за бой - для Испытания чемпиона. */
+/** Низшая доля здоровья героя за бой - для Испытания чемпиона - и потерянная доля - для Чести Разлома. */
 private fun Battle.lookLife() {
     val max = heroFighter.body.maxLife
     if (max > 0) trial.lowestLife = min(trial.lowestLife, (heroFighter.life / max).coerceIn(0.0, 1.0))
+    trial.look(heroFighter.life, max)
 }

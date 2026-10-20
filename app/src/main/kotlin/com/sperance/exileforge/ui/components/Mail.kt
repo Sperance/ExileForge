@@ -51,7 +51,6 @@ import com.sperance.exileforge.core.model.feedback.MailLinkKind
 import com.sperance.exileforge.core.model.feedback.MailMute
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.rules.content.MailGate
-import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
@@ -459,9 +458,8 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 /**
  * Хозяин окна нового письма: черновик в почте ([Feedback.letter]) открывает лист поверх всего - из карточки игрока,
  * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии рядом с подписью, не ввод; тема и текст со счётчиками - поле текста
- * растёт вместе с листающимся телом листа, курсор оно держит на виду само; цитата ответа, квота «Сегодня X из N · этому герою Y из M»;
- * немота - причина и срок сверху. «Отправить» - в подвале листа, над клавиатурой; нельзя - погашена. Паузу до следующего письма
- * читают только подпись и кнопка ([cooldownSeconds]) - её такт не перекомпоновывает весь лист.
+ * растёт вместе с листающимся телом листа, курсор оно держит на виду само; цитата ответа; немота - причина и срок сверху.
+ * «Отправить» - в подвале листа, над клавиатурой; нельзя (немота, рассылка без права) - погашена.
  */
 @Composable
 fun LetterHost(game: GameUi) {
@@ -473,17 +471,16 @@ fun LetterHost(game: GameUi) {
     var subject by remember(draft) { mutableStateOf(draft.subject) }
     var body by remember(draft) { mutableStateOf("") }
     val quota = feedback.quota
-    val readyAt = quota?.readyAt ?: 0L
-    val gate = quota?.let { effectiveGate(it, draft) }
-    val guildFull = draft.kind == MailKind.GUILD && quota?.guild?.let { it.sent >= it.perDay } != false
+    val barred = draft.kind == MailKind.GUILD && quota?.guild == null
     ForgeSheet(
         onDismissRequest = model.letters::close,
         body = SheetBody.Scroll(spacing = 8.dp),
         footer = {
-            SendButton(
-                ready = !activity.busy && gate == MailGate.OPEN && !guildFull && subject.isNotBlank() && body.isNotBlank(),
-                readyAt = readyAt,
-            ) { model.letters.send(subject, body) }
+            ForgeButton(
+                onClick = { model.letters.send(subject, body) },
+                state = ButtonState.of(!activity.busy && quota?.gate == MailGate.OPEN && !barred && subject.isNotBlank() && body.isNotBlank()),
+                modifier = Modifier.weight(1f),
+            ) { Text(ui("mail.send")) }
         },
     ) {
         Text(ui(if (draft.kind == MailKind.GUILD) "mail.letter.broadcast_title" else "mail.letter.title"), style = relicName(19).copy(color = GoldBright))
@@ -509,39 +506,8 @@ fun LetterHost(game: GameUi) {
             modifier = Modifier.fillMaxWidth(),
         )
         if (draft.quote.isNotBlank()) Quote(draft.quoteBy, draft.quote.take(rules.quote))
-        quota?.let { QuotaBar(it, draft) }
-        gate?.takeIf { it != MailGate.OPEN && it != MailGate.MUTED }?.let { Text(gateText(it, quota, rules), color = Caution, style = MaterialTheme.typography.labelMedium) }
-        CooldownNote(readyAt)
     }
 }
-
-/**
- * Секунды до следующего письма - до [readyAt] по часам [rememberNow]. Часы читаются, только пока срок впереди: дождались - такт
- * останавливается.
- */
-@Composable private fun cooldownSeconds(readyAt: Long): Long {
-    var ticking by remember(readyAt) { mutableStateOf(readyAt > 0L) }
-    if (!ticking) return 0L
-    val now by rememberNow(TICK_MS)
-    val wait = ((readyAt - now + SECOND_MS - 1) / SECOND_MS).coerceAtLeast(0L)
-    if (wait == 0L) SideEffect { ticking = false }
-    return wait
-}
-
-/** «Отправить» подвала: погашена, пока письмо не готово [ready] или не прошла пауза до [readyAt]. */
-@Composable private fun RowScope.SendButton(ready: Boolean, readyAt: Long, onSend: () -> Unit) {
-    val wait = cooldownSeconds(readyAt)
-    ForgeButton(onClick = onSend, state = ButtonState.of(ready && wait == 0L), modifier = Modifier.weight(1f)) { Text(ui("mail.send")) }
-}
-
-/** Пауза до следующего письма словами - пока она идёт. */
-@Composable private fun CooldownNote(readyAt: Long) {
-    val wait = cooldownSeconds(readyAt)
-    if (wait > 0) MutedText(ui("mail.letter.cooldown", wait))
-}
-
-/** Ответ на рассылку гильдии пишут и до уровня права писать (как сервер): уровень ему не помеха. */
-private fun effectiveGate(quota: MailQuota, draft: LetterDraft): MailGate = if (quota.gate == MailGate.LEVEL && draft.early) MailGate.OPEN else quota.gate
 
 /** Немота: писать нельзя до срока (или навсегда), категория и причина для игрока. */
 @Composable private fun MuteNote(mute: MailMute) {
@@ -574,26 +540,10 @@ private fun effectiveGate(quota: MailQuota, draft: LetterDraft): MailGate = if (
     }
 }
 
-/** Квота: «Сегодня X из N» и «этому герою Y из M»; у рассылки - рассылки гильдии за сутки. */
-@Composable private fun QuotaBar(quota: MailQuota, draft: LetterDraft) {
-    Row(Modifier.fillMaxWidth().background(PanelRaised, RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 6.dp)) {
-        Text(ui("mail.quota.day", quota.sent, quota.perDay), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-        val right = if (draft.kind == MailKind.GUILD) {
-            quota.guild?.let { ui("mail.quota.guild", it.sent, it.perDay) }
-        } else {
-            ui("mail.quota.recipient", quota.toRecipient, quota.perRecipient)
-        }
-        right?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
-    }
-}
-
-/** Почему писать нельзя - словами, с числом правил: уровень, письма за сутки, письма этому герою. */
-internal fun gateText(gate: MailGate, quota: MailQuota?, rules: MailRules, unlockLevel: Int = quota?.level ?: 1): String = when (gate) {
+/** Почему писать нельзя - словами. */
+internal fun gateText(gate: MailGate): String = when (gate) {
     MailGate.OPEN -> ui("mail.gate.open")
     MailGate.MUTED -> ui("mail.gate.muted")
-    MailGate.LEVEL -> ui("mail.gate.level", unlockLevel)
-    MailGate.DAY_LIMIT -> ui("mail.gate.day_limit", quota?.perDay ?: rules.perDay)
-    MailGate.RECIPIENT_LIMIT -> ui("mail.gate.recipient_limit", quota?.perRecipient ?: rules.perRecipient)
 }
 
 /** Знак игры и администратора. */
@@ -606,5 +556,3 @@ private val TAG = 22.dp
 private const val SHORT_STAMP = 5
 private const val QUOTE_LINES = 3
 private const val DAY_MS = 86_400_000L
-private const val SECOND_MS = 1_000L
-private const val TICK_MS = 1_000L

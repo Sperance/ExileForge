@@ -84,8 +84,8 @@ class MailClient internal constructor(private val http: Transport) {
     /** Письмо героя [heroId]: личное, ответ или рассылка гильдии; ответ - почта героя после письма. */
     suspend fun letter(heroId: String, request: LetterRequest): MailQuota = http.post("$MAIL/letter", heroQuery(heroId), WireJson.encodeToJsonElement(request))
 
-    /** Почта героя [heroId] сейчас: можно ли писать адресату [to] (пусто - без адресата) и сколько осталось. */
-    suspend fun quota(heroId: String, to: String): MailQuota = http.get("$MAIL/quota", heroQuery(heroId, "to" to to.takeIf { it.isNotBlank() }))
+    /** Почта героя [heroId] сейчас: можно ли писать, немота, рассылка гильдии. */
+    suspend fun quota(heroId: String): MailQuota = http.get("$MAIL/quota", heroQuery(heroId))
 
     /** Список игнора героя [heroId], новые сверху. */
     suspend fun ignores(heroId: String): List<IgnoredHero> = http.get("$MAIL/ignores", heroQuery(heroId))

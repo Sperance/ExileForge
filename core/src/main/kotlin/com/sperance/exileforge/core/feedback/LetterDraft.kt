@@ -7,8 +7,7 @@ import com.sperance.exileforge.core.model.feedback.MailKind
 /**
  * Письмо, что пишет герой: кому - герой [to] (имя, класс, уровень - для плашки «Кому», не редактируется) или вся
  * гильдия ([MailKind.GUILD]); ответ - [replyTo] с цитатой [quote] автора [quoteBy]. Адресата вводом не задают: только карточка
- * игрока, «Ответить» и рассылка гильдии. [early] - ответ на письмо, на которое отвечают и до уровня права писать
- * ([MailKind.answerable]).
+ * игрока, «Ответить» и рассылка гильдии.
  */
 data class LetterDraft(
     val kind: MailKind = MailKind.PLAYER,
@@ -20,7 +19,6 @@ data class LetterDraft(
     val subject: String = "",
     val quote: String = "",
     val quoteBy: String = "",
-    val early: Boolean = false,
 ) {
     /** Запрос письма с темой [subject] и текстом [body]. */
     fun request(subject: String, body: String): LetterRequest = LetterRequest(kind, to, replyTo, subject.trim(), body.trim())
@@ -38,7 +36,7 @@ data class LetterDraft(
          */
         fun reply(mail: Mail, subject: String): LetterDraft? {
             val from = mail.from?.takeIf { mail.answerable } ?: return null
-            return LetterDraft(MailKind.PLAYER, from.heroId, from.name, from.heroClass, from.level, mail.id, subject, mail.body, from.name, mail.kind.answerable)
+            return LetterDraft(MailKind.PLAYER, from.heroId, from.name, from.heroClass, from.level, mail.id, subject, mail.body, from.name)
         }
     }
 }

@@ -130,7 +130,7 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
     Box(Modifier.size(size.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             rotate(orbit.value * 360f) {
-                drawCircle(accent.copy(alpha = .5f), radius = size.minDimension / 2 - 1f, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f))))
+                drawCircle(accent.copy(alpha = .5f), radius = this.size.minDimension / 2 - 1f, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f))))
             }
         }
         Box(

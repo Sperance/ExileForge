@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
+import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.model.guild.GuildView
@@ -105,7 +106,22 @@ class GuildActions(
         val stash = api.guild.stash(id)
         if (heroes.onScreen(id)) guild { it.copy(stash = stash) }
     }
-    fun deposit(tab: Int, itemId: String?, code: String?, amount: Long) = stashCommand(ui("guild.toast.deposited")) { api.guild.deposit(it, tab, itemId, code, amount) }
+
+    /**
+     * Пачка во вкладку [tab]: сервер кладёт по порядку, пока есть места. Тост - сколько легло, а легло не всё - из скольких и
+     * почему («Положено 7 из 9: нет места»).
+     */
+    fun deposit(tab: Int, parcels: List<GuildDepositParcel>) = command { id ->
+        val done = api.guild.deposit(id, tab, parcels)
+        guild { it.copy(stash = done.stash) }
+        heroes.money(done.stash.money)
+        if (done.refused.isEmpty()) {
+            ui("guild.toast.deposited_n", done.placed)
+        } else {
+            ui("guild.toast.deposited_part", done.placed, parcels.size, done.refused.keys.sortedBy { it.ordinal }.joinToString(", ") { ui("guild.deposit_bar.${it.name}") })
+        }
+    }
+
     fun take(entryId: String) = stashCommand(ui("guild.toast.taken")) { api.guild.take(it, entryId) }
     fun tabRank(tab: Int, minRank: Int) = stashCommand(ui("guild.toast.saved")) { api.guild.tabRank(it, tab, minRank) }
 
@@ -163,10 +179,14 @@ class GuildActions(
         guild { it.copy(mine = it.mine?.let { mine -> mine.copy(guild = view, me = view.member(id) ?: mine.me) }) }
     }
 
-    /** Одна команда гильдии: по одной за раз - героя под ней не сменить - и без повторов. */
-    private fun command(done: String, block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
-        val id = hero()
+    /** Одна команда гильдии: по одной за раз - героя под ней не сменить - и без повторов; тост [done] - после ответа. */
+    private fun command(done: String, block: suspend (String) -> Unit): Boolean = command { id ->
         block(id)
-        notices.toast(done)
+        done
+    }
+
+    /** Команда гильдии, чей тост складывает сам ответ: [block] возвращает его текст. */
+    private fun command(block: suspend (String) -> String): Boolean = commands.task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
+        notices.toast(block(hero()))
     }
 }

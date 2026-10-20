@@ -19,27 +19,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.SellLot
 import com.sperance.exileforge.core.market.SellPreset
-import com.sperance.exileforge.core.market.SellSelection
+import com.sperance.exileforge.core.pick.PickPreset
+import com.sperance.exileforge.core.pick.PickSelection
+import com.sperance.exileforge.core.pick.Pickable
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Выбор продажи - одна абстракция на режим продажи тайника и окно конца захода: текущие [lots] и отмеченное поверх
- * них. Отметить можно только лот - то, что уходит пачкой; проданное выпадает из выбора само, с новыми лотами. Быстрые наборы берут только [shown] - лоты открытого пункта рейки и фильтров; отмеченное в других пунктах остаётся.
+ * Выбор пачкой - одна абстракция на режим продажи тайника, окно конца захода и окно вклада в хранилище гильдии: текущие [lots] и
+ * отмеченное поверх них. Отметить можно только лот - то, что уходит пачкой; ушедшее выпадает из выбора само, с новыми лотами. Быстрые
+ * наборы берут только [shown] - лоты открытого пункта рейки, вкладки и фильтров; отмеченное в других пунктах остаётся.
  */
 @Stable
-class SellPick internal constructor(val lots: List<SellLot>, private val shown: List<SellLot>, private val state: MutableState<SellSelection>) {
+class Pick<T : Pickable> internal constructor(val lots: List<T>, private val shown: List<T>, private val state: MutableState<PickSelection>) {
     private val byId = lots.associateBy { it.id }
 
-    /** Отмеченные живые лоты, их число и сумма. */
-    val picked: List<SellLot> get() = state.value.picked(lots)
-    val total: Long get() = picked.sumOf { it.price }
+    /** Отмеченные живые лоты - в порядке [lots]. */
+    val picked: List<T> get() = state.value.picked(lots)
 
     fun sellable(id: String): Boolean = id in byId
     fun chosen(id: String): Boolean = id in byId && id in state.value.chosen
@@ -48,42 +51,58 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
         if (sellable(id)) state.value = state.value.toggle(id)
     }
 
-    fun covers(preset: SellPreset): Boolean = state.value.covers(shown, preset)
-    fun offers(preset: SellPreset): Boolean = shown.any(preset::takes)
+    fun covers(preset: PickPreset<T>): Boolean = state.value.covers(shown, preset)
+    fun offers(preset: PickPreset<T>): Boolean = shown.any(preset::takes)
 
-    fun flip(preset: SellPreset) {
+    fun flip(preset: PickPreset<T>) {
         state.value = state.value.flip(shown, preset)
     }
 
     fun clear() {
-        state.value = SellSelection()
+        state.value = PickSelection()
     }
 
-    /** Отмечает [ids], которых ещё нет в [seen], и запоминает их там ([SellSelection.mark]). */
+    /** Отмечает [ids], которых ещё нет в [seen], и запоминает их там ([PickSelection.mark]). */
     fun markNew(ids: Collection<String>, seen: MutableSet<String>) {
         state.value = state.value.mark(ids, seen)
         seen += ids
     }
 }
 
+/** Выбор продажи. */
+typealias SellPick = Pick<SellLot>
+
+/** Сумма отмеченного к продаже. */
+val SellPick.total: Long get() = picked.sumOf { it.price }
+
 /**
  * Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Заранее отмечено [initial]
  * (помеченное к продаже посреди захода). [shown] - id на экране, по которым работают наборы; null - все лоты.
  */
-@Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null, initial: Set<String> = emptySet()): SellPick {
-    val state = remember { mutableStateOf(SellSelection(initial)) }
-    return remember(lots, shown) { SellPick(lots, shown?.let { ids -> lots.filter { it.id in ids } } ?: lots, state) }
+@Composable fun <T : Pickable> rememberPick(lots: List<T>, shown: Set<String>? = null, initial: Set<String> = emptySet()): Pick<T> {
+    val state = remember { mutableStateOf(PickSelection(initial)) }
+    return remember(lots, shown) { Pick(lots, shown?.let { ids -> lots.filter { it.id in ids } } ?: lots, state) }
 }
 
-/** Быстрые наборы над списком: «по правилам автопродажи» и по редкости; включённый снимается тем же нажатием. */
-@Composable fun SellPresetRow(pick: SellPick, modifier: Modifier = Modifier) {
+/** Выбор продажи над [lots] ([rememberPick]). */
+@Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null, initial: Set<String> = emptySet()): SellPick = rememberPick(lots, shown, initial)
+
+/** Быстрые наборы над списком [presets]: подпись и цвет набора - [look]; включённый снимается тем же нажатием. */
+@Composable fun <T : Pickable, P : PickPreset<T>> PresetRow(pick: Pick<T>, presets: List<P>, modifier: Modifier = Modifier, look: (P) -> Pair<String, Color>) {
     Row(modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        SellPreset.ALL.forEach { preset ->
-            val (label, tint) = when (preset) {
-                SellPreset.Rules -> ui("sell.preset_rules") to GoldBright
-                is SellPreset.OfRarity -> ui("stash.rarity_many.${preset.rarity.name}") to rarityColor(preset.rarity.name)
-            }
+        presets.forEach { preset ->
+            val (label, tint) = look(preset)
             PresetChip(label, tint, on = pick.covers(preset), enabled = pick.offers(preset)) { pick.flip(preset) }
+        }
+    }
+}
+
+/** Быстрые наборы продажи: «по правилам автопродажи» и по редкости. */
+@Composable fun SellPresetRow(pick: SellPick, modifier: Modifier = Modifier) {
+    PresetRow(pick, SellPreset.ALL, modifier) { preset ->
+        when (preset) {
+            SellPreset.Rules -> ui("sell.preset_rules") to GoldBright
+            is SellPreset.OfRarity -> ui("stash.rarity_many.${preset.rarity.name}") to rarityColor(preset.rarity.name)
         }
     }
 }
@@ -161,17 +180,31 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 }
 
 @Composable private fun SellRow(pick: SellPick, picked: List<SellLot>, enabled: Boolean, verb: String, onCancel: (() -> Unit)?, onSell: (List<String>) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    PickDock(
+        label = if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size),
+        icon = ForgeGlyphs.Coins,
+        enabled = enabled && picked.isNotEmpty(),
+        figure = ("+" + number(pick.total.toDouble())).takeIf { picked.isNotEmpty() },
+        onCancel = onCancel,
+    ) { onSell(picked.map { it.id }) }
+}
+
+/**
+ * Строка дока выбора пачкой: «Отмена» ([onCancel]) и удерживаемая кнопка действия [label] со значком [icon] и числом [figure]
+ * справа; погашена, пока [enabled] нет. Продажа и вклад в хранилище гильдии - одна строка.
+ */
+@Composable fun PickDock(label: String, icon: ImageVector, enabled: Boolean, figure: String?, onCancel: (() -> Unit)?, modifier: Modifier = Modifier, onConfirm: () -> Unit) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         onCancel?.let { ForgeButton(onClick = it, kind = ButtonKind.Secondary) { Text(ui("common.cancel")) } }
         ForgeButton(
-            onClick = { onSell(picked.map { it.id }) },
+            onClick = onConfirm,
             modifier = Modifier.weight(1f),
-            state = ButtonState.of(enabled && picked.isNotEmpty()),
-            icon = ForgeGlyphs.Coins,
+            state = ButtonState.of(enabled),
+            icon = icon,
             hold = Hold(),
         ) {
-            Text(if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (picked.isNotEmpty()) ButtonFigure("+" + number(pick.total.toDouble()))
+            Text(label, Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            figure?.let { ButtonFigure(it) }
         }
     }
 }

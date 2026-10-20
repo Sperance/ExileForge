@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.guildEntryLevel
+import com.sperance.exileforge.core.app.guildEntryLevels
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
@@ -87,14 +87,14 @@ private enum class Exit(val label: String, val question: String) {
  */
 @Composable internal fun SettingsTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val leader = me != null && GuildPolicy.can(me.role, GuildAction.SETTINGS)
-    val floor = guildEntryLevel(game.index?.rules)
-    val savedLevel = guild.minLevel.coerceAtLeast(floor)
+    val levels = remember(game.index) { guildEntryLevels(game.index) }
+    val draftLevel = guild.minLevel.coerceIn(levels)
     val limit = game.index?.guilds?.announcement ?: 200
     var mode by remember(guild.mode) { mutableStateOf(guild.mode) }
-    var minLevel by remember(savedLevel) { mutableIntStateOf(savedLevel) }
+    var minLevel by remember(draftLevel) { mutableIntStateOf(draftLevel) }
     var announcement by remember(guild.announcement) { mutableStateOf(guild.announcement) }
     val modeChanged = mode != guild.mode
-    val levelChanged = minLevel != savedLevel
+    val levelChanged = minLevel != guild.minLevel
     val textChanged = announcement.trim() != guild.announcement
     val changes = listOf(modeChanged, levelChanged, textChanged).count { it }
     val editable = leader && !game.busy
@@ -105,7 +105,7 @@ private enum class Exit(val label: String, val question: String) {
                 Caption(ui("guild.entry"), modeChanged)
                 ModePicker(mode, editable) { mode = it }
                 OrnateDivider()
-                MinLevelStepper(minLevel, floor, editable, changed = levelChanged) { minLevel = it }
+                MinLevelStepper(minLevel, levels, editable, changed = levelChanged) { minLevel = it }
                 OrnateDivider()
                 Caption(ui("guild.announcement"), textChanged)
                 OutlinedTextField(

@@ -405,6 +405,8 @@ class ExpeditionWorld(
             heroY = ny
         }
         light()
+        val nearExit = atExit
+        if (!nearExit) exitArmed = true
         chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }?.let { chest ->
             chest.opened = true
             return WorldEvent.Opened(chest)
@@ -444,12 +446,10 @@ class ExpeditionWorld(
             if (toHero < rules.contact) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
         }
-        val near = atExit
-        if (near && exitArmed) {
+        if (nearExit && exitArmed) {
             exitArmed = false
             return WorldEvent.Exit
         }
-        if (!near) exitArmed = true
         return null
     }
 

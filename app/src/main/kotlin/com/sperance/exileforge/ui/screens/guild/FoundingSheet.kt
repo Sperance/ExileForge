@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.guildEntryLevel
+import com.sperance.exileforge.core.app.guildEntryLevels
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
@@ -38,8 +38,8 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * the arms, and the way in. The price and the level stand at the bottom; short of either, or with a name
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
  *
- * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат. Порог вступления - не ниже
- * открытия гильдий ([guildEntryLevel]): с него поле и начинается.
+ * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат. Порог вступления - в границах
+ * правил ([guildEntryLevels]): поле начинается с открытия гильдий.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,8 +51,8 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var emblem by remember { mutableStateOf(rules.emblems.firstOrNull().orEmpty()) }
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
-    val floor = guildEntryLevel(game.index?.rules)
-    var minLevel by remember(floor) { mutableIntStateOf(floor) }
+    val levels = remember(game.index) { guildEntryLevels(game.index) }
+    var minLevel by remember(levels.first) { mutableIntStateOf(levels.first) }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)
     val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
@@ -99,10 +99,10 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         MutedText(ui("guild.faction_forever"))
         rules.factions.forEach { FactionCard(it, rules, chosen = it.code == faction) { faction = it.code } }
         Engraved(ui("guild.arms"))
-        ArmsPicker(rules.emblems, rules.colors, emblem, color, enabled = true, onEmblem = { emblem = it }, onColor = { color = it })
+        ArmsPicker(rules.emblems, rules.colors, emblem, color, onEmblem = { emblem = it }, onColor = { color = it })
         Engraved(ui("guild.entry"))
         ModePicker(mode, enabled = true) { mode = it }
-        MinLevelStepper(minLevel, floor, enabled = true) { minLevel = it }
+        MinLevelStepper(minLevel, levels, enabled = true) { minLevel = it }
         OrnateDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
             MutedText(ui("guild.found_price"), Modifier.weight(1f))

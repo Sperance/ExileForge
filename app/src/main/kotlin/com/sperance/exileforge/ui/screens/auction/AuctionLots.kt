@@ -12,8 +12,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -21,7 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -209,15 +206,15 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     var open by rememberSaveable(title) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
-            Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = title) { open = !open }.padding(vertical = 4.dp),
+            Modifier.fillMaxWidth().foldToggle(open, title) { open = !open }.padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(title, color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(entries.size.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
-            Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Gold, modifier = Modifier.size(18.dp))
+            FoldChevron(open, Gold)
         }
-        if (open) entries.forEach { DealLine(game, it, onOpen) }
+        FoldBody(open, Arrangement.spacedBy(4.dp)) { entries.forEach { DealLine(game, it, onOpen) } }
     }
 }
 

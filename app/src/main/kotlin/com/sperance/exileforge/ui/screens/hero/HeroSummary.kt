@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -48,11 +45,14 @@ import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.ui.components.FoldBody
+import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.MightPlaceMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
+import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -217,7 +217,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         if (limits.isNotEmpty()) {
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
             LimitsFold(reached, unfolded, accent) { unfolded = !unfolded }
-            if (unfolded) {
+            FoldBody(unfolded) {
                 limits.forEach { (key, value) ->
                     HorizontalDivider(thickness = 1.dp, color = PanelRaised)
                     StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, open)
@@ -230,7 +230,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
 /** Свёрнутая строка пределов раздела: «Пределы · N упёрлись» ([reached] строк раздела дошли до предела) и стрелка; касание - [onToggle]. */
 @Composable private fun LimitsFold(reached: Int, unfolded: Boolean, accent: Color, onToggle: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onToggle).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
+        Modifier.fillMaxWidth().foldToggle(unfolded, onToggle = onToggle).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -241,7 +241,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.weight(1f),
         )
-        Icon(if (unfolded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(SummaryMetrics.icon))
+        FoldChevron(unfolded, size = SummaryMetrics.icon)
     }
 }
 

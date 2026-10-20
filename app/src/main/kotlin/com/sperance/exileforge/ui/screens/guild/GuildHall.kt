@@ -63,6 +63,7 @@ import kotlin.math.cos
     var opened by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item(key = "points") { TreePoints(game, vm, guild, rule, leader) }
+        item(key = "rules") { TreeRules(rule, leader) }
         item(key = "constellation") { Constellation(rule, guild.tree) { opened = it.code } }
     }
     opened?.let(rule::node)?.let { node ->
@@ -71,7 +72,7 @@ import kotlin.math.cos
 }
 
 /**
- * Шапка древа: «свободно / всего» крупно, уровень гильдии и подсказка с числами правил. Сброс - у главы
+ * Шапка древа: «свободно / всего» крупно и уровень гильдии. Сброс - у главы
  * удержанием; срок «раз в N дней» и живой таймер до следующего сброса видят все участники (первый сброс гильдии - сразу).
  */
 @Composable private fun TreePoints(game: GameUi, vm: GuildViewModel, guild: GuildView, rule: GuildTreeRule, leader: Boolean) {
@@ -106,7 +107,12 @@ import kotlin.math.cos
                 hold = Hold(Hold.RESET_MS),
             ) { Text(ui("guild.tree_reset_hold")) }
         }
-        Spacer(Modifier.height(6.dp))
+    }
+}
+
+/** Правила древа с числами правил - панель [FoldPanel] под шапкой, свёрнутая при каждом входе; глава читает свою версию. */
+@Composable private fun TreeRules(rule: GuildTreeRule, leader: Boolean) {
+    FoldPanel(ui("guild.tree_rules")) {
         MutedText(if (leader) ui("guild.tree_hint_leader", rule.rowGate) else ui("guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
     }
 }

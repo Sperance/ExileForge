@@ -3,8 +3,6 @@ package com.sperance.exileforge.ui.screens.auction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -63,7 +61,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Своей шапки нет: золото героя и время до нового товара - справа в цепочке «Город › Торговец» ([MerchantTrail]), кошелёк больше
- * нигде не печатается - в строках только цена ([GoldCost] без «/ есть», красная при нехватке). ⓘ с правилами торговца - справа над товаром.
+ * нигде не печатается - в строках только цена ([GoldCost] без «/ есть», красная при нехватке).
  *
  * Копия без шаблона в контенте не показывается. Товар - под общим фильтром предметов. Таймер на нуле - витрина перечитывается,
  * карточка ушедшего товара закрывается. Трофеи боссов - над товаром.
@@ -74,7 +72,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     val activity by market.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
-    var notes by remember { mutableStateOf(false) }
     val inspect = rememberInspect()
     val stock = game.hero?.merchant
     val money = game.hero?.money
@@ -96,9 +93,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
         if (chosen != null && stock?.offers.orEmpty().none { it.id == chosen?.id }) chosen = null
     }
     MerchantTrail(money, stock?.refreshAt)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-        ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact)
-    }
     PullToRefreshBox(isRefreshing = Reads.HERO in activity.loading, onRefresh = heroModel::load, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
             if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
@@ -110,7 +104,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             }
         }
     }
-    if (notes) MerchantNotes { notes = false }
     if (filtering) {
         ItemFilterSheet(
             filterState,
@@ -149,18 +142,6 @@ private const val RENEW_SLACK_MS = 1_500L
 private fun countdown(seconds: Long): String {
     val minutes = (seconds + 59) / 60
     return "%d:%02d".format(minutes / 60, minutes % 60)
-}
-
-/** Правила торговца - как витрина обновляется и как назначена цена - за ⓘ над товаром. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun MerchantNotes(onDismiss: () -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Engraved(ui("merchant.title"))
-            Text(ui("merchant.note"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
 }
 
 /**

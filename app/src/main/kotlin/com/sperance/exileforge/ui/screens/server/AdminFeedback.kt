@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.AccountUi
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -481,7 +482,8 @@ private const val DUPLICATE_DIGITS = 6
         )
         var item by remember { mutableStateOf("") }
         var amount by remember { mutableStateOf("1") }
-        Spinner(ui("tester.item"), item, index.items.keys.associate { it.value to itemTitle(it.value) }, !account.busy) { item = it }
+        val itemOptions = remember(index, account.lang) { PickOptions.items(index) }
+        ForgePicker(ui("tester.item"), item, itemOptions, enabled = !account.busy) { item = it }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 amount,
@@ -497,7 +499,8 @@ private const val DUPLICATE_DIGITS = 6
         }
         var template by remember { mutableStateOf("") }
         var rarity by remember { mutableStateOf<Rarity?>(null) }
-        Spinner(ui("mail.template"), template, index.templates.values.associate { it.code to equipmentTitle(it.code) }, !account.busy) { template = it }
+        val templates = remember(index, account.lang) { PickOptions.templates(index) }
+        ForgePicker(ui("mail.template"), template, templates, enabled = !account.busy) { template = it }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ForgeChip(ui("mail.template_rarity"), rarity == null, { rarity = null }, mode = ChipMode.Choice)
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->

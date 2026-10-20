@@ -39,8 +39,11 @@ fun Battle.carry(): HeroCarry {
     )
 }
 
-/** Временные баффы и проклятия героя остатком времени: не глотки, не носимое весь бой и не Разлома. */
-private fun Battle.carriedEffects(): List<CarriedEffect> = heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
+/**
+ * Временные баффы и проклятия героя остатком времени: не глотки пояса, не носимое весь бой и не Разлома. Глоток снятой в походе фляги - не
+ * пояса ([TimedEffect.slot] меньше нуля): он держится до конца срока, как бафф.
+ */
+private fun Battle.carriedEffects(): List<CarriedEffect> = heroFighter.effects.filter { (it.kind != EffectKind.FLASK || it.slot < 0) && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
     CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional, it.stacks)
 }
 

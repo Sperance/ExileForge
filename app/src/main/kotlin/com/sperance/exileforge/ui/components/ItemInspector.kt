@@ -94,7 +94,7 @@ class InspectChoice(val wearInto: Slot?)
 /**
  * Действие места под карточкой: [label] на кнопке, [run] выполняется с выбором карточки, и карточка закрывается. [reason] - почему
  * кнопка погашена, строкой под ней. [hold] - действие по удержанию ([Hold], только у одиночной главной кнопки), [figure] - цена
- * в его ярлыке или справа в строке меню.
+ * в его ярлыке или справа в строке меню. [notes] - что действие изменит, строками над кнопками подвала (у главного действия).
  */
 data class InspectAction(
     val label: String,
@@ -102,6 +102,7 @@ data class InspectAction(
     val reason: String? = null,
     val hold: Boolean = false,
     val figure: String? = null,
+    val notes: (@Composable ColumnScope.() -> Unit)? = null,
     val run: InspectChoice.() -> Unit,
 )
 
@@ -174,10 +175,12 @@ private val NO_CHOICE = InspectChoice(null)
 
 /**
  * Действия карточки [shown]: одно главное - во всю ширину ([InspectButton]); с равным вторым или меню - строкой: главное, второе и
- * квадрат «⋯» с второстепенными. Действие выполняется с выбором [choice] и закрывает лист ([onDone]); почему погашено - под строкой.
+ * квадрат «⋯» с второстепенными. Над ними - что изменит главное ([InspectAction.notes]). Действие выполняется с выбором [choice] и
+ * закрывает лист ([onDone]); почему погашено - под строкой.
  */
 @Composable internal fun ColumnScope.InspectActions(shown: Inspect, choice: InspectChoice, onDone: () -> Unit) {
     val main = shown.action ?: return
+    main.notes?.invoke(this)
     val side = shown.side
     if (side == null && shown.menu.isEmpty()) {
         InspectButton(main, choice, onDone)

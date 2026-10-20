@@ -331,13 +331,14 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
     game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
         game.view(instance)?.let { piece ->
             val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
+            val mark = rememberLootMark(game, instance, flasks = false)
             when {
-                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, onClick = toggle) }
+                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
                 lot != null -> {
                     val marked = lot.chosen(piece.id)
-                    SaleMarked(marked) { PieceLine(piece, presence, selected = marked, onLongClick = { onSelect(piece.id) }) { onItem(piece) } }
+                    SaleMarked(marked) { PieceLine(piece, presence, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
                 }
-                else -> PieceLine(piece, presence) { onItem(piece) }
+                else -> PieceLine(piece, presence, mark = mark) { onItem(piece) }
             }
         }
     }
@@ -385,9 +386,21 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
 
 /**
  * Добытая вещь «Полем боя»: две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
- * Надетая ([presence]) - строкой с меткой «Надето», без действий.
+ * Надетая ([presence]) - строкой с меткой «Надето», без действий. [mark] - метка похода напротив имени и рамка её цвета ([LootMark]).
  */
-@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, selected: Boolean = false, onLongClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, onClick = onClick)
+@Composable internal fun PieceLine(
+    item: ItemView,
+    presence: LootPresence,
+    selected: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    mark: LootMark? = null,
+    onClick: () -> Unit,
+) = if (presence.worn) {
+    WornLootRow(item)
+} else {
+    ItemRow(item, note = mark?.text, noteColor = mark?.color ?: Gold, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, accent = mark?.color, onClick = onClick)
+}
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {

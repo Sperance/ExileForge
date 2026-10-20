@@ -149,6 +149,7 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
                         selected = marked,
                         onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
                         trailing = if (marked) ({ SaleCoin() }) else null,
+                        mark = rememberLootMark(game, instance, flasks = true),
                     ) { onItem(piece) }
                 }
             }

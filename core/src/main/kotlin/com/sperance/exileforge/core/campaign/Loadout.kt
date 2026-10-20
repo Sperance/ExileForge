@@ -18,6 +18,7 @@ import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.ReservePool
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -193,6 +194,8 @@ data class HeroGear(
     val kit: Loadout = Loadout(),
     /** The stats that are a percent already, for lines laid over a sheet without a [model]. */
     val percent: Set<String> = emptySet(),
+    /** Надетое по месту: id вещи - смена набора в походе узнаёт по нему новую флягу ([com.sperance.exileforge.core.campaign.run.ExpeditionRun.wear]). */
+    val worn: Map<Slot, String> = emptyMap(),
 )
 
 /**

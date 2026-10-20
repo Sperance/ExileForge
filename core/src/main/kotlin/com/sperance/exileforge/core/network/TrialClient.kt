@@ -42,9 +42,6 @@ class TrialClient internal constructor(private val http: Transport) {
         ),
     )
 
-    /** Forges a rush key from five crest fragments; the hero's bag comes back with it. */
-    suspend fun forgeKey(heroId: String): Map<String, Long> = http.post("$TRIALS/key", heroQuery(heroId))
-
     /** Enters the tower from its last checkpoint: a tower seal is spent. */
     suspend fun tower(heroId: String): TrialStart = http.post("$TRIALS/tower", heroQuery(heroId))
 

@@ -2,10 +2,12 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.sperance.exileforge.core.model.hero.ServerClock
 import kotlinx.coroutines.delay
 
 /**
@@ -37,3 +39,12 @@ val LocalWallClock = staticCompositionLocalOf<WallClock> { TickingClock }
 
 /** «Сейчас» для живой подписи с тактом [tickMs]. */
 @Composable fun rememberNow(tickMs: Long): State<Long> = LocalWallClock.current.now(tickMs)
+
+/**
+ * Сколько мс осталось до [until] (мс эпохи сервера) по часам сервера ([ServerClock]) для живой подписи с тактом [tickMs]; срок вышел -
+ * 0. «Сейчас» - из часов экрана ([rememberNow]), к нему прибавляется сдвиг часов сервера.
+ */
+@Composable fun rememberServerLeft(until: Long, tickMs: Long): Long {
+    val now by rememberNow(tickMs)
+    return (until - now - ServerClock.offset).coerceAtLeast(0)
+}

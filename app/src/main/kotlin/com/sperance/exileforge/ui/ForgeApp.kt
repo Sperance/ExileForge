@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Density
@@ -85,7 +84,6 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable fun ForgeApp(updates: UpdateModel) {
     val shell: ShellViewModel = koinViewModel()
-    val context = LocalContext.current
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
     val rift by shell.rift.collectAsStateWithLifecycle()
@@ -101,15 +99,16 @@ import org.koin.compose.viewmodel.koinViewModel
         view.keepScreenOn = lit
         onDispose { view.keepScreenOn = false }
     }
-    val haptics = remember(context) { Haptics(context.applicationContext) }
-    LaunchedEffect(shell, haptics) { shell.buzzes.collect(haptics::play) }
+    val buzzes = koinInject<Buzzes>()
+    val haptics = koinInject<Haptics>()
+    LaunchedEffect(buzzes, haptics) { buzzes.flow.collect(haptics::play) }
     val settingsModel = koinViewModel<SettingsViewModel>()
     CompositionLocalProvider(
         LocalUpdates provides updates,
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
-        com.sperance.exileforge.ui.components.LocalBuzzes provides koinInject<Buzzes>(),
+        com.sperance.exileforge.ui.components.LocalBuzzes provides buzzes,
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
         com.sperance.exileforge.ui.components.DecorClockHost { ForgeScreens() }

@@ -2,10 +2,14 @@ package com.sperance.exileforge.core.model.guild
 
 import com.sperance.exileforge.rules.content.GuildRank
 import com.sperance.exileforge.rules.content.GuildRules
+import java.util.concurrent.TimeUnit
 
 /** Что экраны читают из `guilds.json` сверх посчитанного сервером: длины формы, полосу уровня и путь к следующему рангу. */
 val GuildRules.nameLength: IntRange get() = (name.getOrNull(0) ?: 3)..(name.getOrNull(1) ?: 24)
 val GuildRules.tagLength: IntRange get() = (tag.getOrNull(0) ?: 2)..(tag.getOrNull(1) ?: 4)
+
+/** Когда герой, созданный в [heroCreatedAt] (мс эпохи сервера), вправе основать гильдию: через `create.heroDays` суток, в мс сервера. */
+fun GuildRules.foundableAt(heroCreatedAt: Long): Long = heroCreatedAt + TimeUnit.DAYS.toMillis(create.heroDays.toLong())
 
 /** How far a guild of [level] with [experience] is through its level, 0..1; full at the top. */
 fun GuildRules.levelProgress(level: Int, experience: Long): Float {

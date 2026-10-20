@@ -19,7 +19,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,7 +42,6 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -59,7 +57,6 @@ import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
@@ -192,15 +189,7 @@ private fun continues(game: GameUi, zone: MapCode, launch: MapLaunch, forced: Se
 }
 
 /** Сколько целых секунд до [readyAt] по часам сервера, вживую раз в секунду; 0 - можно сейчас. */
-@Composable private fun seedWait(readyAt: Long): Long {
-    val now by produceState(ServerClock.now(), readyAt) {
-        while (readyAt > value) {
-            delay(SEED_TICK_MS)
-            value = ServerClock.now()
-        }
-    }
-    return ((readyAt - now + SEED_TICK_MS - 1) / SEED_TICK_MS).coerceAtLeast(0)
-}
+@Composable private fun seedWait(readyAt: Long): Long = (rememberServerLeft(readyAt, SEED_TICK_MS) + SEED_TICK_MS - 1) / SEED_TICK_MS
 
 /** Шаг отсчёта до нового семени: секунда. */
 private const val SEED_TICK_MS = 1000L

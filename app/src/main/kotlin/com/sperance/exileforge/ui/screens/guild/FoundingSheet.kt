@@ -17,9 +17,9 @@ import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.guild.foundableAt
 import com.sperance.exileforge.core.model.guild.nameLength
 import com.sperance.exileforge.core.model.guild.tagLength
-import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.rules.content.GuildFaction
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
@@ -28,7 +28,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
-import java.util.concurrent.TimeUnit
 
 /** What the founding form hands over: name, tag, faction, emblem, colour, mode and the level to join. */
 internal typealias Founding = (String, String, String, String, String, GuildMode, Int) -> Unit
@@ -56,7 +55,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var minLevel by remember(levels.first) { mutableIntStateOf(levels.first) }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)
-    val wait = foundingWait(game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) })
+    val wait = rememberServerLeft(game.heroRow?.createdAtMs?.let(rules::foundableAt) ?: 0, AGE_TICK_MS)
     val refusal = when {
         !game.freeProgress && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
         !game.freeProgress && wait > 0 -> ui("guild.found_age", rules.create.heroDays, timeLeft(wait))
@@ -114,16 +113,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     }
 }
 
-/**
- * Сколько герою ждать права основать гильдию до [readyAt] (мс эпохи сервера) по часам сервера ([ServerClock]); 0 - срок вышел или
- * неизвестен. Тикает раз в [AGE_TICK_MS], пока лист открыт: срок выходит - кнопка включается сама.
- */
-@Composable private fun foundingWait(readyAt: Long?): Long {
-    val now by rememberNow(AGE_TICK_MS)
-    return readyAt?.let { (it - now - ServerClock.offset).coerceAtLeast(0) } ?: 0
-}
-
-/** Такт часов срока основания. */
+/** Такт часов срока основания: срок выходит, пока лист открыт, - кнопка включается сама. */
 private const val AGE_TICK_MS = 15_000L
 
 /** One faction to choose: its sign, name and word, the card lit in the faction's own colour when chosen. */

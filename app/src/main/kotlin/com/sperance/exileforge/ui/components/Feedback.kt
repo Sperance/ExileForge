@@ -250,12 +250,11 @@ private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownR
         fate,
         own.issue,
         own.createdAt,
-        reportThread(own.issue, own.reason, own.answers),
+        own.thread,
         dim = fate.closed && !focused,
         fresh = fresh,
         focused = focused,
-        onAnswer = onAnswer.takeIf { own.answerable },
-        answering = enabled,
+        answer = AnswerSlot(enabled, onAnswer).takeIf { own.answerable },
         topic = own.topic,
     ) {
         Score(own.likes, own.dislikes)
@@ -265,7 +264,7 @@ private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownR
 
 @Composable private fun KnownCard(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
     val fate = ReportFate.of(known.status, known.issue)
-    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, reportThread(known.issue, ""), dim = false) {
+    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, known.issue?.notes.orEmpty(), dim = false) {
         if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
         VoteRow(known, enabled, onVote)
     }

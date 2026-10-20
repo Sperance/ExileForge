@@ -33,9 +33,10 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * What an icon says about itself: its name in its colour, the rule in words, and the
- * figures it carries — strength, time left, stacks — as label and value. Числа строк - цветом [valueTint].
+ * figures it carries — strength, time left, stacks — as label and value. Числа строк - цветом [valueTint]. Без заголовка
+ * [title] (null или пусто) подсказка - один текст [body].
  */
-data class Tip(val title: String, val body: String = "", val tint: Color = GoldBright, val facts: List<Pair<String, String>> = emptyList(), val valueTint: Color = GoldBright)
+data class Tip(val title: String? = null, val body: String = "", val tint: Color = GoldBright, val facts: List<Pair<String, String>> = emptyList(), val valueTint: Color = GoldBright)
 
 /**
  * An icon that explains itself: a tap opens [tip] as a small window growing out of the
@@ -89,10 +90,10 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
 /** Сторона знака ⓘ. */
 private val InfoGlyphSide = 18.dp
 
-/** The window itself, anchored to whatever holds it. Пустой заголовок не печатается; под строками - [footer] (действие подсказки), если есть. */
+/** The window itself, anchored to whatever holds it. Заголовок без текста не печатается; под строками - [footer] (действие подсказки), если есть. */
 @Composable fun TipCallout(tip: Tip, footer: (@Composable ColumnScope.() -> Unit)? = null, onClose: () -> Unit) {
     TipCallout(tip.tint, onClose) {
-        if (tip.title.isNotBlank()) Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        tip.title?.takeIf { it.isNotBlank() }?.let { Text(it, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold) }
         if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)
         tip.facts.forEach { (label, value) ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

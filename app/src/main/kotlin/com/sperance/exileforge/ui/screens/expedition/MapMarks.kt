@@ -145,7 +145,7 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
                 open = true
                 onOpen?.invoke()
             }
-            .semantics { contentDescription = tip().let { listOf(it.title, it.body).filter(String::isNotBlank).joinToString(". ") } }
+            .semantics { contentDescription = tip().let { listOfNotNull(it.title, it.body).filter(String::isNotBlank).joinToString(". ") } }
             .touchZone()
             .height(MARK_HEIGHT).background(MarkWell, shape).background(tint.copy(alpha = .13f), shape).border(1.dp, tint.copy(alpha = .62f), shape)
             .padding(start = 6.dp, end = 8.dp),

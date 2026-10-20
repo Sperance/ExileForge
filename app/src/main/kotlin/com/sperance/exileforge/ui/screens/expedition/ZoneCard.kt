@@ -163,7 +163,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             icon = ForgeGlyphs.Portal,
             onDisabledClick = why?.let { { explain = true } },
         ) { Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        if (explain && why != null) TipCallout(Tip("", why, Muted)) { explain = false }
+        if (explain && why != null) TipCallout(Tip(body = why, tint = Muted)) { explain = false }
     }
 }
 
@@ -229,7 +229,7 @@ private const val SEED_TICK_MS = 1000L
             Text(ui("expedition.unknown_zone"), color = Muted, style = style, modifier = Modifier.weight(1f))
         } else {
             val name = mapTitle(zone.code)
-            Box(Modifier.weight(1f)) { TapText(name, GoldBright, style, { Tip("", mapDescription(zone.code.value)) }, maxLines = 2) }
+            Box(Modifier.weight(1f)) { TapText(name, GoldBright, style, { Tip(body = mapDescription(zone.code.value)) }, maxLines = 2) }
         }
         val (label, tint) = when (token.state) {
             TokenState.PASSED -> ui("expedition.token_passed") to Gold

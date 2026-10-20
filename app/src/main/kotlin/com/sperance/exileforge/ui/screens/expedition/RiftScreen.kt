@@ -625,7 +625,7 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
             hold = if (hold) Hold() else null,
             onDisabledClick = why?.let { { explain = true } },
         ) { Text(ui("rift.node_go")) }
-        if (explain && why != null) TipCallout(Tip("", ui(why), RiftColors.Warn)) { explain = false }
+        if (explain && why != null) TipCallout(Tip(body = ui(why), tint = RiftColors.Warn)) { explain = false }
     }
 }
 

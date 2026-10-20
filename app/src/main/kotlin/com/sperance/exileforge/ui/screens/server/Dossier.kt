@@ -439,7 +439,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
             }
             Text("›", color = Muted, style = MaterialTheme.typography.titleMedium)
         }
-        if (explain) TipCallout(Tip("", ui("moderation.protected"), Muted)) { explain = false }
+        if (explain) TipCallout(Tip(body = ui("moderation.protected"), tint = Muted)) { explain = false }
     }
 }
 

@@ -156,7 +156,7 @@ fun BugSheet(
     ) {
         Checkbox(checked, onCheckedChange = null, colors = CheckboxDefaults.colors(checkedColor = Gold, uncheckedColor = Muted, checkmarkColor = Ink))
         Text(ui("bug.server_log"), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
-        InfoMark(ui("bug.server_log"), tip = { Tip("", ui("bug.server_log_tip"), Muted) })
+        InfoMark(ui("bug.server_log"), tip = { Tip(body = ui("bug.server_log_tip"), tint = Muted) })
     }
 }
 

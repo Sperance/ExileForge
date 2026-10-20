@@ -120,7 +120,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
 
 /** Пунктирный «?» вместо карт: в тайнике нет карты зоны уровня [level]; касание - откуда они берутся. */
 @Composable private fun NoMaps(level: Int) {
-    Tipped({ Tip("", ui("expedition.launch_no_maps", level), Muted) }) {
+    Tipped({ Tip(body = ui("expedition.launch_no_maps", level), tint = Muted) }) {
         Box(Modifier.size(52.dp).background(Abyss).dashedBorder(Muted, RectangleShape), contentAlignment = Alignment.Center) {
             Text("?", color = Muted, style = MaterialTheme.typography.titleMedium)
         }
@@ -158,7 +158,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             val title = listOfNotNull(rarityTitle(rarity, game.lang), picked.item.mapTier.takeIf { it > 0 }?.let { ui("expedition.launch_tier", it) }).joinToString(" · ")
             val note = listOfNotNull(ui("expedition.launch_rarity_line", number(own)).takeIf { own > 0 }, ui("expedition.launch_spent")).joinToString("\n")
-            TapText(title, tint, MaterialTheme.typography.titleSmall, { Tip("", note, tint) }, Modifier.weight(1f))
+            TapText(title, tint, MaterialTheme.typography.titleSmall, { Tip(body = note, tint = tint) }, Modifier.weight(1f))
             Figure(bonus.quantity, ui("expedition.launch_loot"))
             Figure(bonus.rarity, ui("expedition.launch_rarity"))
         }
@@ -185,7 +185,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
         Box(Modifier.size(16.dp).border(1.dp, tint, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
             Text(name.take(1), color = tint, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
-        TapText(ui("expedition.capture.title", name), tint, MaterialTheme.typography.bodySmall, { Tip("", parts.joinToString("\n"), tint) })
+        TapText(ui("expedition.capture.title", name), tint, MaterialTheme.typography.bodySmall, { Tip(body = parts.joinToString("\n"), tint = tint) })
         Text(
             ui("expedition.capture.short", number(capture.power), number(capture.items)),
             color = Muted,
@@ -223,7 +223,7 @@ internal fun tierGate(index: ContentIndex, level: Int?): String? {
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Rhombus(tint, 7.dp)
-        Tipped(line.note?.let { note -> { Tip("", note, tint) } }, Modifier.weight(1f)) {
+        Tipped(line.note?.let { note -> { Tip(body = note, tint = tint) } }, Modifier.weight(1f)) {
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)
         }
         if (line.kind == MapLineKind.HARM && line.risk > 0) {

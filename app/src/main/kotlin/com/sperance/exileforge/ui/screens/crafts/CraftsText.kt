@@ -48,7 +48,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
-import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.roman
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ruleRefusal
@@ -109,7 +108,7 @@ fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
 fun jobProduct(view: JobView): String = when (val job = view.job) {
     is Job.Item -> itemTitle(job.output)
     is Job.Equipment -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
-    is Job.Chart -> ui("crafts.kind_map", regionTitle(job.region))
+    is Job.Chart -> ui("crafts.kind_map", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
     is Job.Flask -> equipmentTitle(job.output)
     is Job.Book -> ui("crafts.kind_book", job.upTo)
     is Job.Condense -> ui("crafts.kind_condense")

@@ -412,7 +412,7 @@
   "crafts.duration_seconds": "{0} s",
   "crafts.idle": "The hero is not working now. Pick a profession and a work.",
   "crafts.kind_equipment": "Gear of levels {0}–{1}: the group and attribute you choose, random slot and rarity",
-  "crafts.kind_map": "A map of a random open zone of «{0}»",
+  "crafts.kind_map": "A map of a random open zone of levels {0}–{1}, the map level within them",
   "crafts.level": "Lv. {0}",
   "crafts.level_eta": "to Lv. {0} · {1}",
   "crafts.loading_hint": "Loading your professions",

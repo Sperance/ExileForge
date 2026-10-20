@@ -223,5 +223,5 @@ private fun riftTip(boss: BossHud, guard: RiftGuard): Tip = when (guard) {
     ) { ChipDiamond(BlightTint.hot) { burst.value } }
 }
 
-/** Римский номер фазы: I-VI, дальше - арабскими. */
+/** Римский номер фазы: до шестой - римскими цифрами, дальше - арабскими. */
 internal fun phaseRoman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").getOrElse(n - 1) { n.toString() }

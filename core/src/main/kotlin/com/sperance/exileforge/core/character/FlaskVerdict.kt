@@ -64,13 +64,13 @@ data class FlaskRow(
  */
 data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift? = null) : GearVerdict {
     /** Строк, что станут лучше и хуже. */
-    val better: Int get() = rows.count { it.shift == Shift.UP }
-    val worse: Int get() = rows.count { it.shift == Shift.DOWN }
+    val rising: Int get() = rows.count { it.shift == Shift.UP }
+    val falling: Int get() = rows.count { it.shift == Shift.DOWN }
 
     /** Итог одной стрелкой: только лучше, только хуже или поровну. */
     val shift: Shift get() = when {
-        better > 0 && worse == 0 -> Shift.UP
-        worse > 0 && better == 0 -> Shift.DOWN
+        rising > 0 && falling == 0 -> Shift.UP
+        falling > 0 && rising == 0 -> Shift.DOWN
         else -> Shift.EVEN
     }
 

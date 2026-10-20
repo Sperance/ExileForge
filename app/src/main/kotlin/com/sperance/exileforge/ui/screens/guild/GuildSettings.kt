@@ -72,15 +72,13 @@ private enum class Exit(val label: String, val question: String) {
 
 /**
  * The guild's settings (раздел только главы - [com.sperance.exileforge.core.guild.GuildTab.SETTINGS]): the way in, the
- * level to join, the arms and the word to all. Выход - в меню шапки зала ([GuildExitMenu]).
+ * level to join and the word to all; герб и цвет задаются только при основании. Выход - в меню шапки зала ([GuildExitMenu]).
  */
 @Composable internal fun SettingsTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rules = game.index?.guilds
     val leader = me != null && GuildPolicy.can(me.role, GuildAction.SETTINGS)
     var mode by remember(guild.mode) { mutableStateOf(guild.mode) }
     var minLevel by remember(guild.minLevel) { mutableStateOf(guild.minLevel.toString()) }
-    var emblem by remember(guild.emblem) { mutableStateOf(guild.emblem) }
-    var color by remember(guild.color) { mutableStateOf(guild.color) }
     var announcement by remember(guild.announcement) { mutableStateOf(guild.announcement) }
     val limit = rules?.announcement ?: 200
     val editable = leader && !game.busy
@@ -90,14 +88,6 @@ private enum class Exit(val label: String, val question: String) {
                 Engraved(ui("guild.entry"))
                 ModePicker(mode, editable) { mode = it }
                 MinLevelField(minLevel, editable) { minLevel = it }
-            }
-        }
-        rules?.let { r ->
-            item {
-                ForgePanel {
-                    Engraved(ui("guild.arms"))
-                    ArmsPicker(r.emblems, r.colors, emblem, color, editable, { emblem = it }, { color = it })
-                }
             }
         }
         item {
@@ -115,7 +105,7 @@ private enum class Exit(val label: String, val question: String) {
                 if (leader) {
                     ForgeButton(state = ButtonState.of(!game.busy), onClick = {
                         val floor = guildEntryLevel(game.index?.rules)
-                        vm.settings(mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor), emblem, color, announcement.trim())
+                        vm.settings(mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor), announcement.trim())
                     }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.save")) }
                 }
             }

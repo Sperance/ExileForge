@@ -55,7 +55,7 @@ class GuildViewModel(
     fun renewCode() = actions.renewCode()
     fun joinByCode(code: String) = actions.joinByCode(code)
     fun member(command: MemberCommand, memberId: String) = actions.member(command, memberId)
-    fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = actions.settings(mode, minLevel, emblem, color, announcement)
+    fun settings(mode: GuildMode, minLevel: Int, announcement: String) = actions.settings(mode, minLevel, announcement)
     fun takeNode(node: String) = actions.takeNode(node)
     fun resetTree() = actions.resetTree()
     fun loadStash() = actions.loadStash()

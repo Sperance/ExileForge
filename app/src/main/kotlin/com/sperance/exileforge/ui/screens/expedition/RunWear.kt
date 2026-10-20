@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -25,8 +26,6 @@ import com.sperance.exileforge.ui.components.rememberGearVerdict
 import com.sperance.exileforge.ui.theme.Boon
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -71,7 +70,8 @@ internal class RunWearing(val lock: GearLock?, val wearable: Set<String>)
     val run by vm.run.collectAsStateWithLifecycle()
     val wearable = vm.state.collectAsStateWithLifecycle().value.wearable
     val shown = run ?: return null
-    val lock by remember(shown) { shown.hud.map { it.gearLock }.distinctUntilChanged() }.collectAsStateWithLifecycle(shown.hud.value.gearLock)
+    val hud = shown.hud.collectAsStateWithLifecycle()
+    val lock by remember(hud) { derivedStateOf { hud.value.gearLock } }
     return RunWearing(lock, wearable)
 }
 

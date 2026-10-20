@@ -347,6 +347,7 @@ class ExpeditionActions(
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
+            speed = prefs.fightSpeed(i.rules.fight),
         ).also { r -> if (toBoss) r.send(RunCommand.ToBoss) }
         vaalKilled = started.vaalKilled
         persist()
@@ -658,6 +659,7 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
+            speed = prefs.fightSpeed(i.rules.fight),
         )
         parent = outer
         mutableRun.value = inner

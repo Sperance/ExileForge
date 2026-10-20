@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.expedition
 
+import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.RiftStyles
 import com.sperance.exileforge.core.campaign.run.FightReport
@@ -71,6 +72,7 @@ class RiftActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
+    private val prefs: PreferencesRepository,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -203,7 +205,7 @@ class RiftActions(
         val fight = board.fight ?: return null
         val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
         val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
-        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate) { end -> deliver(end) }
+        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate, prefs.fightSpeed(index.rules.fight)) { end -> deliver(end) }
     }
 
     private companion object {

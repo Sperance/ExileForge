@@ -11,6 +11,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class GameSettings(
     val keepScreen: KeepScreen = KeepScreen.EXPEDITION,
+    /** Скорость, с которой начинается каждый бой - одна из скоростей правил `fight.speeds`; кнопка боя меняет её дальше по кругу. */
+    val fightSpeed: Int = 1,
     val damageNumbers: DamageNumbers = DamageNumbers.ALL,
     /** The hero's life share, in per cent, under which a running fight pauses by itself; 0 never. */
     val autoPause: Int = 0,

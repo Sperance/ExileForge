@@ -634,6 +634,7 @@ class ExpeditionRun(
          * «меньше сопротивлений» карты. Порядок расстановки: объекты карты - после прочих (их места не сдвигают сундуков и кристаллов);
          * сделки алтарей, стражи сокровищ, стаи Следопыта и монстры стоявших объектов - до павших. Принесённое из основной карты в
          * Ваал-зону - на листе героя сразу. [bossSlain] - страж карты уже пал в этом заходе (счёт сервера): ускорение [swift] держится.
+         * [speed] - скорость боёв захода на входе, дальше её меняет кнопка скорости.
          */
         fun start(
             index: ContentIndex,
@@ -658,6 +659,7 @@ class ExpeditionRun(
             summoned: Int = 0,
             bossSlain: Boolean = false,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
+            speed: Int = 1,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
@@ -700,6 +702,7 @@ class ExpeditionRun(
                 if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
                 it.summons = campaign.summons
                 it.summoned = summoned
+                it.speed = speed
             }
         }
 

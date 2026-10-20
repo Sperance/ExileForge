@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.expedition
 
+import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialPhase
@@ -42,6 +43,7 @@ class TrialActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
+    private val prefs: PreferencesRepository,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -93,7 +95,7 @@ class TrialActions(
             pending.clear()
             batch = null
         }
-        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.campaign.trials.towerPicks, onEvent = ::recorded)
+        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.campaign.trials.towerPicks, onEvent = ::recorded, speed = prefs.fightSpeed(index.rules.fight))
     }
 
     /** «Завершить»: открытое на сервере испытание без арены здесь - приложение закрылось посреди - кончается, принесённое остаётся. */

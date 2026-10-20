@@ -18,7 +18,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
+import kotlinx.coroutines.delay
 
 /** Форма значка-кнопки. */
 enum class IconButtonShape {
@@ -47,6 +53,12 @@ enum class IconButtonShape {
 /** Сторона зоны касания значка-кнопки любого размера. */
 private val TouchSide = 44.dp
 
+/** Автоповтор удержания: первый повтор через [REPEAT_FIRST_MS], шаг с [REPEAT_START_MS] сжимается в [REPEAT_PACE] раза до [REPEAT_FAST_MS]. */
+private const val REPEAT_FIRST_MS = 400L
+private const val REPEAT_START_MS = 180L
+private const val REPEAT_FAST_MS = 40L
+private const val REPEAT_PACE = .8
+
 /** Сторона видимой кнопки и значка по размеру: [ButtonSize.Auto] - как широкая. */
 private val ButtonSize.side: Dp get() = if (this == ButtonSize.Auto) ButtonSize.Wide.height else height
 private val ButtonSize.glyph: Dp get() = when (this) {
@@ -59,7 +71,8 @@ private val ButtonSize.glyph: Dp get() = when (this) {
  * Значок-кнопка игры: значок [icon] в скруглённом квадрате или круге ([shape]) размера [size] (40/32/30 dp) в зоне касания 44.
  * [contentDescription] - обязательное имя для чтения с экрана. Оси - как у [ForgeButton]: [kind] ([ButtonKind.Secondary] -
  * тональная, [ButtonKind.Text] - без фона), [state], [accent] (цвет значка и окантовки - открытое, мир экрана). [badge] - счётчик
- * в углу цветом [badgeColor] (ноль не показывается), для чтения с экрана - в описании состояния.
+ * в углу цветом [badgeColor] (ноль не показывается), для чтения с экрана - в описании состояния. [repeatOnHold] - автоповтор:
+ * удержание повторяет [onClick] всё чаще, пока кнопка доступна; отпускание после повторов лишнего шага не делает.
  */
 @Composable fun ForgeIconButton(
     icon: ImageVector,
@@ -73,9 +86,25 @@ private val ButtonSize.glyph: Dp get() = when (this) {
     shape: IconButtonShape = IconButtonShape.Rounded,
     badge: Int? = null,
     badgeColor: Color = ButtonInk.Badge,
+    repeatOnHold: Boolean = false,
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
+    val action by rememberUpdatedState(onClick)
+    var repeated by remember { mutableStateOf(false) }
+    if (repeatOnHold && state == ButtonState.Enabled && pressed.value) {
+        LaunchedEffect(Unit) {
+            repeated = false
+            delay(REPEAT_FIRST_MS)
+            var pause = REPEAT_START_MS
+            while (true) {
+                repeated = true
+                action()
+                delay(pause)
+                pause = (pause * REPEAT_PACE).toLong().coerceAtLeast(REPEAT_FAST_MS)
+            }
+        }
+    }
     val disabled = state is ButtonState.Disabled
     val look = remember(kind, disabled, accent) {
         if (disabled) offLook(kind) else liveLook(kind, accent ?: Parchment.takeIf { kind == ButtonKind.Text }, secondaryInk = Parchment)
@@ -86,7 +115,8 @@ private val ButtonSize.glyph: Dp get() = when (this) {
     Box(
         modifier.size(TouchSide)
             .clickable(source, indication = null, enabled = state == ButtonState.Enabled || state == ButtonState.Busy, role = Role.Button) {
-                if (state == ButtonState.Enabled) onClick()
+                if (state != ButtonState.Enabled) return@clickable
+                if (repeated) repeated = false else onClick()
             }
             .semantics {
                 when {

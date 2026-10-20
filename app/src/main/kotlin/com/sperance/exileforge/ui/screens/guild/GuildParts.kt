@@ -76,7 +76,6 @@ internal fun ArmsPicker(
     colors: List<String>,
     emblem: String,
     color: String,
-    enabled: Boolean,
     onEmblem: (String) -> Unit,
     onColor: (String) -> Unit,
 ) {
@@ -84,7 +83,7 @@ internal fun ArmsPicker(
         emblems.forEach { code ->
             Box(
                 Modifier.border(2.dp, if (code == emblem) GoldBright else Color.Transparent, RoundedCornerShape(12.dp)).padding(2.dp)
-                    .clickable(enabled = enabled, onClickLabel = GuildText.emblem(code)) { onEmblem(code) },
+                    .clickable(onClickLabel = GuildText.emblem(code)) { onEmblem(code) },
             ) { GuildEmblem(code, color, 40.dp) }
         }
     }
@@ -92,7 +91,7 @@ internal fun ArmsPicker(
         colors.forEach { hex ->
             Box(
                 Modifier.size(30.dp).border(2.dp, if (hex == color) GoldBright else Bronze, CircleShape).padding(4.dp)
-                    .background(guildColor(hex), CircleShape).clickable(enabled = enabled) { onColor(hex) },
+                    .background(guildColor(hex), CircleShape).clickable { onColor(hex) },
             )
         }
     }
@@ -137,14 +136,11 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
     GuildMode.INVITE -> ui("guild.mode_hint_invite")
 }
 
-/** Наибольший уровень для вступления, что ставит степпер. */
-private const val MAX_ENTRY_LEVEL = 999
-
 /**
- * Уровень героя для вступления степпером «−»/«+» в границах [floor]..[MAX_ENTRY_LEVEL]: ниже порога открытия гильдий [floor]
- * не опустить - «−» на пороге погашен. [changed] - значение правлено и не сохранено (точка у подписи).
+ * Уровень героя для вступления степпером «−»/«+» с шагом 1 в границах [levels] (правила гильдий, `guildEntryLevels`): на краю
+ * кнопка погашена, удержание листает с ускорением. [changed] - значение правлено и не сохранено (точка у подписи).
  */
-@Composable internal fun MinLevelStepper(value: Int, floor: Int, enabled: Boolean, changed: Boolean = false, onChange: (Int) -> Unit) {
+@Composable internal fun MinLevelStepper(value: Int, levels: IntRange, enabled: Boolean, changed: Boolean = false, onChange: (Int) -> Unit) {
     val well = RoundedCornerShape(10.dp)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
@@ -152,15 +148,29 @@ private const val MAX_ENTRY_LEVEL = 999
                 Text(ui("guild.hero_level"), color = Parchment, style = MaterialTheme.typography.titleSmall)
                 if (changed) ChangedDot()
             }
-            Text(ui("guild.level_from", floor), color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text(ui("guild.level_from", levels.first), color = Muted, style = MaterialTheme.typography.bodySmall)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            ForgeIconButton(Icons.Outlined.Remove, ui("guild.level_down"), { onChange(value - 1) }, kind = ButtonKind.Secondary, state = ButtonState.of(enabled && value > floor))
+            ForgeIconButton(
+                Icons.Outlined.Remove,
+                ui("guild.level_down"),
+                { onChange((value - 1).coerceIn(levels)) },
+                kind = ButtonKind.Secondary,
+                state = ButtonState.of(enabled && value > levels.first),
+                repeatOnHold = true,
+            )
             Box(
                 Modifier.widthIn(min = 52.dp).height(ButtonSize.Wide.height).background(Abyss, well).border(1.dp, Bronze, well).padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(value.toString(), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-            ForgeIconButton(Icons.Outlined.Add, ui("guild.level_up"), { onChange(value + 1) }, kind = ButtonKind.Secondary, state = ButtonState.of(enabled && value < MAX_ENTRY_LEVEL))
+            ForgeIconButton(
+                Icons.Outlined.Add,
+                ui("guild.level_up"),
+                { onChange((value + 1).coerceIn(levels)) },
+                kind = ButtonKind.Secondary,
+                state = ButtonState.of(enabled && value < levels.last),
+                repeatOnHold = true,
+            )
         }
     }
 }

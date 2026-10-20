@@ -104,6 +104,6 @@ internal fun runWearAction(game: GameUi, vm: ExpeditionViewModel, item: ItemInst
     }
     shown.flask?.let { flask ->
         Text(ui("expedition.wear_flask", flask.maxCharges), color = Boon, style = MaterialTheme.typography.bodySmall)
-        flask.replaced?.let { id -> game.hero?.item(id)?.let(game::view) }?.let { old -> MutedText(ui("expedition.wear_flask_replace", flask.slot + 1, old.title, flask.lost)) }
+        flask.replaced?.let { id -> game.hero?.item(id)?.let { game.view(it) } }?.let { old -> MutedText(ui("expedition.wear_flask_replace", flask.slot + 1, old.title, flask.lost)) }
     }
 }

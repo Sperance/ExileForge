@@ -24,7 +24,7 @@ import kotlin.math.roundToInt
 /**
  * What a modifier line is, behind a tap on it: its name and sentence, where it sits (prefix, suffix,
  * implicit…), its tier out of how many, the tier's range and where the roll landed inside it.
- * The range lives here, not on the line.
+ * The range lives here, not on the line. Под фразой - пояснение характеристики ([ItemLine.note]), если оно есть (строки карты).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +45,7 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
                 )
             }
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+            line.note?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodySmall) }
             Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Fact(ui("modinfo.kind"), line.kindText())
                 if (line.roll.tier > 0 && line.tierCount > 0) TierScale(line.roll.tier, line.tierOpen)

@@ -200,12 +200,15 @@ fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, ca
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
 
+/** Группы характеристик, у каждой из которых есть пояснение в словаре сервера (`stat.desc.<код>`, `LocalizationTest`). */
+private val explainedGroups = setOf(StatGroup.ATLAS, StatGroup.MAP)
+
 /**
- * Пояснение строки узла Атласа: что делает её характеристика, словами сервера (`stat.desc.<код>` - есть у каждой
- * характеристики Атласа) - серой строкой под строкой узла; строка не Атласа - null.
+ * Пояснение строки модификатора [def]: что делает её характеристика, словами сервера (`stat.desc.<код>`). Атлас печатает его серой
+ * строкой под строкой узла, карта - подсказкой по касанию строки; характеристика без пояснения (не Атласа и не карты) - null.
  */
-fun atlasLineNote(index: ContentIndex, line: Line): String? = index.modifier(line.code)?.effectOf(0)?.stat
-    ?.takeIf { index.stats[it]?.group == StatGroup.ATLAS }
+fun lineNote(index: ContentIndex, def: ModifierDef?): String? = def?.effectOf(0)?.stat
+    ?.takeIf { index.stats[it]?.group in explainedGroups }
     ?.let { loc(LocaleKey.statDescription(it)) }
 
 /**

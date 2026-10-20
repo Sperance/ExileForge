@@ -145,6 +145,8 @@ data class ItemLine(
     val itemLevel: Int = 0,
     /** Строка, усиленная усилителями своей вещи: [values] и [text] - уже итог, ролл и процент - здесь; null - как есть. */
     val amplified: AmplifiedLine? = null,
+    /** Пояснение характеристики строки словами сервера ([lineNote]) - у строк карты; null - пояснения нет. */
+    val note: String? = null,
 ) {
     val code: ModifierCode get() = roll.code
 
@@ -257,7 +259,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             val amplified = if (ranged) null else Amplify.line(index, roll, item.rolls)
             val values = amplified?.shown ?: def?.let(roll::values).orEmpty()
             val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values, template.slot) } ?: modifierLine(index, it, values, template.slot) } ?: displayName(roll.code.value)
-            ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level, amplified)
+            ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level, amplified, lineNote(index, def))
         }
     }
 

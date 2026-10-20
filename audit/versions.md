@@ -13,7 +13,7 @@
 - 93 - 0.16.6 - снят `GET admin/feedback/detail` (`ReportDetail`); `BugReportRequest|OwnReport|FullReport.topic` (улучшение администратора), `CrashTrace.count` на сервере (склейка падений отчёта).
 - 94 - 0.16.8 - `MailRequest.userId`, `POST guild/stash/tab/name` (`GuildStashTab.name`), `WorkView.stoppedAt` и `POST hero/crafts/resume`, `Received.deferred` и `POST hero/campaign/settle` (`CampaignState.pendingSale`), `TrapKind.shape` вместо `reach/rearm`, `CombatRules.tempo`.
 - 95 - 0.16.9 - событие журнала `REGEAR` и `RunStart.wearable` (надевание в походе), `RushTier.unique`, `Item.bound`, `GuildRules.entryLevelMax`, снят `POST hero/trials/key`, `hero/sell?unequip`, отказы `CH_043`/`CH_044`.
-- 96 - 0.16.10 - `Job.additives` - код группы, `CraftingRules.additives` - группы с эффектами `AdditiveEffect` (`MODIFIER`/`YIELD`), `CraftsState.additives`; `hero/orb?count` (пачка сферы качества), снят `hero/merchant/buyOrb` и `rules.merchant.orbs`; поля контента `room` (семейство) и `cost` (вариант верстака); `Job.Chart.band` вместо `region`, счётчик `MAP_RUNS`.
+- 96 - 0.16.10 - `Job.additives` - код группы, `CraftingRules.additives` - группы с эффектами `AdditiveEffect` (`MODIFIER`/`YIELD`), `CraftsState.additives`; `hero/orb?count` (пачка сферы качества), снят `hero/merchant/buyOrb` и `rules.merchant.orbs`; поля контента `room` (семейство) и `cost` (вариант верстака); `Job.Chart.band` вместо `region`, счётчик `MAP_RUNS`; почта без частотных лимитов и уровня (из `rules.mail` сняты `perDay`/`perRecipient`/`guildPerDay`/`cooldownSeconds`/`windowHours`, из `unlocks` - `MAIL`; `mail/quota` без `to` и полей счёта; `MailGate` - `OPEN`/`MUTED`).
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 
@@ -30,7 +30,6 @@
 
 ## Формы коллекций и миграции (`config/CollectionSchemas.kt`)
 
-- `HeroItem` 1 - 0.16.0 - новая коллекция тайника: документ на копию вещи `heroId:itemId`, в герое - надетое и вставленное.
 - `task.heroItems` 1 - 0.16.0 - тайник и переполнение героев перенесены в `HeroItem`, id и номера копий целы.
 - `task.atlasRebuild` 1 - 0.16.0 - узлы нового дерева Атласа сняты бесплатно, очки целы, герою письмо.
 - `task.looseJewels` 1 - 0.16.2 - самоцветы из невзятых гнёзд дерева - в тайник.
@@ -40,3 +39,4 @@
 - часть `Hero.merchantOrbs` 1 - 0.16.10 - снято поле `merchant.orbs` (полка сфер торговца), документы целы.
 - `task.retiredHybrids` 1 - 0.16.10 - гибриды инструментов на копиях (Hero, HeroItem, HeroRun, Mail, AuctionLot, Guild) - одиночным главным свойством с тем же числом (одиночный той же группы - большее число, занятая сторона - следующее свойство), дно редкости держится.
 - `task.chartBands` 1 - 0.16.10 - идущая работа картографа `CHART_REGION_N` - в `CHART_BAND_*` своих уровней.
+- `MailStamp`, `MailCounter` - 0.16.10 - сняты (`CollectionSchemas.RETIRED`): журнал и счётчик пределов почты не нужны, старт сносит их и их записи `Schema`.

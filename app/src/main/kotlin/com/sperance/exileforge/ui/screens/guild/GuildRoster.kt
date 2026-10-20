@@ -8,18 +8,11 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,13 +32,14 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.ClassPortrait
-import com.sperance.exileforge.ui.components.CompactSearchField
 import com.sperance.exileforge.ui.components.FateMark
-import com.sperance.exileforge.ui.components.ForgeMenu
 import com.sperance.exileforge.ui.components.GuildRoleMark
 import com.sperance.exileforge.ui.components.MightLine
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PresenceDot
+import com.sperance.exileforge.ui.components.SearchBar
+import com.sperance.exileforge.ui.components.SortButton
+import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.ring
 import com.sperance.exileforge.ui.screens.hero.titleName
@@ -54,7 +48,6 @@ import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Vital
@@ -98,7 +91,7 @@ internal enum class RosterFilter(private val key: String, val keeps: (GuildMembe
 /** Подходит ли участник под поиск [query] - часть имени без учёта регистра; пустой поиск пропускает всех. */
 internal fun GuildMember.named(query: String): Boolean = name.contains(query.trim(), ignoreCase = true)
 
-/** Поиск по имени над составом - плотное поле; справа - кнопка порядка ([RosterSort]) и, если есть, хвост [trailing] в том же ряду. */
+/** Поиск по имени над составом - строка поиска ([SearchBar]); справа - кнопка порядка ([RosterSort]) и, если есть, хвост [trailing] в том же ряду. */
 @Composable internal fun RosterSearch(
     game: GameUi,
     query: String,
@@ -107,52 +100,27 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
     onOrder: (RosterOrder?) -> Unit,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        CompactSearchField(query, { onQuery(it.take(game.inputs.heroName)) }, ui("guild.roster_search"), Modifier.weight(1f))
+    SearchBar(query, { onQuery(it.take(game.inputs.heroName)) }, ui("guild.roster_search")) {
         RosterSort(order, onOrder)
         trailing?.invoke(this)
     }
 }
 
 /**
- * Кнопка порядка «⇅»: меню столбцов ([RosterColumn]) и порядок по ролям; повторный выбор столбца - обратный порядок.
+ * Кнопка порядка «⇅» ([SortButton]): меню столбцов ([RosterColumn]) и порядок по ролям; повторный выбор столбца - обратный порядок.
  * Выбранный порядок подсвечивает кнопку.
  */
 @Composable private fun RosterSort(order: RosterOrder?, onOrder: (RosterOrder?) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(10.dp)
-    Box {
-        Box(
-            Modifier.size(40.dp).clip(shape).background(Panel).border(1.dp, if (order != null) Gold.copy(alpha = .6f) else Bronze, shape)
-                .clickable(onClickLabel = ui("guild.sort")) { open = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.SwapVert, ui("guild.sort"), tint = if (order != null) GoldBright else Muted, modifier = Modifier.size(20.dp))
+    val byRole = SortOption(ui("guild.sort_role"), order == null) { onOrder(null) }
+    val columns = RosterColumn.entries.map { column ->
+        val mark = when {
+            order?.column != column -> ""
+            order.descending -> " ↓"
+            else -> " ↑"
         }
-        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            DropdownMenuItem(
-                text = { Text(ui("guild.sort_role"), color = if (order == null) GoldBright else Parchment) },
-                onClick = {
-                    open = false
-                    onOrder(null)
-                },
-            )
-            RosterColumn.entries.forEach { column ->
-                val mark = when {
-                    order?.column != column -> ""
-                    order.descending -> " ↓"
-                    else -> " ↑"
-                }
-                DropdownMenuItem(
-                    text = { Text(ui(column.title) + mark, color = if (order?.column == column) GoldBright else Parchment) },
-                    onClick = {
-                        open = false
-                        onOrder(order.next(column))
-                    },
-                )
-            }
-        }
+        SortOption(ui(column.title) + mark, order?.column == column) { onOrder(order.next(column)) }
     }
+    SortButton(null, listOf(byRole) + columns, marked = order != null)
 }
 
 /** Плотные чипы отбора: у каждого - сколько участников [members] под ним проходит; выбранный - в нити `Gold`. */

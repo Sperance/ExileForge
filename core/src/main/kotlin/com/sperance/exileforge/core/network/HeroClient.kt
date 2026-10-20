@@ -133,6 +133,14 @@ class HeroClient internal constructor(private val http: Transport) {
         http.request("POST", "$HERO/grant/$what", heroQuery(heroId, *params), authenticated = true)
     }
 
+    /**
+     * Свободный прогресс [on] героя-тестировщика (`hero/tester/freeProgress`): не выдача - переключает его только сам тестировщик, прочим
+     * сервер отказывает; ответ - уровень героя.
+     */
+    suspend fun freeProgress(heroId: String, on: Boolean) {
+        http.request("POST", "$HERO/tester/freeProgress", heroQuery(heroId, "on" to on.toString()), authenticated = true)
+    }
+
     /** Puts an item on; [slot] names which ring or flask place to take, the server picks a free one without it. */
     suspend fun equip(heroId: String, itemId: String, slot: Slot? = null): ItemInstance {
         requireItemId(itemId)

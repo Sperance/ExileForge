@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.fate.FateView
+import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.network.SanctionNotice
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,18 +40,21 @@ data class Session(
     val isModerator: Boolean get() = isAdmin || (signedIn && profile?.role == "MODERATOR")
 
     /**
-     * Тестировщик ли герой [holding]: отметка героя, не роль аккаунта - окно тестирования, выдачи и замки
-     * прогресса только у героя-тестировщика; живой снимок героя главнее строки списка героев.
+     * Тестировщик ли герой [holding]: отметка героя, не роль аккаунта - окно тестирования и выдачи только у героя-тестировщика; живой
+     * снимок героя главнее строки списка героев.
      */
-    fun tester(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.tester
-        ?: (characters.firstOrNull { it.id == holding.heroId }?.tester == true)
+    fun tester(holding: HeroHolding): Boolean = hero(holding, { it.tester }, { it.tester })
 
     /**
      * Свободен ли прогресс героя [holding]: тестировщик включил «Свободный прогресс» в окне тестирования - замки уровня и прогресса
-     * открыты, как на сервере (`ProgressGate`); выключен - тестировщик идёт по прогрессу, как игрок. Живой снимок главнее строки списка.
+     * открыты, как на сервере; выключен - тестировщик идёт по прогрессу, как игрок. Признак готов у сервера (`ProgressGate.free`: без
+     * отметки тестировщика его нет), клиент его не пересчитывает.
      */
-    fun free(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.let { it.tester && it.freeProgress }
-        ?: (characters.firstOrNull { it.id == holding.heroId }?.let { it.tester && it.freeProgress } == true)
+    fun freeProgress(holding: HeroHolding): Boolean = hero(holding, { it.freeProgress }, { it.freeProgress })
+
+    /** Признак героя [holding]: из живого снимка ([live]), пока он того же героя, иначе из строки списка героев ([listed]); нет героя - нет. */
+    private fun hero(holding: HeroHolding, live: (HeroInfo) -> Boolean, listed: (HeroSummary) -> Boolean): Boolean =
+        holding.hero?.takeIf { it.id == holding.heroId }?.info?.let(live) ?: (characters.firstOrNull { it.id == holding.heroId }?.let(listed) == true)
 
     /** Откроет ли сервер выдачи окна тестирования герою [holding]: администратор - любому, иначе - тестировщику. */
     fun grants(holding: HeroHolding): Boolean = isAdmin || tester(holding)

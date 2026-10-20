@@ -86,7 +86,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val keys = hero.bag[TrialRules.KEY] ?: 0L
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !game.busy
-    val free = game.freeProgress
+    val freeProgress = game.freeProgress
     val rift by vm.riftState.collectAsState()
     var opened by rememberSaveable { mutableStateOf<TrialMode?>(null) }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -147,7 +147,7 @@ import org.koin.compose.viewmodel.koinViewModel
             details = towerEntry.takeUnless { conquered },
         )
         val cleared = hero.campaign.cleared
-        val unlocked = index.campaign.regions.filter { free || RushPlan.open(it, cleared) }
+        val unlocked = index.campaign.regions.filter { freeProgress || RushPlan.open(it, cleared) }
         TrialModeCard(
             TrialMode.RUSH,
             note = null,
@@ -157,7 +157,7 @@ import org.koin.compose.viewmodel.koinViewModel
             phase = 2f / 3,
             onToggle = { toggle(TrialMode.RUSH) },
         ) {
-            unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, free) }
+            unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, freeProgress) }
             index.campaign.regions.filterNot { it in unlocked }.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
                 LockedRegion(near, near.zones.count { it.code !in cleared })
             }
@@ -206,13 +206,13 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
  * цифры выбранной ступени с подписями ([RushTierFacts]) и широкая «Войти · ступень N»; без ключа или при идущем испытании она погашена
  * и пишет причину. Тестировщику со свободным прогрессом (`ProgressGate`) лента показывает все ступени открытыми.
  */
-@Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, free: Boolean) {
+@Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, freeProgress: Boolean) {
     val trials = game.hero?.campaign?.trials ?: return
     val best = trials.rushBest[region.code]
     val count = rules.rush.tierCount
     val passed = (trials.rushTiers[region.code] ?: 0).coerceIn(0, count)
     val lowest = passed.coerceAtMost(count - 1)
-    val shown = if (free) count else minOf(passed + 1, count)
+    val shown = if (freeProgress) count else minOf(passed + 1, count)
     var tier by remember(region.code, lowest) { mutableStateOf(lowest) }
     val cleared = region.code in trials.rushCleared
     val shape = RoundedCornerShape(12.dp)

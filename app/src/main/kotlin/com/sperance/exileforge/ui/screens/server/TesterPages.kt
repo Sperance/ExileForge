@@ -38,8 +38,9 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Стопка за раз - не больше `moderation.grantStack`; редкости выдачи - по шаблону (`ItemFactory.grantable`). Случайная вещь - шаблон
  * выбранных редкости и места (пусто - любые), вещь по шаблону - на выбранной редкости, если шаблону дано больше одной.
- * Герою-тестировщику сверху - переключатель «Свободный прогресс» (`hero/grant/freeProgress`): включён - замки уровня и прогресса
- * открыты в клиенте и на сервере, выключен (по умолчанию) - тестировщик идёт по прогрессу, как игрок.
+ * Герою-тестировщику сверху - переключатель «Свободный прогресс» (`hero/tester/freeProgress`, не выдача: только сам тестировщик, и от
+ * администратора тоже): включён - замки уровня и прогресса открыты в клиенте и на сервере, выключен (по умолчанию) - тестировщик идёт
+ * по прогрессу, как игрок.
  */
 @Composable internal fun TestingPage(account: AccountUi) {
     val heroModel: HeroViewModel = koinViewModel()
@@ -50,7 +51,7 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     TrailData(account.heroName, Tip("", ui("tester.for_hero", account.heroName), Muted))
-    if (account.isTester) FreeProgress(account.freeProgress, enabled) { heroModel.testerGrant("freeProgress", "on" to it.toString()) }
+    if (account.isTester) FreeProgress(account.freeProgress, enabled) { heroModel.freeProgress(it) }
     ForgePanel {
         Engraved(ui("tester.currency"))
         NumberGrant(ui("tester.gold"), "1000000", account.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }

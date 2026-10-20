@@ -69,6 +69,15 @@ class HeroActions(
         sync.readHero()
     }
 
+    /**
+     * Тестировщику: свободный прогресс [on] героя в игре - замки уровня и прогресса открыты или закрыты; снимок героя - заново. Не
+     * тестировщику отказывает сервер (`AUTH_007`).
+     */
+    fun freeProgress(on: Boolean) = heroCommand { id ->
+        api.hero.freeProgress(id, on)
+        sync.readHero()
+    }
+
     /** Тестеру или админу: названный шаблон герою, брошенный сервером. */
     fun grant(template: String, rarity: Rarity? = null) = heroCommand { id ->
         check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }

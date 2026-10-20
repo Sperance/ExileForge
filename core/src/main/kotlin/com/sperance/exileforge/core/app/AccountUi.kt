@@ -30,7 +30,7 @@ data class AccountUi(
     val isTester: Boolean get() = session.tester(hero)
 
     /** Свободный прогресс выбранного героя-тестировщика включён: переключатель окна тестирования. */
-    val freeProgress: Boolean get() = session.free(hero)
+    val freeProgress: Boolean get() = session.freeProgress(hero)
 
     /** Окно тестирования: герою-тестировщику и любому герою администратора. */
     val grants: Boolean get() = session.grants(hero)

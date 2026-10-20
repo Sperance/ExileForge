@@ -64,7 +64,7 @@ class Navigator(
     fun gate(route: Route): Boolean {
         val feature = Feature.ofBuilding(route.building) ?: Feature.ofTab(route.tab) ?: return true
         val holding = heroes.state.value
-        if (sessions.state.value.free(holding)) return true
+        if (sessions.state.value.freeProgress(holding)) return true
         val level = holding.hero?.level ?: sessions.state.value.characters.firstOrNull { it.id == holding.heroId }?.level ?: 1
         val needed = feature.level(world.state.value.content?.rules)
         if (level >= needed) return true

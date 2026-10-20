@@ -66,7 +66,7 @@ data class GameUi(
     val isTester: Boolean get() = session.tester(holding)
 
     /** Прогресс героя в игре свободен: тестировщик включил «Свободный прогресс» - замки уровня и прогресса открыты. */
-    val freeProgress: Boolean get() = session.free(holding)
+    val freeProgress: Boolean get() = session.freeProgress(holding)
 
     /** Модератор или администратор: ему открыты инструменты администратора; права проверяет сервер. */
     val isModerator: Boolean get() = session.isModerator

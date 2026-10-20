@@ -216,18 +216,18 @@ class ExpeditionActions(
     /** Карта из сундука, с которой войти, или null - войти без неё. */
     fun pickMap(itemId: String?) = expedition { e -> e.copy(launch = e.launch?.let { l -> l.copy(picked = itemId, scarabs = if (itemId == null) emptyList() else l.scarabs) }) }
 
-    /** Механика, что тестировщик ставит на заход насильно: переключить одну; не тестировщику - ничего. */
+    /** Механика, что тестировщик со свободным прогрессом ставит на заход насильно: переключить одну; без свободного прогресса - ничего. */
     fun toggleForced(mechanic: MapMechanic) {
-        if (tester) expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
+        if (freeProgress) expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
     }
 
-    /** Все механики разом - или ни одной; не тестировщику - ничего. */
+    /** Все механики разом - или ни одной; без свободного прогресса - ничего. */
     fun forceAll(on: Boolean) {
-        if (tester) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
+        if (freeProgress) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
     }
 
     /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
-    private val tester: Boolean get() = sessions.state.value.free(heroes.state.value)
+    private val freeProgress: Boolean get() = sessions.state.value.freeProgress(heroes.state.value)
 
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
@@ -251,7 +251,7 @@ class ExpeditionActions(
      *
      * [toBoss] (тестировщик и выше) - сразу бой со стражем.
      */
-    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && tester)
+    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && freeProgress)
 
     /** Заход в зону [mapCode]; [toBoss] - сразу бой со стражем. */
     fun start(mapCode: MapCode, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss)

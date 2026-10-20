@@ -102,11 +102,11 @@ enum class ButtonSize(val height: Dp, internal val padding: Dp, internal val ico
      */
     Auto(Dp.Unspecified, 16.dp, 18.dp, 8.dp),
 
-    /** Широкая 44 dp: подвал листа, кнопка во всю ширину. */
-    Wide(44.dp, 20.dp, 18.dp, 8.dp),
+    /** Широкая 40 dp: подвал листа, кнопка во всю ширину. */
+    Wide(40.dp, 20.dp, 18.dp, 8.dp),
 
-    /** Компактная 36 dp: в строке, рядом с текстом. */
-    Compact(36.dp, 16.dp, 18.dp, 8.dp),
+    /** Компактная 32 dp: в строке, рядом с текстом. */
+    Compact(32.dp, 16.dp, 18.dp, 8.dp),
 
     /** Малая 30 dp: плотные строки (карточка игрока, модерация). */
     Small(30.dp, 10.dp, 15.dp, 6.dp),
@@ -190,7 +190,7 @@ private val LocalButtonLive = staticCompositionLocalOf { true }
  * Кнопка игры - единственная: экраны зовут её, а не кнопки Material (сторож сборки `:app:forgeButtonsOnly`).
  *
  * [kind] - вид ([ButtonKind]), [size] - размер ([ButtonSize]), [state] - состояние ([ButtonState]). Форма - скруглённый прямоугольник
- * (10/9/7 dp по высоте), зона касания - не меньше 44 dp. [icon] - значок слева от подписи. [accent] - цвет места из темы (Бездна,
+ * (10/8/7 dp по высоте), зона касания - не меньше 44 dp. [icon] - значок слева от подписи. [accent] - цвет места из темы (Бездна,
  * алтарь Ваал, атлас, сущности кузницы): у главной - заливка и окантовка, у вторичной и текстовой - окантовка и слова, у удержания -
  * окантовка, фон и шкала; слова на заливке система подбирает по яркости, опасную акцент не красит. [hold] - режим удержания ([Hold]):
  * [onClick] срабатывает по полному удержанию. [onDisabledClick] - касание погашенной кнопки (например, «сначала выбери карту»).
@@ -285,7 +285,7 @@ private val FigureBrush = Brush.verticalGradient(listOf(GoldBright, Gold))
     }
 }
 
-/** Высота по размеру; [ButtonSize.Auto] - задана ширина - 44 dp, иначе 36 dp. Содержимое выше - кнопка растёт. */
+/** Высота по размеру; [ButtonSize.Auto] - задана ширина - 40 dp, иначе 32 dp. Содержимое выше - кнопка растёт. */
 private fun Modifier.forgeHeight(size: ButtonSize): Modifier = layout { measurable, constraints ->
     val height = when {
         size != ButtonSize.Auto -> size.height

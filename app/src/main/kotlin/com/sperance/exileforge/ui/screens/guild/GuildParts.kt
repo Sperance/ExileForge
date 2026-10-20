@@ -6,7 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
@@ -31,6 +33,7 @@ import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
@@ -134,16 +137,36 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
     GuildMode.INVITE -> ui("guild.mode_hint_invite")
 }
 
-/** The level a hero needs to join, typed as digits. */
-@Composable internal fun MinLevelField(value: String, enabled: Boolean, onChange: (String) -> Unit) = OutlinedTextField(
-    value,
-    { onChange(it.filter(Char::isDigit).take(3)) },
-    label = { Text(ui("guild.min_level")) },
-    enabled = enabled,
-    singleLine = true,
-    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-    modifier = Modifier.fillMaxWidth(),
-)
+/** Наибольший уровень для вступления, что ставит степпер. */
+private const val MAX_ENTRY_LEVEL = 999
+
+/**
+ * Уровень героя для вступления степпером «−»/«+» в границах [floor]..[MAX_ENTRY_LEVEL]: ниже порога открытия гильдий [floor]
+ * не опустить - «−» на пороге погашен. [changed] - значение правлено и не сохранено (точка у подписи).
+ */
+@Composable internal fun MinLevelStepper(value: Int, floor: Int, enabled: Boolean, changed: Boolean = false, onChange: (Int) -> Unit) {
+    val well = RoundedCornerShape(10.dp)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(ui("guild.hero_level"), color = Parchment, style = MaterialTheme.typography.titleSmall)
+                if (changed) ChangedDot()
+            }
+            Text(ui("guild.level_from", floor), color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            ForgeIconButton(Icons.Outlined.Remove, ui("guild.level_down"), { onChange(value - 1) }, kind = ButtonKind.Secondary, state = ButtonState.of(enabled && value > floor))
+            Box(
+                Modifier.widthIn(min = 52.dp).height(ButtonSize.Wide.height).background(Abyss, well).border(1.dp, Bronze, well).padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(value.toString(), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
+            ForgeIconButton(Icons.Outlined.Add, ui("guild.level_up"), { onChange(value + 1) }, kind = ButtonKind.Secondary, state = ButtonState.of(enabled && value < MAX_ENTRY_LEVEL))
+        }
+    }
+}
+
+/** Точка «правлено, не сохранено» у настройки гильдии. */
+@Composable internal fun ChangedDot() = Box(Modifier.size(7.dp).background(Gold, CircleShape))
 
 /** An epoch-millisecond moment by the device's clock, «dd.MM HH:mm». */
 internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM HH:mm"))

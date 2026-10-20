@@ -52,7 +52,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
     val floor = guildEntryLevel(game.index?.rules)
-    var minLevel by remember(floor) { mutableStateOf(floor.toString()) }
+    var minLevel by remember(floor) { mutableIntStateOf(floor) }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)
     val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
@@ -70,7 +70,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         body = SheetBody.Scroll(),
         footer = {
             ForgeButton(
-                onClick = { onFound(name.trim(), tag, faction, emblem, color, mode, (minLevel.toIntOrNull() ?: floor).coerceAtLeast(floor)) },
+                onClick = { onFound(name.trim(), tag, faction, emblem, color, mode, minLevel) },
                 modifier = Modifier.weight(1f),
                 state = ButtonState.of(!game.busy && refusal == null),
                 icon = ForgeGlyphs.Banner,
@@ -102,7 +102,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
         ArmsPicker(rules.emblems, rules.colors, emblem, color, enabled = true, onEmblem = { emblem = it }, onColor = { color = it })
         Engraved(ui("guild.entry"))
         ModePicker(mode, enabled = true) { mode = it }
-        MinLevelField(minLevel, enabled = true) { minLevel = it }
+        MinLevelStepper(minLevel, floor, enabled = true) { minLevel = it }
         OrnateDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
             MutedText(ui("guild.found_price"), Modifier.weight(1f))

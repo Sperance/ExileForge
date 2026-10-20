@@ -93,7 +93,7 @@ class GuildActions(
     /** Вступление по коду гильдии. */
     fun joinByCode(code: String) = moving(ui("guild.toast.joined_code")) { api.guild.joinByCode(it, code) }
     fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
-    fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
+    fun settings(mode: GuildMode, minLevel: Int, announcement: String) = inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, announcement) }
 
     /** Древо бонусов: глава берёт ранг или сбрасывает всё. */
     fun takeNode(node: String) = moving(ui("guild.toast.node")) { api.guild.takeNode(it, node) }

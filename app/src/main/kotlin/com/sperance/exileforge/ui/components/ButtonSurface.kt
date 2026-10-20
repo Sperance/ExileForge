@@ -112,10 +112,9 @@ internal fun liveLook(kind: ButtonKind, accent: Color?, secondaryInk: Color = Go
 /** Погашенная окраска вида: у текстовой - без фона, у прочих - штриховка. */
 internal fun offLook(kind: ButtonKind): SurfaceLook = if (kind == ButtonKind.Text) bareLook(Muted, Color.Transparent) else OffLook
 
-/** Скругление по высоте: 44 - 10 dp, 36 - 9, чип 32 - 8, малая 30 - 7; выросшая по содержимому кнопка остаётся при 10. */
+/** Скругление по высоте: широкая 40 - 10 dp, компактная и чип 32 - 8, малая 30 - 7; выросшая по содержимому кнопка остаётся при 10. */
 internal fun cornerFor(height: Dp): Dp = when {
-    height >= 43.5.dp -> 10.dp
-    height >= 35.5.dp -> 9.dp
+    height >= 39.5.dp -> 10.dp
     height >= 31.5.dp -> 8.dp
     else -> 7.dp
 }

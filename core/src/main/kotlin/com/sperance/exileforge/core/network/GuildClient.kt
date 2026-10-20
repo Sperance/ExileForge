@@ -112,15 +112,13 @@ class GuildClient internal constructor(private val http: Transport) {
     suspend fun tabRank(heroId: String, tab: Int, minRank: Int): com.sperance.exileforge.core.model.guild.GuildStashView = http.post("$GUILD/stash/tab", heroQuery(heroId, "tab" to tab.toString(), "minRank" to minRank.toString()))
     suspend fun tabName(heroId: String, tab: Int, name: String): com.sperance.exileforge.core.model.guild.GuildStashView = http.post("$GUILD/stash/tab/name", heroQuery(heroId, "tab" to tab.toString(), "name" to name))
 
-    /** Every setting is sent, the announcement as a parameter — an empty one clears it. */
-    suspend fun settings(heroId: String, mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String): GuildView = http.post(
+    /** Настройки гильдии - все сразу, объявление параметром (пустое стирает его); герб и цвет задаются только при основании. */
+    suspend fun settings(heroId: String, mode: GuildMode, minLevel: Int, announcement: String): GuildView = http.post(
         "$GUILD/settings",
         heroQuery(
             heroId,
             "mode" to mode.name,
             "minLevel" to minLevel.toString(),
-            "emblem" to emblem,
-            "color" to color,
             "announcement" to announcement,
         ),
     )

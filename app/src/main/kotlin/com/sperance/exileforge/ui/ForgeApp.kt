@@ -208,7 +208,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
             if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.isTester || game.isModerator) { sheets.reports = null } }
+            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
             if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
             if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()

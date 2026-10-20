@@ -4448,7 +4448,7 @@
   "feedback.admin.accept": "Accept",
   "feedback.admin.reject": "Reject",
   "feedback.admin.steer": "Close…",
-  "feedback.admin.issue_link": "Issue #{0} ↗",
+  "feedback.issue_link": "Issue #{0} ↗",
   "feedback.admin.score": "▲{0} ▼{1}",
   "feedback.admin.hero_line": "{0}, lv {1}",
   "feedback.read_all": "Read in full",

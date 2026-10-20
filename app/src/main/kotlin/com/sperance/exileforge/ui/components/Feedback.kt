@@ -200,7 +200,9 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
                 )
             }
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
-                ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, issueLinks, model) { deleting = it }
+                CompositionLocalProvider(LocalIssueLinks provides issueLinks) {
+                    ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, model) { deleting = it }
+                }
             }
             deleting?.let { id -> ReportDeleteConfirm(activity.busy, onDismiss = { deleting = null }) { model.deleteReport(id) } }
         }
@@ -211,7 +213,7 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
  * Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. Свой отчёт
  * [focus] подсвечен, и «Мои» прокручены к нему, как только он пришёл.
  */
-@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, issueLinks: Boolean, model: FeedbackModel, onDelete: (String) -> Unit) {
+@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel, onDelete: (String) -> Unit) {
     val list = rememberLazyListState()
     val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
     val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { tab == ReportsTab.MINE && it >= 0 }
@@ -220,13 +222,13 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
         when (tab) {
             ReportsTab.MINE -> {
                 if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
-                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, issueLinks, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
+                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
             }
 
             ReportsTab.KNOWN -> {
                 val known = knownList(feedback.known, query)
                 if (known.isEmpty()) item { MutedText(ui("feedback.none_known")) }
-                items(known, key = { it.id }) { KnownCard(it, enabled, issueLinks) { v -> model.vote(it.id, v) } }
+                items(known, key = { it.id }) { KnownCard(it, enabled) { v -> model.vote(it.id, v) } }
             }
         }
     }
@@ -240,22 +242,20 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 /** Ответить в Issue можно, пока он открыт. */
-@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, issueLinks: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
+@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
     val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
     ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, reportThread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer, topic = own.topic) {
         Score(own.likes, own.dislikes)
-        if (issueLinks) own.issue?.let { IssueLink(it, ButtonSize.Small) }
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }
 }
 
-@Composable private fun KnownCard(known: KnownReport, enabled: Boolean, issueLinks: Boolean, onVote: (Vote) -> Unit) {
+@Composable private fun KnownCard(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
     val fate = ReportFate.of(known.status, known.issue)
     ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, reportThread(known.issue, ""), dim = false) {
         if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
         VoteRow(known, enabled, onVote)
-        if (issueLinks) known.issue?.let { IssueLink(it, ButtonSize.Small) }
     }
 }
 

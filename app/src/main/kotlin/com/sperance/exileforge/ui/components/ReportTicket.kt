@@ -40,7 +40,7 @@ import com.sperance.exileforge.ui.theme.*
  * Карточка отчёта - тикет, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
  * логин, герой ссылкой на его карточку и место); текст до трёх строк; путь отчёта шкалой из трёх шагов ([StepPath]); переписка цитатами;
  * ответ автора; [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
- * места (ссылка на Issue - [IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
+ * места, а с [issueLink] (по умолчанию - [LocalIssueLinks]) перед ними - «Issue #N ↗» ([IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
  * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
  * (у модерации сворачивает тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
  */
@@ -60,6 +60,7 @@ import com.sperance.exileforge.ui.theme.*
     author: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
     topic: ReportTopic = ReportTopic.ERROR,
+    issueLink: Boolean = LocalIssueLinks.current,
     footer: @Composable RowScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
@@ -88,6 +89,7 @@ import com.sperance.exileforge.ui.theme.*
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            if (issueLink) issue?.let { IssueLink(it) }
             footer()
         }
     }
@@ -184,14 +186,14 @@ internal fun reportThread(issue: IssueView?, reason: String): List<Pair<NoteAuth
     }
 }
 
-/**
- * «Issue #N ↗» - Issue отчёта на GitHub во внешнем браузере; пока у Issue нет адреса, погашена. Подвал тикета модерации, а у игрока -
- * только тестировщику и модерации.
- */
-@Composable internal fun IssueLink(issue: IssueView, size: ButtonSize = ButtonSize.Auto) {
+/** Видна ли в тикетах игрока ссылка «Issue #N ↗»: лист отчётов задаёт её по [com.sperance.exileforge.core.app.GameUi.seesIssues]. */
+internal val LocalIssueLinks = staticCompositionLocalOf { false }
+
+/** «Issue #N ↗» - Issue отчёта на GitHub во внешнем браузере; пока у Issue нет адреса, погашена. */
+@Composable private fun IssueLink(issue: IssueView) {
     val uri = LocalUriHandler.current
-    ForgeButton(state = ButtonState.of(issue.url.startsWith("http")), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary, size = size, accent = Gold) {
-        Text(ui("feedback.admin.issue_link", issue.number), maxLines = 1, softWrap = false)
+    ForgeButton(state = ButtonState.of(issue.hasUrl), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary, size = ButtonSize.Small, accent = Gold) {
+        Text(ui("feedback.issue_link", issue.number), maxLines = 1, softWrap = false)
     }
 }
 

@@ -1,6 +1,9 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.campaign.FightReading
+import com.sperance.exileforge.core.campaign.FlowMeasure
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.core.i18n.ui
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -110,3 +113,12 @@ fun flowLine(flow: LifeFlow, life: Double, max: Double): FlowLine? = when {
     flow.drainsShieldOnly(life, max) -> FlowLine(FlowSubject.SHIELD, flowRate(-flow.shielded), FlowTone.LOSS)
     else -> null
 }
+
+/** Число [value] строки [stat] со знаком и мерой потока: «+4.2/с», «−1.5/с», «+12 за убийство». */
+fun FlowMeasure.text(stat: String, value: Double): String = ui(key, signedNumber(value) { statNumber(stat, it) })
+
+/** Число [figure] источника строки-потока [stat] с его вкладом [value] в её мере: «+4% увеличения ≈ +0.1/с». */
+fun FlowMeasure.gives(stat: String, figure: String, value: Double): String = ui("stat.flow.gives", figure, text(stat, value))
+
+/** Итог строки сводки [stat]: строка-поток ([FightReading.measure]) - со знаком и мерой, прочие - [statValue]. */
+fun rowValue(stat: String, value: Double, index: ContentIndex? = null): String = FightReading.measure(stat)?.text(stat, value) ?: statValue(stat, value, index)

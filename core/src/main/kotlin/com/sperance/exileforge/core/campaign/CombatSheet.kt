@@ -45,6 +45,9 @@ interface SheetReading {
     val from: String
     val creates: Boolean
 
+    /** Мера строки-потока ([FlowMeasure]): итог и вклады её разбора печатаются с ней; не поток - null. */
+    val measure: FlowMeasure? get() = null
+
     /** Шаги чтения тела [body] поверх цифры [stat]; null - чтение одной прибавкой характеристики [from]. */
     fun steps(body: Combatant): List<ReadingStep>? = null
 
@@ -62,7 +65,7 @@ interface SheetReading {
  * максимума - строку регенерации ([creates]). Часть строки сводки из контента (`StatDef.partOf`) читается здесь же - так строка и её
  * разбор сходятся с боем.
  */
-enum class FightReading(override val stat: String, override val from: String, override val creates: Boolean) : SheetReading {
+enum class FightReading(override val stat: String, override val from: String, override val creates: Boolean, override val measure: FlowMeasure? = null) : SheetReading {
     FIRE(CoreStat.RESIST_FIRE.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
     COLD(CoreStat.RESIST_COLD.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
@@ -71,7 +74,7 @@ enum class FightReading(override val stat: String, override val from: String, ov
      * Регенерация здоровья: строка сводки - итог потока здоровья в секунду, как его читает бой ([Recovery.lifeFlow]): плоская,
      * доля максимума, общий множитель правил и доля восстановления, регенерация из маны, скорость восстановления, потери и деген.
      */
-    LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true) {
+    LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true, FlowMeasure.PER_SECOND) {
         /** Отрицательная сумма - потеря: множитель и доля её не режут. */
         override fun steps(body: Combatant): List<ReadingStep> {
             val flow = Recovery.lifeFlow(body, body.rules)
@@ -89,7 +92,7 @@ enum class FightReading(override val stat: String, override val from: String, ov
     },
 
     /** Регенерация щита: плоская и доля максимума на скорость восстановления - как в бою (`EnergyShield.recovered`). */
-    SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
+    SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true, FlowMeasure.PER_SECOND) {
         override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
             val raw = RegenPool.SHIELD.flat(body) + RegenPool.SHIELD.fromShare(body)
             to(ReadingPart.SHIELD_OF_MAX, raw)
@@ -102,7 +105,7 @@ enum class FightReading(override val stat: String, override val from: String, ov
      * правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления. Не положительная база останавливает регенерацию
      * шагом [ReadingPart.MANA_FLOOR], не положительное «увеличение» - своим шагом в ноль: цепочка доходит до нуля, маны не отнимает.
      */
-    MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true) {
+    MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true, FlowMeasure.PER_SECOND) {
         override fun steps(body: Combatant): List<ReadingStep> {
             val flow = Recovery.manaFlow(body, body.rules.mana)
             return ReadingSteps(body[stat]).apply {
@@ -126,13 +129,40 @@ enum class FightReading(override val stat: String, override val from: String, ov
     },
 
     /** Здоровье за убийство: плоское и доля максимума на скорость восстановления - как в бою (`Battle.slain`). */
-    LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
+    LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true, FlowMeasure.PER_KILL) {
         override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
             val raw = body.lifeOnKill + body.maxLife * body.lifeOnKillShare
             to(ReadingPart.KILL_OF_MAX, raw)
             to(ReadingPart.RATE, raw * body.recoveryRate, body.recoveryRate)
         }.steps
     },
+
+    /** Мана за убийство: бой отдаёт её как есть (`Battle.slain`) - шагов нет, чтение несёт только меру строки. */
+    MANA_ON_KILL(CoreStat.MANA_ON_KILL.code, CoreStat.MANA_ON_KILL.code, false, FlowMeasure.PER_KILL) {
+        override fun steps(body: Combatant): List<ReadingStep> = emptyList()
+    },
+
+    /** Энергощит за убийство: бой отдаёт его как есть, до максимума щита (`Battle.slain`) - шагов нет, только мера строки. */
+    SHIELD_ON_KILL(CoreStat.SHIELD_ON_KILL.code, CoreStat.SHIELD_ON_KILL.code, false, FlowMeasure.PER_KILL) {
+        override fun steps(body: Combatant): List<ReadingStep> = emptyList()
+    },
+    ;
+
+    companion object {
+        private val measures: Map<String, FlowMeasure> = entries.mapNotNull { reading -> reading.measure?.let { reading.stat to it } }.toMap()
+
+        /** Мера строки сводки [stat], если она поток; иначе null. */
+        fun measure(stat: String): FlowMeasure? = measures[stat]
+    }
+}
+
+/**
+ * Мера строки-потока сводки: в секунду или за убийство. [key] - ключ словаря числа с мерой («+23.9/с», «+12 за убийство»),
+ * [shareKey] - доли максимума запаса в этой мере («0.7% максимума в секунду»).
+ */
+enum class FlowMeasure(val key: String, val shareKey: String) {
+    PER_SECOND("unit.per_second", "stat.flow.share_per_second"),
+    PER_KILL("unit.per_kill", "stat.flow.share_per_kill"),
 }
 
 /**
@@ -154,9 +184,10 @@ class ChargeReading private constructor(private val kind: ChargeKind, private va
 /**
  * Часть чтения боя - строка разбора восстановления со своим именем (`stat.flow.<часть>`) и характеристикой [stat],
  * что её задаёт (касание открывает её разбор; у правила боя её нет). В разборе часть - сдвиг чтения боя с источником [ref].
+ * [ofMax] - характеристика части - доля максимума запаса в процентах: разбор потока печатает её числом рядом с вкладом.
  */
-enum class ReadingPart(val stat: String?) {
-    LIFE_OF_MAX(CoreStat.LIFE_REGEN_PERCENT.code),
+enum class ReadingPart(val stat: String?, val ofMax: Boolean = false) {
+    LIFE_OF_MAX(CoreStat.LIFE_REGEN_PERCENT.code, ofMax = true),
     LIFE_RULE(null),
     LIFE_SHARE(CoreStat.LIFE_REGEN_LESS.code),
     FROM_MANA(CoreStat.MANA_REGEN_TO_LIFE.code),
@@ -169,8 +200,8 @@ enum class ReadingPart(val stat: String?) {
     /** Регенерация маны не ниже нуля: не положительная база её останавливает. */
     MANA_FLOOR(null),
 
-    SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code),
-    KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code),
+    SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code, ofMax = true),
+    KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code, ofMax = true),
     CHARGE_BASE(null),
 
     /** Темп боя правил (`combat.tempo`): множитель скорости всех действий в бою. */

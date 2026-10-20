@@ -4,9 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,7 +54,7 @@ private const val ONE_ROW = 6
 
 /**
  * The tray of the forge (mockup B): a compact grid of what can be laid on the anvil — only stacks the bag holds and the item
- * takes — each a drawing with its count. Лоток только выбирает: имя выбранного, итог и описание называет рецепт наковальни
+ * takes — each a drawing with its count. Лоток только выбирает: имя выбранного, итог и описание называет рецепт полосы
  * ([Recipe]); пустой лоток не рисуется - что выбирать нечего, говорит тот же рецепт. [codes] are in their shelf order; [glyph]
  * draws one; [dimmed] - стопка, что цель не примет (тусклая, причину называет рецепт).
  */
@@ -115,13 +118,14 @@ private const val ONE_ROW = 6
 }
 
 /**
- * The orbs of the tray: только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки,
- * в порядке полки; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком (что его нужно, говорит рецепт).
- * Под лотком - строка «Скрыто сфер: N» ([hidden]): касание открывает список спрятанных с точной причиной каждой.
+ * Ряд сфер полосы кузницы: только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки, в порядке полки, одной
+ * строкой, что листается вбок; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком (что его нужно, говорит
+ * рецепт). Спрятанные ([hidden]) - последней ячейкой ряда со знаком «скрыто» или, если ряд пуст, строкой «Скрыто сфер: N»; касание
+ * открывает список спрятанных с точной причиной каждой.
  */
-@Composable internal fun OrbTray(
+@Composable internal fun OrbStrip(
     game: GameUi,
-    smithy: Smithy,
+    chosen: String,
     choices: List<OrbChoice>,
     hidden: List<HiddenOrb>,
     onSelect: (String) -> Unit,
@@ -129,29 +133,57 @@ private const val ONE_ROW = 6
     val waiting = remember(choices) { choices.filter { it.needsOmen }.map { it.code }.toSet() }
     var showing by remember { mutableStateOf(false) }
     if (showing) HiddenOrbsSheet(hidden) { showing = false }
-    ForgeTray(
-        game,
-        ui("forge.tray_orbs"),
-        choices.map { it.code },
-        smithy.orb,
-        Gold,
-        onSelect,
-        marked = { it in waiting },
-    ) { code ->
-        BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
+    val hiddenLabel = ui("forge.hidden_orbs", hidden.size)
+    if (choices.isEmpty()) {
+        if (hidden.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) { showing = true }.padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(Icons.Outlined.VisibilityOff, null, tint = Muted, modifier = Modifier.size(16.dp))
+                Text(hiddenLabel, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+            }
+        }
+        return
     }
-    if (hidden.isNotEmpty()) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = 40.dp).clickable(role = Role.Button) { showing = true }.padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(Icons.Outlined.VisibilityOff, null, tint = Muted, modifier = Modifier.size(16.dp))
-            Text(ui("forge.hidden_orbs", hidden.size), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = (choices.indexOfFirst { it.code == chosen } - STRIP_LEAD).coerceAtLeast(0))
+    LazyRow(Modifier.fillMaxWidth(), state = list, horizontalArrangement = Arrangement.spacedBy(GAP)) {
+        items(choices, key = { it.code }) { choice ->
+            val code = choice.code
+            TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, code in waiting, Gold, { onSelect(code) }) {
+                BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
+            }
+        }
+        if (hidden.isNotEmpty()) {
+            item(key = HIDDEN_CELL) {
+                val shape = RoundedCornerShape(10.dp)
+                Box(
+                    Modifier.size(CELL).clip(shape).border(1.dp, Bronze, shape)
+                        .clickable(role = Role.Button) { showing = true }.semantics { contentDescription = hiddenLabel },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Outlined.VisibilityOff, null, tint = Muted, modifier = Modifier.size(18.dp))
+                    Text(
+                        hidden.size.toString(),
+                        color = Muted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp),
+                    )
+                }
+            }
         }
     }
 }
+
+/** Сколько ячеек ряда видно левее выбранной, когда полоса открывается на ней. */
+private const val STRIP_LEAD = 3
+
+/** Ключ ячейки спрятанных сфер в ряду: не совпадает с кодом сферы. */
+private const val HIDDEN_CELL = "hidden"
 
 /** Лист спрятанных сфер: значок, имя и точная причина отказа правил над вещью под каждой. */
 @Composable private fun HiddenOrbsSheet(hidden: List<HiddenOrb>, onDismiss: () -> Unit) {
@@ -224,7 +256,7 @@ private const val ONE_ROW = 6
 
 /**
  * Знамения [omens], что лягут рядом с валютой на наковальне (сфера или печать Атласа), - лотком под заголовком [title]: выбранное
- * снова - снимается. Имя и описание выбранного называет рецепт наковальни.
+ * снова - снимается. Имя и описание выбранного называет рецепт полосы.
  */
 @Composable fun OmenTray(game: GameUi, title: String, omens: List<Omen>, chosenOmen: String, onSelect: (String) -> Unit) {
     ForgeTray(game, title, omens.map { it.code }, chosenOmen, Rune, { code -> onSelect(if (code == chosenOmen) "" else code) }) {

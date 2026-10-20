@@ -29,6 +29,7 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.hero.OwnItemActions
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.Gold
@@ -38,13 +39,13 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * A piece the run dropped, opened where it dropped — a chest's lid, a fight's spoils, the run's reports:
- * its card and what wearing it would change against what is worn. Снаряжение в заходе не меняется и не продаётся: надеть
- * или продать вещь можно только после захода. The drop is the server's roll and reaches the stash with the journal's
+ * its card and what wearing it would change against what is worn. Снаряжение в заходе не меняется: надеть вещь можно только после
+ * захода. The drop is the server's roll and reaches the stash with the journal's
  * answer, so opening the sheet sends the journal at once; one sold for want of room says so.
  * [extra] is what the caller adds under the card.
  *
- * Копия героя берётся по id: выданная сервером несёт номер экземпляра. В заходе торговцу не продают (проверяет только клиент): вещь
- * помечают к продаже, в итогах карты она уже отмечена.
+ * Копия героя берётся по id: выданная сервером несёт номер экземпляра. Легшую в тайник вещь можно пометить к продаже (в итогах карты
+ * она уже отмечена) или продать торговцу сразу - удержанием в ряду своей вещи ([OwnItemActions]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,16 +71,16 @@ internal fun LootSheet(
 
                 LootPresence.ARRIVING -> MutedText(ui("expedition.loot_arriving"))
 
-                LootPresence.HELD -> if (markable && (item.id in expedition.saleMarks || game.saleMarkable(item.id))) {
-                    val marked = item.id in expedition.saleMarks
-                    ForgeButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                        Icon(ForgeGlyphs.Coins, null, tint = if (marked) GoldBright else Gold, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(ui(if (marked) "sell.unmark" else "sell.mark"))
+                LootPresence.HELD -> {
+                    if (markable && (item.id in expedition.saleMarks || game.saleMarkable(item.id))) {
+                        val marked = item.id in expedition.saleMarks
+                        ForgeButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                            Icon(ForgeGlyphs.Coins, null, tint = if (marked) GoldBright else Gold, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(ui(if (marked) "sell.unmark" else "sell.mark"))
+                        }
                     }
-                    MutedText(ui("expedition.loot_sell_after"))
-                } else {
-                    MutedText(ui("expedition.loot_sell_after"))
+                    game.hero?.item(item.id)?.let { held -> OwnItemActions(game, held, onDone = onDismiss) }
                 }
             }
             extra()

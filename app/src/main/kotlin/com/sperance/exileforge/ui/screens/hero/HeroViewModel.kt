@@ -68,7 +68,7 @@ class HeroViewModel(
     fun openChest(code: String) = hero.openChest(code)
     fun dismissChest() = hero.dismissChest()
     fun setTitle(title: String) = hero.setTitle(title)
-    fun sellForGold(itemId: String) = hero.sellForGold(itemId)
+    fun sellForGold(itemId: String, unequip: Boolean = false) = hero.sellForGold(itemId, unequip)
     fun sellMany(itemIds: Collection<String>) = hero.sellMany(itemIds)
     fun temper(itemId: String) = hero.temper(itemId)
     fun unsocketJewel(itemId: String) = hero.unsocketJewel(itemId)

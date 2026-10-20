@@ -65,6 +65,23 @@ import com.sperance.exileforge.ui.theme.Parchment
 }
 
 /**
+ * Сумма в золоте на кнопке - облик [GoldCost] без кошелька: монета и число короткой записью в тёмной плашке; на погашенной кнопке
+ * приглушена. Цена продажи на удержании «Продать».
+ */
+@Composable fun ButtonGold(gold: Long, modifier: Modifier = Modifier) {
+    val live = LocalButtonLive.current
+    val shape = RoundedCornerShape(50)
+    Row(
+        modifier.background(Abyss, shape).border(1.dp, Bronze, shape).padding(horizontal = 6.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(ForgeGlyphs.Coins, null, tint = if (live) Gold else Muted, modifier = Modifier.size(12.dp))
+        Text(compactNumber(gold.toDouble()), color = if (live) GoldBright else Muted, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+/**
  * Счёт оплаты тремя ячейками «Есть · Спишется · Останется» (не хватает - третья «Не хватает» красным): тот же счёт [GoldBill],
  * что строки подтверждения [goldLedger], там, где покупка раскрывается на месте, а не листом.
  */

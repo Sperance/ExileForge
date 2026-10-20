@@ -29,8 +29,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Выбор цели кузницы: вещи тайника и снаряжения (надетые тоже - сфере всё равно). Общий фильтр предметов
  * ([ItemShelf.FORGE], [filterState] - общий с полкой у наковальни): строка над списком и шторка «Аккордеон», выбор запоминается.
- * Нажатие строки открывает полную карточку вещи ([ForgeCards]): «В кузницу» выбирает цель и закрывает выбор; у цели [current] - «Сменить»
- * возвращает к списку.
+ * Касание строки ставит вещь в кузницу и закрывает выбор; удержание открывает полную карточку вещи ([ForgeCards]) с теми же действиями.
  */
 @Composable
 internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilterState, current: ForgeTarget?, onDismiss: () -> Unit, onPick: (ForgeTarget) -> Unit) {
@@ -39,7 +38,7 @@ internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilt
     }
 }
 
-/** Вещи под кузницу: общий фильтр, строка - карточка вещи с действиями кузницы. */
+/** Вещи под кузницу: общий фильтр; касание строки - цель кузницы, удержание - карточка вещи с действиями кузницы. */
 @Composable private fun ItemTargets(game: GameUi, cards: ForgeCards, filterState: ItemFilterState, current: ForgeTarget?, onPick: (ForgeTarget) -> Unit) {
     val stash = remember(game.hero?.items, game.index) { game.hero?.items.orEmpty().mapNotNull { game.view(it) } }
     var filtering by remember { mutableStateOf(false) }
@@ -56,10 +55,11 @@ internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilt
                 selected = piece.id == current?.id,
                 facts = if (piece.isWorn) listOf(ui("hero.equipped")) else emptyList(),
                 price = game.sellPrice(piece.item),
-            ) {
-                val chosen = current?.takeIf { it.id == piece.id }
-                inspect(cards.of(piece.item, ui(chosen?.changeKey ?: "bag.to_forge")) { if (chosen == null) onPick(ForgeTarget.Gear(piece)) })
-            }
+                onLongClick = {
+                    val chosen = current?.takeIf { it.id == piece.id }
+                    inspect(cards.of(piece.item, ui(chosen?.changeKey ?: "bag.to_forge")) { if (chosen == null) onPick(ForgeTarget.Gear(piece)) })
+                },
+            ) { onPick(ForgeTarget.Gear(piece)) }
         }
     }
     if (filtering) {

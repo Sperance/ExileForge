@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,19 +41,23 @@ import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.screens.hero.OwnItemActions
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearChoice
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
+import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
  * Что показать в карточке предмета: где бы его ни коснулись - строка, плитка, чип, значок. Под карточкой - действия места:
- * главное [action], равное ему второе [side] рядом и второстепенные [menu] в меню «⋯».
+ * главное [action], равное ему второе [side] рядом и второстепенные [menu] в меню «⋯»; у своей вещи под ними - ряд действий по
+ * умолчанию ([OwnItemActions]).
  */
 sealed interface Inspect {
     /** Главная кнопка под карточкой - прежнее действие места касания; null - карточка только смотрит. */
@@ -63,12 +69,16 @@ sealed interface Inspect {
     /** Второстепенные действия - меню «⋯» рядом с кнопками; пусто - меню нет. */
     val menu: List<InspectAction> get() = emptyList()
 
-    /** Копия снаряжения [item]: полная карточка с ценой торговца и итогом «если надеть». */
+    /**
+     * Копия снаряжения [item]: полная карточка с ценой торговца и итогом «если надеть». [forge] - предлагать своей вещи «В кузницу»;
+     * место, что само ведёт в кузницу, его снимает.
+     */
     data class Copy(
         val item: ItemInstance,
         override val action: InspectAction? = null,
         override val side: InspectAction? = null,
         override val menu: List<InspectAction> = emptyList(),
+        val forge: Boolean = true,
     ) : Inspect
 
     /** Шаблон [template] витриной: месту известен только шаблон (вложение письма, сделанное ремеслом). */
@@ -119,9 +129,8 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
         is Inspect.Showcase -> {
             val index = game.index ?: return
             val view = remember(shown.template, index) { index.template(shown.template)?.let { ItemView.showcase(it, index) } } ?: return
-            CardSheet(close) {
+            CardSheet(close, footer.takeIf { shown.action != null }) {
                 ItemCard(view, enabled = false, detailed = true, action = false)
-                footer()
             }
         }
     }
@@ -130,21 +139,37 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 /** Выбор карточки без вкладок мест: стопка и витрина. */
 private val NO_CHOICE = InspectChoice(null)
 
-/** Карточка копии - как у добычи и товара торговца: цена, итог «если надеть», выполнены ли требования; действия знают выбранное место. */
-@Composable private fun CopySheet(game: GameUi, view: ItemView, shown: Inspect, onDismiss: () -> Unit) {
+/**
+ * Карточка копии - как у добычи и товара торговца: цена, итог «если надеть», выполнены ли требования; действия знают выбранное место.
+ * Своя вещь под действиями места получает ряд действий по умолчанию ([OwnItemActions]).
+ */
+@Composable private fun CopySheet(game: GameUi, view: ItemView, shown: Inspect.Copy, onDismiss: () -> Unit) {
     val item = view.item
     val wear = rememberWearChoice(game, item)
-    CardSheet(onDismiss) {
-        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item))
+    val acts = shown.action != null || game.hero?.item(item.id) != null
+    val footer: @Composable ColumnScope.() -> Unit = {
         InspectActions(shown, InspectChoice(wear.target), onDismiss)
+        OwnItemActions(game, item, shown.forge, onDismiss)
+    }
+    CardSheet(onDismiss, footer.takeIf { acts }) {
+        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item))
     }
 }
 
-/** Лист карточки: прокрутка, поля, кнопка места внизу. */
-@Composable private fun CardSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+/** Лист карточки: карточка прокручивается, подвал [footer] с действиями закреплён внизу листа над чертой; действий нет - подвала нет. */
+@Composable private fun CardSheet(onDismiss: () -> Unit, footer: (@Composable ColumnScope.() -> Unit)?, content: @Composable ColumnScope.() -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+            footer?.let { SheetFooter(it) }
+        }
     }
+}
+
+/** Закреплённый подвал листа карточки предмета: черта сверху, поля и действия столбцом - общий хозяину карточек и листу вещи тайника. */
+@Composable internal fun SheetFooter(content: @Composable ColumnScope.() -> Unit) {
+    HorizontalDivider(color = Bronze)
+    Column(Modifier.fillMaxWidth().background(Panel).padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
 }
 
 /**

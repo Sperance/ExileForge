@@ -68,7 +68,7 @@ fun itemName(size: Int = 22) = TextStyle(fontFamily = ItemNameFont, fontWeight =
 
 /**
  * Облик карточки по редкости: рамка, фон, свечение и цвета текста. Обычные, волшебные и редкие вещи - басальт в тон редкости;
- * уникальные - тёплый уголь с искрами, мифические - звёздное небо.
+ * уникальные - тёплый уголь с искрами, мифические - звёздное небо. Подписи [muted] - с контрастом не ниже AA на своей подложке.
  *
  * «Реликварий»: подробная карточка предмета, её строки модификаторов со значком тира, итог героя «сейчас → станет» и «Астролябия»
  * уникальных и мифических вещей.
@@ -102,15 +102,15 @@ fun relicLook(rarity: Rarity): RelicLook {
     return when (rarity) {
         Rarity.UNIQUE -> RelicLook(
             color, Color(0xFFFFB774), Color(0xFF24150C), Color(0xFF120B07), Color(0xFFF0965A), Color(0xFFF2A65A),
-            Color(0xFFA88F7A), Color(0xFF6E5A4A), Color(0xFFFFC98A), RelicLook.Legend.EMBER,
+            Color(0xFFC0A894), Color(0xFF6E5A4A), Color(0xFFFFC98A), RelicLook.Legend.EMBER,
         )
 
         Rarity.MYTHICAL -> RelicLook(
             color, Color(0xFFFFD99A), Color(0xFF2B1A48), Color(0xFF0C0A16), Color(0xFFF0C76A), Color(0xFFF0C76A),
-            Color(0xFF9C8FB5), Color(0xFF6A5E80), Color(0xFF8EC5FF), RelicLook.Legend.STARS,
+            Color(0xFFB5A9CC), Color(0xFF6A5E80), Color(0xFF8EC5FF), RelicLook.Legend.STARS,
         )
 
-        else -> RelicLook(color, color, DepthTop, DepthBottom, color, color, Color(0xFF8FA0AB), Color(0xFF56636D), Rune, null)
+        else -> RelicLook(color, color, DepthTop, DepthBottom, color, color, Quiet, Color(0xFF56636D), Rune, null)
     }
 }
 

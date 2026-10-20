@@ -97,6 +97,39 @@ enum class QualityFilter {
     }
 }
 
+/**
+ * Вилка уровня предмета в фильтре: края [min] и [max] включительно, null - без края. Заданная вилка отсеивает то, у чего уровня
+ * нет (стопки хранилища гильдии); пустая пропускает всё.
+ */
+@Serializable
+data class LevelRange(val min: Int? = null, val max: Int? = null) {
+    val isAny: Boolean get() = min == null && max == null
+
+    fun admits(level: Int?): Boolean = isAny || (level != null && (min == null || level >= min) && (max == null || level <= max))
+
+    /** Вилка словами для строки фильтра и чипа: «Ур. 27–37», с одним краем - «Ур. от 27» / «Ур. до 37»; пустая - null. */
+    fun title(): String? = when {
+        min != null && max != null -> ui("filter.level_range", min, max)
+        min != null -> ui("auction.chip_ilvl_from", min)
+        max != null -> ui("auction.chip_ilvl_to", max)
+        else -> null
+    }
+
+    companion object {
+        /** Сколько уровней в обе стороны от героя берёт «Около моего». */
+        const val NEAR = 5
+
+        /** Сколько цифр принимает поле края вилки. */
+        private const val DIGITS = 3
+
+        /** «Около моего»: уровень героя [level] ± [NEAR], не ниже первого. */
+        fun near(level: Int): LevelRange = LevelRange((level - NEAR).coerceAtLeast(1), level + NEAR)
+
+        /** Край вилки из набранного в поле [text]: только цифры, не больше трёх; пусто - края нет. */
+        fun bound(text: String): Int? = text.filter(Char::isDigit).take(DIGITS).toIntOrNull()
+    }
+}
+
 /** Потолок качества вещи - потолок её вида качества по правилам ([QualityKind]); вида нет - общий. */
 private val ItemView.qualityCap: Int get() = QualityKind.of(catalyst).gain(item, template, index)?.cap(index.rules) ?: index.rules.quality.max
 
@@ -124,8 +157,8 @@ enum class ItemSort {
     }
 }
 
-/** Что умеет сузить фильтр списка: каждая грань - строка шторки или переключатель. */
-enum class FilterFacet { TYPE, RARITY, QUALITY, MINE, CRAFTED, WEARABLE, HIDE_WORN, SORT }
+/** Что умеет сузить фильтр списка: каждая грань - строка шторки или переключатель; уровень - вилка в шапке шторки. */
+enum class FilterFacet { TYPE, RARITY, LEVEL, QUALITY, MINE, CRAFTED, WEARABLE, HIDE_WORN, SORT }
 
 /**
  * Список предметов приложения с фильтром: какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
@@ -139,11 +172,11 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
     FORGE(FilterFacet.entries.toSet() - FilterFacet.WEARABLE, ItemSort.entries, ItemFilter(sort = ItemSort.RARITY), ItemSection.entries),
 
     /** Товар торговца: его вещи не сделаны героем и не надеты; цена - торговца. */
-    MERCHANT(setOf(FilterFacet.TYPE, FilterFacet.RARITY, FilterFacet.QUALITY, FilterFacet.WEARABLE, FilterFacet.SORT), ItemSort.entries, ItemFilter()),
+    MERCHANT(setOf(FilterFacet.TYPE, FilterFacet.RARITY, FilterFacet.LEVEL, FilterFacet.QUALITY, FilterFacet.WEARABLE, FilterFacet.SORT), ItemSort.entries, ItemFilter()),
 }
 
 /**
- * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), качество,
+ * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), вилка уровня предмета ([level]), качество,
  * «сделано мной» (поле `maker` копии - имя героя), «сделано ремеслом» (метка происхождения копии `origin` с сервера), «могу надеть»,
  * «скрыть надетое», порядок и поиск. Поиск - только экрана и не
  * запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]).
@@ -152,6 +185,7 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
 data class ItemFilter(
     val type: ItemType? = null,
     val rarities: Set<Rarity> = emptySet(),
+    val level: LevelRange = LevelRange(),
     val quality: QualityFilter = QualityFilter.ANY,
     val mine: Boolean = false,
     val crafted: Boolean = false,
@@ -165,7 +199,7 @@ data class ItemFilter(
     /** Сколько настроек отличается от обычных списка [shelf]: число на значке фильтра. */
     fun tweaks(shelf: ItemShelf): Int {
         val base = shelf.defaults
-        return listOf(type != base.type, rarities != base.rarities, quality != base.quality, mine != base.mine, crafted != base.crafted, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
+        return listOf(type != base.type, rarities != base.rarities, level != base.level, quality != base.quality, mine != base.mine, crafted != base.crafted, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
             .count { it }
     }
 
@@ -177,6 +211,7 @@ data class ItemFilter(
         fun on(facet: FilterFacet) = facet in shelf.facets
         return (!on(FilterFacet.TYPE) || type?.admits(piece) != false) &&
             (!on(FilterFacet.RARITY) || rarities.isEmpty() || piece.rarity in rarities) &&
+            (!on(FilterFacet.LEVEL) || level.admits(piece.level)) &&
             (!on(FilterFacet.QUALITY) || quality.admits(piece)) &&
             (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == heroName) &&
             (!on(FilterFacet.CRAFTED) || !crafted || piece.item.origin != null) &&

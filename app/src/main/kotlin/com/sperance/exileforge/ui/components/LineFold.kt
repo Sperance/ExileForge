@@ -31,9 +31,15 @@ enum class LineFold {
 
     /** Строки под чипом «Свойства · N ▾», нажатие раскрывает только эту плиту. */
     FOLDED,
+
+    /** Первые [PREVIEW] строк и «ещё N» под ними: вещь строкой в тесной панели (самоцвет в гнезде древа). */
+    SHORT,
     ;
 
     companion object {
+        /** Сколько строк показывает [SHORT]. */
+        const val PREVIEW = 3
+
         /** Свёртка лота: свойства уникальной и мифической вещи свёрнуты, пока игрок не велел раскрывать их ([open]). */
         fun legend(item: ItemView, open: Boolean): LineFold = if (item.rarity.fixed && !open) FOLDED else OPEN
     }
@@ -43,9 +49,11 @@ enum class LineFold {
 @Composable internal fun FoldedLines(lines: List<ItemLine>, fold: LineFold, look: RelicLook) {
     var open by rememberSaveable { mutableStateOf(false) }
     if (fold == LineFold.FOLDED) FoldChip(ui("row.properties", lines.size), open, look) { open = !open }
-    if (fold == LineFold.OPEN || open) {
+    if (fold == LineFold.OPEN || fold == LineFold.SHORT || open) {
+        val shown = if (fold == LineFold.SHORT) lines.take(LineFold.PREVIEW) else lines
         Column(Modifier.padding(start = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            lines.forEach { RelicModLine(it, null, big = false) }
+            shown.forEach { RelicModLine(it, null, big = false) }
+            if (shown.size < lines.size) Text(ui("row.more_lines", lines.size - shown.size), color = look.muted, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

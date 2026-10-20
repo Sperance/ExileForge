@@ -158,6 +158,49 @@ object Sheets {
         skills: HeroSkills = HeroSkills(),
     ): WearOutcome {
         val after = worn(index, item, items, place) ?: return WearOutcome.NONE
+        return outcome(index, level, heroClass, tree, after, before, laws, fate, skills)
+    }
+
+    /**
+     * Что даст самоцвет [jewel] в гнезде [socket] дерева: прежний самоцвет гнезда уходит в тайник, как у сервера; лист с ним -
+     * тем же расчётом правил, что лист героя (гнездо не взято или вторая копия уникального - самоцвет не работает и там).
+     * Сдвиги сводки против [before] и Мощь героя с заменой ([WearOutcome.might]).
+     */
+    fun socketing(
+        index: ContentIndex,
+        jewel: ItemInstance,
+        socket: String,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        before: Map<String, Double>,
+        laws: List<String> = emptyList(),
+        fate: String? = null,
+        skills: HeroSkills = HeroSkills(),
+    ): WearOutcome {
+        val after = items.map {
+            when {
+                it.id == jewel.id -> it.copy(slot = Slot.JEWEL, socket = socket)
+                it.socket == socket -> it.copy(slot = null, socket = null)
+                else -> it
+            }
+        }
+        return outcome(index, level, heroClass, tree, after, before, laws, fate, skills)
+    }
+
+    /** Итог листа героя с вещами [after]: сдвиги цифр сводки против [before], Мощь и итоги листа - общий шаг [wearing] и [socketing]. */
+    private fun outcome(
+        index: ContentIndex,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        after: List<ItemInstance>,
+        before: Map<String, Double>,
+        laws: List<String>,
+        fate: String?,
+        skills: HeroSkills,
+    ): WearOutcome {
         val sheet = calculate(index, level, heroClass, tree, after, laws, fate)
         val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped })
         return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might, sheet.stats)

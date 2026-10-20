@@ -47,7 +47,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.partFigure
-import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
@@ -60,14 +59,11 @@ import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.allocationDelta
 import com.sperance.exileforge.core.sheet.figures
-import com.sperance.exileforge.core.sheet.sellPrice
-import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
-import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
@@ -271,77 +267,6 @@ import kotlin.math.sin
 
 @Composable internal fun CloseButton(onClose: () -> Unit) {
     ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onClose, size = ButtonSize.Compact)
-}
-
-/**
- * What sits in a socket, and what can be put there.
- *
- * A jewel is an ordinary item, so the stash is where the candidates come from: every jewel the hero
- * owns that is neither worn nor already in another socket. Whether this one may go in is still the
- * server's call — the socket has to be taken and free — so the list offers and the refusal explains.
- *
- * Имя гнезда - тема, а не бонус. Взятое гнездо может держать бездействующий самоцвет (вторая копия уникального) - причина листа; уникальный
- * самоцвет, уже стоящий в другом гнезде, ждёт и говорит почему. Самоцвет в занятое гнездо встаёт заменой: прежний уходит в тайник.
- */
-@Composable internal fun SocketContents(
-    game: GameUi,
-    index: ContentIndex,
-    node: TreeNode,
-    allocated: Boolean,
-    enabled: Boolean,
-    onSocket: (String, String) -> Unit,
-    onUnsocket: (String) -> Unit,
-) {
-    val hero = game.hero ?: return
-    val inside = hero.jewels[node.code]
-    val inspect = rememberInspect()
-    MutedText(ui("tree.socket_hint"))
-
-    if (inside != null) {
-        val idle = hero.inactive[inside.id]?.joinToString("\n") { requirementReason(it, game.lang) }
-        game.view(inside)?.let { jewel ->
-            ItemRow(
-                jewel,
-                note = when {
-                    !allocated -> ui("tree.socket_locked")
-                    idle != null -> idle
-                    else -> ui("tree.socket_working")
-                },
-                noteColor = if (allocated && idle == null) Gold else LifeRed,
-            ) { inspect(Inspect.Copy(inside)) }
-        }
-        ForgeButton(state = ButtonState.of(enabled), onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-            Text(ui("tree.jewel_out"))
-        }
-    }
-
-    val free = hero.items.filter { instance ->
-        !instance.equipped && !instance.socketed && index.template(instance.template)?.slot == Slot.JEWEL
-    }
-    when {
-        !allocated -> if (inside == null) MutedText(ui("tree.socket_first"))
-
-        free.isEmpty() -> if (inside == null) MutedText(ui("tree.no_jewels"))
-
-        else -> {
-            val action = ui(if (inside == null) "tree.jewel_in" else "tree.jewel_swap")
-            Engraved(action)
-            if (inside != null) MutedText(ui("tree.jewel_swap_note"))
-            free.forEach { instance ->
-                val single = hero.jewelFree(index, instance, node.code)
-                game.view(instance)?.let { jewel ->
-                    ItemRow(
-                        jewel,
-                        price = game.sellPrice(instance),
-                        note = if (single) null else ui("tree.jewel_unique_taken"),
-                        noteColor = LifeRed,
-                    ) {
-                        inspect(Inspect.Copy(instance, InspectAction(action, enabled = enabled && single) { onSocket(instance.id, node.code) }))
-                    }
-                }
-            }
-        }
-    }
 }
 
 internal fun nodes(n: Int) = plural("tree.node", n)

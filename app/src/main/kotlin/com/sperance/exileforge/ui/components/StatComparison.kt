@@ -133,6 +133,44 @@ private fun tally(comparison: Comparison, muted: Color) = buildAnnotatedString {
     }
 }
 
+/**
+ * Сравнение коротко, без заголовка и раскрытия: первые [limit] важнейших строк - имя и «было → **стало**» цвета сдвига, под ними
+ * «и ещё N». Для строки выбора, где сравнений много сразу (лист самоцветов гнезда); пустое - ничего.
+ */
+@Composable fun ComparisonDigest(comparison: Comparison, modifier: Modifier = Modifier, limit: Int = DIGEST_LINES, muted: Color = Muted) {
+    if (comparison.lines.isEmpty()) return
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        comparison.lines.take(limit).forEach { line ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(line.title, color = muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(
+                    buildAnnotatedString {
+                        append(line.before)
+                        append(" → ")
+                        withStyle(SpanStyle(color = shiftInk(line.better), fontWeight = FontWeight.Bold)) { append(line.after) }
+                    },
+                    color = muted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    softWrap = false,
+                )
+            }
+        }
+        val rest = comparison.lines.size - limit
+        if (rest > 0) Text(ui("compare.more", rest), color = muted, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** Цвет «стало» по сдвигу: рост `Vital`, потеря [LossText], без сдвига - [Parchment]. */
+private fun shiftInk(better: Boolean?): Color = when (better) {
+    true -> Vital
+    false -> LossText
+    null -> Parchment
+}
+
+/** Сколько строк [ComparisonDigest] показывает по умолчанию. */
+private const val DIGEST_LINES = 3
+
 /** «было → **стало**» строки сравнения (общее со строкой Мощи вещи). */
 @Composable internal fun ComparisonFigures(before: String, after: String, muted: Color) {
     Text(

@@ -65,7 +65,7 @@ import com.sperance.exileforge.ui.theme.*
  * The hero's own lots that are still on sale, and those whose time ran out; withdrawn and sold lots leave this list.
  *
  * Места лотов одинаковы у всех героев и не покупаются; сколько занято - числом у вкладки, не в списке. Строка лота - «ещё 14 ч 05 мин»
- * (в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
+ * ([lotMarks]: в последний день - цветом [Caution], в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
  * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
  * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
  */
@@ -79,10 +79,7 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         items(market.ownLots, key = { it.id }) { lot ->
-            val mark = lotReturn(lot) ?: lotLeft(lot)?.let { left ->
-                ui("auction.left", left) + if (rules != null && lot.extendable(rules)) " · " + ui("auction.extend_now") else ""
-            }
-            LotRow(game, lot, mark = mark, withSeller = false) { openLot = lot.id }
+            LotRow(game, lot, marks = lotMarks(lot, rules), withSeller = false) { openLot = lot.id }
         }
     }
     market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
@@ -109,6 +106,20 @@ import com.sperance.exileforge.ui.theme.*
             vm.cancel(lot.id)
         }
     }
+}
+
+/**
+ * Пометки строки своего лота: куда вернулся истёкший ([lotReturn]), иначе «ещё N» - в окне продления (последний день, [rules]) цветом
+ * [Caution] - и «можно продлить», пока продления не кончились; срока нет - пометок нет.
+ */
+private fun lotMarks(lot: AuctionLot, rules: AuctionRules?): List<TradeMark> {
+    lotReturn(lot)?.let { return listOf(TradeMark(it)) }
+    val left = lotLeft(lot) ?: return emptyList()
+    val ending = rules != null && lot.extendable(rules.extendWindowMillis)
+    return listOfNotNull(
+        TradeMark(ui("auction.left", left), if (ending) Caution else Rune),
+        TradeMark(ui("auction.extend_now")).takeIf { rules != null && lot.extendable(rules) },
+    )
 }
 
 /**
@@ -177,7 +188,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
         }
         if (shown.isEmpty()) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint")) }
         items(shown, key = { it.id }) { deal ->
-            LotRow(game, deal, mark = dealMark(deal, heroId), withSeller = false) { openLot = deal.id }
+            LotRow(game, deal, marks = listOf(TradeMark(dealMark(deal, heroId))), withSeller = false) { openLot = deal.id }
         }
     }
     shown.firstOrNull { it.id == openLot }?.let { deal ->

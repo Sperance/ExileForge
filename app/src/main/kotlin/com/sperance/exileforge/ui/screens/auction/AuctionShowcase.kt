@@ -105,7 +105,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         items(market.showcase.items, key = { it.id }) { lot ->
-            LotRow(game, lot, mark = if (lot.belongsTo(game.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
+            LotRow(game, lot, marks = if (lot.belongsTo(game.heroId)) listOf(TradeMark(ui("auction.your_lot"))) else emptyList()) { openLot = lot.id }
         }
         val showcase = market.showcase
         if (showcase.next != null) {

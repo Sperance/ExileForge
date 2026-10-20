@@ -68,21 +68,21 @@ import com.sperance.exileforge.ui.theme.*
  * Вердикт правил о шаблоне, как в тайнике: лот, который не надеть, говорит почему; свойства легенд свёрнуты, пока игрок не велел их
  * раскрывать.
  */
-@Composable internal fun LotRow(game: GameUi, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
+@Composable internal fun LotRow(game: GameUi, lot: AuctionLot, marks: List<TradeMark>, withSeller: Boolean = true, onClick: () -> Unit) {
     val inspect = rememberInspect()
     val price: @Composable RowScope.() -> Unit = { LotPrice(lot) { inspect(Inspect.Stack(lot.priceOrb)) } }
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { game.view(it) }
     if (view != null) {
         val lines = LineFold.legend(view, LocalSettings.current.legendsOpen)
-        ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, lines = lines, onClick = onClick, price = price)
+        ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, marks = marks, lines = lines, onClick = onClick, price = price)
     } else {
         TradeRow(
             lot.title,
             lotColor(lot),
             stackFacts(game, lot) + seller,
             enabled = !game.busy,
-            mark = mark,
+            marks = marks,
             onClick = onClick,
             icon = { LotIcon(game, lot, Modifier.size(28.dp)) },
             price = price,

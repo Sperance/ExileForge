@@ -9,6 +9,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,15 +34,15 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Товар «Ценником» (выбор владельца): плита стопки сумки - иконка, имя, факты и ярлык цены сверху; [mark] руническим
- * синим после фактов: «ваш лот», сколько ему стоять.
+ * Товар «Ценником» (выбор владельца): плита стопки сумки - иконка, имя, факты и ярлык цены сверху; после фактов - пометки [marks]
+ * своими цветами: «ваш лот», сколько ему стоять.
  */
 @Composable internal fun TradeRow(
     title: String,
     color: Color,
     facts: List<String>,
     enabled: Boolean,
-    mark: String? = null,
+    marks: List<TradeMark> = emptyList(),
     onClick: () -> Unit,
     icon: @Composable BoxScope.() -> Unit,
     price: @Composable RowScope.() -> Unit,
@@ -58,7 +59,7 @@ import com.sperance.exileforge.ui.theme.*
             Box(Modifier.size(44.dp).background(Abyss, frame).border(1.dp, color.copy(alpha = .55f), frame), contentAlignment = Alignment.Center, content = icon)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, color = color, style = itemName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                TradeFacts(facts, mark)
+                TradeFacts(facts, marks)
             }
         }
         val shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp)
@@ -72,13 +73,16 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Факты товара одной строкой и [mark] руническим синим в конце. */
-@Composable private fun TradeFacts(facts: List<String>, mark: String?) {
+/** Пометка строки товара: [text] цветом [tint] - руническим синим, срок на исходе - [Caution]. */
+@Immutable internal data class TradeMark(val text: String, val tint: Color = Rune)
+
+/** Факты товара одной строкой и пометки [marks] своими цветами в конце, через «·». */
+@Composable private fun TradeFacts(facts: List<String>, marks: List<TradeMark>) {
     val line = buildAnnotatedString {
         append(facts.joinToString(" · "))
-        mark?.let {
+        marks.forEach { mark ->
             if (length > 0) append(" · ")
-            withStyle(SpanStyle(color = Rune)) { append(it) }
+            withStyle(SpanStyle(color = mark.tint)) { append(mark.text) }
         }
     }
     if (line.isNotEmpty()) Text(line, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -86,14 +90,14 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Копия вещи «Ценником»: плита тайника со всеми строками и значками тиров, ярлык цены сверху, а внизу через нить - продавец
- * и [mark]. Вещь, которую герой надеть не может, говорит почему красным, как в тайнике.
+ * и пометки [marks]. Вещь, которую герой надеть не может, говорит почему красным, как в тайнике.
  */
 @Composable internal fun ItemTradeRow(
     view: ItemView,
     enabled: Boolean,
     unmet: List<String>,
     extra: List<String> = emptyList(),
-    mark: String? = null,
+    marks: List<TradeMark> = emptyList(),
     lines: LineFold = LineFold.OPEN,
     onClick: () -> Unit,
     price: @Composable RowScope.() -> Unit,
@@ -104,12 +108,12 @@ import com.sperance.exileforge.ui.theme.*
         unwearable = unmet,
         tag = price,
         lines = lines,
-        footer = if (extra.isEmpty() && mark == null) {
+        footer = if (extra.isEmpty() && marks.isEmpty()) {
             null
         } else {
             {
                 HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .05f))
-                TradeFacts(extra, mark)
+                TradeFacts(extra, marks)
             }
         },
         onClick = onClick,

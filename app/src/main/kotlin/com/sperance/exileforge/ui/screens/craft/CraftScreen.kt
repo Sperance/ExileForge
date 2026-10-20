@@ -95,8 +95,9 @@ internal const val UNCRAFT = "-"
         if (index == null || gear == null || hero == null) emptyMap() else essenceRefusals(index, hero, gear)
     }
     val quality = remember(target, index, smithy.omen) { index?.let { target?.quality(it, Omen.of(smithy.omen)) } }
-    val batch = remember(target, index, smithy.omen, hero?.bag, hero?.money) {
-        if (index == null || hero == null || target == null) null else QualityBatch.of(index, target, Omen.of(smithy.omen), hero::count, hero.money)
+    val batch = remember(target, index, smithy.orb, smithy.omen, hero?.bag, hero?.money) {
+        val orb = Orb.of(smithy.orb)
+        if (index == null || hero == null || target == null || orb == null) null else QualityBatch.of(index, target, orb, Omen.of(smithy.omen), hero::count, hero.money)
     }
     val chanceUniques = remember(target, index) { index?.let { target?.chanceUniques(it) }.orEmpty() }
     val sections = target?.sections ?: listOf(ForgeSection.ORBS)

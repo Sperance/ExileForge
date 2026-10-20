@@ -70,6 +70,9 @@ sealed interface ForgeTarget {
     /** Путь сферы качества со знамением [omen] до потолка вида - то же правило, что пачка сервера; null - сфера качества не ляжет. */
     fun qualityClimb(index: ContentIndex, omen: Omen?): QualityClimb? = null
 
+    /** Предел пачки сферы [orb] со знамением [omen] на цели - правило [OrbApplier.batchLimit], что зовёт сервер; null - сфера по одной. */
+    fun batchLimit(index: ContentIndex, orb: Orb, omen: Omen?): Int? = null
+
     /** Уникалки, что может дать сфера удачи, - тот же список правил, что тянет сервер. */
     fun chanceUniques(index: ContentIndex): List<String> = emptyList()
 
@@ -123,6 +126,8 @@ sealed interface ForgeTarget {
         override fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = QualityForecast.of(index, view.item, view.template, omen)
 
         override fun qualityClimb(index: ContentIndex, omen: Omen?): QualityClimb? = OrbApplier(index).qualityClimb(view.item, view.template, omen)
+
+        override fun batchLimit(index: ContentIndex, orb: Orb, omen: Omen?): Int? = OrbApplier(index).batchLimit(orb, view.item, view.template, omen)
 
         override fun chanceUniques(index: ContentIndex): List<String> = OrbApplier(index).chanceUniques(view.item, view.template).map { it.value.code }
 

@@ -43,6 +43,7 @@ import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.SkillType
+import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -66,6 +67,32 @@ import kotlin.random.Random
 
 /** Where a run stands: walking, fighting, at a kill's loot, at a Vaal portal's gate, at a crystal, at a crack of the Abyss, or over one way or another. */
 enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT, CHALLENGE }
+
+/**
+ * Что изменит смена набора в походе ([ExpeditionRun.preview]): здоровье держит число [life] под новым максимумом [newMaxLife] (было
+ * [maxLife]); прибавки к добыче следующих боёв и неоткрытых сундуков, что сдвинутся ([loot]); новая фляга - [flask], null - фляги не меняются.
+ */
+data class GearPreview(val life: Double, val maxLife: Double, val newMaxLife: Double, val loot: List<LootShift>, val flask: FlaskSwap?)
+
+/** Прибавка героя к добыче вида [kind] с обычного монстра, процентов: сейчас [before], с новым набором [after]. */
+data class LootShift(val kind: WorldKind, val before: Double, val after: Double)
+
+/**
+ * Фляга, что встанет на место [slot] пояса (с нуля) пустой - 0 из [maxCharges] зарядов; [replaced] - id снятой фляги этого места
+ * (null - место было пустым) и её заряды [lost], что пропадут.
+ */
+data class FlaskSwap(val slot: Int, val maxCharges: Int, val replaced: String?, val lost: Int)
+
+/** Почему набор в походе сейчас не сменить: идёт бой, спуск в Бездну или заход окончен; подпись - `expedition.gear_lock.<вид>`. */
+enum class GearLock {
+    FIGHT,
+    ABYSS,
+    OVER,
+    ;
+
+    /** Ключ подписи причины. */
+    val key: String get() = "expedition.gear_lock.${name.lowercase()}"
+}
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(
@@ -447,6 +474,8 @@ data class RunHud(
     val challenge: ChallengeView? = null,
     /** Очаг Скверны карты; null - очага нет. */
     val blight: BlightView? = null,
+    /** Почему набор сейчас не сменить; null - между боями, находку захода можно надеть. */
+    val gearLock: GearLock? = null,
 ) {
     /**
      * Итог ведёт обратно на карту под зоной: зона Ваал, из которой вышли живыми. Гибель в зоне заканчивает весь заход -

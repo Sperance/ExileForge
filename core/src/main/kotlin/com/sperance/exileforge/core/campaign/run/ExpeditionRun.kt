@@ -24,10 +24,12 @@ import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.AilmentLaw
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
+import com.sperance.exileforge.core.campaign.combat.CarriedEffect
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
+import com.sperance.exileforge.core.campaign.combat.EffectKind
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.FlaskView
@@ -51,8 +53,11 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.MapStat
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.ReservePool
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SummonLog
+import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.ActiveMap
@@ -63,6 +68,7 @@ import com.sperance.exileforge.rules.roll.SourcedEffects
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.FeatureUse
+import com.sperance.exileforge.rules.run.RarityBonus
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
@@ -70,6 +76,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -374,12 +381,73 @@ class ExpeditionRun(
     internal var recap: List<DeathHit> = emptyList()
     internal var fightAgent: MonsterAgent? = null
 
+    /** Набор сервера, что пришёл посреди боя ([RunCommand.Regear] без вещи): встаёт с концом боя. */
+    internal var pendingGear: HeroGear? = null
+
     /** Все стаи боя: вступившая первой, затем собранные ею по раундам. */
     internal var fightAgents: List<MonsterAgent> = emptyList()
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
 
     internal fun manaCap(): Double = kit.reserve(ReservePool.MANA, hero).free
+
+    /**
+     * Набор сменён между боями: здоровье, мана и щит держат число под новым максимумом. Фляга, что встала на место другой, - пустая и без
+     * глотка, а идущий глоток снятой держится на герое до конца срока ([HeroCarry.effects]); фляга, что осталась, - со своими зарядами.
+     * Несомое - баффы и проклятия, счёт сил «каждое N-е» - не трогается: временные эффекты снятой вещи держатся до конца срока, постоянные
+     * уходят с листом сразу, силы начала боя новой вещи ждут следующего боя. Прибавки захода к добыче - по новому листу, как у сервера
+     * ([RarityBonus.of]): итоги и разбор добычи читают их.
+     */
+    internal fun wear(gear: HeroGear) {
+        val was = build.gear
+        val left = flaskLeft
+        fun same(i: Int): Boolean = Slot.FLASKS.getOrNull(i)?.let { slot -> gear.worn[slot]?.let { it == was.worn[slot] } } == true
+        val lingering = kit.flasks.withIndex().filter { (i, flask) -> flask != null && (left.getOrNull(i) ?: 0.0) > 0 && !same(i) }.map { (i, flask) ->
+            val draught = flask!!.sheet.draught(build.body, life, 0.0)
+            CarriedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left[i], draught.duration, conditional = draught.conditional)
+        }
+        build = HeroBuild(gear, mapEffects, rules, origins = origins)
+        charges = gear.kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { if (same(i)) (charges.getOrNull(i) ?: 0.0).coerceIn(0.0, it.maxCharges) else 0.0 } ?: 0.0 }
+        flaskLeft = gear.kit.flasks.indices.map { i -> if (same(i)) left.getOrNull(i) ?: 0.0 else 0.0 }
+        rates = gear.kit.flasks.indices.map { i -> if (same(i)) rates.getOrNull(i) ?: DraughtRate() else DraughtRate() }
+        if (lingering.isNotEmpty()) carry = carry.copy(effects = carry.effects + lingering)
+        run = Run(index, run.zone, run.seed, run.context.copy(bonuses = RarityBonus.of(index.powers, gear.stats)))
+        rebody()
+        life = life.coerceIn(0.0, hero.maxLife)
+    }
+
+    /**
+     * Что даст набор [gear], надетый сейчас ([wear]): здоровье числом под новым максимумом, сдвиги прибавок к добыче с обычного монстра и
+     * новая фляга на поясе. Только показ: читает заход, не меняя его.
+     */
+    fun preview(gear: HeroGear): GearPreview {
+        val was = build.gear
+        val body = HeroBuild(gear, mapEffects, rules, origins = origins).body
+        val before = run.context.bonus(MonsterRarity.NORMAL)
+        val after = RarityBonus.of(index.powers, gear.stats)[MonsterRarity.NORMAL.name] ?: RarityBonus()
+        val loot = listOf(
+            LootShift(WorldKind.QUANTITY, before.quantity, after.quantity),
+            LootShift(WorldKind.RARITY, before.rarity, after.rarity),
+            LootShift(WorldKind.GOLD, before.gold, after.gold),
+            LootShift(WorldKind.EXPERIENCE, before.experience, after.experience),
+        ).filter { abs(it.after - it.before) >= LOOT_STEP }
+        val swap = Slot.FLASKS.withIndex().firstOrNull { (_, slot) -> gear.worn[slot] != null && gear.worn[slot] != was.worn[slot] }?.let { (i, slot) ->
+            FlaskSwap(i, gear.kit.flasks.getOrNull(i)?.sheet?.maxCharges?.toInt() ?: 0, was.worn[slot], charges.getOrNull(i)?.toInt() ?: 0)
+        }
+        return GearPreview(life, hero.maxLife, body.maxLife, loot, swap)
+    }
+
+    /**
+     * Почему набор сейчас не сменить: идёт бой, спуск в Бездну или заход окончен; null - между боями, можно. Сервер отказывает смене по
+     * тем же причинам.
+     */
+    internal val gearLock: GearLock?
+        get() = when (phase) {
+            RunPhase.FIGHT -> GearLock.FIGHT
+            RunPhase.ABYSS -> GearLock.ABYSS
+            RunPhase.DEAD, RunPhase.CLEARED, RunPhase.LEFT -> GearLock.OVER
+            else -> if (descent != null) GearLock.ABYSS else null
+        }
 
     internal fun regear(gear: HeroGear) {
         val next = HeroBuild(gear, mapEffects, rules, origins = origins)
@@ -544,6 +612,9 @@ class ExpeditionRun(
 
         /** How long the fight's last blow hangs before the scene moves on. */
         const val HIT_LIFETIME = 1.0
+
+        /** Меньше стольких процентов сдвиг прибавки к добыче не показывается: показ - целыми процентами. */
+        private const val LOOT_STEP = 0.5
 
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         internal const val ABYSS_AGENT = -10_000

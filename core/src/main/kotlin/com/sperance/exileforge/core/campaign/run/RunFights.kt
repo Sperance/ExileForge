@@ -244,6 +244,8 @@ internal fun ExpeditionRun.play(dt: Double) {
     }
     endFight()
     abyssFight = false
+    if (phase != RunPhase.DEAD) pendingGear?.let { wear(it) }
+    pendingGear = null
     if (outcome == Outcome.WIN && down != null) {
         if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++
     }

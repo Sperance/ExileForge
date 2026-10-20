@@ -74,6 +74,19 @@ internal fun ExpeditionRun.resolve() {
     }
 }
 
+/**
+ * Смена набора: с вещью - решение игрока, только между боями ([ExpeditionRun.gearLock]): событие журнала [RunEvent.Regear] и набор
+ * сразу ([ExpeditionRun.wear]); без вещи - набор, каким его держит сервер: посреди боя он ждёт конца боя.
+ */
+internal fun ExpeditionRun.changeGear(command: RunCommand.Regear) {
+    val item = command.item
+    when {
+        item != null -> if (gearLock == null) record { n -> RunEvent.Regear(n, item, command.slot) }?.let { wear(command.gear) }
+        phase == RunPhase.FIGHT -> pendingGear = command.gear
+        else -> wear(command.gear)
+    }
+}
+
 /** What the orb did, read off the crystal before and after it. */
 internal fun ExpeditionRun.vaalOutcome(before: Crystal, after: Crystal): String = when {
     after.essences.count { index.essence(it)?.special == true } > before.essences.count { index.essence(it)?.special == true } -> EssenceBook.VAAL_SPECIAL
@@ -167,6 +180,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             corruptionOpened = true
             phase = RunPhase.MAP
         }
+
+        is RunCommand.Regear -> changeGear(command)
 
         is RunCommand.Cast -> fight?.useSkill(command.slot)
 

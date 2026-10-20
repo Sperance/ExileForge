@@ -268,7 +268,7 @@ object Sheets {
      *
      * Вещь, что ещё не у героя (товар, лот), взвешивается как лежащая в тайнике.
      */
-    private fun worn(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance>? {
+    fun worn(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance>? {
         val fit = fit(index, item, items, place) ?: return null
         return (if (items.none { it.id == item.id }) items + item else items).map {
             when {

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
@@ -26,6 +27,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -137,4 +139,10 @@ sealed interface RunCommand {
 
     /** The hero's campaign as the server holds it now: the Vaal zone a portal opened and a crystal a Vaal orb changed are read from it. */
     data class Campaign(val state: CampaignState) : RunCommand
+
+    /**
+     * Новый набор [gear]: с [item] - игрок надел находку захода на место [slot] (null - решают правила), только между боями - событие
+     * журнала и набор сразу ([ExpeditionRun.changeGear]); без неё - набор, каким его держит сервер, посреди боя - с его концом.
+     */
+    data class Regear(val gear: HeroGear, val item: String? = null, val slot: Slot? = null) : RunCommand
 }

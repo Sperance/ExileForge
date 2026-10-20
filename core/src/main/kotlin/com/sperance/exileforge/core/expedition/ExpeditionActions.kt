@@ -19,7 +19,9 @@ import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FOUGHT_EVENTS
+import com.sperance.exileforge.core.campaign.run.GearPreview
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroActions
@@ -51,6 +53,7 @@ import com.sperance.exileforge.rules.run.RunEventKind
 import com.sperance.exileforge.rules.run.RunStart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -140,6 +143,9 @@ class ExpeditionActions(
 
     /** Отправок подряд не дошло: каждая ждёт вдвое дольше прошлой. */
     private var failures = 0
+
+    /** Сервер отклонил смену набора в походе: поход возьмёт набор сервера ([resync]). */
+    @Volatile private var regearRefused = false
 
     /** Жетоны зоны Ваал, которые сервер уже сосчитал, когда в поход вошли снова. */
     private var vaalKilled: List<Int> = emptyList()
@@ -300,7 +306,7 @@ class ExpeditionActions(
         expedition {
             it.copy(
                 runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = marks,
-                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion,
+                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion, found = started.found.toSet(),
             )
         }
         mutableRun.value = ExpeditionRun.start(
@@ -406,6 +412,8 @@ class ExpeditionActions(
             settle(j, pending, report)
             if (!report.open) shut = j.runId
             j.confirm(report.applied, report.rejected)
+            if (pending.any { it.kind == RunEventKind.REGEAR && it.n in report.rejected }) regearRefused = true
+            hero?.let(::resync)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
@@ -574,18 +582,24 @@ class ExpeditionActions(
 
     private fun stance(): HeroStance = hero?.let { HeroStance.of(it.heroClass) } ?: HeroStance()
 
+    /** Герой, как его берёт поход: в своём наборе ([gear] с вещами героя). */
+    fun gear(): HeroGear? = hero?.let { gear(it, it.items) }
+
     /**
-     * Герой, как его берёт поход: лист и из чего он сложен, стойка и что он несёт сверх листа.
+     * Герой [h] с вещами [items], как его берёт поход: лист и из чего он сложен, стойка, что он несёт сверх листа, и надетое по месту.
+     * Вещи героя как есть - его лист; иной набор - лист тем же расчётом правил, что у сервера ([Sheets.calculate]).
      *
      * Рычаги боя Предначертания - на силе листа, с судьбоносными строками надетого.
      */
-    fun gear(): HeroGear? {
+    private fun gear(h: HeroView, items: List<ItemInstance>): HeroGear? {
         val i = index ?: return null
-        val h = hero ?: return null
+        val sheet = if (items === h.items) h.sheet else Sheets.calculate(i, h.level, h.heroClass, h.tree, items, h.info.laws, h.info.fate)
+        val equipped = items.filter { it.equipped && !it.socketed }.associateBy { it.slot!! }
         val conditions = h.skills.flasks
-        val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        val fate = FateKit.of(i, h.info.fate, h.stats, h.equipped.values)
-        return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges, fate), i.stats.percent)
+        val flasks = Slot.FLASKS.mapIndexed { n, slot -> equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
+        val fate = FateKit.of(i, h.info.fate, sheet.stats, equipped.values)
+        val kit = Loadout.of(h.skills, i, h.heroClass, flasks, sheet.stats, i.powers, i.rules.charges, fate)
+        return HeroGear(sheet.stats, h.level, sheet.model, stance(), kit, i.stats.percent, equipped.mapValues { it.value.id })
     }
 
     fun send(command: RunCommand) {
@@ -637,9 +651,66 @@ class ExpeditionActions(
         if (heroes.state.value.readAt == 0L) heroSync.readHero()
     }
 
-    /** Новое чтение героя: походу - кампания, зона Ваал или кристалл, что сервер решил. */
+    /** Новое чтение героя: походу - кампания, зона Ваал или кристалл, что сервер решил, и набор сервера ([resync]). */
     private fun heroChanged(view: HeroView) {
-        if (runJournal?.heroId == view.id) runs().forEach { it.send(RunCommand.Campaign(view.campaign)) }
+        if (runJournal?.heroId != view.id) return
+        runs().forEach { it.send(RunCommand.Campaign(view.campaign)) }
+        resync(view)
+    }
+
+    /**
+     * Сервер отклонил смену набора ([regearRefused]): поход берёт набор героя [view], каким его держит сервер, когда журнал уже не везёт
+     * своих смен ([RunEventKind.REGEAR]). Совпадают - ничего не считается.
+     */
+    private fun resync(view: HeroView) {
+        if (!regearRefused || runJournal?.heroId != view.id || runJournal?.pending?.any { it.kind == RunEventKind.REGEAR } == true) return
+        regearRefused = false
+        val worn = view.equipped.mapValues { it.value.id }
+        val behind = runs().filter { it.build.gear.worn != worn }.takeIf { it.isNotEmpty() } ?: return
+        val gear = gear(view, view.items) ?: return
+        behind.forEach { it.send(RunCommand.Regear(gear.copy(stance = it.stance))) }
+    }
+
+    /**
+     * «Надеть» в походе по карте: находка этого захода ([Expedition.found]) встаёт на место [slot] (null - решают правила) между боями. Набор
+     * с ней считается здесь тем же расчётом листа, что у сервера ([Sheets.worn]), поверх набора, что поход носит сейчас; поход берёт его сразу
+     * и пишет смену в журнал ([RunCommand.Regear]), карта под зоной Ваал - тоже, без своего события. Сервер проверяет то же сам: отказ вернёт
+     * набор сервера ([resync]). Лист считается вне главного потока.
+     */
+    fun wear(itemId: String, slot: Slot? = null) {
+        val run = mutableRun.value ?: return
+        if (itemId !in repository.state.value.found || run.hud.value.gearLock != null) return
+        val outer = parent
+        scope.launch(Dispatchers.Default) {
+            val gear = wearing(run, itemId, slot) ?: return@launch
+            run.send(RunCommand.Regear(gear.copy(stance = run.stance), itemId, slot))
+            outer?.send(RunCommand.Regear(gear.copy(stance = outer.stance)))
+        }
+    }
+
+    /**
+     * Что изменит в походе надетая находка [itemId] на месте [slot] ([ExpeditionRun.preview]); null - похода нет или вещь не надеть. Лист
+     * считается здесь - вызывать вне главного потока.
+     */
+    fun wearPreview(itemId: String, slot: Slot? = null): GearPreview? {
+        val run = mutableRun.value ?: return null
+        return wearing(run, itemId, slot)?.let(run::preview)
+    }
+
+    /** Набор героя похода [run] с вещью [itemId] на месте [slot], поверх набора, что поход носит сейчас; null - вещь не надеть. */
+    private fun wearing(run: ExpeditionRun, itemId: String, slot: Slot?): HeroGear? {
+        val i = index ?: return null
+        val h = hero?.takeIf { it.id == runJournal?.heroId } ?: return null
+        val items = wornAs(h.items, run.build.gear.worn)
+        val item = items.firstOrNull { it.id == itemId }?.takeIf { !it.equipped } ?: return null
+        return Sheets.worn(i, item, items, slot)?.let { gear(h, it) }
+    }
+
+    /** Вещи героя [items] в наборе [worn] - как их носит поход: надетое по месту, прочее в тайнике; самоцветы гнёзд - как были. */
+    private fun wornAs(items: List<ItemInstance>, worn: Map<Slot, String>): List<ItemInstance> {
+        if (worn.isEmpty()) return items
+        val place = worn.entries.associate { (slot, id) -> id to slot }
+        return items.map { if (it.socketed || it.slot == place[it.id]) it else it.copy(slot = place[it.id]) }
     }
 
     /**
@@ -704,10 +775,11 @@ class ExpeditionActions(
         if (shut != runId) api.campaign.abandon(heroId, runId)
     }
 
+    /** Снаряжение из ответа журнала - в «Новый лут» и в находки захода ([Expedition.found]). */
     private fun loot(heroId: String, equipment: List<ItemInstance>) {
         if (equipment.isEmpty() || !heroes.onScreen(heroId)) return
         val now = System.currentTimeMillis()
-        expedition { it.copy(runLoot = it.runLoot + equipment.map { piece -> LootEntry(piece, now) }) }
+        expedition { it.copy(runLoot = it.runLoot + equipment.map { piece -> LootEntry(piece, now) }, found = it.found + equipment.map { piece -> piece.id }) }
     }
 
     /** Брошен без слова: герой или его сессия ушли. Журнал остаётся на диске до следующего входа. */
@@ -729,13 +801,13 @@ class ExpeditionActions(
          * События, что отправляют журнал сразу: всё, что не убийство и не начало или итог боя. Сундук - тоже: его крышка
          * открыта, добыча вылетает, как придёт ответ.
          *
-         * Объект карты (золото торговца, сделка алтаря, добыча комнаты) ждёт ответа сразу.
+         * Объект карты (золото торговца, сделка алтаря, добыча комнаты) ждёт ответа сразу; смена набора - тоже: сервер мерит по ней следующий бой.
          */
         val CHECKPOINTS = setOf(
             RunEventKind.CHEST,
             RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
-            RunEventKind.FEATURE,
+            RunEventKind.FEATURE, RunEventKind.REGEAR,
         )
         const val FLUSH_EVERY = 20_000L
 

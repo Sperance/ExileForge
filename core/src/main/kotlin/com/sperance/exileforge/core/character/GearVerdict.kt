@@ -25,6 +25,9 @@ sealed interface GearVerdict {
      */
     val might: MightShift?
 
+    /** Смена лучше надетого - по Мощи героя ([MightShift.shift]), без неё - по [score]: метка «лучше надетого» строк лута в походе. */
+    val better: Boolean get() = (might?.shift ?: Shift.of(score)) == Shift.UP
+
     /** Куда сдвинулась величина, когда сдвиг достаточно велик, чтобы о нём говорить. */
     enum class Shift {
         UP,

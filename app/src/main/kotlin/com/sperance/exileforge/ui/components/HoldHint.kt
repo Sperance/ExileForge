@@ -21,16 +21,12 @@ enum class HoldSubject {
 
     /** Карточка предмета. */
     ITEM,
-
-    /** Пояснение значка или метки. */
-    INFO,
     ;
 
     /** Строка подсказки: ключи словаря - буквально, их полноту видит `UiStringsTest`. */
     val text: String get() = when (this) {
         SKILL -> ui("hint.hold.skill")
         ITEM -> ui("hint.hold.item")
-        INFO -> ui("hint.hold.info")
     }
 }
 

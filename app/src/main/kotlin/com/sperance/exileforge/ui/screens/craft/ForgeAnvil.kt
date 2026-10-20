@@ -38,8 +38,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
-import com.sperance.exileforge.ui.components.HoldHint
-import com.sperance.exileforge.ui.components.HoldSubject
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.TipCallout
@@ -190,11 +188,7 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
     }
 }
 
-/**
- * The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides, its base and its lines.
- *
- * Метка строки называет свой вид удержанием.
- */
+/** The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides, its base and its lines. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
@@ -227,7 +221,6 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
                 Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if (item.lines.any { it.marks.kind != null }) HoldHint(HoldSubject.INFO)
     }
 }
 

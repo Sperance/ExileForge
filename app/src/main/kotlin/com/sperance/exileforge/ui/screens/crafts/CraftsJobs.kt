@@ -46,6 +46,7 @@ import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.additiveTitle
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
@@ -208,7 +209,7 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
 /**
  * Лист работы формулой рецепта: имя и «профессия · с ур. N», выбор варианта (и вещи у Осквернения), полоса-формула «вход + вход → выход
  * + находки» (касание материала или выхода - карточка), что получится - имя, сведения и описание (касание - карточка), поля работы списком
- * с разбором по источникам ([JobFields]), примеси кузнеца, у нехватки - где материал добывается,
+ * с разбором по источникам ([JobFields]), добавки работы с их эффектом, у нехватки - где материал добывается,
  * и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион, инструмент или нехватка на цикл.
  *
  * Работа с выбором запускается одним из вариантов; недоступный виден с замком. Кузнец открывается в последнем режиме этого героя на
@@ -272,13 +273,14 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             RecipeFormula(game, profession, job, chosenAdditives) { it?.let(inspect) }
             ResultLine(game, job) { it?.let(inspect) }
             crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code) { help = it } }
-            if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
+            val offered = crafts?.additives(job).orEmpty()
+            if (offered.isNotEmpty() && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    crafts.additives.keys.forEach { code ->
+                    offered.forEach { (code, effect) ->
                         val on = code in additives
                         ForgeChip(
-                            ui("crafts.gain", bagCount(game, code), itemTitle(code)).removePrefix("+"),
+                            ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
                             on,
                             { additives = if (on) additives - code else additives + code },
                             state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),

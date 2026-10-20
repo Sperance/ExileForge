@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model.crafts
 
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.rules.content.AdditiveEffect
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobExtra
@@ -43,7 +44,6 @@ import kotlinx.serialization.Serializable
     val seconds: Double get() = job.seconds
     val output: String get() = job.output
     val inputs: List<JobInput> get() = job.inputs
-    val additives: Boolean get() = job.additives
 
     /** Расход цикла с добавками [chosen] - тот же, что проверяет сервер при запуске. */
     fun cycleCost(chosen: List<String> = emptyList()): Cost = Cost(Work.perCycle(job, chosen))
@@ -118,12 +118,15 @@ fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.first
     val professions: List<ProfessionView> = emptyList(),
     val work: WorkView? = null,
     val gains: WorkGains = WorkGains(),
-    /** Which additive guarantees which handcrafted line, and how many a smelt takes. */
-    val additives: Map<String, String> = emptyMap(),
+    /** Группы добавок работ: группа ([Job.additives]) - предмет добавки и его эффект; [maxAdditives] - сколько разных берёт цикл. */
+    val additives: Map<String, Map<String, AdditiveEffect>> = emptyMap(),
     val maxAdditives: Int = 0,
     /** До какого мига работа была досчитана прежде (часы сервера): [gains] покрывают время от него; ноль - досчёта не было. */
     val from: Long = 0,
-)
+) {
+    /** Добавки, что берёт работа [job]: предмет и его эффект; у работы без группы - пусто. */
+    fun additives(job: JobView): Map<String, AdditiveEffect> = additives[job.job.additives].orEmpty()
+}
 
 /** The work under way, as its profession lists it: the chosen variant when it has one. */
 val CraftsState.running: JobView? get() = work?.let { w -> professions.firstOrNull { it.code == w.profession }?.job(w.job, w.choice) }

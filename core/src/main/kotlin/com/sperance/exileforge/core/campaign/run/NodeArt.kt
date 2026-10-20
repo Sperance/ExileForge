@@ -316,6 +316,16 @@ object NodeArt {
                 glow(star4(53, 9, 2), 0xFFF0B0)
                 glow(star4(45, 26, 1.6), 0xFFF0B0)
             }
+
+            NodeLook.QUARRY -> {
+                rock(40, 20, 26, 0x8A8378)
+                body(poly(26, 47, 40, 44, 40, 50, 26, 53), 0x6E685F)
+                line(svg("M26 47L40 44L54 46"), 0xB8B0A2, .9)
+                body(poly(30, 66, 44, 66, 44, 58, 30, 58), 0xA49C8E)
+                body(poly(44, 66, 49, 63, 49, 55, 44, 58), 0x7A7368)
+                body(poly(30, 58, 44, 58, 49, 55, 35, 55), 0xC2BAAA)
+                line(svg("M53 63L57 40M60 63L57 40"), 0x6A4A2A, 1.6)
+            }
         }
     }
 
@@ -529,6 +539,14 @@ object NodeArt {
                 glow(oval(40, 57, 6, 2.5), 0xE8C860, .45)
                 line(oval(40, 57, 8.2, 3.4), 0xA07A40, .7)
                 chips(0xD0A868)
+            }
+
+            NodeLook.QUARRY -> {
+                rock(40, 18, 12, 0x7A746A)
+                body(poly(27, 55, 52, 52, 52, 55, 27, 58), 0x5E594F)
+                line(svg("M30 56L50 53"), 0xA49C8E, .8)
+                rubble(0x7A746A)
+                line(svg("M56 66L62 60"), 0x5A3E24, 1.4)
             }
         }
     }

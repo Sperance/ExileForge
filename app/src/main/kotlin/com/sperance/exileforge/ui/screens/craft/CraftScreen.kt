@@ -49,12 +49,12 @@ internal const val UNCRAFT = "-"
 /**
  * The forge as an anvil: a rail of the picker's sections beside the anvil («Тип» общего
  * фильтра выбора вещи), which holds the target, the orb, essence or bench line laid on it and, for an orb, its omen — and shows the
- * target as it stands. Under it the section's tray: a compact grid of only what the bag holds and the target takes, or the bench's
- * lines. What is laid sits in a bar over the navigation with a button that is held, because an orb is spent the moment it is used.
+ * target as it stands. Under it the section's tray (знамения, оттиски, эссенции) or the bench's lines. Полоса над навигацией - рецепт
+ * связки, ряд сфер и удерживаемая кнопка, because an orb is spent the moment it is used.
  *
  * Цель - [ForgeTarget] (зеркало правил [OrbTarget]). Every rule is the server's; what a target takes is the rules' own [OrbApplier.accepts].
  *
- * Сферы и материалы читаются из сумки - кузня открывается на свежем герое. Лоток - только сферы, что лягут на цель сами или со знамением
+ * Сферы и материалы читаются из сумки - кузня открывается на свежем герое. Ряд сфер полосы - только сферы, что лягут на цель сами или со знамением
  * сумки; переставшая ложиться выбранная сфера снимается. Печати Атласа - только на карту. Эссенции, что не лягут, - серыми с отказом правил
  * словами игрока. Сфера качества говорит, что поднимет и сколько качества другого вида сбросится; сфера удачи - какие уникалки может дать
  * вещь.
@@ -114,14 +114,6 @@ internal const val UNCRAFT = "-"
                     target,
                     toolSocket(game, smithy, section, index, benchLine, if (section == ForgeSection.SEALS) sealChosen else chosen, essenceRefusals),
                     omenSocket(game, smithy, section, vm::selectOmen),
-                    remember(section, target, smithy, choices, seals, quality, chanceUniques, essenceRefusals, benchLine, hero.bag, game.bench) {
-                        when (section) {
-                            ForgeSection.ORBS -> orbRecipe(game, index, smithy, target, chosen, choices.isEmpty(), quality, chanceUniques)
-                            ForgeSection.SEALS -> sealRecipe(game, index, smithy, sealChosen, seals.isEmpty())
-                            ForgeSection.ESSENCES -> gear?.let { essenceRecipe(game, index, hero, it, smithy.essence, essenceRefusals) } ?: Recipe(null, null)
-                            ForgeSection.BENCH -> benchRecipe(game, benchLine)
-                        }
-                    },
                     onPick = { picking = true },
                     modifier = Modifier.weight(1f),
                 )
@@ -130,10 +122,6 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ORBS -> target?.let {
                     LineChoices(game, it, enabled, vm)
                     OmenLedger(game, smithy.orb, smithy.omen, it.orbTarget, omens, vm::selectOmen)
-                    OrbTray(game, smithy, choices, hidden) { code ->
-                        vm.selectOrb(code)
-                        engraving = code == Orb.ENGRAVERS_ORB.name
-                    }
                 }
 
                 ForgeSection.SEALS -> gear?.let {
@@ -147,12 +135,37 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ESSENCES -> EssenceTray(game, smithy.essence, essenceRefusals, vm::selectEssence)
             }
         }
-        if (hero != null && target != null) {
+        if (hero != null && index != null && target != null) {
+            val recipe = remember(section, target, smithy, choices, seals, quality, chanceUniques, essenceRefusals, benchLine, hero.bag, game.bench) {
+                when (section) {
+                    ForgeSection.ORBS -> orbRecipe(game, index, smithy, target, chosen, choices.isEmpty(), quality, chanceUniques)
+                    ForgeSection.SEALS -> sealRecipe(game, index, smithy, sealChosen, seals.isEmpty())
+                    ForgeSection.ESSENCES -> gear?.let { essenceRecipe(game, index, hero, it, smithy.essence, essenceRefusals) } ?: Recipe(null, null)
+                    ForgeSection.BENCH -> benchRecipe(game, benchLine)
+                }
+            }
             when (section) {
-                ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, { engraving = true }) { vm.applyOrb(target, it) }
-                ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, sealChosen, enabled) { code -> vm.applySeal(it.id, code) } }
-                ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, it.view, benchLine, enabled) }
-                ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
+                ForgeSection.ORBS -> OrbBar(
+                    game,
+                    smithy,
+                    target,
+                    recipe,
+                    choices,
+                    hidden,
+                    enabled,
+                    quality?.lost ?: 0,
+                    onSelect = { code ->
+                        vm.selectOrb(code)
+                        engraving = code == Orb.ENGRAVERS_ORB.name
+                    },
+                    onPickLine = { engraving = true },
+                ) { vm.applyOrb(target, it) }
+
+                ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, recipe, sealChosen, seals.isEmpty(), enabled) { code -> vm.applySeal(it.id, code) } }
+
+                ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, recipe, it.view, benchLine, enabled) }
+
+                ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, recipe, smithy.essence, it.view, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
             }
         }
     }

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Search
@@ -22,8 +21,6 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,30 +37,14 @@ import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
-/** Что лежит в круглом гнезде наковальни: рисунок (null - гнездо пусто) и цвет; имя лежащего называет рецепт ([Recipe]). */
+/** Что лежит в круглом гнезде наковальни: рисунок (null - гнездо пусто) и цвет; имя лежащего называет рецепт полосы ([Recipe]). */
 internal class Socket(val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
-
-/**
- * Рецепт наковальни - строка под гнёздами, единственное место, что называет связку: что ляжет на цель ([tool]), знамение к нему
- * ([omen]) и итог одной фразой ([effect] цветом [tone]). Нажатие итога открывает подсказку с описанием правил ([detail]); пустое
- * описание - итог не нажимается. Нет инструмента - [effect] просит выбрать или говорит, что выбирать нечего. [warnings] - красные
- * строки того, что действие снимет или сбросит.
- */
-internal class Recipe(
-    val tool: String?,
-    val effect: String?,
-    val tone: Color = Vital,
-    val omen: String? = null,
-    val detail: String = "",
-    val warnings: List<String> = emptyList(),
-)
 
 /** Значок раздела на полке у наковальни. */
 private val ItemSection.glyph: ImageVector get() = when (this) {
@@ -129,10 +110,10 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 }
 
 /**
- * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen]; под гнёздами - [recipe] (имена
- * связки и итог), then the target itself as it stands and the server's last word about it. Осквернённая цель вместо рецепта
- * получает причину отказа. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её
- * карточку ([ForgeCards]): выбор другой - «Сменить», рядом - надеть или снять, в «⋯» - продажа и аукцион; пустая открывает выбор.
+ * The anvil: the target's socket, then the [tool] laid on it and, for an orb, its [omen]; под гнёздами - сама цель как есть и последнее
+ * слово сервера о ней. Связку и итог называет рецепт полосы ([ForgeBar]), наковальня отдаёт место предмету. Цель - [ForgeTarget]: вещь
+ * (база и строки со значками). Касание лежащей цели открывает её карточку ([ForgeCards]): выбор другой - «Сменить», рядом - надеть или
+ * снять, в «⋯» - аукцион; пустая открывает выбор.
  */
 @Composable internal fun Anvil(
     game: GameUi,
@@ -140,7 +121,6 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
     target: ForgeTarget?,
     tool: Socket,
     omen: Socket?,
-    recipe: Recipe,
     onPick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -165,11 +145,6 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
                 Plus()
                 RoundSocket(it)
             }
-        }
-        when {
-            target == null -> Unit
-            target.corrupted -> Refusal(ui("orb.corrupted"))
-            else -> RecipeLine(recipe)
         }
         when (target) {
             null -> Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onPick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -259,46 +234,5 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
         ) {
             Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) { socket.glyph?.invoke() }
         }
-    }
-}
-
-/**
- * Строка рецепта: имя инструмента, «+ знамение» и итог - по центру под гнёздами; итог с описанием подчёркнут и по нажатию открывает
- * подсказку ([TipCallout]). Под ним - красные предупреждения рецепта.
- */
-@Composable private fun RecipeLine(recipe: Recipe) {
-    var open by remember(recipe.detail) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        recipe.tool?.let { Text(it, color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center) }
-        recipe.omen?.let { Text("+ $it", color = Rune, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
-        recipe.effect?.takeIf { it.isNotBlank() }?.let { effect ->
-            val tappable = recipe.detail.isNotBlank()
-            Box {
-                Text(
-                    effect,
-                    color = if (recipe.tool == null) Muted else recipe.tone,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center,
-                    textDecoration = if (tappable) TextDecoration.Underline else null,
-                    modifier = Modifier.padding(top = 2.dp).then(if (tappable) Modifier.clickable(role = Role.Button) { open = true } else Modifier),
-                )
-                if (open) {
-                    TipCallout(recipe.tone, { open = false }) { Text(recipe.detail, color = Parchment, style = MaterialTheme.typography.bodySmall) }
-                }
-            }
-        }
-        recipe.warnings.forEach { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
-    }
-}
-
-/** Отказ кузницы над целью вместо рецепта: значок запрета и причина в красной рамке. */
-@Composable private fun Refusal(text: String) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.fillMaxWidth().background(LifeRed.copy(alpha = .08f), shape).border(1.dp, LifeRed.copy(alpha = .35f), shape).padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(Icons.Outlined.Block, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
-        Text(text, color = LifeRed, style = MaterialTheme.typography.bodySmall)
     }
 }

@@ -226,8 +226,8 @@ class ExpeditionActions(
         if (tester) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
     }
 
-    /** Тестировщик и выше: насильные механики и бой сразу со стражем. */
-    private val tester: Boolean get() = sessions.state.value.tester(heroes.state.value)
+    /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
+    private val tester: Boolean get() = sessions.state.value.free(heroes.state.value)
 
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }

@@ -67,11 +67,11 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * «Испытания» (страница «Похода»): ключи под рукой, незавершённое испытание и три режима
  * плитами [TrialMode] - Разлом недели, Башня и Босс-раш; плита раскрывается касанием, внутри - вход и подробности.
- * Тестировщику замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
+ * Тестировщику со свободным прогрессом замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
  *
  * Каждое число на доске - один раз: запасы ключей - только в сетке сверху, правила режимов - в ⓘ плиты, причина запрета входа -
  * на погашенной кнопке. Разлом недели - своя доска на весь экран. Покорённая башня печать не тратит и не раскрывается. Закрытый раш
- * не показывается (тестировщику открыты все регионы); фрагменты герба сами собираются в ключ на сервере - сетка показывает, сколько
+ * не показывается (тестировщику со свободным прогрессом открыты все регионы); фрагменты герба сами собираются в ключ на сервере - сетка показывает, сколько
  * их к следующему ключу; ближайший закрытый регион - один, с тем, что осталось зачистить.
  */
 @Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
@@ -86,7 +86,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val keys = hero.bag[TrialRules.KEY] ?: 0L
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !game.busy
-    val free = game.isTester
+    val free = game.freeProgress
     val rift by vm.riftState.collectAsState()
     var opened by rememberSaveable { mutableStateOf<TrialMode?>(null) }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -204,7 +204,7 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
  * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные (зелёные), ровно одна следующая (золотая,
  * выбрана по умолчанию) и за ней одна закрытая с замком - касание объясняет, как её открыть; дальше ступени не рисуются. Под лентой -
  * цифры выбранной ступени с подписями ([RushTierFacts]) и широкая «Войти · ступень N»; без ключа или при идущем испытании она погашена
- * и пишет причину. Тестировщику (`ProgressGate`) лента показывает все ступени открытыми.
+ * и пишет причину. Тестировщику со свободным прогрессом (`ProgressGate`) лента показывает все ступени открытыми.
  */
 @Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, free: Boolean) {
     val trials = game.hero?.campaign?.trials ?: return

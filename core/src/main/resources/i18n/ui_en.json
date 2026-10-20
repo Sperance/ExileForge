@@ -3753,6 +3753,8 @@
   "tester.skill_points": "Skill points",
   "tester.atlas_points": "All atlas points",
   "tester.zones": "Open every zone",
+  "tester.free_progress": "Free progress",
+  "tester.free_progress_hint": "Level and progress locks are open: rush tiers, sections, the Rift, the guardian at once. Off - you play like a player",
   "tester.items": "Items",
   "tester.item": "Item (orbs, essences, runes…)",
   "tester.amount": "Amount",

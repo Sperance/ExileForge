@@ -85,7 +85,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * Атласа; лента снаряжения (карты, зелья, скарабеи); плита выбранной карты; «Войти в портал». Зона «???» говорит только, чей страж её
  * открывает. Правила и контент - индекса; сроки зоны - возвращение стража - кампании героя.
  *
- * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик начинает заход сразу боем со стражем. Новое семя раньше
+ * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик со свободным прогрессом начинает заход сразу боем со стражем. Новое семя раньше
  * правил не даётся: кнопка погашена и считает секунды; погашенная без карты объясняет причину по касанию.
  */
 @Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
@@ -145,8 +145,8 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 state = ButtonState.of(game.hero != null && !game.busy && wait == 0L && !mapless),
                 why = ui("expedition.launch_needs_map").takeIf { mapless },
             ) { launchGuarded { vm.startRun(zone.code.value) } }
-            if (game.isTester) TesterMechanics(vm, forced)
-            if (game.isTester) {
+            if (game.freeProgress) TesterMechanics(vm, forced)
+            if (game.freeProgress) {
                 ForgeButton(
                     state = ButtonState.of(game.hero != null && !game.busy && wait == 0L),
                     onClick = { launchGuarded { vm.startRun(zone.code.value, toBoss = true) } },
@@ -206,7 +206,7 @@ private fun continues(game: GameUi, zone: MapCode, launch: MapLaunch, forced: Se
 private const val SEED_TICK_MS = 1000L
 
 /**
- * Механики тестировщика: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
+ * Механики тестировщика со свободным прогрессом: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
  * между зонами; открытый заход с другим выбором начинается заново. Панель свёрнута заголовком «Механики · выбрано N»;
  * раскрытость помнит устройство ([com.sperance.exileforge.core.app.GameSettings.testerMechanicsOpen]).
  */

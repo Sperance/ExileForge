@@ -137,7 +137,7 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
     if (breakdown) FightStatsSheet(report.stats, hud.summary.fights) { breakdown = false }
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
-    if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index, game.isTester, hud.atlas) { model.runCommand(RunCommand.LevelSeen) } }
+    if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index, game.freeProgress, hud.atlas) { model.runCommand(RunCommand.LevelSeen) } }
 }
 
 /**

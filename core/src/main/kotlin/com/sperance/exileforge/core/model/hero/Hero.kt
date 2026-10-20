@@ -59,8 +59,10 @@ import kotlinx.serialization.Serializable
     val fateCarry: Int = 0,
     /** Номер героя: шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
     val number: String = "",
-    /** Тестировщик: окно тестирования и замки прогресса - по герою, а не по аккаунту. */
+    /** Тестировщик: окно тестирования - по герою, а не по аккаунту. */
     val tester: Boolean = false,
+    /** Свободный прогресс тестировщика: замки прогресса открыты, только когда он включён у тестировщика (`ProgressGate` сервера). */
+    val freeProgress: Boolean = false,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
@@ -204,6 +206,8 @@ object ServerClock {
     val createdAt: String = "",
     /** Тестировщик: окно тестирования - по герою. */
     val tester: Boolean = false,
+    /** Свободный прогресс тестировщика: замки прогресса открыты, только когда он включён у тестировщика. */
+    val freeProgress: Boolean = false,
 ) {
     /** [createdAt] в мс эпохи; null - не прочитать. */
     val createdAtMs: Long? get() = runCatching { java.time.LocalDateTime.parse(createdAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull()

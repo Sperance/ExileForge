@@ -109,7 +109,7 @@ import org.koin.compose.viewmodel.koinViewModel
     var open by remember { mutableStateOf<String?>(null) }
     var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
     val show: (String) -> Unit = { open = it }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, show) } }
         if (conditional.isNotEmpty()) ConditionalCard(conditional, game) { openConditional = it }
@@ -137,27 +137,27 @@ internal fun conditionalTitle(row: ConditionalStat, game: GameUi): AnnotatedStri
     val explainer = remember(game) { StatExplainer(game) }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(18.dp))
+            Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(SummaryMetrics.icon))
             Text(ui("stat.conditional.group"), color = ConditionalAccent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
         rows.forEach { row ->
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
             Row(
-                Modifier.fillMaxWidth().clickable { open(row) }.padding(horizontal = 12.dp, vertical = 6.dp).heightIn(min = 36.dp),
+                Modifier.fillMaxWidth().clickable { open(row) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                StatIcon(row.stat, ConditionalAccent, Modifier.size(18.dp))
+                StatIcon(row.stat, ConditionalAccent, Modifier.size(SummaryMetrics.icon))
                 Text(conditionalTitle(row, game), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(
                     explainer.fmt(row.stat, row.value, row.op, game.index?.stats?.isPercent(row.stat) == true),
                     color = Parchment,
                     style = MaterialTheme.typography.titleSmall,
-                    fontSize = 15.sp,
+                    fontSize = SummaryMetrics.figure,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                 )
@@ -203,11 +203,11 @@ private val StatSection.glyph: Glyph get() = when (this) {
     var unfolded by rememberSaveable(group) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            GlyphIcon(group.glyph, accent, Modifier.size(18.dp))
+            GlyphIcon(group.glyph, accent, Modifier.size(SummaryMetrics.icon))
             Text(group.title(game.lang), color = accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
         plain.forEach { (key, value) ->
@@ -230,7 +230,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
 /** Свёрнутая строка пределов раздела: «Пределы · N упёрлись» ([reached] строк раздела дошли до предела) и стрелка; касание - [onToggle]. */
 @Composable private fun LimitsFold(reached: Int, unfolded: Boolean, accent: Color, onToggle: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onToggle).padding(horizontal = 12.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onToggle).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -241,14 +241,27 @@ private val StatSection.glyph: Glyph get() = when (this) {
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.weight(1f),
         )
-        Icon(if (unfolded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+        Icon(if (unfolded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(SummaryMetrics.icon))
     }
+}
+
+/**
+ * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding], значок строки и шапки раздела [icon], итог [figure],
+ * шапка раздела с полями [headPadding], между карточками разделов [cardGap].
+ */
+private object SummaryMetrics {
+    val rowHeight = 28.dp
+    val rowPadding = 3.dp
+    val icon = 16.dp
+    val figure = 14.sp
+    val headPadding = 4.dp
+    val cardGap = 6.dp
 }
 
 /** Строка сводки: касание открывает разбор ([open]). */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String) -> Unit) {
     val lit = if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier
-    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = 6.dp))
+    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
 }
 
 /**
@@ -259,11 +272,11 @@ private val StatSection.glyph: Glyph get() = when (this) {
  */
 @Composable private fun StatRow(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
     Row(
-        modifier.heightIn(min = 36.dp),
+        modifier.heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        StatIcon(key, accent, Modifier.size(18.dp))
+        StatIcon(key, accent, Modifier.size(SummaryMetrics.icon))
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
         val level = game.hero?.level
         val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
@@ -278,7 +291,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
                 else -> Parchment
             },
             style = MaterialTheme.typography.titleSmall,
-            fontSize = 15.sp,
+            fontSize = SummaryMetrics.figure,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )

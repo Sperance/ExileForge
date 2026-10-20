@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,16 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
@@ -27,19 +21,15 @@ import com.sperance.exileforge.core.filter.itemShelf
 import com.sperance.exileforge.core.filter.railGroups
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
-import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.model.trade.MerchantOffer
-import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
@@ -54,9 +44,6 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * An offer is a copy like any in the stash: its view over the content draws it, and the
  * rules say whether this hero could wear it.
- *
- * Beside the wares, the orb shelf: lesser orbs for gold, each one of a kind
- * dearer than the last until the shelf renews with the wares.
  *
  * It has a building of the City of its own, apart from the auction's tabs.
  *
@@ -76,10 +63,9 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Своей шапки нет: золото героя и время до нового товара - справа в цепочке «Город › Торговец» ([MerchantTrail]), кошелёк больше
- * нигде не печатается - в строках только цена ([GoldCost] без «/ есть», красная при нехватке). Товар и сферы - две доли одного
- * переключателя, ⓘ с правилами торговца - в конце его ряда.
+ * нигде не печатается - в строках только цена ([GoldCost] без «/ есть», красная при нехватке). ⓘ с правилами торговца - справа над товаром.
  *
- * Копия без шаблона в контенте не показывается. Товар - под общим фильтром предметов. Таймер на нуле - витрина и полка сфер перечитываются,
+ * Копия без шаблона в контенте не показывается. Товар - под общим фильтром предметов. Таймер на нуле - витрина перечитывается,
  * карточка ушедшего товара закрывается. Трофеи боссов - над товаром.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,12 +75,10 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     val busy = activity.busy
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var notes by remember { mutableStateOf(false) }
-    var orbsShelf by rememberSaveable { mutableStateOf(false) }
     val inspect = rememberInspect()
     val stock = game.hero?.merchant
     val money = game.hero?.money
     val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
-    val orbs = stock?.orbs.orEmpty()
     val filterState = rememberItemFilter(ItemShelf.MERCHANT)
     var filtering by remember { mutableStateOf(false) }
     val prices = remember(offers) { offers.associate { (offer, view) -> view.id to offer.price } }
@@ -112,43 +96,17 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
         if (chosen != null && stock?.offers.orEmpty().none { it.id == chosen?.id }) chosen = null
     }
     MerchantTrail(money, stock?.refreshAt)
-    val about: @Composable RowScope.() -> Unit = { ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact) }
-    if (orbs.isNotEmpty()) {
-        PillTabs(
-            listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)),
-            if (orbsShelf) 1 else 0,
-            { orbsShelf = it == 1 },
-            segmented = true,
-            trailing = about,
-        )
-    } else {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, content = about)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact)
     }
     PullToRefreshBox(isRefreshing = Reads.HERO in activity.loading, onRefresh = heroModel::load, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
-            if (orbsShelf && orbs.isNotEmpty()) {
-                item {
-                    ForgePanel {
-                        orbs.forEach { orb ->
-                            val bill = game.goldBill(orb.price)
-                            OrbRow(
-                                orb,
-                                bill,
-                                have = game.bagAmount(orb.code),
-                                enabled = !busy && !orb.soldOut && bill?.affordable == true,
-                                onInfo = { inspect(Inspect.Stack(orb.code)) },
-                            ) { market.buyOrb(orb.code) }
-                        }
-                    }
-                }
-            } else {
-                if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
-                if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
-                if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
-                if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
-                items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
-                    ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
-                }
+            if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
+            if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
+            if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
+            if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
+            items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
+                ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
             }
         }
     }
@@ -193,7 +151,7 @@ private fun countdown(seconds: Long): String {
     return "%d:%02d".format(minutes / 60, minutes % 60)
 }
 
-/** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the (i) at the end of the tabs. */
+/** Правила торговца - как витрина обновляется и как назначена цена - за ⓘ над товаром. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MerchantNotes(onDismiss: () -> Unit) {
@@ -201,53 +159,8 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Engraved(ui("merchant.title"))
             Text(ui("merchant.note"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            Engraved(ui("merchant.orbs"))
-            Text(ui("merchant.orbs_note"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
         }
     }
-}
-
-/**
- * One orb on the shelf: its glass and name (a tap on them opens the orb), under them one line «в сумке 14 · ещё 5» (полка пуста -
- * «раскуплено» угольным), and the next price over the button. В правом углу строки - цена без кошелька ([GoldCost]) и под ней малая
- * «Купить»; не хватает - цена красная, кнопка погашена.
- */
-@Composable private fun OrbRow(orb: MerchantOrb, bill: GoldBill?, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            Modifier.weight(1f).clickable(onClickLabel = itemTitle(orb.code), onClick = onInfo),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
-            Column(Modifier.weight(1f)) {
-                Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
-                OrbStock(have, orb)
-            }
-        }
-        RowActions(value = { bill?.let { GoldCost(it, purse = false) } ?: GoldPrice(orb.price) }) {
-            RowButton(ui("auction.buy"), onClick = onBuy, state = ButtonState.of(enabled))
-        }
-    }
-}
-
-/** Запас сферы одной строкой: «в сумке 14 · ещё 5», полка пуста - «раскуплено» угольным; не знаем ни того, ни другого - строки нет. */
-@Composable private fun OrbStock(have: Long?, orb: MerchantOrb) {
-    val left = orb.left
-    if (have == null && left == null) return
-    Text(
-        buildAnnotatedString {
-            have?.let { append(ui("merchant.orb_have", it)) }
-            if (have != null && left != null) append(" · ")
-            when {
-                left == null -> Unit
-                orb.soldOut -> withStyle(SpanStyle(color = Ember)) { append(ui("merchant.sold_out")) }
-                else -> append(ui("merchant.orb_left", left))
-            }
-        },
-        color = Muted,
-        style = MaterialTheme.typography.labelSmall,
-    )
 }
 
 /**

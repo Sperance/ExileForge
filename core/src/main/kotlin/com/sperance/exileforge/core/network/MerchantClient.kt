@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.model.trade.MerchantOrbPurchase
 import com.sperance.exileforge.core.model.trade.MerchantPurchase
 import com.sperance.exileforge.core.model.trade.MerchantStock
 
@@ -8,9 +7,6 @@ import com.sperance.exileforge.core.model.trade.MerchantStock
 class MerchantClient internal constructor(private val http: Transport) {
     /** Repeated only under its key ([SafeRetry]): the server answers a repeat with the first answer, never paying twice. */
     suspend fun buy(heroId: String, offerId: String): MerchantPurchase = http.post("api/v1/hero/merchant/buy", heroQuery(heroId, "offerId" to offerId))
-
-    /** One orb off the shelf, repeated only under its key too. */
-    suspend fun buyOrb(heroId: String, code: String): MerchantOrbPurchase = http.post("api/v1/hero/merchant/buyOrb", heroQuery(heroId, "code" to code))
 
     /**
      * Трофеи босса [boss] - на его уникалку (Предначертание «Трофейщик»): копия ложится в тайник. Отказы - `FT_003`

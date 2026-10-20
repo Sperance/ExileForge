@@ -104,10 +104,6 @@ class MarketActions(
         restocked { api.merchant.buy(heroes.heroId, offerId) }
     }
 
-    fun buyOrb(code: String) = trade(writing = true) {
-        restocked { api.merchant.buyOrb(heroes.heroId, code) }
-    }
-
     /**
      * Покупка с полки, что успела смениться: отказ `CH_017` - не ошибка игрока, а старая витрина - герой
      * перечитывается (полка едет в его снимке), тост «Витрина обновилась».

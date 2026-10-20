@@ -71,7 +71,6 @@ enum class SourceKind(val per: ChanceUnit) {
     RIFT(ChanceUnit.CHEST),
     RUSH(ChanceUnit.CHEST),
     QUEST(ChanceUnit.QUEST),
-    MERCHANT(ChanceUnit.REWARD),
     SALE(ChanceUnit.REWARD),
     FIND(ChanceUnit.CYCLE),
 }
@@ -141,7 +140,7 @@ fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized
 private val useCache = WeakHashMap<ContentIndex, Map<String, List<ItemUse>>>()
 
 /**
- * The reverse of the content: every table, monster, zone, work and shelf, read once into stack → sources.
+ * The reverse of the content: every table, monster, zone and work, read once into stack → sources.
  *
  * Что карточка стопки говорит из одного контента, под описанием сервера: гарантированную строку эссенции по роду вещи на её тире и откуда
  * стопка берётся; сервера ничто не спрашивает.
@@ -166,7 +165,6 @@ private class SourceIndex(private val index: ContentIndex) {
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
-        index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }
         index.rules.sell.shards.entries.groupBy { it.value.shard }.forEach { (shard, grants) ->
             add(shard, ItemSource(SourceKind.SALE, ref = grants.joinToString(",") { it.key.name }, level = grants.first().value.amount.toInt()))
         }

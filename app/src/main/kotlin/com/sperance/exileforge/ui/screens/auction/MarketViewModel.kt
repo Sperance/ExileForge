@@ -35,7 +35,6 @@ class MarketViewModel(
     fun openAuction() = actions.loadAuction(fresh = true)
     fun glanceLots() = actions.loadMyLots(glance = true, fresh = true)
     fun buyOffer(offerId: String) = actions.buyOffer(offerId)
-    fun buyOrb(code: String) = actions.buyOrb(code)
     fun tradeTrophy(boss: String) = actions.tradeTrophy(boss)
     fun buy(lotId: String) = actions.buy(lotId)
     fun extend(lotId: String) = actions.extend(lotId)

@@ -7,10 +7,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.HourglassEmpty
@@ -35,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
@@ -92,6 +95,10 @@ internal object RiftColors {
     val Warn = Color(0xFFFF6B4A)
     val LifeLow = Color(0xFFB3263B)
     val LifeHigh = Color(0xFFFF4D62)
+
+    /** Выделенный вариант узла - золото Предначертания: рамка и знак выбора. */
+    val Pick = FateInk.Gold
+    val OnPick = FateInk.OnGold
 }
 
 /** Цвет редкости дара. */
@@ -420,8 +427,8 @@ private enum class RunSheet { BOONS, CURSES }
             modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             Column(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp).heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
-            ) { offer?.let { OfferPlate(rules, engine, run, it, idle, model::riftAct) } }
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp).heightIn(max = 440.dp),
+            ) { offer?.let { OfferPlate(rules, run, it, idle, model::riftAct) } }
         }
     }
     looking?.let { node ->
@@ -545,6 +552,9 @@ private val RiftMenuPalette = MenuPalette(
     }
 }
 
+/** Имя дара [code], со ступенью [grade] - если она есть. */
+private fun boonName(code: String, grade: Int): String = loc("rift.boon.$code.name") + if (grade > 0) " · ${ui("rift.grade", grade)}" else ""
+
 /** Дар одной строкой: имя цветом редкости, ступень и его строки листа; дар правил - своим описанием. */
 @Composable private fun BoonLine(rules: RiftRules, code: String, grade: Int = 0, modifier: Modifier = Modifier) {
     val index = LocalContentIndex.current
@@ -552,7 +562,7 @@ private val RiftMenuPalette = MenuPalette(
     val scale = 1 + rules.nodes.gradePower / 100 * grade
     Column(modifier) {
         Text(
-            loc("rift.boon.$code.name") + if (grade > 0) " · ${ui("rift.grade", grade)}" else "",
+            boonName(code, grade),
             color = boon.rarity.color(),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
@@ -632,144 +642,263 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
 private const val RUNES = 24
 private const val SPARKS = 14
 
-/** Предложение узла: дары, пары алтаря, Отдых, Кузня, контракт Владыки. */
-@Composable private fun OfferPlate(rules: RiftRules, engine: RiftEngine, run: RiftRun, offer: RiftOffer, idle: Boolean, onAct: (RiftAct) -> Unit) {
-    val full = run.boons.size >= rules.nodes.slots
-    var replacing by remember(offer) { mutableStateOf<((Int) -> RiftAct)?>(null) }
-    RiftPlate(RiftColors.Hot) {
-        when (offer) {
-            is RiftOffer.Boons -> {
-                Text(ui("rift.boons_title"), color = RiftColors.Hot, style = MaterialTheme.typography.titleSmall)
-                offer.options.forEachIndexed { i, code ->
-                    Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) { BoonLine(rules, code) }
-                }
-                ForgeButton(onClick = { onAct(RiftAct.Leave) }, state = ButtonState.of(idle), kind = ButtonKind.Text, accent = RiftColors.Muted) { Text(ui("rift.skip")) }
-            }
+/**
+ * Вариант предложения узла, который выделяет касание: [Take] - дар, пара алтаря или товар Кузни по номеру в предложении,
+ * [Merge] - слияние в Кузне, [Rest] - выбор Отдыха, [Law] - закон контракта Владыки.
+ */
+private sealed interface OfferOption {
+    data class Take(val index: Int) : OfferOption
 
-            is RiftOffer.Altar -> {
-                PlateTitle(ui("rift.altar_title"), RiftColors.Chaos, listOf(ui("rift.altar_hint", rules.score.altarCurse.toInt()), ui("rift.altar_pair")))
-                offer.pacts.forEachIndexed { i, pact ->
-                    Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
-                        BoonLine(rules, pact.boon)
-                        CurseLine(pact.curse)
+    data object Merge : OfferOption
+
+    data class Rest(val choice: RiftRest) : OfferOption
+
+    data class Law(val law: RiftLaw) : OfferOption
+}
+
+/**
+ * Выделение на плашке узла, общее для всех узлов: касание варианта выделяет его, касание другого меняет выбор; [targets] - цели
+ * второго шага выделенного (ячейка дара на замену или усиление, проклятие, пара даров слияния). Выбор совершает только удержание
+ * кнопки подвала; у нового узла выделение новое.
+ */
+@Stable private class OfferPick {
+    var option by mutableStateOf<OfferOption?>(null)
+        private set
+    val targets = mutableStateListOf<Int>()
+
+    fun select(next: OfferOption) {
+        if (next == option) return
+        option = next
+        targets.clear()
+    }
+
+    /** Отметить цель [index] или снять отметку; сверх [limit] отметок уходит самая ранняя. */
+    fun toggle(index: Int, limit: Int) {
+        if (targets.remove(index)) return
+        if (targets.size >= limit) targets.removeAt(0)
+        targets += index
+    }
+}
+
+/** Тон кнопки удержания по сути выбора: сделка - хаос, дар - золото Предначертания, покупка - Разлом, слияние и отдых - зелёный. */
+private enum class CommitTone(val accent: Color?, val hold: Hold) {
+    PACT(RiftColors.Chaos, Hold()),
+    GIFT(null, Hold(tone = HoldTone.Fate)),
+    BUY(RiftColors.Rift, Hold()),
+    MEND(null, Hold()),
+}
+
+/** Уход с узла без выбора: подпись [label] и ход [act]. */
+private class OfferLeave(val label: String, val act: RiftAct)
+
+/**
+ * Подвал плашки узла: главная кнопка удержания [label] тона [tone] совершает [act]; без хода выбор не полон - кнопка погашена,
+ * а [label] говорит, что выбрать. [leave] - вторичная красная: уйти ни с чем или отказаться, тоже удержанием.
+ */
+private class OfferFooter(val label: String, val tone: CommitTone, val act: RiftAct?, val leave: OfferLeave? = null)
+
+/** Цена дара [code] на витрине Кузни в Эхо. */
+private fun RiftRules.price(code: String): Int = boonsByCode[code]?.rarity?.let(nodes.prices::get) ?: 0
+
+/**
+ * Подпись главной кнопки подвала: без выделения - [prompt], выделение без хода [act] (цели не отмечены) - [incomplete], иначе
+ * действие [ready].
+ */
+private fun OfferPick.label(act: RiftAct?, ready: String, prompt: String, incomplete: String = ui("rift.pick_replace")): String = when {
+    option == null -> prompt
+    act == null -> incomplete
+    else -> ready
+}
+
+/** Подвал предложения [offer] при выделении [pick]: ход есть, только когда выбраны и вариант, и все его цели. */
+private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: OfferPick): OfferFooter {
+    val option = pick.option
+    val target = pick.targets.firstOrNull()
+    val take = (option as? OfferOption.Take)?.let { if (run.boons.size < rules.nodes.slots) RiftAct.Take(it.index) else target?.let { slot -> RiftAct.Take(it.index, slot) } }
+    val skip = OfferLeave(ui("rift.skip"), RiftAct.Leave)
+    return when (offer) {
+        is RiftOffer.Boons -> OfferFooter(pick.label(take, ui("rift.boon_take"), ui("rift.boons_title")), CommitTone.GIFT, take, skip)
+
+        is RiftOffer.Altar -> OfferFooter(pick.label(take, ui("rift.altar_take"), ui("rift.altar_pick")), CommitTone.PACT, take, skip)
+
+        is RiftOffer.Forge -> {
+            val leave = OfferLeave(ui("rift.forge_leave"), RiftAct.Leave)
+            if (option == OfferOption.Merge) {
+                val merge = pick.targets.takeIf { it.size == 2 }?.let { RiftAct.Merge(it[0], it[1]) }
+                OfferFooter(pick.label(merge, ui("rift.merge_take", rules.nodes.merge), ui("rift.forge_pick"), ui("rift.merge_pick_pair")), CommitTone.MEND, merge, leave)
+            } else {
+                val price = (option as? OfferOption.Take)?.let { rules.price(offer.shop[it.index]) } ?: 0
+                OfferFooter(pick.label(take, ui("rift.forge_buy", price), ui("rift.forge_pick")), CommitTone.BUY, take, leave)
+            }
+        }
+
+        RiftOffer.Rest -> {
+            val choice = (option as? OfferOption.Rest)?.choice
+            val act = choice?.let { rest -> if (rest == RiftRest.HEAL) RiftAct.Rest(rest) else target?.let { RiftAct.Rest(rest, it) } }
+            val incomplete = if (choice == RiftRest.CLEANSE) ui("rift.rest_pick_curse") else ui("rift.rest_pick_boon")
+            OfferFooter(pick.label(act, ui("rift.rest_take"), ui("rift.rest_pick"), incomplete), CommitTone.MEND, act)
+        }
+
+        RiftOffer.Contract -> {
+            val act = (option as? OfferOption.Law)?.let { RiftAct.Contract(it.law) }
+            OfferFooter(pick.label(act, ui("rift.contract_take"), ui("rift.contract_hint")), CommitTone.PACT, act, OfferLeave(ui("rift.contract_refuse"), RiftAct.Contract(null)))
+        }
+    }
+}
+
+/**
+ * Предложение узла: дары, пары алтаря, Отдых, Кузня, контракт Владыки. Касание варианта выделяет его ([OfferPick]), выбор совершает
+ * удержание кнопки подвала, закреплённого под листаемым списком.
+ */
+@Composable private fun OfferPlate(rules: RiftRules, run: RiftRun, offer: RiftOffer, idle: Boolean, onAct: (RiftAct) -> Unit) {
+    val pick = remember(run.at, offer) { OfferPick() }
+    RiftPlate(RiftColors.Hot) {
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            when (offer) {
+                is RiftOffer.Boons -> {
+                    Text(ui("rift.boons_title"), color = RiftColors.Hot, style = MaterialTheme.typography.titleSmall)
+                    offer.options.forEachIndexed { i, code -> TakeCard(rules, run, pick, i, idle) { BoonLine(rules, code) } }
+                }
+
+                is RiftOffer.Altar -> {
+                    PlateTitle(ui("rift.altar_title"), RiftColors.Chaos, listOf(ui("rift.altar_hint", rules.score.altarCurse.toInt()), ui("rift.altar_pair")))
+                    offer.pacts.forEachIndexed { i, pact ->
+                        TakeCard(rules, run, pick, i, idle) {
+                            BoonLine(rules, pact.boon)
+                            CurseLine(pact.curse)
+                        }
                     }
                 }
-                ForgeButton(onClick = { onAct(RiftAct.Leave) }, state = ButtonState.of(idle), kind = ButtonKind.Text, accent = RiftColors.Muted) { Text(ui("rift.skip")) }
-            }
 
-            RiftOffer.Rest -> RestChoices(rules, run, idle, onAct)
+                RiftOffer.Rest -> RestCards(rules, run, pick, idle)
 
-            is RiftOffer.Forge -> ForgeChoices(rules, engine, run, offer, idle, full, { replacing = it }, onAct)
+                is RiftOffer.Forge -> ForgeCards(rules, run, offer, pick, idle)
 
-            RiftOffer.Contract -> {
-                PlateTitle(ui("rift.contract_title"), RiftColors.Warn, listOf(ui("rift.contract_sign"), ui("rift.contract_hint")))
-                rules.guardians.lord.laws.forEach { law -> LawChoice(law, idle && run.boons.isNotEmpty()) { onAct(RiftAct.Contract(law)) } }
-                if (run.boons.isEmpty()) Text(ui("rift.contract_no_boons"), color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
-                ForgeButton(onClick = { onAct(RiftAct.Contract(null)) }, state = ButtonState.of(idle), modifier = Modifier.fillMaxWidth()) { Text(ui("rift.contract_decline", rules.score.contract)) }
-            }
-        }
-    }
-    replacing?.let { make ->
-        SlotPicker(rules, run, { Text(ui("rift.replace_hint"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall) }, onDismiss = { replacing = null }) { slot ->
-            replacing = null
-            onAct(make(slot))
-        }
-    }
-}
-
-@Composable private fun LawChoice(law: RiftLaw, enabled: Boolean, onClick: () -> Unit) {
-    Choice(enabled, onClick) {
-        Text(loc("rift.law.${law.name}.name"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
-        Text(loc("rift.law.${law.name}.description"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-/** Отдых: лечение, усиление дара (выбор дара) или снятие проклятия (выбор проклятия). */
-@Composable private fun RestChoices(rules: RiftRules, run: RiftRun, idle: Boolean, onAct: (RiftAct) -> Unit) {
-    var target by remember { mutableStateOf<RiftRest?>(null) }
-    RiftRest.entries.forEach { choice ->
-        val possible = when (choice) {
-            RiftRest.HEAL -> true
-            RiftRest.UPGRADE -> run.boons.any { it.grade < rules.nodes.maxGrade }
-            RiftRest.CLEANSE -> run.curses.isNotEmpty()
-        }
-        Choice(idle && possible, { if (choice == RiftRest.HEAL) onAct(RiftAct.Rest(choice)) else target = choice }) {
-            Text(ui("rift.rest.${choice.name}"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-    when (target) {
-        RiftRest.UPGRADE -> SlotPicker(rules, run, { Text(ui("rift.rest_pick_boon"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall) }, onDismiss = { target = null }, enabled = { run.boons[it].grade < rules.nodes.maxGrade }) {
-            target = null
-            onAct(RiftAct.Rest(RiftRest.UPGRADE, it))
-        }
-
-        RiftRest.CLEANSE -> ForgeSheet(onDismissRequest = { target = null }, containerColor = RiftColors.Ground2) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(ui("rift.rest_pick_curse"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall)
-                run.curses.forEachIndexed { i, curse ->
-                    Choice(true, {
-                        target = null
-                        onAct(RiftAct.Rest(RiftRest.CLEANSE, i))
-                    }) { CurseLine(curse.code, curse.altar) }
+                RiftOffer.Contract -> {
+                    PlateTitle(
+                        ui("rift.contract_title"),
+                        RiftColors.Warn,
+                        listOf(ui("rift.contract_sign"), ui("rift.contract_hint"), ui("rift.contract_decline", rules.score.contract)),
+                    )
+                    rules.guardians.lord.laws.forEach { law ->
+                        PickCard(pick, OfferOption.Law(law), idle && run.boons.isNotEmpty()) {
+                            Text(loc("rift.law.${law.name}.name"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
+                            Text(loc("rift.law.${law.name}.description"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    if (run.boons.isEmpty()) Text(ui("rift.contract_no_boons"), color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
+        OfferFooterBar(offerFooter(rules, run, offer, pick), idle, onAct)
+    }
+}
 
-        else -> Unit
+/** Подвал плашки узла под списком: главная кнопка удержания во всю ширину и рядом красная «уйти» ([OfferFooter]). */
+@Composable private fun OfferFooterBar(footer: OfferFooter, idle: Boolean, onAct: (RiftAct) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ForgeButton(
+            onClick = { footer.act?.let(onAct) },
+            modifier = Modifier.weight(1f),
+            size = ButtonSize.Wide,
+            state = ButtonState.of(idle && footer.act != null),
+            accent = footer.tone.accent,
+            hold = footer.tone.hold,
+        ) { Text(footer.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        footer.leave?.let { leave ->
+            ForgeButton(
+                onClick = { onAct(leave.act) },
+                kind = ButtonKind.Danger,
+                size = ButtonSize.Wide,
+                state = ButtonState.of(idle),
+                icon = Icons.Outlined.Close,
+                hold = Hold(),
+            ) { Text(leave.label, maxLines = 1) }
+        }
+    }
+}
+
+/** Вариант «взять» ([OfferOption.Take]) номер [index]: при полных ячейках у выделенного - выбор дара на замену. */
+@Composable private fun TakeCard(rules: RiftRules, run: RiftRun, pick: OfferPick, index: Int, enabled: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    val replace: (@Composable ColumnScope.() -> Unit)? = if (run.boons.size >= rules.nodes.slots) {
+        { PickTargets(pick, ui("rift.replace_hint"), heldTargets(rules, run) { true }) }
+    } else {
+        null
+    }
+    PickCard(pick, OfferOption.Take(index), enabled, replace, content)
+}
+
+/** Отдых: лечение; усиление дара и снятие проклятия - с целью у выделенного варианта. */
+@Composable private fun RestCards(rules: RiftRules, run: RiftRun, pick: OfferPick, idle: Boolean) {
+    RiftRest.entries.forEach { choice ->
+        val (hint, targets) = when (choice) {
+            RiftRest.HEAL -> "" to emptyList<PickTarget>()
+            RiftRest.UPGRADE -> ui("rift.rest_pick_boon") to heldTargets(rules, run) { run.boons[it].grade < rules.nodes.maxGrade }
+            RiftRest.CLEANSE -> ui("rift.rest_pick_curse") to run.curses.map { curse ->
+                PickTarget(loc("rift.curse.${curse.code}.name") + if (curse.altar) " · ${ui("rift.altar_mark")}" else "", RiftColors.Warn, enabled = true)
+            }
+        }
+        val possible = choice == RiftRest.HEAL || targets.any { it.enabled }
+        val more: (@Composable ColumnScope.() -> Unit)? = if (targets.isEmpty()) {
+            null
+        } else {
+            { PickTargets(pick, hint, targets) }
+        }
+        PickCard(pick, OfferOption.Rest(choice), idle && possible, more) {
+            Text(ui("rift.rest.${choice.name}"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
 /** Кузня: витрина за Эхо и слияние двух даров одной редкости; открыта, пока герой не уйдёт. */
-@Composable private fun ForgeChoices(
-    rules: RiftRules,
-    engine: RiftEngine,
-    run: RiftRun,
-    offer: RiftOffer.Forge,
-    idle: Boolean,
-    full: Boolean,
-    onReplace: (((Int) -> RiftAct)?) -> Unit,
-    onAct: (RiftAct) -> Unit,
-) {
-    var merging by remember { mutableStateOf(false) }
+@Composable private fun ForgeCards(rules: RiftRules, run: RiftRun, offer: RiftOffer.Forge, pick: OfferPick, idle: Boolean) {
     offer.shop.forEachIndexed { i, code ->
-        val price = rules.boonsByCode[code]?.rarity?.let(rules.nodes.prices::get) ?: 0
-        Choice(idle && run.echo >= price, { if (full) onReplace { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
+        val price = rules.price(code)
+        val affordable = run.echo >= price
+        TakeCard(rules, run, pick, i, idle && affordable) {
             BoonLine(rules, code)
-            Text(ui("rift.forge_buy", price), color = if (run.echo >= price) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
+            Text(
+                if (affordable) ui("rift.forge_price", price) else ui("rift.forge_price_short", price),
+                color = if (affordable) RiftColors.Rift else RiftColors.Warn,
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
+    val rarityOf = { i: Int -> rules.boonsByCode[run.boons[i].code]?.rarity }
     val mergeable = run.boons.groupBy { rules.boonsByCode[it.code]?.rarity }.any { (rarity, held) -> rarity?.next != null && held.size >= 2 }
-    ForgeButton(onClick = { merging = true }, state = ButtonState.of(idle && mergeable && run.echo >= rules.nodes.merge), modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-        Text(ui("rift.forge_merge", rules.nodes.merge))
+    val pair: @Composable ColumnScope.() -> Unit = {
+        val first = pick.targets.firstOrNull()
+        PickTargets(pick, ui("rift.merge_pick"), heldTargets(rules, run) { i -> rarityOf(i)?.next != null && (first == null || rarityOf(first) == rarityOf(i)) }, limit = 2)
     }
-    ForgeButton(onClick = { onAct(RiftAct.Leave) }, state = ButtonState.of(idle), kind = ButtonKind.Text, accent = RiftColors.Muted) { Text(ui("rift.forge_leave")) }
-    if (merging) {
-        var first by remember { mutableStateOf<Int?>(null) }
-        val rarityOf = { i: Int -> rules.boonsByCode[run.boons[i].code]?.rarity }
-        SlotPicker(
-            rules,
-            run,
-            { PlateTitle(ui("rift.merge_title"), RiftColors.Text, listOf(ui("rift.merge_pick"))) },
-            onDismiss = { merging = false },
-            enabled = { i -> rarityOf(i)?.next != null && (first == null || (i != first && rarityOf(i) == rarityOf(first!!))) },
-        ) { i ->
-            val a = first
-            if (a == null) {
-                first = i
-            } else {
-                merging = false
-                onAct(RiftAct.Merge(a, i))
-            }
-        }
+    PickCard(pick, OfferOption.Merge, idle && mergeable && run.echo >= rules.nodes.merge, pair) {
+        Text(ui("rift.merge_title"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Text(ui("rift.forge_merge", rules.nodes.merge), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 
-/** Выбор ячейки дара под заголовком [title]. */
-@Composable private fun SlotPicker(rules: RiftRules, run: RiftRun, title: @Composable () -> Unit, onDismiss: () -> Unit, enabled: (Int) -> Boolean = { true }, onPick: (Int) -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss, containerColor = RiftColors.Ground2) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            title()
-            run.boons.forEachIndexed { i, held -> Choice(enabled(i), { onPick(i) }) { BoonLine(rules, held.code, held.grade) } }
+/** Цель второго шага - чип: подпись [label], цвет [accent], можно ли её отметить ([enabled]). */
+private class PickTarget(val label: String, val accent: Color, val enabled: Boolean)
+
+/** Дары героя целями второго шага: имя со ступенью цветом редкости; [enabled] - какой можно отметить. */
+private fun heldTargets(rules: RiftRules, run: RiftRun, enabled: (Int) -> Boolean): List<PickTarget> = run.boons.mapIndexed { i, held ->
+    PickTarget(boonName(held.code, held.grade), rules.boonsByCode[held.code]?.rarity?.color() ?: RiftColors.Text, enabled(i))
+}
+
+/** Цели второго шага у выделенного варианта: строка [hint] и чипы [items]; отметить - не больше [limit]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, limit: Int = 1) {
+    Text(hint, color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        items.forEachIndexed { i, item ->
+            val marked = i in pick.targets
+            ForgeChip(
+                item.label,
+                marked,
+                { pick.toggle(i, limit) },
+                mode = if (limit == 1) ChipMode.Choice else ChipMode.Filter,
+                state = ButtonState.of(item.enabled || marked),
+                accent = item.accent,
+            )
         }
     }
 }
@@ -790,14 +919,47 @@ private const val SPARKS = 14
     }
 }
 
-@Composable private fun Choice(enabled: Boolean, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+/**
+ * Вариант узла: касание выделяет его в [pick] (выбор можно сменить), сам выбор совершает удержание кнопки подвала. Выделенный -
+ * золотая рамка и галочка, прочие - пустое кольцо; [targets] - цели второго шага, видны только у выделенного.
+ */
+@Composable private fun PickCard(
+    pick: OfferPick,
+    option: OfferOption,
+    enabled: Boolean,
+    targets: (@Composable ColumnScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val picked = pick.option == option
     val shape = RoundedCornerShape(10.dp)
-    Column(
-        Modifier.fillMaxWidth().background(RiftColors.Panel, shape).border(1.dp, if (enabled) RiftColors.LineHi else RiftColors.Line, shape)
-            .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        content = content,
-    )
+    val rim = when {
+        picked -> RiftColors.Pick
+        enabled -> RiftColors.LineHi
+        else -> RiftColors.Line
+    }
+    Box(
+        Modifier.fillMaxWidth().background(RiftColors.Panel, shape).border(if (picked) 2.dp else 1.dp, rim, shape)
+            .selectable(picked, enabled = enabled, role = Role.RadioButton) { pick.select(option) }
+            .padding(10.dp),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(end = 28.dp).alpha(if (enabled || picked) 1f else .6f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            content()
+            if (picked) targets?.invoke(this)
+        }
+        PickMark(picked, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** Знак выделения варианта: золотой круг с галочкой или пустое кольцо. */
+@Composable private fun PickMark(picked: Boolean, modifier: Modifier) {
+    val mark = modifier.size(22.dp)
+    if (picked) {
+        Box(mark.background(RiftColors.Pick, CircleShape), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Check, null, tint = RiftColors.OnPick, modifier = Modifier.size(14.dp))
+        }
+    } else {
+        Box(mark.border(1.5.dp, RiftColors.LineHi, CircleShape))
+    }
 }
 
 @Composable internal fun RiftPlate(accent: Color, content: @Composable ColumnScope.() -> Unit) {

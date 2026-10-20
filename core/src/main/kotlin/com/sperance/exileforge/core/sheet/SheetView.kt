@@ -53,6 +53,16 @@ internal object HeroLens {
     }
 
     /**
+     * Что даст самоцвет [jewel] в гнезде [socket] вместо того, что там стоит: сдвиги сводки и Мощь героя с заменой
+     * ([Sheets.socketing]). Считается клиентом без запроса - вызывать вне главного потока.
+     */
+    fun socketing(index: ContentIndex?, hero: HeroView?, jewel: ItemInstance, socket: String): WearOutcome {
+        index ?: return WearOutcome.NONE
+        hero ?: return WearOutcome.NONE
+        return Sheets.socketing(index, jewel, socket, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.info.laws, hero.info.fate, hero.skills)
+    }
+
+    /**
      * Что изменит в листе взятие узла [code] дерева с вариантом [choice] (у узла с выбором); пусто - героя или контента нет
      * или узел уже взят. Считается клиентом без запроса - вызывать вне главного потока.
      */
@@ -157,6 +167,7 @@ fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 fun GameUi.itemSeals(item: ItemInstance): List<CardSeal> = HeroLens.itemSeals(index, hero, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
+fun GameUi.socketing(jewel: ItemInstance, socket: String): WearOutcome = HeroLens.socketing(index, hero, jewel, socket)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)

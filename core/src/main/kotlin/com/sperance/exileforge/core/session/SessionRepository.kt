@@ -45,6 +45,13 @@ data class Session(
     fun tester(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.tester
         ?: (characters.firstOrNull { it.id == holding.heroId }?.tester == true)
 
+    /**
+     * Свободен ли прогресс героя [holding]: тестировщик включил «Свободный прогресс» в окне тестирования - замки уровня и прогресса
+     * открыты, как на сервере (`ProgressGate`); выключен - тестировщик идёт по прогрессу, как игрок. Живой снимок главнее строки списка.
+     */
+    fun free(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.let { it.tester && it.freeProgress }
+        ?: (characters.firstOrNull { it.id == holding.heroId }?.let { it.tester && it.freeProgress } == true)
+
     /** Откроет ли сервер выдачи окна тестирования герою [holding]: администратор - любому, иначе - тестировщику. */
     fun grants(holding: HeroHolding): Boolean = isAdmin || tester(holding)
 

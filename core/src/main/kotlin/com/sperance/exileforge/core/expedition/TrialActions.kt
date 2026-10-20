@@ -124,7 +124,7 @@ class TrialActions(
      * Отправляет пачку в пути снова или ожидающие события под новым ключом; ответ ложится на арену.
      *
      * Не больше пачки за раз: длинный журнал сервер отвергает целиком. Дошедшая без отчёта пачка взята - добыча придёт с героем. Рубеж
-     * башни и первая зачистка раша - тост нового очка Атласа. Закрытое испытание или чужой журнал - ничто больше не ждёт; любой другой
+     * башни и первая зачистка раша - тост нового очка Атласа; отклонённый босс или этаж - красный тост с причиной поверх тоста добычи. Закрытое испытание или чужой журнал - ничто больше не ждёт; любой другой
      * отказ оставляет события неотправленными под новым ключом позже.
      */
     private suspend fun flush() {
@@ -148,8 +148,8 @@ class TrialActions(
             }
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
             expedition.atlasEarned(owner, report.rewards.flatMap { it.atlas })
-            if (report.rejected.isNotEmpty()) notices.toast(ui("expedition.rejected", report.rejected.size))
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
+            notices.refused(report.rejected, report.refusals)
             if (heroes.state.value.readAt == 0L && heroes.onScreen(owner)) heroSync.readHero()
             if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
         } catch (e: CancellationException) {

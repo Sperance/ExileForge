@@ -14,6 +14,7 @@ import com.sperance.exileforge.rules.roll.CrystalWindow
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.ChestStock
+import com.sperance.exileforge.rules.run.Refusal
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -120,6 +121,8 @@ import kotlinx.serialization.Serializable
     val rewards: List<EventReward> = emptyList(),
     /** The run the report is about. */
     val runId: String = "",
+    /** Причины отклонённых событий ([rejected]) по номерам; нет номера - отказ правила. */
+    val refusals: Map<Int, Refusal> = emptyMap(),
     /** Задания, сданные сервером при конце захода: ответ, что закрыл заход; null - заход открыт или сдача не прошла. */
     val turnIns: com.sperance.exileforge.rules.content.QuestClaimAll? = null,
     /** Задания гильдии после той сдачи; null - вне гильдии или заход открыт. */
@@ -166,4 +169,6 @@ import kotlinx.serialization.Serializable
     val received: Received = Received(),
     /** The trial the report is about. */
     val runId: String = "",
+    /** Причины отклонённых событий ([rejected]) по номерам; нет номера - отказ правила. */
+    val refusals: Map<Int, Refusal> = emptyMap(),
 )

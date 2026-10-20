@@ -38,6 +38,8 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Стопка за раз - не больше `moderation.grantStack`; редкости выдачи - по шаблону (`ItemFactory.grantable`). Случайная вещь - шаблон
  * выбранных редкости и места (пусто - любые), вещь по шаблону - на выбранной редкости, если шаблону дано больше одной.
+ * Герою-тестировщику сверху - переключатель «Свободный прогресс» (`hero/grant/freeProgress`): включён - замки уровня и прогресса
+ * открыты в клиенте и на сервере, выключен (по умолчанию) - тестировщик идёт по прогрессу, как игрок.
  */
 @Composable internal fun TestingPage(account: AccountUi) {
     val heroModel: HeroViewModel = koinViewModel()
@@ -48,6 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     TrailData(account.heroName, Tip("", ui("tester.for_hero", account.heroName), Muted))
+    if (account.isTester) FreeProgress(account.freeProgress, enabled) { heroModel.testerGrant("freeProgress", "on" to it.toString()) }
     ForgePanel {
         Engraved(ui("tester.currency"))
         NumberGrant(ui("tester.gold"), "1000000", account.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }
@@ -118,6 +121,19 @@ import org.koin.compose.viewmodel.koinViewModel
                 reset = null
                 heroModel.testerGrant("reset", "what" to what)
             }
+        }
+    }
+}
+
+/** Переключатель свободного прогресса тестировщика: [on] - замки прогресса открыты; ответ сервера приходит снимком героя. */
+@Composable private fun FreeProgress(on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    ForgePanel {
+        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(ui("tester.free_progress"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                Text(ui("tester.free_progress_hint"), color = Muted, style = MaterialTheme.typography.labelSmall)
+            }
+            Switch(checked = on, enabled = enabled, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = Elder))
         }
     }
 }

@@ -51,7 +51,8 @@ import kotlin.random.Random
 // ==================== The map between fights ====================
 /**
  * Недуги из боя и ловушек тикают на дороге и убивают. Страж вручную - сперва экран-вызов; запечатанный босс не встаёт. Крышка сундука
- * открывается сразу, герой идёт дальше: добыча вылетает сразу из запаса сундуков захода.
+ * открывается сразу, герой идёт дальше: добыча вылетает сразу из запаса сундуков захода. Шаг героя или встреча с монстром сбрасывают
+ * идущий сбор узла ([breakGather]).
  */
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
@@ -59,7 +60,9 @@ internal fun ExpeditionRun.walk(dt: Double) {
     if (phase != RunPhase.MAP) return
     openArena()
     val (x, y) = IsoGrid.pace(stickX, stickY)
-    when (val event = world.step(dt, x, y)) {
+    val event = world.step(dt, x, y)
+    if (world.moving || event is WorldEvent.Encounter) breakGather()
+    when (event) {
         is WorldEvent.Encounter -> if (event.agent !== world.boss) {
             engage(event.agent)
         } else if (!sealed) {

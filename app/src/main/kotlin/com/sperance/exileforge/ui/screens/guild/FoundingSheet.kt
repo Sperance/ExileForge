@@ -38,7 +38,7 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * the arms, and the way in. The price and the level stand at the bottom; short of either, or with a name
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
  *
- * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат. Порог вступления - в границах
+ * С создания героя должно пройти `create.heroDays` дней; тестировщика со свободным прогрессом уровень и возраст не держат. Порог вступления - в границах
  * правил ([com.sperance.exileforge.rules.content.ContentIndex.guildEntryLevels]): поле начинается с открытия гильдий.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,8 +58,8 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     val bill = game.goldBill(price)
     val wait = foundingWait(game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) })
     val refusal = when {
-        !game.isTester && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
-        !game.isTester && wait > 0 -> ui("guild.found_age", rules.create.heroDays, timeLeft(wait))
+        !game.freeProgress && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
+        !game.freeProgress && wait > 0 -> ui("guild.found_age", rules.create.heroDays, timeLeft(wait))
         bill?.affordable == false -> bill.shortText()
         name.trim().length !in rules.nameLength -> ui("guild.found_name", rules.nameLength.first, rules.nameLength.last)
         tag.length !in rules.tagLength -> ui("guild.found_tag", rules.tagLength.first, rules.tagLength.last)

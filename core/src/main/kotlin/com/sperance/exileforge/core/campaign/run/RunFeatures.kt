@@ -132,20 +132,27 @@ internal fun ExpeditionRun.choose(choice: Int) {
 }
 
 /**
- * «Собрать» на листе узла: сбор идёт [MapFeature.Node.seconds], забег стоит. Инструмент проверяет лист и сервер; узел под стражами
- * сокровищ ждёт их гибели.
+ * «Собрать» на листе узла: лист закрыт, сбор идёт [MapFeature.Node.seconds] при тикающем мире - монстры ходят, здоровье и недуги
+ * героя идут своим ходом. Инструмент проверяет лист и сервер; узел под стражами сокровищ ждёт их гибели.
  */
 internal fun ExpeditionRun.startGather() {
     val spot = (offer as? NodeSpot)?.takeIf { phase == RunPhase.MAP && !it.spent && !world.guarded(it.id) } ?: return
+    offer = null
     channel = Channel(spot)
 }
 
-/** Сбор идёт: по его концу - событие узла, лист закрыт. */
+/** Сбор прерван боем или шагом героя: доля пропала с нулём, узел ждёт нового «Собрать»; игроку - тост. */
+internal fun ExpeditionRun.breakGather() {
+    channel ?: return
+    channel = null
+    onGatherBroken()
+}
+
+/** Сбор идёт: по его концу - событие узла. */
 internal fun ExpeditionRun.gather(channel: Channel, dt: Double) {
     channel.elapsed += dt
     if (channel.elapsed < channel.spot.node.seconds) return
     this.channel = null
-    offer = null
     channel.spot.resolve(this, MapFeature.TRIGGER)
 }
 

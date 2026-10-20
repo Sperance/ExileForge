@@ -70,7 +70,7 @@ internal data class LevelGains(
     val atlas: List<Pair<Int, String>> = emptyList(),
 )
 
-internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, atlas: List<String> = emptyList()): LevelGains {
+internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, free: Boolean, atlas: List<String> = emptyList()): LevelGains {
     val stats = heroClass?.perLevel.orEmpty().filterValues { it != 0.0 }.map { (stat, value) -> stat to value * rise.levels }
     val within = { levels: List<Int> -> levels.count { it in (rise.from + 1)..rise.to } }
     val rules = index?.skills?.rules
@@ -79,8 +79,8 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
         active = rules?.let { within(it.activeSlots) } ?: 0,
         passive = rules?.let { within(it.passiveSlots) } ?: 0,
         points = index?.classes?.let { it.pointsTotal(rise.to) - it.pointsTotal(rise.from) } ?: 0,
-        opened = if (tester) emptyList() else Feature.gained(rise.from, rise.to, index?.rules),
-        next = if (tester) null else Feature.next(rise.to, index?.rules),
+        opened = if (free) emptyList() else Feature.gained(rise.from, rise.to, index?.rules),
+        next = if (free) null else Feature.next(rise.to, index?.rules),
         skills = heroClass?.let { c -> index?.skills?.ofClass(c.code)?.filter { it.unlock in (rise.from + 1)..rise.to }?.map { it.code } }.orEmpty(),
         atlas = atlas.map { key -> (index?.atlas?.points?.let { AtlasPoints.total(it, listOf(key)) } ?: 1) to atlasPointSource(key) },
     )
@@ -95,8 +95,8 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
  * Открывшееся умение - строкой, что открывает его карточку. Очки Атласа [atlas], что принесло то же событие, - строкой «Очко Атласа +N —
  * откуда» среди открытого.
  */
-@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, atlas: List<String> = emptyList(), onDone: () -> Unit) {
-    val gains = remember(rise, heroClass, index, tester, atlas) { levelGains(rise, heroClass, index, tester, atlas) }
+@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, free: Boolean, atlas: List<String> = emptyList(), onDone: () -> Unit) {
+    val gains = remember(rise, heroClass, index, free, atlas) { levelGains(rise, heroClass, index, free, atlas) }
     val motion = LocalMotion.current
     val drop = remember { Animatable(if (motion) 0f else 1f) }
     var shown by remember { mutableIntStateOf(if (motion) 0 else Int.MAX_VALUE) }

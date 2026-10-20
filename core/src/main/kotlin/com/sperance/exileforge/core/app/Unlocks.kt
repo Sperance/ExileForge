@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.content.EngineRules
 
 /**
  * What opens with the hero's level: not everything at once, a new place every few levels. The client alone keeps
- * the gate; testers and staff pass it. [tab] or [building] is the way into the feature that the gate closes. Уровни - в
+ * the gate; a tester with free progress passes it. [tab] or [building] is the way into the feature that the gate closes. Уровни - в
  * правилах `unlocks`, не в коде: раздела там нет - он открыт с первого уровня.
  */
 enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null) {
@@ -37,7 +37,7 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
 }
 
 /** Whether the hero being played has [feature] open. */
-fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester || heroLevel >= feature.level(index?.rules)
+fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || freeProgress || heroLevel >= feature.level(index?.rules)
 
 /**
  * Открыт ли раздел [feature] по прочитанным правилам: пока правил нет, уровень открытия неизвестен - раздел закрыт, его запросы ждут

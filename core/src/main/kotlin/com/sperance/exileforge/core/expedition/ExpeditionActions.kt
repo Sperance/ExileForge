@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
@@ -225,8 +226,8 @@ class ExpeditionActions(
         if (tester) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
     }
 
-    /** Тестировщик и выше: насильные механики и бой сразу со стражем. */
-    private val tester: Boolean get() = sessions.state.value.tester(heroes.state.value)
+    /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
+    private val tester: Boolean get() = sessions.state.value.free(heroes.state.value)
 
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
@@ -343,7 +344,8 @@ class ExpeditionActions(
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onGatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+            killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
@@ -421,7 +423,7 @@ class ExpeditionActions(
      * счёт сервера и награда каждого события, снимок героя едет с ним.
      *
      * Ключ пачки - на диске до её ухода: потерянный с процессом ответ спрашивается снова. Отклонённое начало боя - не потеря игрока, о нём
-     * не говорят. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
+     * не говорят; прочие отказы - красный тост с причиной сервера поверх тоста добычи. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
      * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
      * офлайн или таймаут - снова скоро.
      */
@@ -446,8 +448,8 @@ class ExpeditionActions(
             j.confirm(report.applied, report.rejected)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
-            report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
+            notices.refused(report.rejected.filter { it !in engages }, report.refusals)
             if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)

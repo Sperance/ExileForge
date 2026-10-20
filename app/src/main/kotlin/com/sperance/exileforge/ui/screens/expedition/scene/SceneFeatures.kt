@@ -145,6 +145,21 @@ internal fun ScenePainter.drawNode(x: Double, y: Double, look: NodeLook?, spent:
     nodes.draw(pen.scope, look, spent, isoX(x, y), isoY(x, y), unit, light)
 }
 
+/** Кольцо идущего сбора по полу вокруг узла: тёмный след и золотая доля [progress] времени сбора - от верха по часовой. */
+internal fun ScenePainter.drawGather(x: Double, y: Double, progress: Float, light: Float) {
+    val w = unit * GATHER_RING
+    val h = w * .5f
+    val left = isoX(x, y) - w / 2
+    val bottom = isoY(x, y) - h / 2
+    pen.color = Color.Black.copy(alpha = .35f * light)
+    pen.ring(left, bottom, w, h, unit * .1f)
+    pen.color = GoldBright.copy(alpha = light)
+    pen.ringArc(left, bottom, w, h, 90f - 360f * progress, 360f * progress, unit * .07f)
+}
+
+/** Поперечник кольца сбора у узла в клетках сцены. */
+private const val GATHER_RING = 1.3f
+
 /** Тайный вход - светлая трещина в скале, что ярче, пока герой стоит рядом. */
 internal fun ScenePainter.drawCrack(x: Double, y: Double, progress: Float, light: Float) {
     val cx = isoX(x, y)

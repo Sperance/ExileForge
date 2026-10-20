@@ -51,23 +51,23 @@ import com.sperance.exileforge.ui.theme.*
  * A line is a way in rather than a control of its own: a worn item opens its sheet, where taking it
  * off is one of the actions, and an empty place opens the stash narrowed to what fits it. Each line
  * carries the item's name and the one property it is worn for, so the whole outfit reads without a
- * tap. [onPlace] gets the place and the worn item's id, or null. [readOnly] - только просмотр (заход): без выбора из
- * тайника и без инструментов ремёсел.
+ * tap. [onPlace] gets the place and the worn item's id, or null. [pickable] - у пустого места есть выбор из тайника, [tools] - есть
+ * инструменты ремёсел (в заходе - только боевые места).
  */
-@Composable fun EquipmentLedger(game: GameUi, readOnly: Boolean = false, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
-    rememberEquipment(game)?.let { EquipmentLedger(it, readOnly, onPlace) }
+@Composable fun EquipmentLedger(game: GameUi, pickable: Boolean = true, tools: Boolean = true, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
+    rememberEquipment(game)?.let { EquipmentLedger(it, pickable, tools, onPlace) }
 }
 
 /**
  * Снаряжение «Полными карточками» (выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и
  * инструменты ремёсел со счётом надетых. Надетая вещь - карточка во всю ширину: имя с номером экземпляра, метка роллов и все
  * строки вещи целиком, с переносом; пустое место - строка с кнопкой выбора из тайника. Своя нарезка состояния: движение
- * кошелька не перерисовывает надетое. [readOnly] - только просмотр: у пустого места нет кнопки выбора, группы инструментов нет.
+ * кошелька не перерисовывает надетое. Без [pickable] у пустого места нет кнопки выбора, без [tools] нет группы инструментов.
  */
-@Composable fun EquipmentLedger(equipment: EquipmentState, readOnly: Boolean = false, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
+@Composable fun EquipmentLedger(equipment: EquipmentState, pickable: Boolean = true, tools: Boolean = true, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
     val byCode = equipment.places.associateBy { it.place.code }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        GEAR_GROUPS.filterNot { readOnly && it.tools }.forEach { group ->
+        GEAR_GROUPS.filter { tools || !it.tools }.forEach { group ->
             val lines = group.codes.mapNotNull { byCode[it] }
             if (lines.isEmpty()) return@forEach
             GroupHeader(group, lines)
@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
                 if (line.worn != null) {
                     WornCard(line, line.worn, equipment.lang, equipment.signedIn, group.compact, open)
                 } else {
-                    EmptyPlace(line, equipment.lang, equipment.signedIn, pickable = !readOnly, onPick = open)
+                    EmptyPlace(line, equipment.lang, equipment.signedIn, pickable = pickable, onPick = open)
                 }
             }
         }

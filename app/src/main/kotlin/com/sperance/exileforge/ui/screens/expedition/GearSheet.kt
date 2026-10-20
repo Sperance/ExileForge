@@ -23,8 +23,8 @@ import com.sperance.exileforge.ui.theme.Vital
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The gear on the map: the body's ledger as the Equipment section draws it, over the walking map, в наборе, что поход носит
- * ([rememberRunGame]). В походе по карте касание места открывает выбор
+ * The gear on the map: the body's ledger as the Equipment section draws it, over the walking map - только боевые места, без
+ * инструментов ремёсел, и в наборе, что поход носит ([rememberRunGame]). В походе по карте касание места открывает выбор
  * ([RunSlotPicker]): что там надето, вещи, что в заходе можно надеть, с «Надеть» в карточке и приглушённые прочие вещи тайника. Вне
  * похода по карте (испытание) - только просмотр: надетая вещь открывает свою карточку, пустое место - ничего.
  */
@@ -40,7 +40,7 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("expedition.gear")) }
             item { MutedText(ui(if (wearing != null) "expedition.gear_hint_wear" else "expedition.gear_hint")) }
-            item { EquipmentLedger(dressed, readOnly = wearing == null) { at, id -> if (wearing != null) place = at else worn = id } }
+            item { EquipmentLedger(dressed, pickable = wearing != null, tools = false) { at, id -> if (wearing != null) place = at else worn = id } }
         }
     }
     val chosen = place

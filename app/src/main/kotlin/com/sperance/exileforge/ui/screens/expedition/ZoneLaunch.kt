@@ -35,6 +35,7 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.MapCapture
 import com.sperance.exileforge.core.display.influenceTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.lineNote
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
@@ -237,10 +238,13 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     val def = line.definition
     val shown = values ?: line.values
     val risk = def?.bind(shown).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value, all) }
-    return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk)
+    return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk, lineNote(index, def))
 }
 
-/** Строка карты ромбом цвета вида; доля опасности к добыче - «8%» справа, касание объясняет; бафф героя оплачивается наградой карты. */
+/**
+ * Строка карты ромбом цвета вида; касание текста - пояснение её характеристики ([MapLine.note]); доля опасности к добыче - «8%» справа,
+ * касание объясняет; бафф героя оплачивается наградой карты.
+ */
 @Composable internal fun LineRow(line: MapLine) {
     val tint = when (line.kind) {
         MapLineKind.HARM -> LifeRed
@@ -249,7 +253,9 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Rhombus(tint, 7.dp)
-        Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Tipped(line.note?.let { note -> { Tip("", note, tint) } }, Modifier.weight(1f)) {
+            Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)
+        }
         if (line.kind == MapLineKind.HARM && line.risk > 0) {
             val share = number(line.risk)
             TapText(ui("expedition.launch_percent", share), Muted, MaterialTheme.typography.labelSmall, { Tip(ui("expedition.launch_risk", share), ui("expedition.launch_risk_tip"), LifeRed) })

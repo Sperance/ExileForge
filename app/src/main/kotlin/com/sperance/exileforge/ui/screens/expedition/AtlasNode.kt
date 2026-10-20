@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
-import com.sperance.exileforge.core.display.atlasLineNote
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.lineNote
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -91,7 +91,7 @@ import kotlin.math.sin
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
             effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
-            atlasLineNote(index, line)?.let { note ->
+            lineNote(index, index.modifier(line.code))?.let { note ->
                 Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
             }
             if (node.kind != AtlasNodeKind.START) {

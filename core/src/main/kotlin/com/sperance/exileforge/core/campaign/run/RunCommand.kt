@@ -141,8 +141,14 @@ sealed interface RunCommand {
     data class Campaign(val state: CampaignState) : RunCommand
 
     /**
-     * Новый набор [gear]: с [item] - игрок надел находку захода на место [slot] (null - решают правила), только между боями - событие
-     * журнала и набор сразу ([ExpeditionRun.changeGear]); без неё - набор, каким его держит сервер, посреди боя - с его концом.
+     * Новый набор [gear]: с [putOn] - решение игрока, только между боями - событие журнала и набор сразу ([ExpeditionRun.changeGear]);
+     * без него - набор, каким его держит сервер, посреди боя - с его концом.
      */
-    data class Regear(val gear: HeroGear, val item: String? = null, val slot: Slot? = null) : RunCommand
+    data class Regear(val gear: HeroGear, val putOn: PutOn? = null) : RunCommand
+
+    /**
+     * Игрок надел вещь [item] на место [slot] поверх набора [over] - надетого по месту, от которого посчитан новый набор: поход берёт смену,
+     * только если носит ровно [over]. [done] - на потоке похода, принята ли смена.
+     */
+    class PutOn(val item: String, val slot: Slot, val over: Map<Slot, String>, val done: (taken: Boolean) -> Unit)
 }

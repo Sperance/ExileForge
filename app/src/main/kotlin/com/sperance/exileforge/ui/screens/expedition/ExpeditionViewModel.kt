@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.expedition.RiftActions
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.rules.content.Slot
@@ -55,6 +56,9 @@ class ExpeditionViewModel(
     val state: StateFlow<Expedition> = repository.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
 
+    /** Герой в наборе, что носит поход по карте ([ExpeditionActions.runHero]); null - похода нет. */
+    val runHero: StateFlow<HeroView?> = expedition.runHero
+
     /** Добыча основной карты под зоной Ваал. */
     fun outerLoot(): List<String> = expedition.outerLoot()
     val arena: StateFlow<TrialArena?> = trial.arena
@@ -82,10 +86,10 @@ class ExpeditionViewModel(
     fun flushRun() = expedition.flushRun()
     fun toggleSaleMark(itemId: String) = expedition.toggleSaleMark(itemId)
 
-    /** Надеть находку захода между боями ([ExpeditionActions.wear]). */
+    /** Надеть между боями вещь, что в заходе можно надеть ([ExpeditionActions.wear]). */
     fun wear(itemId: String, slot: Slot? = null) = expedition.wear(itemId, slot)
 
-    /** Что изменит надетая находка ([ExpeditionActions.wearPreview]); вызывать вне главного потока. */
+    /** Что изменит надетая в походе вещь ([ExpeditionActions.wearPreview]); вызывать вне главного потока. */
     fun wearPreview(itemId: String, slot: Slot? = null): GearPreview? = expedition.wearPreview(itemId, slot)
     fun enterVaal() = expedition.enterVaal()
 

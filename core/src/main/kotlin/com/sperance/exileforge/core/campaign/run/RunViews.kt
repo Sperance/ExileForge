@@ -43,6 +43,7 @@ import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.SkillType
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -476,6 +477,8 @@ data class RunHud(
     val blight: BlightView? = null,
     /** Почему набор сейчас не сменить; null - между боями, находку захода можно надеть. */
     val gearLock: GearLock? = null,
+    /** Набор, что поход носит сейчас: id вещи по месту. */
+    val worn: Map<Slot, String> = emptyMap(),
 ) {
     /**
      * Итог ведёт обратно на карту под зоной: зона Ваал, из которой вышли живыми. Гибель в зоне заканчивает весь заход -

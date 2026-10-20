@@ -23,27 +23,29 @@ import com.sperance.exileforge.ui.theme.Vital
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The gear on the map: the body's ledger as the Equipment section draws it, over the walking map. В походе по карте касание места
- * открывает выбор ([RunSlotPicker]): что там надето, находки захода с «Надеть» в карточке и приглушённые вещи тайника. Вне похода по
- * карте (испытание) - только просмотр: надетая вещь открывает свою карточку, пустое место - ничего.
+ * The gear on the map: the body's ledger as the Equipment section draws it, over the walking map, в наборе, что поход носит
+ * ([rememberRunGame]). В походе по карте касание места открывает выбор
+ * ([RunSlotPicker]): что там надето, вещи, что в заходе можно надеть, с «Надеть» в карточке и приглушённые прочие вещи тайника. Вне
+ * похода по карте (испытание) - только просмотр: надетая вещь открывает свою карточку, пустое место - ничего.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
     val vm: ExpeditionViewModel = koinViewModel()
     val wearing = rememberRunWearing(vm)
+    val dressed = rememberRunGame(game, vm)
     var worn by remember { mutableStateOf<String?>(null) }
     var place by remember { mutableStateOf<BodyPlace?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("expedition.gear")) }
             item { MutedText(ui(if (wearing != null) "expedition.gear_hint_wear" else "expedition.gear_hint")) }
-            item { EquipmentLedger(game, readOnly = wearing == null) { at, id -> if (wearing != null) place = at else worn = id } }
+            item { EquipmentLedger(dressed, readOnly = wearing == null) { at, id -> if (wearing != null) place = at else worn = id } }
         }
     }
     val chosen = place
-    if (wearing != null && chosen != null) RunSlotPicker(game, vm, chosen, wearing) { place = null }
-    val instance = worn?.let { id -> game.hero?.item(id) } ?: return
+    if (wearing != null && chosen != null) RunSlotPicker(dressed, vm, chosen, wearing) { place = null }
+    val instance = worn?.let { id -> dressed.hero?.item(id) } ?: return
     ForgeSheet(onDismissRequest = { worn = null }) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
             game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = game.sellPrice(instance), seals = game.itemSeals(instance)) }
@@ -52,20 +54,23 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
 }
 
 /**
- * Выбор места [place] в походе по карте: надетое здесь - первым (касание - карточка); ниже находки захода, что сюда встают, - касание
- * открывает карточку с «Надеть» ([runWearAction]), лист закрывается вместе с ней; ниже вещи тайника - приглушены, с замком, без
- * действия, причина плашкой над ними: в походе надевают только найденное в этом заходе. Порядок - как в убежище: что не надеть - ниже,
- * дороже - выше; вердикт - на это самое место.
+ * Выбор места [place] в походе по карте, по набору похода ([game] - срез с героем похода, [rememberRunGame]): надетое здесь - первым
+ * (касание - карточка); ниже вещи, что в заходе можно надеть ([RunWearing.wearable]: набор входа и находки) и что сюда встают, - касание
+ * открывает карточку с «Надеть» ([runWearAction]), лист закрывается вместе с ней; ниже прочие вещи тайника - приглушены, с замком, без
+ * действия, причина плашкой над ними. Порядок - как в убежище: что не надеть - ниже, дороже - выше; вердикт - на это самое место.
+ * Списки считаются по герою, месту и тому, что можно надеть, - не на каждую перерисовку.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun RunSlotPicker(game: GameUi, vm: ExpeditionViewModel, place: BodyPlace, wearing: RunWearing, onDismiss: () -> Unit) {
     val hero = game.hero ?: return
     val inspect = rememberInspect()
-    val fitting = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
-        .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
-    val (found, stash) = fitting.partition { it.id in wearing.found }
-    val worn = place.wornIn(hero.equipped)?.let { game.view(it) }
+    val (found, stash) = remember(hero, game.index, place, wearing.wearable) {
+        hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
+            .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
+            .partition { it.id in wearing.wearable }
+    }
+    val worn = remember(hero, game.index, place) { place.wornIn(hero.equipped)?.let { game.view(it) } }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("hero.slot_pick", slotTitle(place.code, game.lang))) }

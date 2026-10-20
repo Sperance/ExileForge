@@ -99,6 +99,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         challenge = challengeView(),
         blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }?.view(world),
         gearLock = gearLock,
+        worn = build.gear.worn,
     )
 }
 

@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.Screens
 import com.sperance.exileforge.core.campaign.AtlasWindow
 import com.sperance.exileforge.core.campaign.BeltFlask
+import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.FateKit
@@ -54,17 +55,28 @@ import com.sperance.exileforge.rules.run.RunStart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Кампания: карта мира и поход по карте, которым идёт игрок (из `ExpeditionViewModel`).
@@ -144,8 +156,27 @@ class ExpeditionActions(
     /** Отправок подряд не дошло: каждая ждёт вдвое дольше прошлой. */
     private var failures = 0
 
-    /** Сервер отклонил смену набора в походе: поход возьмёт набор сервера ([resync]). */
-    @Volatile private var regearRefused = false
+    /** Смены набора похода считаются по одной ([wear]): следующая - поверх набора, что ушёл последним. */
+    private val wearings = Mutex()
+
+    /** Смена набора, что ушла в поход и им ещё не принята или не отклонена; null - смен в пути нет, база смены - набор похода. */
+    private val sentWear = AtomicReference<SentWear?>(null)
+
+    /** Смена в пути: поход [run] и надетое по месту [worn] с ней. */
+    private class SentWear(val run: ExpeditionRun, val worn: Map<Slot, String>)
+
+    /**
+     * Герой, как его одел поход по карте на экране: вещи - по набору, что поход носит ([ExpeditionRun.hud]), лист и лист боя - с ним; набор совпал с
+     * сервером - сам снимок героя; null - похода нет. Сравнения и метки лута в походе - с ним, а не с набором на сервере. Лист считается
+     * вне главного потока и только пока его читают.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val runHero: StateFlow<HeroView?> = mutableRun
+        .flatMapLatest { run -> run?.hud?.map { it.worn }?.distinctUntilChanged() ?: flowOf(null) }
+        .combine(heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }) { worn, view -> worn?.let { view?.to(it) } }
+        .mapLatest { pair -> pair?.let { (view, worn) -> dressed(view, worn) } }
+        .flowOn(Dispatchers.Default)
+        .stateIn(scope, SharingStarted.WhileSubscribed(), null)
 
     /** Жетоны зоны Ваал, которые сервер уже сосчитал, когда в поход вошли снова. */
     private var vaalKilled: List<Int> = emptyList()
@@ -306,7 +337,7 @@ class ExpeditionActions(
         expedition {
             it.copy(
                 runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = marks,
-                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion, found = started.found.toSet(),
+                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion, wearable = started.wearable.toSet(),
             )
         }
         mutableRun.value = ExpeditionRun.start(
@@ -412,8 +443,6 @@ class ExpeditionActions(
             settle(j, pending, report)
             if (!report.open) shut = j.runId
             j.confirm(report.applied, report.rejected)
-            if (pending.any { it.kind == RunEventKind.REGEAR && it.n in report.rejected }) regearRefused = true
-            hero?.let(::resync)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
@@ -668,12 +697,11 @@ class ExpeditionActions(
     }
 
     /**
-     * Сервер отклонил смену набора ([regearRefused]): поход берёт набор героя [view], каким его держит сервер, когда журнал уже не везёт
-     * своих смен ([RunEventKind.REGEAR]). Совпадают - ничего не считается.
+     * Поход берёт набор героя [view], каким его держит сервер, когда журнал уже не везёт своих смен ([RunEventKind.REGEAR]), а набор похода
+     * с ним разошёлся: сервер отклонил смену. Совпадают - ничего не считается.
      */
     private fun resync(view: HeroView) {
-        if (!regearRefused || runJournal?.heroId != view.id || runJournal?.pending?.any { it.kind == RunEventKind.REGEAR } == true) return
-        regearRefused = false
+        if (runJournal?.heroId != view.id || runJournal?.pending?.any { it.kind == RunEventKind.REGEAR } == true) return
         val worn = view.equipped.mapValues { it.value.id }
         val behind = runs().filter { it.build.gear.worn != worn }.takeIf { it.isNotEmpty() } ?: return
         val gear = gear(view, view.items) ?: return
@@ -681,38 +709,69 @@ class ExpeditionActions(
     }
 
     /**
-     * «Надеть» в походе по карте: находка этого захода ([Expedition.found]) встаёт на место [slot] (null - решают правила) между боями. Набор
-     * с ней считается здесь тем же расчётом листа, что у сервера ([Sheets.worn]), поверх набора, что поход носит сейчас; поход берёт его сразу
-     * и пишет смену в журнал ([RunCommand.Regear]), карта под зоной Ваал - тоже, без своего события. Сервер проверяет то же сам: отказ вернёт
-     * набор сервера ([resync]). Лист считается вне главного потока.
+     * «Надеть» в походе по карте: вещь, что в заходе можно надеть ([Expedition.wearable]: набор входа и находки), встаёт на место [slot]
+     * (null - решают правила, как у сервера: [Sheets.worn]) между боями. Смены идут по одной: набор с вещью считается тем же расчётом листа,
+     * что у сервера, поверх набора, что ушёл последней сменой (нет её в пути - что поход носит); поход берёт его, только если носит ровно
+     * эту базу, и пишет смену в журнал с выбранным местом ([RunCommand.PutOn]); карта под зоной Ваал - следом, без своего события, только
+     * если поход смену принял. Сервер проверяет то же сам: отказ вернёт набор сервера ([resync]). Лист считается вне главного потока.
      */
     fun wear(itemId: String, slot: Slot? = null) {
         val run = mutableRun.value ?: return
-        if (itemId !in repository.state.value.found || run.hud.value.gearLock != null) return
+        if (itemId !in repository.state.value.wearable || run.hud.value.gearLock != null) return
         val outer = parent
         scope.launch(Dispatchers.Default) {
-            val gear = wearing(run, itemId, slot) ?: return@launch
-            run.send(RunCommand.Regear(gear.copy(stance = run.stance), itemId, slot))
-            outer?.send(RunCommand.Regear(gear.copy(stance = outer.stance)))
+            wearings.withLock {
+                val over = baseOf(run)
+                val (gear, place) = wearing(run, over, itemId, slot) ?: return@withLock
+                val sent = SentWear(run, gear.worn)
+                sentWear.set(sent)
+                run.send(
+                    RunCommand.Regear(
+                        gear.copy(stance = run.stance),
+                        RunCommand.PutOn(itemId, place, over) { taken ->
+                            sentWear.compareAndSet(sent, null)
+                            if (taken) outer?.send(RunCommand.Regear(gear.copy(stance = outer.stance)))
+                        },
+                    ),
+                )
+            }
         }
     }
 
     /**
-     * Что изменит в походе надетая находка [itemId] на месте [slot] ([ExpeditionRun.preview]); null - похода нет или вещь не надеть. Лист
+     * Что изменит в походе надетая вещь [itemId] на месте [slot] ([ExpeditionRun.preview]); null - похода нет или вещь не надеть. Лист
      * считается здесь - вызывать вне главного потока.
      */
     fun wearPreview(itemId: String, slot: Slot? = null): GearPreview? {
         val run = mutableRun.value ?: return null
-        return wearing(run, itemId, slot)?.let(run::preview)
+        return wearing(run, baseOf(run), itemId, slot)?.first?.let(run::preview)
     }
 
-    /** Набор героя похода [run] с вещью [itemId] на месте [slot], поверх набора, что поход носит сейчас; null - вещь не надеть. */
-    private fun wearing(run: ExpeditionRun, itemId: String, slot: Slot?): HeroGear? {
+    /** Набор, поверх которого считается смена в поход [run]: что ушло последней сменой, а без неё в пути - что поход носит. */
+    private fun baseOf(run: ExpeditionRun): Map<Slot, String> = sentWear.get()?.takeIf { it.run === run }?.worn ?: run.build.gear.worn
+
+    /**
+     * Набор героя похода с вещью [itemId] на месте [slot] поверх надетого [over] и место, куда она встала по правилу сервера
+     * ([Sheets.worn]); null - вещь не надеть.
+     */
+    private fun wearing(run: ExpeditionRun, over: Map<Slot, String>, itemId: String, slot: Slot?): Pair<HeroGear, Slot>? {
         val i = index ?: return null
-        val h = hero?.takeIf { it.id == runJournal?.heroId } ?: return null
-        val items = wornAs(h.items, run.build.gear.worn)
+        val h = hero?.takeIf { it.id == runJournal?.heroId && mutableRun.value === run } ?: return null
+        val items = wornAs(h.items, over)
         val item = items.firstOrNull { it.id == itemId }?.takeIf { !it.equipped } ?: return null
-        return Sheets.worn(i, item, items, slot)?.let { gear(h, it) }
+        val worn = Sheets.worn(i, item, items, slot) ?: return null
+        val place = worn.firstOrNull { it.id == itemId }?.slot ?: return null
+        return gear(h, worn)?.let { it to place }
+    }
+
+    /** Герой [view] в наборе похода [worn]: вещи по месту и листы с ними; набор тот же, что у снимка, - сам снимок. */
+    private fun dressed(view: HeroView, worn: Map<Slot, String>): HeroView {
+        val i = index ?: return view
+        if (view.equipped.mapValues { it.value.id } == worn) return view
+        val items = wornAs(view.items, worn)
+        val sheet = Sheets.calculate(i, view.level, view.heroClass, view.tree, items, view.info.laws, view.info.fate)
+        val combat = CombatSheet.of(i, sheet, view.level, view.heroClass, view.skills, view.info.fate, items.filter { it.equipped })?.also { it.figures }
+        return view.copy(items = items, sheet = sheet, combat = combat)
     }
 
     /** Вещи героя [items] в наборе [worn] - как их носит поход: надетое по месту, прочее в тайнике; самоцветы гнёзд - как были. */
@@ -784,11 +843,11 @@ class ExpeditionActions(
         if (shut != runId) api.campaign.abandon(heroId, runId)
     }
 
-    /** Снаряжение из ответа журнала - в «Новый лут» и в находки захода ([Expedition.found]). */
+    /** Снаряжение из ответа журнала - в «Новый лут» и в то, что в заходе можно надеть ([Expedition.wearable]). */
     private fun loot(heroId: String, equipment: List<ItemInstance>) {
         if (equipment.isEmpty() || !heroes.onScreen(heroId)) return
         val now = System.currentTimeMillis()
-        expedition { it.copy(runLoot = it.runLoot + equipment.map { piece -> LootEntry(piece, now) }, found = it.found + equipment.map { piece -> piece.id }) }
+        expedition { it.copy(runLoot = it.runLoot + equipment.map { piece -> LootEntry(piece, now) }, wearable = it.wearable + equipment.map { piece -> piece.id }) }
     }
 
     /** Брошен без слова: герой или его сессия ушли. Журнал остаётся на диске до следующего входа. */

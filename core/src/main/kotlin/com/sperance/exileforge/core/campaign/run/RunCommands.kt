@@ -75,13 +75,18 @@ internal fun ExpeditionRun.resolve() {
 }
 
 /**
- * Смена набора: с вещью - решение игрока, только между боями ([ExpeditionRun.gearLock]): событие журнала [RunEvent.Regear] и набор
- * сразу ([ExpeditionRun.wear]); без вещи - набор, каким его держит сервер: посреди боя он ждёт конца боя.
+ * Смена набора: решение игрока ([RunCommand.PutOn]) - только между боями ([ExpeditionRun.gearLock]) и поверх набора, что поход носит:
+ * событие журнала [RunEvent.Regear] с местом, что выбрал клиент, и набор сразу ([ExpeditionRun.wear]); ответ - в [RunCommand.PutOn.done].
+ * Без решения - набор, каким его держит сервер: посреди боя он ждёт конца боя.
  */
 internal fun ExpeditionRun.changeGear(command: RunCommand.Regear) {
-    val item = command.item
+    val put = command.putOn
     when {
-        item != null -> if (gearLock == null) record { n -> RunEvent.Regear(n, item, command.slot) }?.let { wear(command.gear) }
+        put != null -> {
+            val taken = gearLock == null && put.over == build.gear.worn && record { n -> RunEvent.Regear(n, put.item, put.slot) } != null
+            if (taken) wear(command.gear)
+            put.done(taken)
+        }
         phase == RunPhase.FIGHT -> pendingGear = command.gear
         else -> wear(command.gear)
     }

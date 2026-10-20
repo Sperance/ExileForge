@@ -123,6 +123,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val inspect = rememberInspect()
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
     val hero = game.hero
+    val dressed = rememberRunGame(game, vm)
     val run by vm.run.collectAsStateWithLifecycle()
     val back = hud.returnsToMap
     val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, hero?.level, game.index, back) {
@@ -133,8 +134,8 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val state by vm.state.collectAsStateWithLifecycle()
     val marks = state.saleMarks
     val potion = remember(state.potion, game.index) { state.potion?.let { game.index?.rules?.brews?.potion(it) }.orEmpty() }
-    val gold = remember(run, run?.pacts, potion, tally.gold) { run?.let { LootBreakdown.gold(it.run, it.pacts, potion, tally.gold.toDouble()) } }
-    val experience = remember(run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
+    val gold = remember(run?.run, run?.pacts, potion, tally.gold) { run?.let { LootBreakdown.gold(it.run, it.pacts, potion, tally.gold.toDouble()) } }
+    val experience = remember(run?.run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
     val seen = remember { HashSet(marks) }
@@ -174,6 +175,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             }
             Loot(
                 game,
+                dressed,
                 tally,
                 pick.takeIf { offered },
                 selecting,
@@ -282,7 +284,10 @@ private fun questCount(quests: List<QuestTurnIn>): String {
     return if (also == 0) ui("summary.counted", run, plural("summary.quest", run)) else ui("summary.quests_split", run, also)
 }
 
-/** Плитка золота или опыта: итог [breakdown] (без захода на экране - итог сервера [total]), множитель в углу и разбор по нажатию. */
+/**
+ * Плитка золота или опыта: итог [breakdown] (без захода на экране - итог сервера [total]), множитель в углу и разбор по нажатию. Прибавки
+ * героя в разборе - по набору, что поход носит сейчас: набор в походе меняется, а прибавки каждого боя не хранятся.
+ */
 private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: String, tone: Color, breakdown: LootBreakdown?): SummaryTile {
     val parts = breakdown?.takeIf { it.parts.isNotEmpty() }
     return SummaryTile(
@@ -292,7 +297,7 @@ private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: S
         label,
         tone,
         corner = parts?.let { ui("summary.multiplier", number(it.multiplier)) },
-        panel = if (parts != null) ({ BreakdownParts(parts, tone) }) else null,
+        panel = if (parts != null) ({ BreakdownParts(parts, tone, ui("summary.by_current_gear")) }) else null,
     )
 }
 
@@ -310,12 +315,12 @@ private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: S
 
 /**
  * Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said.
- * Продажа - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
+ * Метки «Лучше надетого» - против набора похода ([dressed]). Продажа - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
  * и отмечает её ([onSelect]); в режиме нажатие отмечает, над вещами - быстрые наборы.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit, onSelect: (String) -> Unit) {
+private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?, selecting: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit, onSelect: (String) -> Unit) {
     val loot = tally.loot
     var open by rememberSaveable { mutableStateOf(true) }
     LootHeader(loot.equipment.size, pick?.picked?.size ?: 0, open) { open = !open }
@@ -331,7 +336,7 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
     game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
         game.view(instance)?.let { piece ->
             val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
-            val mark = rememberLootMark(game, instance, flasks = false)
+            val (_, mark) = rememberLootVerdict(dressed, instance, flasks = false)
             when {
                 lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
                 lot != null -> {

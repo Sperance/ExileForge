@@ -118,8 +118,8 @@ internal class SummaryTile(
     }
 }
 
-/** Разбор: полоса долей (сток и источники), строки «Без бонусов», «Источник +N%» с долей и «Итого». */
-@Composable internal fun BreakdownParts(breakdown: LootBreakdown, tone: Color) {
+/** Разбор: полоса долей (сток и источники), строки «Без бонусов», «Источник +N%» с долей и «Итого»; под ними - оговорка [note]. */
+@Composable internal fun BreakdownParts(breakdown: LootBreakdown, tone: Color, note: String? = null) {
     val positive = breakdown.parts.filter { it.percent > 0 }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val whole = breakdown.stock + positive.sumOf { breakdown.share(it) }
@@ -140,6 +140,7 @@ internal class SummaryTile(
             Text(ui("summary.total"), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text(amount(breakdown.total), color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
         }
+        note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

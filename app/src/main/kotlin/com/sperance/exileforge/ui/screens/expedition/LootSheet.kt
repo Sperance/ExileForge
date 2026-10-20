@@ -50,7 +50,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Карточка прокручивается, действия - в закреплённом подвале ([SheetFooter]). В походе по карте находку захода можно надеть между
  * боями - широкой «Надеть» с тем, что изменится, над ней ([runWearAction]); в бою она погашена с причиной; испытание и итоги закрытого
- * захода её не показывают. Копия героя берётся по id: выданная сервером несёт номер экземпляра. Легшую в тайник вещь можно пометить к
+ * захода её не показывают. Сравнение и требования - с набором похода ([rememberRunGame]). Копия героя берётся по id: выданная сервером несёт номер экземпляра. Легшую в тайник вещь можно пометить к
  * продаже (в итогах карты она уже отмечена) или продать торговцу сразу - удержанием в ряду своей вещи ([OwnItemActions]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,14 +65,15 @@ internal fun LootSheet(
 ) {
     val expedition by vm.state.collectAsStateWithLifecycle()
     val stand = game.lootPresence(item.id, arriving = expedition.pending > 0)
-    val choice = rememberWearChoice(game, item.item)
-    val wearing = rememberRunWearing(vm)?.takeIf { it.lock != GearLock.OVER && wearable(game, item.item) }
+    val dressed = rememberRunGame(game, vm)
+    val choice = rememberWearChoice(dressed, item.item)
+    val wearing = rememberRunWearing(vm)?.takeIf { it.lock != GearLock.OVER && wearable(dressed, item.item) }
     LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val shown = remember(item, game.hero) { game.hero?.item(item.id)?.takeIf { it.serial != item.item.serial }?.let { ItemView(it, item.template, item.index) } ?: item }
-                ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item, choice), unmet = game.unmetNeeds(item.code), seals = game.itemSeals(item.item))
+                ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(dressed, item.item, choice), unmet = dressed.unmetNeeds(item.code), seals = game.itemSeals(item.item))
                 when (stand) {
                     LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
                     LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))
@@ -85,7 +86,7 @@ internal fun LootSheet(
             if (held != null) {
                 SheetFooter {
                     wearing?.let {
-                        val wear = runWearAction(game, vm, held, null, it)
+                        val wear = runWearAction(dressed, vm, held, null, it)
                         wear.notes?.invoke(this)
                         InspectButton(wear, InspectChoice(choice.target), onDismiss)
                     }

@@ -286,13 +286,14 @@ private fun counted(label: String, count: Int) = if (count > 0) "$label · $coun
  * What the kill brought, by section, as the server's answers bring it; on its way, or its absence said plainly.
  *
  * По положению у героя: проданная вещь уходит из списка, надетая - с меткой «Надето». Строка на вещь, карточка - по касанию, удержание
- * помечает к продаже. Вещь лучше надетого - с меткой «▲ Лучше надетого», фляга - «Новая фляга · 0 зар.» ([rememberLootMark]); пока
+ * помечает к продаже. Вещь лучше набора похода - с меткой «▲ Лучше надетого», фляга - «Новая фляга · 0 зар.» ([lootMark]); пока
  * набор можно сменить, подсказка под списком: надевают в карточке, до начала следующего боя.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
+    val dressed = rememberRunGame(game, expedition)
     val reward = hud.reward ?: return
     val index = game.index
     reward.recipe?.let { code ->
@@ -305,7 +306,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
         gear.forEach { (piece, presence) ->
             val marked = piece.id in marks
-            val mark = rememberLootMark(game, piece.item, flasks = hud.gearLock == null)
+            val (_, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
             SaleMarked(marked) {
                 PieceLine(piece, presence, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
             }

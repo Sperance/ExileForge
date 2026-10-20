@@ -12,6 +12,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.GearLock
 import com.sperance.exileforge.core.campaign.run.GearPreview
+import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.unmetFor
@@ -34,12 +35,11 @@ import kotlin.math.roundToInt
 internal class LootMark(val text: String, val color: Color)
 
 /**
- * Метка строки лута: фляга, что герой может надеть, - «Новая фляга · 0 зар.» (только с [flasks] - пока набор в походе ещё меняется),
- * прочая вещь лучше надетого ([com.sperance.exileforge.core.character.GearVerdict.better]) - «▲ Лучше надетого»; иначе null. Вердикт - с
- * копией героя, когда она уже у него.
+ * Метка строки лута по уже посчитанному вердикту [verdict] вещи [item]: фляга, что герой может надеть, - «Новая фляга · 0 зар.» (только с
+ * [flasks] - пока набор в походе ещё меняется), прочая вещь лучше надетого ([GearVerdict.better]) - «▲ Лучше надетого»; иначе null.
  */
-@Composable internal fun rememberLootMark(game: GameUi, item: ItemInstance, flasks: Boolean): LootMark? {
-    val verdict = rememberGearVerdict(game, game.hero?.item(item.id) ?: item) ?: return null
+internal fun lootMark(game: GameUi, item: ItemInstance, verdict: GearVerdict?, flasks: Boolean): LootMark? {
+    verdict ?: return null
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
     return when {
         flask -> LootMark(ui("expedition.new_flask"), Boon).takeIf { flasks }
@@ -48,28 +48,43 @@ internal class LootMark(val text: String, val color: Color)
     }
 }
 
-/** Смена набора в походе на экране: [lock] - почему сейчас нельзя (null - можно), [found] - id находок захода, их и надевают. */
-internal class RunWearing(val lock: GearLock?, val found: Set<String>)
+/** Вердикт вещи [item] строки лута и её метка ([lootMark]): сравнение - с копией героя, когда она уже у него. */
+@Composable internal fun rememberLootVerdict(game: GameUi, item: ItemInstance, flasks: Boolean): Pair<GearVerdict?, LootMark?> {
+    val verdict = rememberGearVerdict(game, game.hero?.item(item.id) ?: item)
+    return verdict to lootMark(game, item, verdict, flasks)
+}
+
+/**
+ * Срез игры [game] с героем, как его одел поход по карте ([ExpeditionViewModel.runHero]): вердикты, метки «Лучше надетого», требования и
+ * карточки в походе сравнивают с набором похода, а не с набором на сервере; вне похода - сам [game].
+ */
+@Composable internal fun rememberRunGame(game: GameUi, vm: ExpeditionViewModel): GameUi {
+    val dressed by vm.runHero.collectAsStateWithLifecycle()
+    return remember(game, dressed) { dressed?.takeIf { it !== game.hero && it.id == game.hero?.id }?.let { game.copy(holding = game.holding.copy(hero = it)) } ?: game }
+}
+
+/** Смена набора в походе на экране: [lock] - почему сейчас нельзя (null - можно), [wearable] - id вещей, что в заходе можно надеть. */
+internal class RunWearing(val lock: GearLock?, val wearable: Set<String>)
 
 /** Смена набора в походе по карте на экране; null - похода нет (испытание, Разлом, убежище). */
 @Composable internal fun rememberRunWearing(vm: ExpeditionViewModel): RunWearing? {
     val run by vm.run.collectAsStateWithLifecycle()
-    val found = vm.state.collectAsStateWithLifecycle().value.found
+    val wearable = vm.state.collectAsStateWithLifecycle().value.wearable
     val shown = run ?: return null
     val lock by remember(shown) { shown.hud.map { it.gearLock }.distinctUntilChanged() }.collectAsStateWithLifecycle(shown.hud.value.gearLock)
-    return RunWearing(lock, found)
+    return RunWearing(lock, wearable)
 }
 
 /**
  * «Надеть» вещи [item] в походе по карте - на место [place] (null - решают правила; место вкладок карточки главнее): погашено с причиной,
- * если вещь не из этого захода, набор сейчас не сменить ([GearLock]: в бою кнопка - «Надеть после боя») или это вторая копия уникалки;
+ * если вещь не из набора входа и не находка захода ([RunWearing.wearable]), набор сейчас не сменить ([GearLock]: в бою кнопка - «Надеть после боя») или это вторая копия уникалки;
  * не по требованиям - погашено, требования говорит карточка. Над кнопкой - что изменится ([RunWearNotes]). [then] - перед командой
  * (место закрывает свой лист).
  */
 internal fun runWearAction(game: GameUi, vm: ExpeditionViewModel, item: ItemInstance, place: Slot?, wearing: RunWearing, then: () -> Unit = {}): InspectAction {
     val twin = game.index?.let { game.hero?.uniqueWorn(it, item, place) } == true
     val reason = when {
-        item.id !in wearing.found -> ui("expedition.wear_stash")
+        item.id !in wearing.wearable -> ui("expedition.wear_stash")
         wearing.lock != null -> ui(wearing.lock.key)
         twin -> ui("hero.unique_worn")
         else -> null
@@ -83,7 +98,7 @@ internal fun runWearAction(game: GameUi, vm: ExpeditionViewModel, item: ItemInst
 }
 
 /**
- * Что изменит надетая в походе находка [itemId] на месте [place]: действует со следующего боя; здоровье сохранит число под новым
+ * Что изменит надетая в походе вещь [itemId] на месте [place]: действует со следующего боя; здоровье сохранит число под новым
  * максимумом; добыча следующих боёв и неоткрытых сундуков - по новому набору (сдвиги прибавок); новая фляга встаёт пустой, а снятая
  * уносит свои заряды. Считается вне главного потока; до ответа - только первая строка.
  */

@@ -80,7 +80,8 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
             value = run.now()
         }
     }
-    val pieces = bag.sumOf { entry -> entry.reward?.let { it.equipment.size + it.items.values.sum().toInt() } ?: 0 }
+    val pieces = remember(bag) { bag.sumOf { entry -> entry.reward?.let { it.equipment.size + it.items.values.sum().toInt() } ?: 0 } }
+    val dressed = rememberRunGame(game, vm)
     val haptics = LocalHapticFeedback.current
     val mark = { id: String ->
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -110,7 +111,7 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
             bag.forEachIndexed { at, entry ->
                 key(entry.n) {
                     if (at > 0) HorizontalDivider(color = Bronze)
-                    BagPortion(game, entry, fresh = at == 0, now = now, arriving = expedition.pending > 0, marks = expedition.saleMarks, onMark = mark, onItem = { looked = it }) { inspect(Inspect.Stack(it)) }
+                    BagPortion(game, dressed, entry, fresh = at == 0, now = now, arriving = expedition.pending > 0, marks = expedition.saleMarks, onMark = mark, onItem = { looked = it }) { inspect(Inspect.Stack(it)) }
                 }
             }
             if (awaiting > 0) Text(ui("expedition.bag.awaiting", awaiting), color = Muted, style = MaterialTheme.typography.labelSmall)
@@ -122,10 +123,10 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
     }
 }
 
-/** Порция одного события: «когда · откуда» (у новейшей - «новое»), вещи строками, стопки чипами. */
+/** Порция одного события: «когда · откуда» (у новейшей - «новое»), вещи строками с метками против набора похода [dressed], стопки чипами. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long, arriving: Boolean, marks: Set<String>, onMark: (String) -> Unit, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
+private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Boolean, now: Long, arriving: Boolean, marks: Set<String>, onMark: (String) -> Unit, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
     val reward = entry.reward ?: return
     Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -149,7 +150,7 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
                         selected = marked,
                         onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
                         trailing = if (marked) ({ SaleCoin() }) else null,
-                        mark = rememberLootMark(game, instance, flasks = true),
+                        mark = rememberLootVerdict(dressed, instance, flasks = true).second,
                     ) { onItem(piece) }
                 }
             }

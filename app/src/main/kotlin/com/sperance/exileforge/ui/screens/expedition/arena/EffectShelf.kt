@@ -127,8 +127,8 @@ internal data class ShelfRow(val title: String, val tint: Color, val source: Str
 internal fun stunned(held: Boolean, ailments: List<AilmentView>): Boolean = held && ailments.none { it.ailment == Ailment.FROZEN }
 
 /**
- * Временная полка бойца: оглушение, недуги, эффекты с таймером, заряды, силы-события героя - последними; [holder] - имя надетой вещи
- * по id (носитель силы), не найдена - null.
+ * Временные эффекты бойца для листа эффектов: оглушение, недуги, эффекты с таймером, заряды, силы-события героя - последними;
+ * полка под карточкой берёт из них только [onShelf]. [holder] - имя надетой вещи по id (носитель силы), не найдена - null.
  */
 internal fun timedShelf(
     held: Boolean,
@@ -143,6 +143,16 @@ internal fun timedShelf(
     effects.forEach { if (!it.lasting) add(Shelved.Effect(it)) }
     charges.forEach { add(Shelved.Charge(it)) }
     powers.forEach { if (!it.standing) add(Shelved.Power(it, it.holders.mapNotNull(holder))) }
+}
+
+/**
+ * Место ли плитке на временной полке под карточкой: силе - только на перезарядке или со счётом «каждое N-е», глотку - пока он
+ * не прерван; сила «готова», потраченная на бой и прерванный глоток без срока остаются лишь в листе эффектов.
+ */
+internal val Shelved.onShelf: Boolean get() = when (this) {
+    is Shelved.Effect -> !view.halted
+    is Shelved.Power -> !view.spent && (view.ready > 0 || view.nth != null)
+    else -> true
 }
 
 /**

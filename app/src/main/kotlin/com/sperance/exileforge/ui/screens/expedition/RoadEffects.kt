@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.screens.expedition.arena.AllEffects
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectShelf
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectsSheet
+import com.sperance.exileforge.ui.screens.expedition.arena.onShelf
 import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
 
 /**
@@ -38,11 +39,12 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
 @Composable internal fun RoadEffects(live: State<RunHud>) {
     val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
     val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
+    val shelf = remember(timed) { timed.filter { it.onShelf } }
     var open by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (timed.isNotEmpty()) {
             AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = true }
-            EffectShelf(timed, TILE, { open = true }, Modifier.weight(1f))
+            EffectShelf(shelf, TILE, { open = true }, Modifier.weight(1f))
         }
     }
     if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow) { open = false }

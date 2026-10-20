@@ -99,7 +99,6 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         Picker(
             kindTitle(kind),
-            enabled = true,
             FeedbackKind.entries.map { k ->
                 kindTitle(k) to {
                     kind = k
@@ -530,5 +529,31 @@ private const val DUPLICATE_DIGITS = 6
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(text, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
         ForgeButton(onClick = onRemove, kind = ButtonKind.Danger, icon = Icons.Outlined.Delete) { Text(ui("mail.remove")) }
+    }
+}
+
+/**
+ * Компактный выпадающий выбор в ряду чипов: значение «Ошибка ▾» в нити, зона касания - общая 44 dp ([touchZone]); пункт [options] -
+ * подпись и что он делает.
+ */
+@Composable private fun Picker(value: String, options: List<Pair<String, () -> Unit>>) {
+    var expanded by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(8.dp)
+    Box {
+        Text(
+            "$value ▾",
+            color = Rune,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            modifier = Modifier.clickable(role = Role.Button) { expanded = true }.touchZone().clip(shape).border(1.dp, Bronze, shape).padding(horizontal = 8.dp, vertical = 3.dp),
+        )
+        ForgeMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (label, pick) ->
+                DropdownMenuItem(text = { Text(label) }, onClick = {
+                    expanded = false
+                    pick()
+                })
+            }
+        }
     }
 }

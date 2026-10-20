@@ -391,29 +391,6 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
     }
 }
 
-/** Компактный выпадающий выбор: значение «Ошибка ▾» в нити (вид отчётов в очереди модерации); пункт [options] - подпись и что он делает. */
-@Composable internal fun Picker(value: String, enabled: Boolean, options: List<Pair<String, () -> Unit>>) {
-    var expanded by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(8.dp)
-    Box {
-        Text(
-            "$value ▾",
-            color = if (enabled) Rune else Muted,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            modifier = Modifier.clip(shape).border(1.dp, Bronze, shape).clickable(enabled = enabled) { expanded = true }.padding(horizontal = 8.dp, vertical = 3.dp),
-        )
-        ForgeMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (label, pick) ->
-                DropdownMenuItem(text = { Text(label) }, onClick = {
-                    expanded = false
-                    pick()
-                })
-            }
-        }
-    }
-}
-
 /**
  * Опасные действия - красный блок внизу досье: бан, немота и удаление строками, под каждым именем - одна строка последствий. Права
  * - из досье ([Dossier.rights]); роль выше вашей - строки модерации погашены, касание называет причину. В своём досье [own] блока нет.

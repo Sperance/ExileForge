@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FOUGHT_EVENTS
 import com.sperance.exileforge.core.campaign.run.GearPreview
+import com.sperance.exileforge.core.campaign.run.RunCallbacks
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.receivedText
@@ -216,18 +217,18 @@ class ExpeditionActions(
     /** Карта из сундука, с которой войти, или null - войти без неё. */
     fun pickMap(itemId: String?) = expedition { e -> e.copy(launch = e.launch?.let { l -> l.copy(picked = itemId, scarabs = if (itemId == null) emptyList() else l.scarabs) }) }
 
-    /** Механика, что тестировщик ставит на заход насильно: переключить одну; не тестировщику - ничего. */
+    /** Механика, что тестировщик со свободным прогрессом ставит на заход насильно: переключить одну; без свободного прогресса - ничего. */
     fun toggleForced(mechanic: MapMechanic) {
-        if (tester) expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
+        if (freeProgress) expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
     }
 
-    /** Все механики разом - или ни одной; не тестировщику - ничего. */
+    /** Все механики разом - или ни одной; без свободного прогресса - ничего. */
     fun forceAll(on: Boolean) {
-        if (tester) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
+        if (freeProgress) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
     }
 
     /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
-    private val tester: Boolean get() = sessions.state.value.free(heroes.state.value)
+    private val freeProgress: Boolean get() = sessions.state.value.freeProgress(heroes.state.value)
 
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
@@ -251,7 +252,7 @@ class ExpeditionActions(
      *
      * [toBoss] (тестировщик и выше) - сразу бой со стражем.
      */
-    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && tester)
+    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && freeProgress)
 
     /** Заход в зону [mapCode]; [toBoss] - сразу бой со стражем. */
     fun start(mapCode: MapCode, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss)
@@ -343,8 +344,7 @@ class ExpeditionActions(
         }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
-            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onGatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+            vaalOrbs = ::vaalOrbsFree, callbacks = callbacks,
             killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
@@ -354,6 +354,16 @@ class ExpeditionActions(
         vaalKilled = started.vaalKilled
         persist()
     }
+
+    /**
+     * Отклики забега: событие журнала - в отправку, конец забега и гибель - журнал уходит сразу, прерванный сбор узла - красный тост.
+     */
+    private val callbacks = RunCallbacks(
+        recorded = ::recorded,
+        cleared = { flushes.trySend(Unit) },
+        fallen = { flushes.trySend(Unit) },
+        gatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+    )
 
     /** Сферы Ваал под рукой за вычетом тех, что журнал потратил, а сервер ещё не сосчитал. */
     private fun vaalOrbsFree(): Long = (hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
@@ -658,8 +668,8 @@ class ExpeditionActions(
         outer.send(RunCommand.ShutGate(entered = true))
         val inner = ExpeditionRun.start(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
-            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts,
+            vaalOrbs = ::vaalOrbsFree, callbacks = callbacks, vaal = true, startPools = outer.pools,
+            killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
             speed = prefs.fightSpeed(i.rules.fight),
         )

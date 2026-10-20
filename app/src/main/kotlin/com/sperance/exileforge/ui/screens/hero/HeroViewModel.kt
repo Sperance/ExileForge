@@ -96,6 +96,7 @@ class HeroViewModel(
     fun addExperience(amount: Double) = hero.addExperience(amount)
     fun grantItem(code: String, amount: Long) = hero.grantItem(code, amount)
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = hero.testerGrant(what, *params)
+    fun freeProgress(on: Boolean) = hero.freeProgress(on)
     fun redeem(code: String) = hero.redeem(code)
 
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = hero.autoSell(rarity, groups)

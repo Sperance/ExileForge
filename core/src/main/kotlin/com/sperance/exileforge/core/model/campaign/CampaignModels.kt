@@ -121,7 +121,7 @@ import kotlinx.serialization.Serializable
     val rewards: List<EventReward> = emptyList(),
     /** The run the report is about. */
     val runId: String = "",
-    /** Причины отклонённых событий ([rejected]) по номерам; нет номера - отказ правила. */
+    /** Причины отказов сверх правила (темп) по номерам из [rejected]; отклонённое без причины - отказ правила. */
     val refusals: Map<Int, Refusal> = emptyMap(),
     /** Задания, сданные сервером при конце захода: ответ, что закрыл заход; null - заход открыт или сдача не прошла. */
     val turnIns: com.sperance.exileforge.rules.content.QuestClaimAll? = null,
@@ -169,6 +169,6 @@ import kotlinx.serialization.Serializable
     val received: Received = Received(),
     /** The trial the report is about. */
     val runId: String = "",
-    /** Причины отклонённых событий ([rejected]) по номерам; нет номера - отказ правила. */
+    /** Причины отказов сверх правила (темп) по номерам из [rejected]; отклонённое без причины - отказ правила. */
     val refusals: Map<Int, Refusal> = emptyMap(),
 )

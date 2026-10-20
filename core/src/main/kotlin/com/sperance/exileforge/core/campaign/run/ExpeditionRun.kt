@@ -117,11 +117,8 @@ class ExpeditionRun(
     internal var corruptionOpened: Boolean,
     internal var vaalZone: VaalZone?,
     internal var bossDown: Boolean,
-    internal val onRecorded: (RunEvent) -> Unit,
-    internal val onCleared: () -> Unit,
-    internal val onFallen: () -> Unit,
-    /** Сбор узла прерван боем или шагом героя ([breakGather]): игроку - тост. */
-    internal val onGatherBroken: () -> Unit,
+    /** Отклики забега наружу: событие журнала, конец забега, гибель, прерванный сбор. */
+    internal val callbacks: RunCallbacks,
     /**
      * Счёт Предначертания захода: бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
      * ([tallyWins]).
@@ -225,9 +222,6 @@ class ExpeditionRun(
 
     /** Сбор узла ремесла: какой узел и сколько секунд уже прошло; мир тикает, бой или шаг героя сбрасывают сбор ([breakGather]). */
     internal var channel: Channel? = null
-
-    /** Узел, что герой сейчас собирает; null - сбора нет. Сцена рисует у него кольцо доли ([FightPulse.action]). */
-    val gathering: NodeSpot? get() = channel?.spot
 
     /** Числа урона карты на экране (удары и тики эффектов, каждое своё) и номер следующего. */
     internal val hazards = mutableListOf<ShownHazard>()
@@ -510,7 +504,10 @@ class ExpeditionRun(
         wake.poke()
     }
 
-    /** Предложенный фонтан, предложенный уход и лист объекта карты держат шаг, пока игрок не ответит; сбор узла идёт при тикающем мире. */
+    /**
+     * Предложенный фонтан, предложенный уход и лист объекта карты держат шаг, пока игрок не ответит; сбор узла идёт при тикающем мире,
+     * тем же шагом: мир стоит - стоит и сбор.
+     */
     override fun update(dt: Double) {
         val poked = wake.took()
         var commanded = false
@@ -524,9 +521,9 @@ class ExpeditionRun(
         hazards.removeAll { it.left <= 0 }
         if (holds == 0) {
             when (phase) {
-                RunPhase.MAP -> {
+                RunPhase.MAP -> if (fountain == null && offer == null && !exitOffered) {
+                    walk(dt)
                     channel?.let { gather(it, dt) }
-                    if (fountain == null && offer == null && !exitOffered) walk(dt)
                 }
 
                 RunPhase.FIGHT -> play(dt)
@@ -535,7 +532,7 @@ class ExpeditionRun(
             }
         }
         pulse.capture(fight)
-        pulse.act(if (phase == RunPhase.MAP) objectAction()?.progress else null)
+        pulse.act(if (phase == RunPhase.MAP) objectAction()?.progress else null, channel?.spot?.takeIf { phase == RunPhase.MAP })
         if (cadence.due(dt, commanded || poked, leaps(), fight)) state.value = snapshot()
         wake.rest(active)
     }
@@ -573,7 +570,7 @@ class ExpeditionRun(
     }
 
     /** One event of the journal, and the listener told. */
-    internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(onRecorded)?.also(::counted)
+    internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(callbacks.recorded)?.also(::counted)
 
     private fun counted(event: RunEvent) {
         fun add(counter: String) {
@@ -665,12 +662,9 @@ class ExpeditionRun(
             heroExperience: Double,
             heroLevel: Int,
             vaalOrbs: () -> Long,
-            onRecorded: (RunEvent) -> Unit = {},
+            callbacks: RunCallbacks = RunCallbacks(),
             vaal: Boolean = false,
             startPools: HeroPools? = null,
-            onCleared: () -> Unit = {},
-            onFallen: () -> Unit = {},
-            onGatherBroken: () -> Unit = {},
             killed: Collection<Int> = emptyList(),
             opened: Collection<Int> = emptyList(),
             features: Collection<FeatureUse> = emptyList(),
@@ -707,7 +701,7 @@ class ExpeditionRun(
             }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onGatherBroken, fateRun,
+                campaign.corruptionOpened, vaalZone, bossDown, callbacks, fateRun,
             ).also {
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()

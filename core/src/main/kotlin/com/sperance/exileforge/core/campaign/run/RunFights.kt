@@ -58,9 +58,10 @@ import kotlin.random.Random
  * бой собирает обычные стаи вокруг ([gathered]) и идёт раундами ([FightRounds]) не больше `fight.maxFoes` врагов:
  * герой переходит из раунда в раунд как есть, гибель в любом - гибель в бою. Каждой стае - своё ENGAGE.
  *
- * «В бой» игрока начинает бой.
+ * «В бой» игрока начинает бой. Начатый бой прерывает идущий сбор узла ([breakGather]).
  */
 internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
+    breakGather()
     fightAgent = agent
     fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
     abyssFight = abyssal
@@ -239,7 +240,7 @@ internal fun ExpeditionRun.play(dt: Double) {
                 fallEvent = it.n
                 fall = deathLoss()
             }
-            onFallen()
+            callbacks.fallen()
         }
     }
     endFight()

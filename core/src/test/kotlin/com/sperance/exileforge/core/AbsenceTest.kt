@@ -16,7 +16,7 @@ class AbsenceTest {
     private val away = (rules.awayMinutes * MINUTE).toLong()
     private val before = ActiveWork("SMITHING", "IRON_FORGING", startedAt = 0, settledAt = 0)
 
-    private fun answer(span: Long, cycles: Int) = CraftsState(now = NOW, rules = rules, gains = WorkGains(cycles = cycles), from = NOW - span)
+    private fun answer(span: Long, cycles: Int) = CraftsState(now = NOW, rules = rules, crafting = TestContent.index.professions.crafting, gains = WorkGains(cycles = cycles), from = NOW - span)
 
     @Test
     fun aLongCatchUpWithCyclesIsAnAbsence() {

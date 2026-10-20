@@ -95,13 +95,17 @@ private val ButtonSize.glyph: Dp get() = when (this) {
     if (repeatOnHold && state == ButtonState.Enabled && pressed.value) {
         LaunchedEffect(Unit) {
             repeated = false
-            delay(REPEAT_FIRST_MS)
-            var pause = REPEAT_START_MS
-            while (true) {
-                repeated = true
-                action()
-                delay(pause)
-                pause = (pause * REPEAT_PACE).toLong().coerceAtLeast(REPEAT_FAST_MS)
+            try {
+                delay(REPEAT_FIRST_MS)
+                var pause = REPEAT_START_MS
+                while (true) {
+                    repeated = true
+                    action()
+                    delay(pause)
+                    pause = (pause * REPEAT_PACE).toLong().coerceAtLeast(REPEAT_FAST_MS)
+                }
+            } finally {
+                repeated = false
             }
         }
     }

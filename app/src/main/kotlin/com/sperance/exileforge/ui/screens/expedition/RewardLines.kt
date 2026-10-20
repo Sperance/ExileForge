@@ -31,7 +31,8 @@ import com.sperance.exileforge.ui.theme.*
  * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
  * With [onItem] a card opens its comparison with what is worn. Каждая надеваемая вещь несёт стрелки урона и
  * защиты. Вещь показывается по её положению у героя ([presentLoot]): проданной нет, надетая - с меткой
- * «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя, ждут, а не пропадают.
+ * «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя, ждут, а не пропадают. Вещь лучше надетого - с меткой
+ * «▲ Лучше надетого» ([rememberLootMark]).
  * Без [onItem] вещь и стопка открывают общую карточку предмета.
  *
  * Без нелокальных return из составных лямбд: D8 не переводит их в dex. Сравнение - с копией героя, когда она уже у него.
@@ -59,11 +60,15 @@ import com.sperance.exileforge.ui.theme.*
                     presence.worn -> WornLootRow(piece)
 
                     else -> {
+                        val mark = rememberLootMark(game, instance, flasks = false)
                         ItemRow(
                             piece,
+                            note = mark?.text,
+                            noteColor = mark?.color ?: Gold,
                             compact = true,
                             price = game.sellPrice(instance),
                             verdict = rememberGearVerdict(game, game.hero?.item(instance.id) ?: instance),
+                            accent = mark?.color,
                         ) { if (onItem != null) onItem(piece) else inspect(Inspect.Copy(instance)) }
                     }
                 }

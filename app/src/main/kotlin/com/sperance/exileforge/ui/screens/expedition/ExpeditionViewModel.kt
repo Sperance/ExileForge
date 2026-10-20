@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.GearPreview
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.RiftActions
@@ -19,6 +20,7 @@ import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.ui.nav.Navigator
@@ -79,6 +81,12 @@ class ExpeditionViewModel(
     fun runCommand(command: RunCommand) = expedition.send(command)
     fun flushRun() = expedition.flushRun()
     fun toggleSaleMark(itemId: String) = expedition.toggleSaleMark(itemId)
+
+    /** Надеть находку захода между боями ([ExpeditionActions.wear]). */
+    fun wear(itemId: String, slot: Slot? = null) = expedition.wear(itemId, slot)
+
+    /** Что изменит надетая находка ([ExpeditionActions.wearPreview]); вызывать вне главного потока. */
+    fun wearPreview(itemId: String, slot: Slot? = null): GearPreview? = expedition.wearPreview(itemId, slot)
     fun enterVaal() = expedition.enterVaal()
 
     /** Выход из итогов захода: отмеченное [sell] продаётся, отложенная добыча со снятой отметкой [keep] остаётся. */

@@ -48,7 +48,7 @@ import com.sperance.exileforge.ui.theme.*
  * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. Две линии вместо плиты - лут после боя; «Ценник» -
  * ярлык цены сверху плиты; «лучше или хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка;
  * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - уровень предмета плашкой первым, значки тиров, качество,
- * состояния и замок; каждая строка вещи видна без карточки.
+ * состояния и замок; каждая строка вещи видна без карточки. [accent] - цвет рамки метки строки ([note]): «лучше надетого» в походе.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -71,6 +71,7 @@ fun ItemRow(
     verdict: GearVerdict? = null,
     onLongClick: (() -> Unit)? = null,
     lines: LineFold = LineFold.OPEN,
+    accent: Color? = null,
     onClick: () -> Unit,
 ) {
     val look = relicLook(item.rarity)
@@ -95,6 +96,7 @@ fun ItemRow(
                     1.dp,
                     when {
                         selected -> Gold
+                        accent != null -> accent.copy(alpha = .7f)
                         worn -> Gold.copy(alpha = .5f)
                         legend != null -> look.gold.copy(alpha = .55f)
                         else -> look.rarity.copy(alpha = .2f)

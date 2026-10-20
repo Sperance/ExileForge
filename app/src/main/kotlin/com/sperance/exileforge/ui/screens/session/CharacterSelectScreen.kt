@@ -1,11 +1,17 @@
 package com.sperance.exileforge.ui.screens.session
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -14,12 +20,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.MAX_CHARACTERS
-import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
@@ -101,8 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * What is worth checking here is which hero a tap plays and how many slots are left — not the
  * wiring behind them.
  *
- * Список перечитывается потягиванием; сколько героев держит аккаунт, говорят правила, до их чтения - своё число клиента. Предначертание -
- * лентой над героями.
+ * Список перечитывается потягиванием; герои - строками, под ними - создание героя с занятыми местами. Предначертание - лентой над героями.
  */
 @Composable internal fun ColumnScope.CharacterMenu(
     game: GameUi,
@@ -127,22 +133,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     onErase = { onErase(character) },
                 )
             }
-            item {
-                ForgeButton(state = ButtonState.of(!game.busy && game.characterSlotsLeft > 0), onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(ui("editor.create_character"), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        ui("chars.slots_short", game.characterSlotsLeft, game.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        softWrap = false,
-                        modifier = Modifier.alpha(.75f),
-                    )
-                }
-                if (game.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
-            }
+            item { CreateHeroButton(game, onCreate) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(game.session.title, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
@@ -150,6 +141,30 @@ import org.koin.compose.viewmodel.koinViewModel
                 }
             }
         }
+    }
+}
+
+/**
+ * «+ Создать героя» во всю ширину с занятыми местами «N/M» справа; мест нет - кнопка погашена, касание объясняет, как освободить место.
+ * Сколько мест держит аккаунт, говорят правила, до их чтения - своё число клиента.
+ */
+@Composable private fun CreateHeroButton(game: GameUi, onCreate: () -> Unit) {
+    val total = game.index?.rules?.maxCharacters ?: MAX_CHARACTERS
+    val full = game.characterSlotsLeft <= 0
+    var explain by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        ForgeButton(
+            state = ButtonState.of(!game.busy && !full),
+            onClick = onCreate,
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.Outlined.Add,
+            onDisabledClick = if (full) ({ explain = true }) else null,
+        ) {
+            Text(ui("editor.create_character"), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Spacer(Modifier.width(10.dp))
+            Text("${(total - game.characterSlotsLeft).coerceIn(0, total)}/$total", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, modifier = Modifier.alpha(.75f))
+        }
+        if (explain) TipCallout(Tip("", ui("chars.slots_full"), Muted)) { explain = false }
     }
 }
 
@@ -165,10 +180,45 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
     com.sperance.exileforge.ui.components.PrologueGate(always = true) { CreatingList(game, vm, onBack, onSignOut) }
 }
 
-/** Форма создания героя: «⋮» с отчётом - в углу экрана, как у списка героев. */
+/**
+ * Форма создания героя. У аккаунта с героями сверху - цепочка «← Герои» (и системный «назад») к списку; без героев вернуться некуда,
+ * поэтому под выбором класса - вход под другим аккаунтом. «В изгнание» закреплена внизу, форма над ней прокручивается.
+ */
 @Composable private fun ColumnScope.CreatingList(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    val classes = game.index?.classes?.classes.orEmpty()
+    val draft by vm.draftClass.collectAsStateWithLifecycle()
+    val heroClass = draft.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
+    val canGoBack = game.session.characters.isNotEmpty()
+    if (canGoBack) {
+        BackHandler(onBack = onBack)
+        HeroesTrail(onBack)
+    }
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { CreateCharacterPanel(game, vm, canGoBack = game.session.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
+        item { CreateCharacterPanel(game, vm, name, { name = it }, classes.map { it.code }, heroClass) }
+        if (!canGoBack) {
+            item {
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onSignOut, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
+                    Text(ui("chars.other_account"))
+                }
+            }
+        }
+    }
+    ForgeButton(
+        state = ButtonState.of(!game.busy && name.isNotBlank() && heroClass.isNotBlank()),
+        onClick = { vm.createCharacter(name, heroClass) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        size = ButtonSize.Wide,
+    ) {
+        Text(ui("chars.create"))
+    }
+}
+
+/** Цепочка «← Герои» над формой создания: стрелка и звено ведут к списку героев. */
+@Composable private fun HeroesTrail(onBack: () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(40.dp).padding(start = 4.dp, end = 64.dp), verticalAlignment = Alignment.CenterVertically) {
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, accent = Gold)
+        Text(ui("chars.back"), color = Muted, style = MaterialTheme.typography.labelLarge, modifier = Modifier.clickable(role = Role.Button, onClick = onBack))
     }
 }
 
@@ -178,8 +228,9 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
  * The row carries the class as a code; the server's dictionary names it, and the portrait
  * is drawn by the code alone, so the menu reads before the content has.
  *
- * Под баном и в корзине героем не играют - карточка говорит, кто, за что и до когда, и даёт обжаловать; самоудаление - серая карточка с
- * отсчётом. Значок роли - у администратора и модератора.
+ * Герой - одной строкой: портрет с уровнем на нём, имя и класс, справа - удаление и малая «Играть». Под баном и в корзине героем не
+ * играют - под строкой карточка говорит, кто, за что и до когда, и даёт обжаловать; самоудаление - серая карточка с отсчётом. Значок
+ * роли - у администратора и модератора.
  */
 @Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit, onRestore: () -> Unit, onErase: () -> Unit) {
     val heroClass = character.heroClass.takeIf { it.isNotBlank() }
@@ -189,16 +240,26 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
     val playable = sanction == null && !deleted
     var appealing by remember(character.id) { mutableStateOf(false) }
     ForgePanel(modifier = Modifier.alpha(if (deleted) .6f else 1f).clickable(enabled = !game.busy && playable, onClick = onPlay)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp).then(if (voluntary) Modifier.grayscale() else Modifier), round = true)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LevelPortrait(heroClass, character.level, game.world.portraits, gray = voluntary)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(character.name, color = nameColor(sanction != null, voluntary), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        character.name,
+                        color = nameColor(sanction != null, voluntary),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
                     RoleMark(accountRole(game.session.profile?.role))
                     TesterMark(character.tester)
                 }
-                PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
-                PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
+                Text(heroClass?.let(::classTitle) ?: ui("chars.unknown"), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (playable) {
+                ForgeIconButton(Icons.Outlined.DeleteOutline, ui("chars.release_do"), onClick = onDelete, kind = ButtonKind.Danger, size = ButtonSize.Small, state = ButtonState.of(!game.busy))
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onPlay, size = ButtonSize.Small) { Text(ui("auth.play")) }
             }
         }
         when {
@@ -215,11 +276,6 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
             sanction != null -> ForgeButton(state = ButtonState.of(!game.busy && !sanction.appealed), onClick = { appealing = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
                 Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
             }
-
-            else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = onDelete, kind = ButtonKind.Danger) { Text(ui("chars.release_do")) }
-            }
         }
     }
     if (appealing && sanction != null) {
@@ -231,6 +287,22 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
     }
 }
 
+/** Круглый портрет класса 48 dp с уровнем героя [level] плашкой на нижней кромке; [gray] - обесцвечен (герой в своей корзине). */
+@Composable private fun LevelPortrait(heroClass: String?, level: Int, portraits: Int, gray: Boolean) {
+    Box(Modifier.size(48.dp), contentAlignment = Alignment.BottomCenter) {
+        ClassPortrait(heroClass, portraits, Modifier.fillMaxSize().then(if (gray) Modifier.grayscale() else Modifier), round = true)
+        Text(
+            level.toString(),
+            color = GoldBright,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.offset(y = 4.dp).background(Ink, LevelShape).border(1.dp, Gold.copy(alpha = .6f), LevelShape).padding(horizontal = 5.dp),
+        )
+    }
+}
+
+private val LevelShape = RoundedCornerShape(6.dp)
+
 /** Имя героя: под санкцией модерации - красным, в своей корзине - приглушённым, иначе - золотом. */
 private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
     voluntary -> Muted
@@ -238,11 +310,19 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
     else -> GoldBright
 }
 
-/** Кнопки героя в своей корзине: вернуть - если есть свободное место, иначе погашено с причиной; стереть навсегда. */
+/** Кнопки героя в своей корзине: вернуть - если есть свободное место, иначе погашено, касание называет причину; стереть навсегда. */
 @Composable private fun MarkedActions(game: GameUi, onRestore: () -> Unit, onErase: () -> Unit) {
     val slot = game.characterSlotsLeft > 0
-    ForgeButton(state = ButtonState.of(!game.busy && slot), onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
-    if (!slot) Text(ui("chars.restore_no_slot"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+    var explain by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        ForgeButton(
+            state = ButtonState.of(!game.busy && slot),
+            onClick = onRestore,
+            modifier = Modifier.fillMaxWidth(),
+            onDisabledClick = if (slot) null else ({ explain = true }),
+        ) { Text(ui("chars.restore")) }
+        if (explain) TipCallout(Tip("", ui("chars.restore_no_slot"), Muted)) { explain = false }
+    }
     ForgeButton(state = ButtonState.of(!game.busy), onClick = onErase, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
         Text(ui("chars.erase_do"))
     }
@@ -253,60 +333,30 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
  *
  * The class is chosen here or nowhere: it is the whole stat base and the root of the tree, and the
  * server has no route that moves a hero to another one. The classes come with the content, and the one picked is the play state's draft, so it survives the form being redrawn.
- * Each is shown by the carousel, whole, between the name and the button that seals the choice.
+ * Each is shown by the picker, whole, between the name and the button that seals the choice.
  *
- * Классы приходят с контентом после открытия формы: пустой список - ошибка, только когда чтение кончилось. У аккаунта без героев нет
- * списка, куда вернуться, поэтому здесь же - вход под другим аккаунтом.
+ * Имя - поле со счётчиком знаков внутри и ⓘ правил имени. Классы приходят с контентом после открытия формы: пустой список - ошибка,
+ * только когда чтение кончилось.
  */
-@Composable private fun CreateCharacterPanel(
-    game: GameUi,
-    vm: CharactersViewModel,
-    canGoBack: Boolean,
-    onBack: () -> Unit,
-    onSignOut: () -> Unit,
-) {
-    var name by rememberSaveable { mutableStateOf("") }
+@Composable private fun CreateCharacterPanel(game: GameUi, vm: CharactersViewModel, name: String, onName: (String) -> Unit, classes: List<String>, heroClass: String) {
     val index = game.index
-    val classes = index?.classes?.classes.orEmpty()
-    val draft by vm.draftClass.collectAsStateWithLifecycle()
-    val heroClass = draft.takeIf { code -> classes.any { it.code == code } } ?: classes.firstOrNull()?.code.orEmpty()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ForgePanel {
-            OutlinedTextField(
-                name,
-                { name = NameCharset.filter(it).take(game.inputs.heroName) },
-                enabled = !game.busy,
-                label = { Text(ui("common.name")) },
-                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${game.inputs.heroName}\n" + ui("common.name_charset")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (classes.isEmpty() && index != null && Reads.CONTENT !in game.loading) {
-                Text(
-                    ui("editor.no_classes"),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
+        val rules = ui("chars.name_unique")
+        OutlinedTextField(
+            name,
+            { onName(NameCharset.filter(it).take(game.inputs.heroName)) },
+            enabled = !game.busy,
+            label = { Text(ui("common.name")) },
+            suffix = { Text("${name.length}/${game.inputs.heroName}", color = Muted, style = MaterialTheme.typography.labelMedium) },
+            trailingIcon = { InfoMark(rules) { Tip(rules, ui("common.name_charset"), Muted) } },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (classes.isEmpty() && index != null && Reads.CONTENT !in game.loading) {
+            Text(ui("editor.no_classes"), color = MaterialTheme.colorScheme.error)
         }
         if (index != null && heroClass.isNotBlank()) {
-            ClassCarousel(index, classes.map { it.code }, heroClass, game.world.portraits, enabled = !game.busy, onChoose = vm::draftClass)
-        }
-        ForgePanel {
-            ForgeButton(
-                state = ButtonState.of(!game.busy && name.isNotBlank() && heroClass.isNotBlank()),
-                onClick = { vm.createCharacter(name, heroClass) },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(ui("chars.create"))
-            }
-            if (canGoBack) {
-                ForgeButton(state = ButtonState.of(!game.busy), onClick = onBack, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
-                    Text(ui("chars.back"))
-                }
-            }
-            ForgeButton(state = ButtonState.of(!game.busy), onClick = onSignOut, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
-                Text(ui("chars.other_account"))
-            }
+            ClassPicker(index, classes, heroClass, game.world.portraits, enabled = !game.busy, onChoose = vm::draftClass)
         }
     }
 }

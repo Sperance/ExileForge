@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -62,6 +63,16 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     Box {
         ForgeIconButton(Icons.Outlined.Info, label, onClick = { open = true }, size = ButtonSize.Small)
         if (open) TipCallout(tint, onClose = { open = false }, body = body)
+    }
+}
+
+/**
+ * Значок ⓘ: касание открывает [tip] окном у значка - пояснение вместо сноски на экране. [label] - имя для чтения с экрана,
+ * [tint] - цвет значка; зона касания - 36 dp.
+ */
+@Composable fun InfoMark(label: String, modifier: Modifier = Modifier, tint: Color = Muted, tip: () -> Tip) {
+    Tipped(tip, modifier.size(36.dp), contentAlignment = Alignment.Center) {
+        Icon(Icons.Outlined.Info, label, tint = tint, modifier = Modifier.size(18.dp))
     }
 }
 

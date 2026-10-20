@@ -117,11 +117,9 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     }
 }
 
-/** Who is playing: the class's portrait, the name and level, the class; the account under it once signed in. */
+/** Who is playing: the class's portrait, the name and level, the class. Аккаунт - значением строки входа ниже, не здесь. */
 @Composable private fun ProfileCard(account: AccountUi) {
-    val model = koinViewModel<ServerViewModel>()
-    val session by model.session.collectAsStateWithLifecycle()
-    val world by model.world.collectAsStateWithLifecycle()
+    val world by koinViewModel<ServerViewModel>().world.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(14.dp)
     val classCode = account.heroClass
     Row(
@@ -142,16 +140,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                 )
             }
             classCode?.takeIf { it.isNotBlank() }?.let { MutedText(classTitle(it)) }
-            if (session.signedIn) {
-                MutedText(
-                    "${session.title} · ${ui(
-                        when {
-                            session.isAdmin -> "account.administrator"
-                            else -> "account.player"
-                        },
-                    )}",
-                )
-            }
         }
     }
 }
@@ -218,7 +206,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                 { draft = it.take(account.inputs.server) },
                 enabled = !account.busy,
                 label = { Text(ui("account.server_address")) },
-                supportingText = { Text(ui("account.address_hint")) },
+                trailingIcon = { InfoMark(ui("account.server_address")) { Tip("", ui("account.address_hint"), Muted) } },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )

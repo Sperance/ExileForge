@@ -533,7 +533,7 @@ private fun trashShare(sanction: SanctionView): Float {
 }
 
 private const val PRESET_WEEK = 2
-private const val TRASH_DAYS = 30
+internal const val TRASH_DAYS = 30
 private const val COMMENT = 300
 private const val DIGITS = 4
 private const val HOURS_IN_DAY = 24

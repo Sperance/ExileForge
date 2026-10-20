@@ -7,12 +7,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,10 +47,11 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Досье: шапка в две строки, одна панель «ключ — значение» в две колонки,
- * свёрнутые строки Экономика, Связи, История и Предначертание с итогом справа, одна строка управления (роль, сервер, тестировщик) и
- * кнопки санкций внизу - досье помещается в экран. Своё досье администратора - «Сменить» в Предначертании: лист всех даров. Досье -
- * уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]): своей стрелки у него нет.
+ * Досье как страница настроек: шапка в две строки, строки «Роль ›», «Сервер ›» и переключатель «Тестировщик» - значение роли и сервера
+ * печатается только в своей строке; одна панель «ключ — значение» в две колонки, свёрнутые строки Экономика, Связи, История и
+ * Предначертание с итогом справа и красный блок опасных действий внизу - у каждого строка последствий. Своё досье администратора -
+ * «Сменить» в Предначертании: лист всех даров. Досье - уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]): своей
+ * стрелки у него нет.
  */
 @Composable internal fun DossierView(account: AccountUi, vm: ModerationModel, dossier: Dossier?) {
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
@@ -59,7 +62,7 @@ import java.time.format.DateTimeFormatter
         return
     }
     val state by vm.state.collectAsStateWithLifecycle()
-    DossierHeader(account, dossier, dossier.hero?.let { vm.serverName(it.server) })
+    DossierHeader(account, dossier)
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
             sanctionLine(active),
@@ -68,17 +71,16 @@ import java.time.format.DateTimeFormatter
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).border(1.dp, LifeRed.copy(alpha = .4f), RoundedCornerShape(10.dp)).padding(10.dp),
         )
     }
+    SettingRows(account, vm, dossier, state.servers)
     DossierFacts(account, dossier)
     DossierFolds(account, vm, dossier) { item ->
         device = item
         sanctioning = SanctionKind.BAN
     }
-    ControlRow(account, vm, dossier, state.servers)
-    SanctionButtons(account, dossier, onSanction = { kind ->
+    DangerBlock(account, dossier, vm.owns(dossier.account.userId), onSanction = { kind ->
         device = null
         sanctioning = kind
     }) { deleting = it }
-    if (!dossier.rights.ban) MutedText(ui("moderation.protected"))
     sanctioning?.let { kind ->
         BanSheet(account, dossier, device, kind, onDismiss = { sanctioning = null }) {
             sanctioning = null
@@ -93,8 +95,8 @@ import java.time.format.DateTimeFormatter
     }
 }
 
-/** Шапка досье: портрет 40dp, «Имя · класс уровень», ниже «логин · роль · сервер · ✦ дар». */
-@Composable private fun DossierHeader(account: AccountUi, dossier: Dossier, server: String?) {
+/** Шапка досье: портрет 40dp, «Имя · класс уровень», ниже «логин · ✦ дар»; роль и сервер - в своих строках под шапкой. */
+@Composable private fun DossierHeader(account: AccountUi, dossier: Dossier) {
     val hero = dossier.hero
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ClassPortrait(hero?.heroClass, account.world.portraits, Modifier.size(40.dp))
@@ -105,8 +107,6 @@ import java.time.format.DateTimeFormatter
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                 MutedText(dossier.account.login, style = MaterialTheme.typography.labelSmall)
-                RoleMark(dossier.account.role, 14.dp)
-                server?.let { MutedText("· $it", style = MaterialTheme.typography.labelSmall) }
                 dossier.account.fate?.let { FateMark(FateCard(it)) }
             }
         }
@@ -266,41 +266,39 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 }
 
 /**
- * Строка управления: роль аккаунта (администратор; администратора не меняет никто), сервер героя (администратор: перенос
- * с подтверждением - он уводит из гильдии и снимает лоты, «+ новый сервер») и отметка тестировщика (администратор и
- * модератор) - выпадающими выборами одной строкой. Нечего менять - строки нет.
+ * Строки досье «имя — значение ›»: роль аккаунта (меняет администратор; администратора не меняет никто), сервер героя (администратор:
+ * лист серверов с переносом удержанием) и переключатель тестировщика (администратор и модератор). Нельзя менять - строка без «›» и
+ * не нажимается; у аккаунта без героя - только роль.
  */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier, servers: List<GameServer>) {
+@Composable private fun SettingRows(account: AccountUi, vm: ModerationModel, dossier: Dossier, servers: List<GameServer>) {
     val hero = dossier.hero
     val role = account.isAdmin && dossier.account.role != AccountRole.ADMIN
     val server = account.isAdmin && hero != null
-    val tester = account.isModerator && hero != null
-    if (!role && !server && !tester) return
     if (server) LaunchedEffect(Unit) { vm.loadServers() }
-    var moving by remember(hero?.heroId) { mutableStateOf<GameServer?>(null) }
-    var founding by remember { mutableStateOf(false) }
-    ForgePanel {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-            if (role) {
-                MutedText(ui("dossier.role"), style = MaterialTheme.typography.labelSmall)
-                Picker(ui("moderation.role.${dossier.account.role.name}"), !account.busy, ASSIGNABLE.map { option -> ui("moderation.role.${option.name}") to { if (option != dossier.account.role) vm.setRole(dossier.account.userId, option) } })
+    var picking by remember { mutableStateOf(false) }
+    var moving by remember(hero?.heroId) { mutableStateOf(false) }
+    val shape = RoundedCornerShape(10.dp)
+    Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape)) {
+        Box {
+            SettingRow(ui("dossier.role"), ui("moderation.role.${dossier.account.role.name}"), enabled = role && !account.busy) { picking = true }
+            ForgeMenu(expanded = picking, onDismissRequest = { picking = false }) {
+                ASSIGNABLE.forEach { option ->
+                    DropdownMenuItem(text = { Text(ui("moderation.role.${option.name}")) }, onClick = {
+                        picking = false
+                        if (option != dossier.account.role) vm.setRole(dossier.account.userId, option)
+                    })
+                }
             }
-            if (server && hero != null) {
-                MutedText(ui("dossier.server"), style = MaterialTheme.typography.labelSmall)
-                val known = servers.ifEmpty { listOf(GameServer(hero.server, hero.server)) }
-                Picker(
-                    vm.serverName(hero.server),
-                    !account.busy,
-                    known.map { option -> option.name.ifBlank { option.code } to { if (option.code != hero.server) moving = option } } + (ui("dossier.new_server") to { founding = true }),
-                )
-            }
-            if (tester && hero != null) {
-                MutedText(ui("dossier.tester"), style = MaterialTheme.typography.labelSmall)
+        }
+        if (hero != null) {
+            HorizontalDivider(color = Bronze)
+            SettingRow(ui("dossier.server"), vm.serverName(hero.server), enabled = server && !account.busy) { moving = true }
+            HorizontalDivider(color = Bronze)
+            Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(ui("dossier.tester"), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                 Switch(
                     checked = hero.tester,
-                    enabled = !account.busy,
+                    enabled = account.isModerator && !account.busy,
                     onCheckedChange = { vm.setTester(hero.heroId, it) },
                     colors = SwitchDefaults.colors(checkedTrackColor = Elder),
                     modifier = Modifier.height(24.dp),
@@ -308,29 +306,92 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
             }
         }
     }
-    val target = moving
-    if (target != null && hero != null) {
-        ConfirmSheet(
-            title = ui("admin.move_q", hero.name),
-            confirm = ui("admin.move"),
-            danger = true,
-            subtitle = "${vm.serverName(hero.server)} → ${target.name.ifBlank { target.code }}",
-            note = ui("admin.move_note"),
-            onDismiss = { moving = null },
-        ) {
-            moving = null
-            vm.moveHero(hero.heroId, target.code)
-        }
-    }
-    if (founding) {
-        ServerSheet(account, onDismiss = { founding = false }) { code, name ->
-            founding = false
-            vm.createServer(code, name)
+    if (moving && hero != null) {
+        MoveSheet(account, hero, servers.ifEmpty { listOf(GameServer(hero.server, hero.server)) }, vm::serverName, onDismiss = { moving = false }, onFound = vm::createServer) { code ->
+            moving = false
+            vm.moveHero(hero.heroId, code)
         }
     }
 }
 
-/** Компактный выпадающий выбор: значение «Админ ▾» в нити (строка управления досье, версия у отчётов); пункт [options] - подпись и что он делает. */
+/** Строка настроек досье: имя слева, значение справа и «›», если её можно менять - касание [onClick]. */
+@Composable private fun SettingRow(label: String, value: String, enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(enabled = enabled, role = Role.Button, onClick = onClick).heightIn(min = 44.dp).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(label, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(value, color = if (enabled) Rune else Muted, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (enabled) Text("›", color = Muted, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/**
+ * Лист «Сервер героя»: серверы списком - нынешний с «✓», выбранный для переноса с «●», последней строкой «+ Новый сервер». Выбран
+ * другой - внизу предупреждение переноса (уходит из гильдии, лоты возвращаются письмами) прямо над удерживаемой «перенести на X».
+ */
+@Composable private fun MoveSheet(
+    account: AccountUi,
+    hero: DossierHero,
+    servers: List<GameServer>,
+    nameOf: (String) -> String,
+    onDismiss: () -> Unit,
+    onFound: (String, String) -> Unit,
+    onMove: (String) -> Unit,
+) {
+    var target by remember { mutableStateOf<GameServer?>(null) }
+    var founding by remember { mutableStateOf(false) }
+    val picked = target
+    val confirm: @Composable RowScope.() -> Unit = {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("⚠ " + ui("admin.move_note"), color = Ember, style = MaterialTheme.typography.bodySmall)
+            ForgeButton(
+                onClick = { picked?.let { onMove(it.code) } },
+                modifier = Modifier.fillMaxWidth(),
+                kind = ButtonKind.Danger,
+                state = ButtonState.of(!account.busy),
+                icon = Icons.Outlined.SwapHoriz,
+                hold = Hold(),
+            ) { Text(ui("admin.move_hold", picked?.let { nameOf(it.code) }.orEmpty()), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
+    }
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(spacing = 6.dp),
+        footer = confirm.takeIf { picked != null },
+    ) {
+        Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Engraved(ui("admin.hero_server"))
+        servers.forEach { server ->
+            val current = server.code == hero.server
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = !current) { target = server }.heightIn(min = 44.dp).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(nameOf(server.code), color = if (current) GoldBright else Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                when {
+                    current -> Text("✓", color = Vital, style = MaterialTheme.typography.titleMedium)
+                    server == picked -> Text("●", color = Rune, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+        }
+        Text(
+            ui("dossier.new_server"),
+            color = Rune,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { founding = true }.heightIn(min = 44.dp).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 8.dp),
+        )
+    }
+    if (founding) {
+        ServerSheet(account, onDismiss = { founding = false }) { code, name ->
+            founding = false
+            onFound(code, name)
+        }
+    }
+}
+
+/** Компактный выпадающий выбор: значение «Ошибка ▾» в нити (вид отчётов в очереди модерации); пункт [options] - подпись и что он делает. */
 @Composable internal fun Picker(value: String, enabled: Boolean, options: List<Pair<String, () -> Unit>>) {
     var expanded by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
@@ -354,22 +415,54 @@ private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier
 }
 
 /**
- * Кнопки санкций внизу досье: бан, немота и удаление - что разрешают права досье, поровну в ширину.
- *
- * Немота: не пишет письма, играет как обычно.
+ * Опасные действия - красный блок внизу досье: бан, немота и удаление строками, под каждым именем - одна строка последствий. Права
+ * - из досье ([Dossier.rights]); роль выше вашей - строки модерации погашены, касание называет причину. В своём досье [own] блока нет.
  */
-@Composable private fun SanctionButtons(account: AccountUi, dossier: Dossier, onSanction: (SanctionKind) -> Unit, onDelete: (SanctionTarget) -> Unit) {
-    val hero = dossier.hero
-    val actions = buildList<Pair<String, () -> Unit>> {
-        if (dossier.rights.ban) add(ui("moderation.ban") to { onSanction(SanctionKind.BAN) })
-        if (dossier.rights.mute) add(ui("moderation.mute") to { onSanction(SanctionKind.MUTE) })
-        if (dossier.rights.delete) add(ui("moderation.delete") to { onDelete(if (hero != null && !hero.deleted) SanctionTarget.HERO else SanctionTarget.ACCOUNT) })
-    }
-    if (actions.isEmpty()) return
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        actions.forEach { (label, act) ->
-            ForgeButton(state = ButtonState.of(!account.busy), onClick = act, modifier = Modifier.weight(1f), kind = ButtonKind.Danger, icon = Icons.Outlined.Block) { Text(label, maxLines = 1) }
+@Composable private fun DangerBlock(account: AccountUi, dossier: Dossier, own: Boolean, onSanction: (SanctionKind) -> Unit, onDelete: (SanctionTarget) -> Unit) {
+    val rights = dossier.rights
+    if (own || !account.isModerator) return
+    val hero = dossier.hero?.takeIf { !it.deleted }
+    val protected = !rights.ban
+    val days = account.index?.rules?.moderation?.trashDays ?: TRASH_DAYS
+    val shape = RoundedCornerShape(12.dp)
+    Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, LifeRed.copy(alpha = .5f), shape)) {
+        DangerRow(ui("moderation.ban"), ui("moderation.ban_effect"), rights.ban && !account.busy, protected) { onSanction(SanctionKind.BAN) }
+        HorizontalDivider(color = LifeRed.copy(alpha = .25f))
+        DangerRow(ui("moderation.mute"), ui("moderation.mute_note"), rights.mute && !account.busy, protected) { onSanction(SanctionKind.MUTE) }
+        if (rights.delete || (protected && account.isAdmin)) {
+            HorizontalDivider(color = LifeRed.copy(alpha = .25f))
+            val target = if (hero != null) SanctionTarget.HERO else SanctionTarget.ACCOUNT
+            DangerRow(
+                ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_do" else "moderation.delete_account_do"),
+                ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_effect" else "moderation.delete_account_effect", days),
+                rights.delete && !account.busy,
+                protected,
+            ) { onDelete(target) }
         }
+    }
+}
+
+/**
+ * Строка опасного действия: имя красным, под ним строка последствий [effect] и «›»; погашенная - приглушена, при [protected] касание
+ * открывает причину «роль выше вашей».
+ */
+@Composable private fun DangerRow(title: String, effect: String, enabled: Boolean, protected: Boolean, onClick: () -> Unit) {
+    var explain by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.fillMaxWidth().clickable(enabled = enabled || protected, role = Role.Button) { if (enabled) onClick() else explain = true }
+                .heightIn(min = 52.dp).padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(Icons.Outlined.Block, null, tint = if (enabled) LifeRed else Muted, modifier = Modifier.size(18.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(title, color = if (enabled) LifeRed else Muted, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                MutedText(effect, style = MaterialTheme.typography.labelSmall)
+            }
+            Text("›", color = Muted, style = MaterialTheme.typography.titleMedium)
+        }
+        if (explain) TipCallout(Tip("", ui("moderation.protected"), Muted)) { explain = false }
     }
 }
 

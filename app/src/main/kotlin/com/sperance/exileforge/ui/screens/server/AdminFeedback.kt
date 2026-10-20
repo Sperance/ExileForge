@@ -54,11 +54,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, порядок чипами ([Order]: новые,
- * рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
+ * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
+ * выбором, ниже - порядок сегментами без подписи ([Order]: новые, рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
  * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
  * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
- * отчёту отправляет его в GitHub сразу. Любой чип очереди и вида, и уже выбранный, и потягивание страницы перечитывают список с сервера.
+ * отчёту отправляет его в GitHub сразу. Любой чип очереди, и уже выбранный, выбор вида и потягивание страницы перечитывают список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>().model
@@ -90,26 +90,25 @@ import org.koin.compose.viewmodel.koinViewModel
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         Queue.entries.forEach { q ->
             CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {
                 queue = q
                 vm.loadReports(kind, null)
             }
         }
+        Picker(
+            kindTitle(kind),
+            enabled = true,
+            FeedbackKind.entries.map { k ->
+                kindTitle(k) to {
+                    kind = k
+                    vm.loadReports(k, null)
+                }
+            },
+        )
     }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FeedbackKind.entries.forEach { k ->
-            CountChip(kindTitle(k), null, kind == k) {
-                kind = k
-                vm.loadReports(k, null)
-            }
-        }
-    }
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        MutedText(ui("feedback.order"), style = MaterialTheme.typography.labelMedium)
-        Order.entries.forEach { o -> CountChip(ui(o.key), null, order == o) { order = o } }
-    }
+    PillTabs(Order.entries.map { ui(it.key) }, order.ordinal, { order = Order.entries[it] }, segmented = true)
     val shown = found.filter { queue.holds(it) }.sortedWith(order.comparator)
     if (shown.isEmpty()) MutedText(ui("feedback.none"))
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {

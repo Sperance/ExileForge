@@ -25,7 +25,7 @@ class ModifierCoverageTest {
      * Что читает движок: реестры правил, а не префиксы имён - характеристики ядра, карт, Атласа и фляг, силы,
      * повышаемые пределы, перечень боевых характеристик героя Мощи ([MightStats]: каждую он относит к учтённым, сведённым или
      * читаемым боем вне Мощи), ауры врагов (группа `AURA` - их все читает бой), механики фляг - реестр читателей `FlaskStat`
-     * и метка скрытой строки (её ищет сфера раскрытия).
+     * метка скрытой строки (её ищет сфера раскрытия) и строки места (`room`: их читают места аффиксов вещи - `ContentIndex.limits`).
      */
     private val read: Set<String> by lazy {
         buildSet {
@@ -38,6 +38,7 @@ class ModifierCoverageTest {
             addAll(MightStats.COUNTED + MightStats.FOLDED + MightStats.OUTSIDE)
             index.stats.ofGroup(StatGroup.AURA).mapTo(this) { it.code }
             index.families.values.filter { ModifierDef.VEILED in it.tags }.flatMapTo(this) { def -> def.effects.map { it.stat } }
+            index.families.values.filter { it.room }.flatMapTo(this) { def -> def.effects.map { it.stat } }
         }
     }
 

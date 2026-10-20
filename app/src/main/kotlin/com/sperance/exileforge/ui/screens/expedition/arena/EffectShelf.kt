@@ -289,12 +289,22 @@ private fun powerFacts(view: PowerView): List<String> = if (view.standing) {
     )
 }
 
-/** Что писать вместо срока у силы-события: потрачена на бой, секунды до готовности или «готова»; постоянная - весь бой (null). */
-private fun powerState(view: PowerView): String? = when {
-    view.standing -> null
-    view.spent -> ui("fight.power.spent")
-    view.ready > 0 -> ui("fight.fact_seconds", fineNumber(view.ready))
-    else -> ui("fight.power.ready")
+/**
+ * Что писать вместо срока у силы-события, по её счёту: раз за бой - «истрачена» или «раз за бой», идущая перезарядка - секунды до
+ * готовности, «каждое N-е» - сколько ещё до срабатывания, вышедшая перезарядка - «наготове»; сила по событию без перезарядки и счёта -
+ * ничего (пустая строка). Постоянная - весь бой (null).
+ */
+private fun powerState(view: PowerView): String? {
+    val nth = view.nth
+    return when {
+        view.standing -> null
+        view.spent -> ui("fight.power.spent")
+        view.once -> ui("fight.power.once")
+        view.ready > 0 -> ui("fight.fact_seconds", fineNumber(view.ready))
+        nth != null -> ui("fight.power.left", nth.second - nth.first)
+        view.cooldown > 0 -> ui("fight.power.ready")
+        else -> ""
+    }
 }
 
 /** Метка в углу плитки силы-события: счёт «каждое N-е» или сколько раз сработала; нечего считать - null. */

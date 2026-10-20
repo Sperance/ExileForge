@@ -6,12 +6,13 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.market.MarketRepository
+import com.sperance.exileforge.core.market.MarketTab
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import kotlinx.coroutines.flow.StateFlow
 
-/** Лавка торговца и аукцион: рынок из репозитория, действия общие с продажей из сундука. */
+/** Лавка торговца и рынок игроков: состояние из репозитория, действия общие с продажей из сундука. */
 class MarketViewModel(
     private val actions: MarketActions,
     repository: MarketRepository,
@@ -23,11 +24,12 @@ class MarketViewModel(
     val market: StateFlow<Market> = repository.state
     val activity: StateFlow<Activity> = commands.state
 
-    fun tab(tab: Int) = actions.tab(tab)
+    fun tab(tab: MarketTab) = actions.tab(tab)
     fun filter(filter: AuctionFilter) = actions.filter(filter)
     fun showOwnLots(show: Boolean) = actions.showOwnLots(show)
     fun loadShowcase() = actions.loadShowcase()
     fun moreShowcase() = actions.moreShowcase()
+    fun moreAuctions() = actions.moreAuctions()
     fun loadMyLots(glance: Boolean = false) = actions.loadMyLots(glance)
     fun loadAuction() = actions.loadAuction()
 
@@ -39,4 +41,7 @@ class MarketViewModel(
     fun buy(lotId: String) = actions.buy(lotId)
     fun extend(lotId: String) = actions.extend(lotId)
     fun cancel(lotId: String) = actions.cancel(lotId)
+    fun bid(lotId: String, amount: Long) = actions.bid(lotId, amount)
+    fun buyout(lotId: String) = actions.buyout(lotId)
+    fun accept(lotId: String) = actions.accept(lotId)
 }

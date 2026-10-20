@@ -67,10 +67,10 @@ private val ItemInstance.loose: Boolean get() = !equipped && !socketed
     when (deal) {
         ItemDeal.AUCTION -> ListingSheet(game, name, onDismiss = deals::close, hint = {
             model.priceHint(instance.template, instance.rarity, view.level)
-        }) { orb, price, _ ->
+        }) { orb, price, _, terms ->
             deals.close()
             onDone()
-            model.sellEquipment(instance.id, orb, price)
+            model.sellEquipment(instance.id, orb, price, terms)
         }
 
         ItemDeal.WORN -> AlertDialog(

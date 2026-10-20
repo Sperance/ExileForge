@@ -10,18 +10,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketTab
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The player auction.
+ * Рынок игроков - здание Города: витрина лотов за цену, торги со ставками («Аукцион»), свои лоты и ставки, история сделок.
+ * The Hero tab is left alone — an item is sold from here, not from the stash.
  *
- * Three jobs live here and nowhere else: the showcase, the character's own lots and listing
- * something new. It is a building of the City, entered from its square. The Hero tab is left alone — an item is sold from here, not from the stash.
- *
- * The auction opens at a level the server keeps to itself, so the screen does not guard the gate:
+ * The market opens at a level the server keeps to itself, so the screen does not guard the gate:
  * it asks, and turns the refusal into an explanation.
  *
  * Без шапки: строка Города уже называет здание; места лотов - числом «занято/всего» у вкладки «Мои лоты» ([slotsBadge]). Открытие вкладки наполняет списки; лист героя нужен правилам, чтобы
@@ -50,19 +49,28 @@ fun AuctionScreen() {
             }
             return@Column
         }
-        val tabs = listOf(ui("auction.showcase"), ui("auction.my_lots"), ui("auction.history"))
-        val tab = market.tab.coerceIn(tabs.indices)
-        PillTabs(tabs, tab, model::tab, enabled = !busy, badges = listOf(null, slotsBadge(market)))
+        val tabs = MarketTab.entries.map(::tabTitle)
+        val tab = market.tab
+        PillTabs(tabs, tab.ordinal, { model.tab(MarketTab.entries[it]) }, enabled = !busy, badges = MarketTab.entries.map { if (it == MarketTab.LOTS) slotsBadge(market) else null })
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
-                    0 -> ShowcaseTab(game, market, model)
-                    1 -> MyLotsTab(game, market, model)
-                    else -> HistoryTab(game, market)
+                    MarketTab.SHOWCASE -> ShowcaseTab(game, market, model)
+                    MarketTab.AUCTION -> BidsTab(game, market, model)
+                    MarketTab.LOTS -> MyLotsTab(game, market, model)
+                    MarketTab.HISTORY -> HistoryTab(game, market)
                 }
             }
         }
     }
+}
+
+/** Подпись вкладки рынка: Витрина · Аукцион · Мои лоты · История. */
+private fun tabTitle(tab: MarketTab): String = when (tab) {
+    MarketTab.SHOWCASE -> ui("auction.showcase")
+    MarketTab.AUCTION -> ui("auction.tab_auction")
+    MarketTab.LOTS -> ui("auction.my_lots")
+    MarketTab.HISTORY -> ui("auction.history")
 }
 
 /** Места лотов у вкладки «Мои лоты»: «3/5», все заняты - красным; пока мест не знаем - число своих лотов на продаже. */

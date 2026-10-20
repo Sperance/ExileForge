@@ -14,8 +14,11 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.rules.trade.BidStanding
+import com.sperance.exileforge.rules.trade.BidState
 import com.sperance.exileforge.rules.trade.LotGoods
 import com.sperance.exileforge.rules.trade.LotKind
+import com.sperance.exileforge.rules.trade.LotMode
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -61,6 +64,12 @@ import kotlinx.serialization.Serializable
     val extended: Int = 0,
     /** Куда товар вернулся продавцу при снятии или истечении (сервер); null - лот на витрине, продан или старый. */
     val returned: LotReturn? = null,
+    /** Лот за цену или торги; у торгов [price] - цена выкупа, у проданных - итоговая цена. */
+    val mode: LotMode = LotMode.FIXED,
+    /** Торги: первая ставка, крайний срок, текущая ставка и число ставок; лидера сервер не отдаёт. */
+    val bidding: BidState? = null,
+    /** Где ставка героя в этих торгах: лидирует, перебита; null - он не ставил. */
+    val standing: BidStanding? = null,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
@@ -216,16 +225,22 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
 
 fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
 
-/** The hero's lot places: [used] of [limit] taken — the same for every hero. */
-@Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 12) {
+/** Места героя под лоты и торги: [used] из [limit], поровну у всех; в скольких торгах он лидирует - [bids] из [bidLimit]. */
+@Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 12, val bids: Int = 0, val bidLimit: Int = 0) {
     val full: Boolean get() = used >= limit
 }
 
 /**
- * Свой аукцион героя: [lots] - его лоты, [slots] - места, [history] - сделки; [lot] - лот только что
- * прошедшей команды (выставлен, снят, продлён).
+ * Свой рынок героя: [lots] - его лоты и торги, [slots] - места, [history] - сделки, [bids] - открытые торги, где он ставил; [lot] - лот
+ * только что прошедшей команды (выставлен, снят, продлён, продан ставке).
  */
-@Serializable data class AuctionMine(val lots: List<AuctionLot> = emptyList(), val slots: AuctionSlots = AuctionSlots(), val history: List<AuctionLot> = emptyList(), val lot: AuctionLot? = null)
+@Serializable data class AuctionMine(
+    val lots: List<AuctionLot> = emptyList(),
+    val slots: AuctionSlots = AuctionSlots(),
+    val history: List<AuctionLot> = emptyList(),
+    val lot: AuctionLot? = null,
+    val bids: List<AuctionLot> = emptyList(),
+)
 
 /** The price hint: the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */
 @kotlinx.serialization.Serializable data class PriceHint(val priceOrb: String = "", val price: Long = 0, val sales: Int = 0)

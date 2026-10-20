@@ -9,11 +9,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** Аукцион и лавка торговца, как сервер ответил последним: витрина под фильтром, свои лоты, сделки, полка. */
+/** Вкладки рынка по порядку: витрина лотов за цену, торги («Аукцион»), свои лоты и ставки, история сделок. */
+enum class MarketTab { SHOWCASE, AUCTION, LOTS, HISTORY }
+
+/** Рынок и лавка торговца, как сервер ответил последним: витрина и торги под одним фильтром, свои лоты и ставки, сделки, полка. */
 data class Market(
-    /** Вкладка аукциона: витрина, свои лоты, история; после выставления - свои лоты. */
-    val tab: Int = 0,
+    /** Вкладка рынка; после выставления - свои лоты. */
+    val tab: MarketTab = MarketTab.SHOWCASE,
     val showcase: AuctionPage = AuctionPage(),
+    /** Торги под тем же фильтром, что витрина. */
+    val auctions: AuctionPage = AuctionPage(),
     val filter: AuctionFilter = AuctionFilter(),
     val showOwnLots: Boolean = false,
     val myLots: List<AuctionLot> = emptyList(),
@@ -24,6 +29,8 @@ data class Market(
     val slots: AuctionSlots? = null,
     /** Витрина не загрузилась: показан отказ с «Повторить», а не пустая витрина. */
     val showcaseFailed: Boolean = false,
+    /** Открытые торги, где герой ставил: лидирует или перебит. */
+    val myBids: List<AuctionLot> = emptyList(),
 ) {
     /**
      * Свои лоты: что ещё продаются, чей срок вышел и что ещё возвращаются ([AuctionLot.returning]), и ниже - истёкшие, чей товар уже

@@ -61,25 +61,58 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * The hero's own lots that are still on sale, and those whose time ran out; withdrawn and sold lots leave this list.
  *
- * Места лотов одинаковы у всех героев и не покупаются; сколько занято - числом у вкладки, не в списке. Строка лота - «ещё 14 ч 05 мин»
+ * Места лотов и торгов общие, одинаковы у всех героев и не покупаются; сколько занято - числом у вкладки, сколько ставок лидирует - в
+ * строке над списком. Сверху - свои торги на витрине ([BidRow]: ставок N, лист - [OwnBidSheet]), под ними - свои ставки в чужих торгах
+ * (лидирую / перебита, лист ставки - [BidSheet]), ниже - лоты за цену и вернувшиеся. Строка лота - «ещё 14 ч 05 мин»
  * ([lotMarks]: в последний день - цветом [Caution], в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
  * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
  * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
  */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
+    var openBid by remember { mutableStateOf<String?>(null) }
     val rules = game.index?.rules?.auction
+    val (auctions, lots) = market.ownLots.partition { it.isBidding && it.onSale }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (market.ownLots.isEmpty()) {
+        market.slots?.takeIf { it.bidLimit > 0 }?.let { slots ->
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    MutedText(ui("auction.my_fixed") + " " + ui("auction.slots_value", slots.used, slots.limit))
+                    MutedText(ui("auction.my_bids") + " " + ui("auction.slots_value", slots.bids, slots.bidLimit))
+                }
+            }
+        }
+        if (market.ownLots.isEmpty() && market.myBids.isEmpty()) {
             item {
                 InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
             }
         }
-        items(market.ownLots, key = { it.id }) { lot ->
+        if (auctions.isNotEmpty()) {
+            item { SectionTitle(ui("auction.my_auctions"), auctions.size) }
+            items(auctions, key = { it.id }) { lot -> BidRow(game, lot, rules) { openLot = lot.id } }
+        }
+        if (market.myBids.isNotEmpty()) {
+            item { SectionTitle(ui("auction.my_bids"), market.myBids.size) }
+            items(market.myBids, key = { "bid-${it.id}" }) { lot -> BidRow(game, lot, rules) { openBid = lot.id } }
+        }
+        if (lots.isNotEmpty() && (auctions.isNotEmpty() || market.myBids.isNotEmpty())) item { SectionTitle(ui("auction.my_fixed"), lots.size) }
+        items(lots, key = { it.id }) { lot ->
             LotRow(game, lot, marks = lotMarks(lot, rules), withSeller = false) { openLot = lot.id }
         }
     }
-    market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
+    market.myBids.firstOrNull { it.id == openBid }?.let { lot ->
+        BidSheet(game, lot, onDismiss = { openBid = null }, onBid = { amount -> vm.bid(lot.id, amount) }, onBuyout = { vm.buyout(lot.id) })
+    }
+    auctions.firstOrNull { it.id == openLot }?.let { lot ->
+        OwnBidSheet(game, lot, onDismiss = { openLot = null }, onWithdraw = {
+            openLot = null
+            vm.cancel(lot.id)
+        }) {
+            openLot = null
+            vm.accept(lot.id)
+        }
+    }
+    lots.firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(
             game,
             lot,
@@ -103,6 +136,42 @@ import com.sperance.exileforge.ui.theme.*
             vm.cancel(lot.id)
         }
     }
+}
+
+/** Заголовок раздела своих лотов: имя и сколько в нём строк. */
+@Composable private fun SectionTitle(title: String, count: Int) {
+    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = Parchment, style = MaterialTheme.typography.titleSmall)
+        Text(count.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/**
+ * Лист своих торгов: товар и факты торгов, как у лота, текущая ставка и число ставок строкой места. «Снять с продажи» - удержанием, при
+ * ставке - с предупреждением, что ставка вернётся покупателю письмом; при ставке рядом «Продать за N» - удержанием: торги кончаются сейчас,
+ * предмет уходит лучшей ставке ([acceptable]).
+ */
+@Composable private fun OwnBidSheet(game: GameUi, lot: AuctionLot, onDismiss: () -> Unit, onWithdraw: () -> Unit, onAccept: () -> Unit) {
+    val bid = lot.currentBid
+    val note = if (bid > 0) "${ui("auction.current_bid")}: ${number(bid.toDouble())} ${orbTitle(lot)} · ${ui("auction.bids_count", lot.bidCount)}" else ui("auction.no_bids")
+    LotSheet(game, lot, action = null, enabled = false, note = note, onDismiss = onDismiss, left = lotLeft(lot), extra = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (bid > 0) {
+                MutedText(ui("auction.withdraw_bid_warn", "${number(bid.toDouble())} ${orbTitle(lot)}"))
+                MutedText(ui("auction.accept_note"))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ForgeButton(onClick = onWithdraw, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && lot.onSale), hold = Hold()) {
+                    Text(ui("auction.withdraw"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (lot.acceptable) {
+                    ForgeButton(onClick = onAccept, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy), hold = Hold()) {
+                        Text(ui("auction.accept_do", number(bid.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    })
 }
 
 /**

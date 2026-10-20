@@ -92,6 +92,9 @@ object MailSchemas {
     /** Письмо о лоте: предмет лота и число. */
     private val auction = listOf(titled(0, ::lotItem), arg(1)).let { lot -> MailSchema(lot, lot) }
 
+    /** Письмо о торгах: предмет лота, число, сферы и имя сферы цены. */
+    private val bidding = listOf(titled(0, ::lotItem), arg(1), arg(2), titled(3, ::itemTitle)).let { deal -> MailSchema(deal, deal) }
+
     private val PLAIN = MailSchema()
 
     private val SCHEMAS: Map<String, MailSchema> = mapOf(
@@ -101,6 +104,10 @@ object MailSchemas {
         SystemMail.AUCTION_EXPIRED to auction,
         SystemMail.AUCTION_RECALLED to auction,
         SystemMail.AUCTION_EXPIRING to auction,
+        SystemMail.AUCTION_OUTBID to bidding,
+        SystemMail.AUCTION_BID_RETURNED to bidding,
+        SystemMail.AUCTION_SOLD to bidding,
+        SystemMail.AUCTION_WON to bidding,
         SystemMail.FATE_REDRAWN to listOf(titled(0) { FateCard(it).title }).let { fate -> MailSchema(fate, fate, reason = 1) },
     )
 

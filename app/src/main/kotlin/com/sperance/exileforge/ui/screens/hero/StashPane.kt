@@ -30,7 +30,9 @@ import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.filter.ItemType
 import com.sperance.exileforge.core.filter.isWorn
 import com.sperance.exileforge.core.filter.itemShelf
+import com.sperance.exileforge.core.filter.modChoices
 import com.sperance.exileforge.core.filter.railGroups
+import com.sperance.exileforge.core.filter.typeTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.core.sheet.sellPrice
@@ -42,13 +44,13 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Тайник: сверху только порядок и фильтры, слева рейка мест со счётом,
+ * Тайник: сверху строка поиска ([ItemSearchBar]: поиск, фильтр, порядок, ряд сужений), слева рейка мест со счётом,
  * справа список под названием выбранного пункта с фишкой мест и автопродажи - она открывает окно тайника ([StashWindow]).
  * Удержание плитки включает режим выбора: у строк отметки, сверху быстрые наборы, снизу удерживаемая
  * кнопка с суммой; «Отмена» и системный «назад» выходят из него. Как продавать, говорит разовая плашка над списком
  * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
  *
- * Фильтр - общий фильтр предметов ([ItemShelf.STASH]): строка над списком и шторка «Аккордеон», выбор запоминается на
+ * Фильтр - общий фильтр предметов ([ItemShelf.STASH]): строка поиска над списком и шторка «Аккордеон», выбор запоминается на
  * устройстве; рейка - его же «Тип». Список, лоты и счёт рейки запоминаются по копиям, а не по герою: изменившийся кошелёк не
  * перестраивает тысячу строк.
  *
@@ -97,7 +99,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 Text(ui("sell.mode_title"), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 SellPresetRow(pick)
             } else {
-                ItemFilterBar(filterState, visible.size, onOpen = { filtering = true })
+                ItemSearchBar(filterState, ui("hero.find_item"), game.lang, onFilter = { filtering = true })
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
@@ -115,7 +117,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 }
                 if (!selling && lots.isNotEmpty() && read?.contains(SELL_HINT) == false) item(key = "hint") { SellHint(onDismiss = { hintRead() }) }
                 if (hero.overflow.isNotEmpty() && !selling) item(key = "overflow") { StashOverflow(game, model) }
-                if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.tweaks(ItemShelf.STASH) > 0 || filter.hideWorn) ui("filter.empty") else ui("hero.stash_empty_hint")) }
+                if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (stash.isNotEmpty()) ui("filter.empty") else ui("hero.stash_empty_hint")) }
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
@@ -139,7 +141,10 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
             ) { model.sellMany(it) }
         }
     }
-    if (filtering) ItemFilterSheet(filterState, rail.map { it.first }, rarities, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
+    if (filtering) {
+        val mods = remember(stash, game.lang) { modChoices(stash, game.lang) }
+        ItemFilterSheet(filterState, rail.map { it.first }, rarities, mods, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
+    }
     if (sheet) StashWindow(game, hero.info.autoSell, lots, model) { sheet = false }
 }
 

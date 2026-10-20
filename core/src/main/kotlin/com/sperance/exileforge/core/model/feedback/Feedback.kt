@@ -189,13 +189,12 @@ import kotlinx.serialization.Serializable
  * Чьё письмо: игры, администратора; героя герою ([PLAYER]) и рассылка гильдии ([GUILD]).
  *
  * @property written письмо пишет герой: на него отвечают, жалуются и по нему игнорируют автора
- * @property answerable на него отвечают и до уровня права писать - на рассылку гильдии отвечают сразу (как сервер)
  */
-@Serializable enum class MailKind(val written: Boolean = false, val answerable: Boolean = false) {
+@Serializable enum class MailKind(val written: Boolean = false) {
     SYSTEM,
     ADMIN,
     PLAYER(written = true),
-    GUILD(written = true, answerable = true),
+    GUILD(written = true),
 }
 
 /** Гильдия рассылки - снимок на момент письма. */
@@ -254,25 +253,11 @@ import kotlinx.serialization.Serializable
 /** Немота глазами немого: категория, причина для игрока (без номера и заметки модератора) и срок. */
 @Serializable data class MailMute(val category: String, val reason: String = "", val until: String? = null)
 
-/** Рассылка гильдии главе или офицеру: кому уйдёт и сколько рассылок гильдии за сутки. */
-@Serializable data class GuildMailQuota(val tag: String, val name: String, val emblem: String = "", val color: String = "", val members: Int = 0, val sent: Int = 0, val perDay: Int = 0)
+/** Рассылка гильдии главе или офицеру: кому она уйдёт. */
+@Serializable data class GuildMailQuota(val tag: String, val name: String, val emblem: String = "", val color: String = "", val members: Int = 0)
 
-/**
- * Почта героя сейчас (сервер `GET mail/quota`): [gate] - можно ли писать (адресату, если назван) или почему нет;
- * письма за сутки [sent] из [perDay], этому герою [toRecipient] из [perRecipient]; [readyAt] - конец паузы между письмами (мс
- * эпохи); [level] - с какого уровня пишут; [mute] - немота; [guild] - рассылка, если роль её допускает.
- */
-@Serializable data class MailQuota(
-    val gate: MailGate,
-    val sent: Int = 0,
-    val perDay: Int = 0,
-    val toRecipient: Int = 0,
-    val perRecipient: Int = 0,
-    val readyAt: Long = 0,
-    val level: Int = 1,
-    val mute: MailMute? = null,
-    val guild: GuildMailQuota? = null,
-)
+/** Почта героя сейчас (сервер `GET mail/quota`): [gate] - можно ли писать или почему нет; [mute] - немота; [guild] - рассылка, если роль её допускает. */
+@Serializable data class MailQuota(val gate: MailGate, val mute: MailMute? = null, val guild: GuildMailQuota? = null)
 
 /** Строка списка игнора: чьи письма герой не принимает и с какого времени (мс эпохи). */
 @Serializable data class IgnoredHero(val heroId: String, val name: String, val heroClass: String = "", val at: Long = 0)

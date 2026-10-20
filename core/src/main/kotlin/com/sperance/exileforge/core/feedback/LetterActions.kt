@@ -29,7 +29,7 @@ class LetterActions(
     /** Герой в игре - автор письма; без героя писать некому. */
     private val author: String? get() = heroes.heroId.takeIf { it.isNotBlank() }
 
-    /** Открывает окно письма [draft] и читает квоту героя к его адресату. */
+    /** Открывает окно письма [draft] и читает почту героя: можно ли писать, немота, рассылка гильдии. */
     fun compose(draft: LetterDraft) {
         repository.update { it.copy(letter = draft, quota = null) }
         loadQuota()
@@ -44,12 +44,12 @@ class LetterActions(
         LetterDraft.reply(mail, subject.take(subjectLimit))?.let(::compose)
     }
 
-    /** Квота окна письма: можно ли писать адресату, сколько осталось, немота. */
+    /** Почта героя для окна письма: можно ли писать, немота, рассылка гильдии. */
     fun loadQuota() {
         val draft = repository.state.value.letter ?: return
         val hero = author ?: return
         commands.read(Reads.MAIL_QUOTA, restart = true, silent = true) {
-            val quota = api.mail.quota(hero, draft.to)
+            val quota = api.mail.quota(hero)
             repository.update { if (it.letter == draft) it.copy(quota = quota) else it }
         }
     }

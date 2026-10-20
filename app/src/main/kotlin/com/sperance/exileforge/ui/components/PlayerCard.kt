@@ -58,7 +58,6 @@ import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.player.PlayerCardModel
 import com.sperance.exileforge.rules.content.MailGate
-import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.server.ModerationViewModel
 import com.sperance.exileforge.ui.theme.Bronze
@@ -228,10 +227,7 @@ private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () 
         ForgeButton(onLots, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = Icons.Outlined.Gavel, state = ButtonState.of(!game.busy)) { Text(ui("player.lots", card.lots), maxLines = 1) }
     }
     if (rights.invite && guildLow) MutedText(ui("guild.recruit_low", guildNeed))
-    letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
-        val rules = game.index?.rules
-        rules?.let { MutedText(gateText(gate, null, it.mail, it.unlockLevel(MailRules.SECTION))) }
-    }
+    letter?.takeIf { it != MailGate.OPEN }?.let { MutedText(gateText(it)) }
 }
 
 /**

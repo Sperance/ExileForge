@@ -11,8 +11,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -226,7 +224,6 @@ private val Feature.glyph: ImageVector get() = when (this) {
     Feature.TRIALS -> ForgeGlyphs.Skull
     Feature.GUILD -> ForgeGlyphs.Banner
     Feature.RIFT -> ForgeGlyphs.Skull
-    Feature.MAIL -> Icons.Outlined.Mail
 }
 
 /**

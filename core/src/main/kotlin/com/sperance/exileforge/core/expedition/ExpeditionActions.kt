@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FOUGHT_EVENTS
 import com.sperance.exileforge.core.campaign.run.GearPreview
+import com.sperance.exileforge.core.campaign.run.RunCallbacks
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.receivedText
@@ -343,8 +344,7 @@ class ExpeditionActions(
         }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
-            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onGatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+            vaalOrbs = ::vaalOrbsFree, callbacks = callbacks,
             killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
@@ -354,6 +354,16 @@ class ExpeditionActions(
         vaalKilled = started.vaalKilled
         persist()
     }
+
+    /**
+     * Отклики забега: событие журнала - в отправку, конец забега и гибель - журнал уходит сразу, прерванный сбор узла - красный тост.
+     */
+    private val callbacks = RunCallbacks(
+        recorded = ::recorded,
+        cleared = { flushes.trySend(Unit) },
+        fallen = { flushes.trySend(Unit) },
+        gatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+    )
 
     /** Сферы Ваал под рукой за вычетом тех, что журнал потратил, а сервер ещё не сосчитал. */
     private fun vaalOrbsFree(): Long = (hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
@@ -658,8 +668,8 @@ class ExpeditionActions(
         outer.send(RunCommand.ShutGate(entered = true))
         val inner = ExpeditionRun.start(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
-            vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts,
+            vaalOrbs = ::vaalOrbsFree, callbacks = callbacks, vaal = true, startPools = outer.pools,
+            killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
             speed = prefs.fightSpeed(i.rules.fight),
         )

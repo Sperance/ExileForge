@@ -5,9 +5,10 @@ import com.sperance.exileforge.core.campaign.combat.Foe
 
 /**
  * Экран-вызов («Досье»): страж зоны или Ваал-зоны встречен вручную - мир ждёт слова игрока «В бой». Автозабег
- * идёт в бой сразу, без экрана.
+ * идёт в бой сразу, без экрана. Вызов прерывает идущий сбор узла ([breakGather]), как начало боя.
  */
 internal fun ExpeditionRun.challenge(agent: MonsterAgent) {
+    breakGather()
     challenge = agent
     phase = RunPhase.CHALLENGE
 }

@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FloatingHit
 import com.sperance.exileforge.core.campaign.run.HeroCastView
 import com.sperance.exileforge.core.campaign.run.LungeView
+import com.sperance.exileforge.core.campaign.run.NodeSpot
 
 /**
  * Пульс боя на кадр: часы боя и замахи бойцов - то, что экран рисует каждый кадр. Снимок экрана ([FightHud]) выходит реже кадра
@@ -33,9 +34,16 @@ class FightPulse {
     var action: Float? = null
         private set
 
-    /** Кадр действия у объекта: сделанная доля [progress]; без действия - null. */
-    fun act(progress: Float?) {
+    /**
+     * Узел, что герой собирает в этом кадре: у него сцена рисует кольцо доли [action] - узел и доля из одного кадра; сбора нет - null.
+     */
+    var gathering: NodeSpot? = null
+        private set
+
+    /** Кадр действия у объекта: сделанная доля [progress] и собираемый узел [gathering]; без действия - null. */
+    fun act(progress: Float?, gathering: NodeSpot?) {
         action = progress
+        this.gathering = gathering
     }
 
     /** Доля замаха врага [index] (номер в паке боя); вне пака - 0. */

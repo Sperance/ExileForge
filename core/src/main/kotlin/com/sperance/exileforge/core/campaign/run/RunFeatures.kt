@@ -141,14 +141,14 @@ internal fun ExpeditionRun.startGather() {
     channel = Channel(spot)
 }
 
-/** Сбор прерван боем или шагом героя: доля пропала с нулём, узел ждёт нового «Собрать»; игроку - тост. */
+/** Сбор прерван началом боя, вызовом стража или шагом героя: доля пропала с нулём, узел ждёт нового «Собрать»; игроку - тост. */
 internal fun ExpeditionRun.breakGather() {
     channel ?: return
     channel = null
-    onGatherBroken()
+    callbacks.gatherBroken()
 }
 
-/** Сбор идёт: по его концу - событие узла. */
+/** Сбор идёт тем же шагом, что мир ([walk]): по его концу - событие узла. */
 internal fun ExpeditionRun.gather(channel: Channel, dt: Double) {
     channel.elapsed += dt
     if (channel.elapsed < channel.spot.node.seconds) return
@@ -320,5 +320,5 @@ internal fun ExpeditionRun.fallOnMap() {
         fallEvent = it.n
         fall = deathLoss()
     }
-    onFallen()
+    callbacks.fallen()
 }

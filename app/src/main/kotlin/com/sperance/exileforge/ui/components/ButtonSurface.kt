@@ -33,9 +33,9 @@ import com.sperance.exileforge.ui.theme.Parchment
 import kotlin.math.sqrt
 
 /**
- * Окраска поверхности кнопки, иконки-кнопки и чипа: окантовка [rim] в 1 dp, заливка [fill] внутри неё и цвет слов [ink];
- * нажатая - [pressedRim] и [pressedFill]. [ledge] - кромка тени по нижнему краю и блик сверху (только у главной), [hatched] -
- * погашенная: косая штриховка вместо заливки.
+ * Окраска поверхности кнопки, иконки-кнопки и чипа: окантовка [rim] толщиной [rimWidth] (обычно 1 dp; рисуется внутри поверхности
+ * и её размер не меняет), заливка [fill] внутри неё и цвет слов [ink]; нажатая - [pressedRim] и [pressedFill]. [ledge] - кромка тени
+ * по нижнему краю и блик сверху (только у главной), [hatched] - погашенная: косая штриховка вместо заливки.
  */
 @Immutable
 internal class SurfaceLook(
@@ -46,6 +46,7 @@ internal class SurfaceLook(
     val pressedFill: Brush? = fill,
     val ledge: Color? = null,
     val hatched: Boolean = false,
+    val rimWidth: Dp = 1.dp,
 )
 
 /** Цвета кнопок, которых нет в теме: оттенки окантовок, нажатых заливок и шкал удержания. */
@@ -132,7 +133,7 @@ internal fun Modifier.forgeSurface(
     circle: Boolean = false,
     extra: (DrawScope.(inner: Size) -> Unit)? = null,
 ): Modifier = drawWithCache {
-    val border = 1.dp.toPx()
+    val border = look.rimWidth.toPx()
     val radius = if (circle) size.minDimension / 2 else cornerFor(size.height.toDp()).toPx()
     val inner = CornerRadius((radius - border).coerceAtLeast(0f))
     val innerSize = Size(size.width - 2 * border, size.height - 2 * border)

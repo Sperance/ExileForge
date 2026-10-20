@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipPath
 import com.sperance.exileforge.ui.icons.Strokes
@@ -93,4 +94,8 @@ internal class Pen {
 
     /** A pie slice, [start] and [degrees] counter-clockwise as the pen measures them. */
     fun arc(x: Float, y: Float, radius: Float, start: Float, degrees: Float) = scope.drawArc(color, -(start + degrees), degrees, true, Offset(x - radius, -y - radius), Size(radius * 2, radius * 2))
+
+    /** Дуга контура овала, как у [ring], с круглыми концами: [start] и [degrees] - против часовой, как их мерит перо. */
+    fun ringArc(x: Float, y: Float, width: Float, height: Float, start: Float, degrees: Float, stroke: Float) =
+        scope.drawArc(color, -(start + degrees), degrees, false, Offset(x, -(y + height)), Size(width, height), style = Strokes.of(stroke, StrokeCap.Round))
 }

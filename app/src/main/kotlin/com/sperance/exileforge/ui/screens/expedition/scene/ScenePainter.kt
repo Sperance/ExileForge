@@ -189,7 +189,7 @@ internal class ScenePainter {
     /**
      * Запись [i] очереди стоящего.
      *
-     * Открытый сундук без ответа сервера приоткрыт и ждёт.
+     * Открытый сундук без ответа сервера приоткрыт и ждёт. Узел, что герой собирает, стоит на кольце доли сбора ([drawGather]).
      */
     private fun stand(scope: DrawScope, run: ExpeditionRun, world: ExpeditionWorld, blight: BlightSpot?, i: Int) {
         val ref = standing.ref(i)
@@ -201,7 +201,10 @@ internal class ScenePainter {
             Standing.CHEST -> (ref as Chest).let { drawChest(it.cell.x + .5, it.cell.y + .5, it.opened, glow(it.cell.x, it.cell.y), run.waiting(it)) }
             Standing.CRYSTAL -> (ref as CrystalSpot).let { drawCrystal(it.cell.x + .5, it.cell.y + .5, it.freed, it.crystal.stronger, glow(it.cell.x, it.cell.y)) }
             Standing.CRACK -> (ref as AbyssSpot).let { drawCrack(it.cell.x + .5, it.cell.y + .5, it.opened, it.id, glow(it.cell.x, it.cell.y)) }
-            Standing.FEATURE -> drawFeature(ref as FeatureSpot, standing.part(i), world)
+            Standing.FEATURE -> (ref as FeatureSpot).let { spot ->
+                if (spot === run.gathering) run.pulse.action?.let { drawGather(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
+                drawFeature(spot, standing.part(i), world)
+            }
             Standing.AGENT -> agent(ref as MonsterAgent, world, blight)
             else -> hero(run, world)
         }

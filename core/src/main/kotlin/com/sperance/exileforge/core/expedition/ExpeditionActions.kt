@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
@@ -343,7 +344,8 @@ class ExpeditionActions(
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, onGatherBroken = { notices.toast(ui("expedition.gather_broken"), NoticeKind.FAILED) },
+            killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),

@@ -120,6 +120,8 @@ class ExpeditionRun(
     internal val onRecorded: (RunEvent) -> Unit,
     internal val onCleared: () -> Unit,
     internal val onFallen: () -> Unit,
+    /** Сбор узла прерван боем или шагом героя ([breakGather]): игроку - тост. */
+    internal val onGatherBroken: () -> Unit,
     /**
      * Счёт Предначертания захода: бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
      * ([tallyWins]).
@@ -221,8 +223,11 @@ class ExpeditionRun(
     /** Уход у открытого выхода предложен: забег ждёт ответа игрока, как у фонтана. */
     internal var exitOffered = false
 
-    /** Сбор узла ремесла: какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
+    /** Сбор узла ремесла: какой узел и сколько секунд уже прошло; мир тикает, бой или шаг героя сбрасывают сбор ([breakGather]). */
     internal var channel: Channel? = null
+
+    /** Узел, что герой сейчас собирает; null - сбора нет. Сцена рисует у него кольцо доли ([FightPulse.action]). */
+    val gathering: NodeSpot? get() = channel?.spot
 
     /** Числа урона карты на экране (удары и тики эффектов, каждое своё) и номер следующего. */
     internal val hazards = mutableListOf<ShownHazard>()
@@ -505,7 +510,7 @@ class ExpeditionRun(
         wake.poke()
     }
 
-    /** Предложенный фонтан, предложенный уход, лист объекта карты и сбор узла держат шаг, пока игрок не ответит. */
+    /** Предложенный фонтан, предложенный уход и лист объекта карты держат шаг, пока игрок не ответит; сбор узла идёт при тикающем мире. */
     override fun update(dt: Double) {
         val poked = wake.took()
         var commanded = false
@@ -521,7 +526,7 @@ class ExpeditionRun(
             when (phase) {
                 RunPhase.MAP -> {
                     channel?.let { gather(it, dt) }
-                    if (fountain == null && offer == null && channel == null && !exitOffered) walk(dt)
+                    if (fountain == null && offer == null && !exitOffered) walk(dt)
                 }
 
                 RunPhase.FIGHT -> play(dt)
@@ -665,6 +670,7 @@ class ExpeditionRun(
             startPools: HeroPools? = null,
             onCleared: () -> Unit = {},
             onFallen: () -> Unit = {},
+            onGatherBroken: () -> Unit = {},
             killed: Collection<Int> = emptyList(),
             opened: Collection<Int> = emptyList(),
             features: Collection<FeatureUse> = emptyList(),
@@ -701,7 +707,7 @@ class ExpeditionRun(
             }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, fateRun,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, onGatherBroken, fateRun,
             ).also {
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()

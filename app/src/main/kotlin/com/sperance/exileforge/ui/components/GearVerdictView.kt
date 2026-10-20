@@ -61,6 +61,11 @@ private fun MightShift.figure(): String = signedNumber(after - before) { compact
         }
         return
     }
-    val might = verdict.might?.takeIf { it.shown } ?: return
+    verdict.might?.let { MightShiftBadge(it, modifier) }
+}
+
+/** Значок сдвига Мощи «⚜ +1.2k» цвета сдвига; сдвиг, что не стоит показа ([MightShift.shown]), не пишется. */
+@Composable fun MightShiftBadge(might: MightShift, modifier: Modifier = Modifier) {
+    if (!might.shown) return
     Text(ui("might.short", might.figure()), modifier, color = might.shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
 }

@@ -1,17 +1,28 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.campaign.CombatSheet
+import com.sperance.exileforge.core.campaign.FightReading
+import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.ModifierDef
+import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.StatGroup
+import com.sperance.exileforge.rules.content.StatSpread
+import com.sperance.exileforge.rules.content.StatUnit
+import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SourceKind
+import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
 import com.sperance.exileforge.rules.text.LocaleKey
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -39,6 +50,45 @@ class SheetCompletenessTest {
                 .map { "${def.code.value}:${it.stat}" }
         }
         assertEquals(emptyList(), lost, "строки героя без места в сводке")
+    }
+
+    /**
+     * Строка героя без условия с любого носителя двигает итог своей строки сводки на эталонном герое ([REFERENCE]): цифра её
+     * характеристики, строки, частью которой она объявлена, или того, что бой читает вместе с ней ([FightReading]). Так ловится
+     * «увеличение без базы» - «увеличение» или «больше» характеристики, которой у героя нет, ничего не меняет и в сводке не видно.
+     */
+    @Test
+    fun every_hero_line_moves_its_summary_row() {
+        val heroClass = index.classes.classes.first()
+        val hero = SheetCalculator(index).hero(LEVEL, heroClass, listOf(TakenNode(heroClass.startNode)), emptyList())
+        val base = hero.operations + REFERENCE.map { (stat, value) -> StatOperation(stat, Op.ADD, value) }
+        fun summary(extra: List<StatOperation>): Map<String, Double> {
+            val model = SheetModel(hero.base, base + extra, index)
+            val kit = Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), model.plain, index.powers, index.rules.charges)
+            return CombatSheet(index, model, LEVEL, kit).values
+        }
+        val before = summary(emptyList())
+        val rarityLines = index.campaign.rarities.flatMapTo(HashSet()) { rule -> rule.lines.map { it.code } }
+        val lines = heroDefs.filter { it.code !in rarityLines }.flatMap { def ->
+            def.effects.filter { it.condition == null && registry[it.stat]?.group == StatGroup.HERO }.map { def to it }
+        }
+        assertTrue(lines.size >= 300, "строк героя мало: тест ничего не доказал (${lines.size})")
+        val still = lines.filter { (_, effect) ->
+            val targets = StatSpread.targets(effect.stat, effect.op)
+            val rows = targets + targets.map(registry::row) + FightReading.entries.filter { it.from in targets }.map { it.stat }
+            probes(effect.stat, effect.op).none { value ->
+                val after = summary(listOf(StatOperation(effect.stat, effect.op, value, effect.perStat, effect.perAmount)))
+                rows.any { abs((after[it] ?: 0.0) - (before[it] ?: 0.0)) > MOVED }
+            }
+        }.map { (def, effect) -> "${def.code.value}:${effect.stat}:${effect.op}" }
+        assertEquals(emptyList(), still, "строки героя, что не двигают свою строку сводки")
+    }
+
+    /** Числа пробы: флаг - единица, замена (`SET`) - заметная величина и запрет, остальное - заметная величина. */
+    private fun probes(stat: String, op: Op): List<Double> = when {
+        registry[stat]?.unit == StatUnit.FLAG -> listOf(1.0)
+        op == Op.SET -> listOf(PROBE, 0.0)
+        else -> listOf(PROBE)
     }
 
     @Test
@@ -79,5 +129,29 @@ class SheetCompletenessTest {
                 assertTrue(index.textNumbers.text(text) != null, "${lang.code}: подстановка без числа в пояснении $condition")
             }
         }
+    }
+
+    private companion object {
+        const val LEVEL = 60
+
+        /** Число пробы строки. */
+        const val PROBE = 30.0
+
+        /** Сдвиг меньше этого - не сдвиг. */
+        const val MOVED = 1e-9
+
+        /**
+         * Эталонный герой поверх класса: что даёт обычное снаряжение - урон, защиты, щит, запасы, регенерация, крит, недуги,
+         * вампиризм, порог оглушения и счёт надетого. Строка «увеличения» характеристики, которой здесь нет, требует базы у эталона
+         * или своей плоской строки.
+         */
+        val REFERENCE = mapOf(
+            "STOCK_ATTACK_PHYSICAL" to 120.0, "STOCK_ATTACK_FIRE" to 30.0, "STOCK_ATTACK_COLD" to 30.0, "STOCK_ATTACK_LIGHTNING" to 30.0, "STOCK_ATTACK_CHAOS" to 20.0,
+            "STOCK_ATTACK_SPEED" to 1.4, "STOCK_HEALTH" to 3000.0, "STOCK_MANA" to 300.0, "STOCK_ENERGY_SHIELD" to 300.0, "STOCK_ARMOR" to 800.0,
+            "STOCK_EVASION" to 600.0, "STOCK_BLOCK_CHANCE" to 15.0, "STOCK_ALL_ELEMENTAL_RESISTANCES" to 30.0, "STOCK_CRITICAL_CHANCE" to 20.0, "STOCK_SPELL_CRITICAL_CHANCE" to 20.0,
+            "STOCK_IGNITE_CHANCE" to 20.0, "STOCK_SHOCK_CHANCE" to 20.0, "STOCK_POISON_CHANCE" to 20.0, "STOCK_BLEED_CHANCE" to 20.0, "STOCK_FREEZE_CHANCE" to 10.0,
+            "STOCK_HEALTH_REGEN" to 10.0, "STOCK_MANA_REGEN_FLAT" to 8.0, "STOCK_STRENGTH" to 150.0, "STOCK_AGILITY" to 150.0, "STOCK_INTELLECT" to 150.0,
+            "STOCK_LEECH_PHYSICAL" to 2.0, "STOCK_STUN_THRESHOLD" to 100.0, "STOCK_WORN_UNIQUES" to 1.0, "STOCK_WORN_CORRUPTED" to 1.0, "STOCK_WORN_JEWELS" to 1.0,
+        )
     }
 }

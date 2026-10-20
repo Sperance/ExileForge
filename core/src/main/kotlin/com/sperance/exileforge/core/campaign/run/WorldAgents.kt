@@ -124,6 +124,8 @@ sealed interface WorldEvent {
 
     /** The hero reached the Vaal portal. */
     data object Portal : WorldEvent
+
+    /** Герой подошёл к открытому выходу: уход предлагается, а не случается под ногами. */
     data object Exit : WorldEvent
 }
 

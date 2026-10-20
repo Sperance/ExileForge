@@ -191,8 +191,14 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.TakeFountain -> fountain?.takeIf { phase == RunPhase.MAP && !it.used }?.let(::drink)
 
+        RunCommand.TakeExit -> if (phase == RunPhase.MAP && world.atExit) {
+            exitOffered = false
+            exit()
+        }
+
         RunCommand.StepOff -> when {
             fountain != null -> fountain = null
+            exitOffered -> exitOffered = false
             leaveOffer() -> Unit
             phase == RunPhase.CRYSTAL -> closeCrystal()
             phase == RunPhase.ABYSS && (descent == null || descent?.claim != null) -> closeRift()

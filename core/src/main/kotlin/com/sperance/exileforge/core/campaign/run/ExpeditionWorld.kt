@@ -84,6 +84,12 @@ class ExpeditionWorld(
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     internal var portalArmed = true
 
+    /** Выход взведён: шаг в его радиус предлагает уйти; отказ гасит его, пока герой не выйдет из радиуса. */
+    internal var exitArmed = true
+
+    /** Герой у открытого выхода: страж повержен, до выхода не дальше `exitReach`. */
+    val atExit: Boolean get() = !sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < rules.exitReach
+
     /** Монстры карты: жетоны, босс и стаи, что встают посреди захода ([summon]: стражи сокровищ). */
     private val roster: MutableList<MonsterAgent> = (
         packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
@@ -374,6 +380,9 @@ class ExpeditionWorld(
     /** The cracks not yet opened, in the server's order: a crack's place among them is what the server names it by. */
     val standingCracks: List<AbyssSpot> get() = cracks.filterNot { it.opened }
 
+    /** Объекты карты, которых герой ещё не тронул ни одним выбором; ловушки выбора не знают и не считаются. */
+    val untouched: Int get() = features.count { it !is TrapSpot && it.taken.isEmpty() }
+
     fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
     fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
 
@@ -435,7 +444,12 @@ class ExpeditionWorld(
             if (toHero < rules.contact) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
         }
-        if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < rules.exitReach) return WorldEvent.Exit
+        val near = atExit
+        if (near && exitArmed) {
+            exitArmed = false
+            return WorldEvent.Exit
+        }
+        if (!near) exitArmed = true
         return null
     }
 

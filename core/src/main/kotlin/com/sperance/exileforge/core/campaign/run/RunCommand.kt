@@ -103,6 +103,9 @@ sealed interface RunCommand {
     /** Предложенный фонтан выпит: здоровье, мана и заряды фляг - по его долям. */
     data object TakeFountain : RunCommand
 
+    /** Уход у открытого выхода принят: карта завершена, из зоны Ваал - назад на карту ([exit]). */
+    data object TakeExit : RunCommand
+
     /** Выбор на листе объекта карты: пара алтаря или вещь торговца по номеру. */
     data class Choose(val choice: Int) : RunCommand
 

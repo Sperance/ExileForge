@@ -66,7 +66,7 @@ internal fun ExpeditionRun.walk(dt: Double) {
             challenge(event.agent)
         }
 
-        WorldEvent.Exit -> exit()
+        WorldEvent.Exit -> exitOffered = true
 
         is WorldEvent.Opened -> rewarding(record { RunEvent.Chest(it, event.chest.id) })?.let { opened ->
             event.chest.event = opened.n

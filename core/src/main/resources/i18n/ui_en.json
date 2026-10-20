@@ -743,7 +743,6 @@
   "expedition.stunned": "Stunned",
   "expedition.summary": "Slain: {0} · gold: {1} · experience: {2}",
   "expedition.title": "Expedition",
-  "expedition.to_hero": "To your hero",
   "expedition.unsent": "The last run's journal is not sent yet: check the connection and try again",
   "expedition.unfinished_title": "Unfinished run",
   "expedition.unfinished_text": "You have an unfinished run: {0}",

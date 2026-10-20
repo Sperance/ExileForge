@@ -743,7 +743,6 @@
   "expedition.stunned": "Оглушение",
   "expedition.summary": "Убито: {0} · золото: {1} · опыт: {2}",
   "expedition.title": "Поход",
-  "expedition.to_hero": "К герою",
   "expedition.unsent": "Журнал прошлого захода ещё не отправлен: проверьте связь и попробуйте снова",
   "expedition.unfinished_title": "Незаконченный заход",
   "expedition.unfinished_text": "У вас незаконченный заход: {0}",

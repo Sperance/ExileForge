@@ -87,7 +87,9 @@ internal fun ExpeditionRun.changeGear(command: RunCommand.Regear) {
             if (taken) wear(command.gear)
             put.done(taken)
         }
+
         phase == RunPhase.FIGHT -> pendingGear = command.gear
+
         else -> wear(command.gear)
     }
 }

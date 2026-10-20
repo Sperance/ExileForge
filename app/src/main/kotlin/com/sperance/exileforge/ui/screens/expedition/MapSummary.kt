@@ -339,10 +339,12 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
             val (_, mark) = rememberLootVerdict(dressed, instance, flasks = false)
             when {
                 lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
+
                 lot != null -> {
                     val marked = lot.chosen(piece.id)
                     SaleMarked(marked) { PieceLine(piece, presence, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
                 }
+
                 else -> PieceLine(piece, presence, mark = mark) { onItem(piece) }
             }
         }

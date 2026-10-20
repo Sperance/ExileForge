@@ -23,13 +23,13 @@ import kotlinx.serialization.Serializable
 
 /** One work of a profession as the hero has it now: the rules' seconds, and the cycle and the «nothing» chance their gear makes of it. */
 @Serializable data class JobView(
-    /** The work itself: each kind with its own fields — a stack's output, a smith's band, a chart's region. */
+    /** The work itself: each kind with its own fields — a stack's output, a smith's band, a chart's level band. */
     val job: Job,
     val cycleMillis: Long = 0,
     /** The hero's own odds: the empty cycle's and each find's, after level and gear. */
     val nothing: Double = 0.0,
     val extra: List<JobExtra> = emptyList(),
-    /** Whether the hero may take it: a chart needs an open zone of its region, a choosing work a variant. */
+    /** Whether the hero may take it: a chart needs an open zone in its level band, a choosing work a variant. */
     val open: Boolean = true,
     /** A variant of a choosing work: what was chosen — the item it makes; blank on the work itself. */
     val choice: String = "",

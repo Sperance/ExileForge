@@ -38,6 +38,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.InfoMark
+import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -57,18 +59,20 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
 }
 
 /**
- * Плита режима: медальон в цвете режима с вращающейся пунктирной орбитой, имя серифами, строка
- * сути и плашка ключа; по плите пробегает блик со сдвигом [phase] круга, чтобы плиты не мигали разом. Касание раскрывает
- * [details] - вход и подробности; шеврон поворачивается. Декор стоит, когда анимации выключены.
+ * Плита режима: медальон в цвете режима с вращающейся пунктирной орбитой, имя серифами со значком ⓘ правил режима [info],
+ * строка сути [note] и плашка [chip], если есть; по плите пробегает блик со сдвигом [phase] круга, чтобы плиты не мигали разом.
+ * Касание раскрывает [details] - вход и подробности; шеврон поворачивается. Без [details] плита не раскрывается и шеврона нет.
+ * Декор стоит, когда анимации выключены.
  */
 @Composable fun TrialModeCard(
     mode: TrialMode,
-    note: String,
+    note: String?,
     chip: String?,
+    info: () -> Tip,
     open: Boolean,
     phase: Float,
     onToggle: () -> Unit,
-    details: @Composable ColumnScope.() -> Unit,
+    details: (@Composable ColumnScope.() -> Unit)?,
 ) {
     val accent = mode.accent
     val shape = RoundedCornerShape(14.dp)
@@ -79,11 +83,18 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
             .sweep(phase)
             .border(1.dp, accent.copy(alpha = if (open) .7f else .45f), shape),
     ) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Medallion(mode)
+        Row(
+            Modifier.fillMaxWidth().then(if (details != null) Modifier.clickable(onClick = onToggle) else Modifier).padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TrialMedallion(mode)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(mode.label, color = GoldBright, style = relicName(15))
-                Text(note, color = Muted, style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(mode.label, color = GoldBright, style = relicName(15), modifier = Modifier.weight(1f, fill = false))
+                    InfoMark(mode.label, tip = info)
+                }
+                note?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
                 chip?.let {
                     Text(
                         it,
@@ -95,35 +106,39 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
                     )
                 }
             }
-            val turn by animateFloatAsState(if (open) 90f else 0f, label = "trial-chevron")
-            Text("›", color = accent, style = relicName(20), modifier = Modifier.rotate(turn))
+            if (details != null) {
+                val turn by animateFloatAsState(if (open) 90f else 0f, label = "trial-chevron")
+                Text("›", color = accent, style = relicName(20), modifier = Modifier.rotate(turn))
+            }
         }
-        AnimatedVisibility(open) {
-            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = details)
+        if (details != null) {
+            AnimatedVisibility(open) {
+                Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = details)
+            }
         }
     }
 }
 
 /**
- * Медальон: знак режима в круге его цвета, вокруг - пунктирная орбита, оборот за 18 с.
+ * Медальон: знак режима в круге его цвета поперечником [size] dp, вокруг - пунктирная орбита, оборот за 18 с.
  *
  * Фаза читается в рисовании: орбита идёт без перекомпоновки.
  */
-@Composable private fun Medallion(mode: TrialMode) {
+@Composable internal fun TrialMedallion(mode: TrialMode, size: Int = MEDALLION) {
     val accent = mode.accent
     val orbit = motionPhase(ORBIT_MS)
-    Box(Modifier.size(MEDALLION.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             rotate(orbit.value * 360f) {
                 drawCircle(accent.copy(alpha = .5f), radius = size.minDimension / 2 - 1f, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f))))
             }
         }
         Box(
-            Modifier.size((MEDALLION - 12).dp).glow(accent.copy(alpha = .45f), radius = 10.dp, shape = CircleShape)
+            Modifier.size((size - size / 5).dp).glow(accent.copy(alpha = .45f), radius = 10.dp, shape = CircleShape)
                 .background(Brush.radialGradient(listOf(accent.copy(alpha = .3f), AbyssInk)), CircleShape)
                 .border(1.5.dp, accent, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Icon(mode.icon, null, tint = accent, modifier = Modifier.size(26.dp)) }
+        ) { Icon(mode.icon, null, tint = accent, modifier = Modifier.size((size * 9 / 20).dp)) }
     }
 }
 

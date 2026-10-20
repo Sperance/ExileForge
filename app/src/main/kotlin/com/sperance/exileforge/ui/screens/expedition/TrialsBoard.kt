@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.signedNumber
+import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
@@ -66,9 +69,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * плитами [TrialMode] - Разлом недели, Башня и Босс-раш; плита раскрывается касанием, внутри - вход и подробности.
  * Тестировщику замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
  *
- * Разлом недели - своя доска на весь экран. Покорённая башня печать не тратит. Закрытый раш не показывается (тестировщику открыты все
- * регионы); фрагменты герба сами собираются в ключ на сервере - доска показывает, сколько их к следующему ключу; ближайший закрытый регион -
- * один, с тем, что осталось зачистить.
+ * Каждое число на доске - один раз: запасы ключей - только в сетке сверху, правила режимов - в ⓘ плиты, причина запрета входа -
+ * на погашенной кнопке. Разлом недели - своя доска на весь экран. Покорённая башня печать не тратит и не раскрывается. Закрытый раш
+ * не показывается (тестировщику открыты все регионы); фрагменты герба сами собираются в ключ на сервере - сетка показывает, сколько
+ * их к следующему ключу; ближайший закрытый регион - один, с тем, что осталось зачистить.
  */
 @Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
@@ -94,51 +98,65 @@ import org.koin.compose.viewmodel.koinViewModel
                 RiftRules.KEY to compactCount(hero.bag[RiftRules.KEY] ?: 0L),
             ),
         )
-        trials.run?.let { open ->
-            Plate(LifeRed) {
-                Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
-                MutedText(ui(if (open.kind == TrialKind.RUSH) "trials.open_rush" else "trials.open_tower", if (open.kind == TrialKind.RUSH) regionTitle(open.region) else open.floor))
-                ForgeButton(onClick = vm::abandonTrial, state = ButtonState.of(idle), modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("trials.abandon")) }
-            }
-        }
+        trials.run?.let { open -> OpenTrial(open.kind, if (open.kind == TrialKind.RUSH) regionTitle(open.region) else open.floor.toString(), idle, vm::abandonTrial) }
         val toggle = { mode: TrialMode -> opened = mode.takeIf { it != opened } }
         rules.rift?.let { riftRules ->
             val left = rift.board?.free
-            TrialModeCard(TrialMode.RIFT, ui("trials.mode_rift_note"), left?.let { ui("trials.chip_free", it, riftRules.free) }, opened == TrialMode.RIFT, 0f, { toggle(TrialMode.RIFT) }) {
-                MutedText(ui("rift.hint", riftRules.acts, riftRules.layout.rows, riftRules.free))
+            TrialModeCard(
+                TrialMode.RIFT,
+                note = null,
+                chip = left?.let { ui("trials.chip_free", it, riftRules.free) },
+                info = { Tip(TrialMode.RIFT.label, ui("rift.hint", riftRules.acts, riftRules.layout.rows, riftRules.free), TrialMode.RIFT.accent) },
+                open = opened == TrialMode.RIFT,
+                phase = 0f,
+                onToggle = { toggle(TrialMode.RIFT) },
+            ) {
                 val open = game.unlocked(Feature.RIFT)
-                ForgeButton(onClick = vm::openRift, state = ButtonState.of(idle && open), modifier = Modifier.fillMaxWidth()) { Text(ui("rift.open")) }
-                if (!open) Text(ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(index.rules)), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                ForgeButton(onClick = vm::openRift, state = ButtonState.of(idle && open), modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+                    Text(if (open) ui("rift.open") else ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(index.rules)), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
         val tower = rules.tower
         val conquered = tower.start(trials.towerBest) > tower.maxFloor
         val towerNote = if (conquered) ui("trials.tower_conquered", tower.maxFloor) else ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest))
-        TrialModeCard(TrialMode.TOWER, towerNote, ui("trials.chip_seals", seals), opened == TrialMode.TOWER, 1f / 3, { toggle(TrialMode.TOWER) }) {
-            MutedText(
+        val towerHint = {
+            Tip(
+                TrialMode.TOWER.label,
                 ui(
                     "trials.tower_hint", tower.firstLevel, tower.levelStep, index.rules.fight.maxFoes, tower.life.toInt(), number(tower.flaskCharges),
                     tower.hoardEvery, tower.modEvery, tower.checkpoint,
                 ),
+                TrialMode.TOWER.accent,
             )
-            if (!conquered) {
-                tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {
-                    Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            ForgeButton(onClick = vm::enterTower, state = ButtonState.of(idle && seals >= 1 && trials.run == null && !conquered), modifier = Modifier.fillMaxWidth()) {
-                Text(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)))
-            }
         }
+        val towerEntry: @Composable ColumnScope.() -> Unit = {
+            tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {
+                Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+            }
+            EnterButton(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)), entryBlock(trials.run != null, seals), idle, vm::enterTower)
+        }
+        TrialModeCard(
+            TrialMode.TOWER,
+            note = towerNote,
+            chip = null,
+            info = towerHint,
+            open = opened == TrialMode.TOWER,
+            phase = 1f / 3,
+            onToggle = { toggle(TrialMode.TOWER) },
+            details = towerEntry.takeUnless { conquered },
+        )
         val cleared = hero.campaign.cleared
         val unlocked = index.campaign.regions.filter { free || RushPlan.open(it, cleared) }
-        TrialModeCard(TrialMode.RUSH, ui("trials.mode_rush_note"), ui("trials.chip_keys", keys), opened == TrialMode.RUSH, 2f / 3, { toggle(TrialMode.RUSH) }) {
-            MutedText(ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()))
-            if (unlocked.isEmpty()) {
-                index.campaign.regions.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
-                    Text(ui("trials.rush_locked", regionTitle(near.code), near.zones.count { it.code !in cleared }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                }
-            }
+        TrialModeCard(
+            TrialMode.RUSH,
+            note = null,
+            chip = null,
+            info = { Tip(TrialMode.RUSH.label, ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()) + "\n\n" + ui("trials.rush_tiers_hint"), TrialMode.RUSH.accent) },
+            open = opened == TrialMode.RUSH,
+            phase = 2f / 3,
+            onToggle = { toggle(TrialMode.RUSH) },
+        ) {
             unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, free) }
             index.campaign.regions.filterNot { it in unlocked }.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
                 LockedRegion(near, near.zones.count { it.code !in cleared })
@@ -147,16 +165,49 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
+/** Причина, по которой вход в испытание закрыт: идёт другое испытание [busy] или нет ключа - при [keys] меньше одного; null - вход открыт. */
+private fun entryBlock(busy: Boolean, keys: Long): String? = when {
+    busy -> ui("trials.why_busy")
+    keys < 1 -> ui("trials.why_no_key")
+    else -> null
+}
+
+/** Вход в испытание во всю ширину: подпись [label], а при запрете [why] - погашена и пишет причину вместо подписи. */
+@Composable private fun EnterButton(label: String, why: String?, idle: Boolean, onClick: () -> Unit) {
+    ForgeButton(onClick = onClick, state = ButtonState.of(idle && why == null), modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+        Text(why ?: label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 /**
- * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней с подписью «Сложность» - все пройденные
- * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - цифры
- * выбранной ступени с подписями ([RushTierFacts]), её имя и в правом углу ключи героя над малой «Войти». Тестировщику (`ProgressGate`) лента показывает все ступени.
- *
- * Следующая ступень - первая непройденная, её и выбирают по умолчанию.
+ * Незавершённое испытание строкой: малый медальон режима [kind], что идёт ([place] - регион раша или этаж башни), что достанется
+ * при завершении, и «Завершить».
+ */
+@Composable private fun OpenTrial(kind: TrialKind, place: String, idle: Boolean, onAbandon: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    val rush = kind == TrialKind.RUSH
+    Row(
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, LifeRed.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        TrialMedallion(if (rush) TrialMode.RUSH else TrialMode.TOWER, size = 36)
+        Column(Modifier.weight(1f)) {
+            Text(ui(if (rush) "trials.open_rush" else "trials.open_tower", place), color = LifeRed, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            MutedText(ui(if (rush) "trials.open_rush_keep" else "trials.open_tower_keep"), style = MaterialTheme.typography.labelSmall)
+        }
+        ForgeButton(onClick = onAbandon, state = ButtonState.of(idle), kind = ButtonKind.Secondary, size = ButtonSize.Compact) { Text(ui("trials.abandon")) }
+    }
+}
+
+/**
+ * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные (зелёные), ровно одна следующая (золотая,
+ * выбрана по умолчанию) и за ней одна закрытая с замком - касание объясняет, как её открыть; дальше ступени не рисуются. Под лентой -
+ * цифры выбранной ступени с подписями ([RushTierFacts]) и широкая «Войти · ступень N»; без ключа или при идущем испытании она погашена
+ * и пишет причину. Тестировщику (`ProgressGate`) лента показывает все ступени открытыми.
  */
 @Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, free: Boolean) {
     val trials = game.hero?.campaign?.trials ?: return
-    val idle = !game.busy
     val best = trials.rushBest[region.code]
     val count = rules.rush.tierCount
     val passed = (trials.rushTiers[region.code] ?: 0).coerceIn(0, count)
@@ -180,42 +231,19 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
         }
+        val bosses = minOf(region.zones.size, rules.rush.bosses)
         MutedText(
-            listOfNotNull(ui("trials.rush_bosses", minOf(region.zones.size, rules.rush.bosses)), best?.let { ui("trials.rush_best", clock(it.toDouble())) }).joinToString(" · "),
+            listOfNotNull(ui(pluralKey("trials.rush_bosses", bosses), bosses), best?.let { ui("trials.rush_best", clock(it.toDouble())) }).joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,
         )
         if (count > 1) {
             Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                MutedText(ui("trials.rush_tier_pick"), style = MaterialTheme.typography.labelSmall)
                 (0 until shown).forEach { t -> TierPlate(t, done = t < passed, selected = t == tier) { tier = t } }
-                if (passed == 0 && !free) MutedText(ui("trials.rush_tier_first"), style = MaterialTheme.typography.labelSmall)
+                if (shown < count) LockedTier(shown)
             }
         }
         RushTierFacts(rules.rush.tier(tier))
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                ui("trials.rush_tier", roman(tier + 1)),
-                color = Parchment,
-                fontFamily = RelicSerif,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f).padding(bottom = 12.dp),
-            )
-            RowActions(value = { KeyCount(keys) }) {
-                RowButton(ui("trials.rush_enter"), onClick = { vm.enterRush(region.code, tier) }, state = ButtonState.of(idle && keys >= 1 && trials.run == null))
-            }
-        }
-        when {
-            trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
-            keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
-
-/** Ключи раша у героя над «Войти»: значок ключа и короткое число. */
-@Composable private fun KeyCount(keys: Long) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        BagIcon(TrialRules.KEY, Modifier.size(16.dp))
-        Text(compactCount(keys), color = Muted, style = MaterialTheme.typography.labelMedium)
+        EnterButton(ui("trials.rush_enter", roman(tier + 1)), entryBlock(trials.run != null, keys), !game.busy) { vm.enterRush(region.code, tier) }
     }
 }
 
@@ -232,18 +260,33 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Ближайший закрытый регион раша: замок, имя и сколько зон осталось зачистить, пунктирная рамка без входа. */
+/** Закрытая ступень [tier] после следующей: замок и номер приглушённо, касание - подсказка, какую ступень пройти, чтобы её открыть. */
+@Composable private fun LockedTier(tier: Int) {
+    val shape = RoundedCornerShape(7.dp)
+    val title = ui("trials.rush_tier_locked", roman(tier + 1))
+    Tipped(
+        { Tip(title, ui("trials.rush_tier_locked_hint", roman(tier)), Muted) },
+        Modifier.heightIn(min = 26.dp).widthIn(min = 30.dp).clip(shape).dashedBorder(Bronze, shape).semantics { contentDescription = title },
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(Modifier.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(11.dp))
+            Text(roman(tier + 1), color = Muted, fontFamily = RelicSerif, fontSize = 12.sp)
+        }
+    }
+}
+
+/** Ближайший закрытый регион раша одной строкой: замок, имя и справа сколько зон осталось зачистить, пунктирная рамка без входа. */
 @Composable private fun LockedRegion(region: Region, left: Int) {
     val shape = RoundedCornerShape(12.dp)
-    Column(
+    Row(
         Modifier.fillMaxWidth().alpha(.8f).dashedBorder(Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
-            Text(regionTitle(region.code), color = Muted, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        MutedText(ui("trials.rush_locked_zones", left), style = MaterialTheme.typography.labelSmall)
+        Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
+        Text(regionTitle(region.code), color = Muted, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        MutedText(ui(pluralKey("trials.rush_zones_left", left), left), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -314,12 +357,3 @@ private const val KEYS_PER_ROW = 4
 internal fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (left, out), (value, sign) ->
     (left % value) to (out + sign.repeat(left / value))
 }.second
-
-@Composable private fun Plate(accent: Color, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Column(
-        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, accent.copy(alpha = .45f), shape).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        content = content,
-    )
-}

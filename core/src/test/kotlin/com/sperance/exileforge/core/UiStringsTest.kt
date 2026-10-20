@@ -249,6 +249,8 @@ class UiStringsTest {
             com.sperance.exileforge.core.campaign.run.LootKind.entries.forEach { add("expedition.bag.from.${it.name}") }
             AtlasPoints.ALL.forEach { add("atlas.earned.$it") }
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }
+            com.sperance.exileforge.core.display.SourceKind.entries.forEach { add("source.${it.name}") }
+            com.sperance.exileforge.core.display.ChanceUnit.entries.forEach { add("source.per.${it.name}") }
             SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
             SkillType.entries.forEach { add("skills.type.${it.name}") }
             SkillEvent.entries.forEach { add("skill.on.${it.name}") }

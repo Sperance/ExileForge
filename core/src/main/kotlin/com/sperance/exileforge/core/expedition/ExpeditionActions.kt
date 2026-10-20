@@ -520,6 +520,15 @@ class ExpeditionActions(
         }
     }
 
+    /** Вещь [itemId] продана поштучно: её отметка к продаже уходит с экрана и из журнала захода ([RunJournal.saleMarks]). */
+    fun forget(itemId: String) {
+        if (itemId in repository.state.value.saleMarks) expedition { it.copy(saleMarks = it.saleMarks - itemId) }
+        runJournal?.takeIf { itemId in it.saleMarks }?.let { j ->
+            j.saleMarks = j.saleMarks - itemId
+            persist()
+        }
+    }
+
     /**
      * Отложенная продажа: добыча захода, что продаёт фильтр героя, сервер кладёт в тайник и называет её id - она ложится в пометки к продаже
      * ([RunJournal.saleMarks]), и итоги карты отмечают ровно её; снятую отметку итоги передают серверу ([closeSettling]).

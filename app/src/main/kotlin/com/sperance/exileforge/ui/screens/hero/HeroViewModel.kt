@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hall.HallFocus
@@ -46,6 +47,7 @@ class HeroViewModel(
     private val pages: HeroPageModel,
     private val hall: HallFocus,
     fates: HeroFateModel,
+    private val expedition: ExpeditionActions,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
@@ -68,7 +70,9 @@ class HeroViewModel(
     fun openChest(code: String) = hero.openChest(code)
     fun dismissChest() = hero.dismissChest()
     fun setTitle(title: String) = hero.setTitle(title)
-    fun sellForGold(itemId: String, unequip: Boolean = false) = hero.sellForGold(itemId, unequip)
+
+    /** Продажа торговцу; проданная вещь сумки захода снимается и с отметок к продаже - счётчик сумки её больше не считает. */
+    fun sellForGold(itemId: String, unequip: Boolean = false) = hero.sellForGold(itemId, unequip) { expedition.forget(itemId) }
     fun sellMany(itemIds: Collection<String>) = hero.sellMany(itemIds)
     fun temper(itemId: String) = hero.temper(itemId)
     fun unsocketJewel(itemId: String) = hero.unsocketJewel(itemId)

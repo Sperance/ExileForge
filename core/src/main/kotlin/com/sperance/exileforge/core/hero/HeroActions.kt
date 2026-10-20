@@ -190,9 +190,13 @@ class HeroActions(
     }
     fun unsocketJewel(itemId: String) = heroCommand { id -> api.hero.unsocket(id, itemId) }
 
-    /** Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. [unequip] - надетую снять и продать разом. */
-    fun sellForGold(itemId: String, unequip: Boolean = false) = heroCommand { id ->
+    /**
+     * Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. [unequip] - надетую снять и продать разом;
+     * [onSold] - сервер продал вещь, до перерисовки героя.
+     */
+    fun sellForGold(itemId: String, unequip: Boolean = false, onSold: () -> Unit = {}) = heroCommand { id ->
         val sold = api.hero.sell(id, itemId, unequip)
+        onSold()
         notices.toast(withShards(ui("toast.sold", sold.gold), sold.shards, perOrb))
     }
 

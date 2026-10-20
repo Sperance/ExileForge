@@ -13,11 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
-import com.sperance.exileforge.core.filter.itemShelf
-import com.sperance.exileforge.core.filter.modChoices
-import com.sperance.exileforge.core.filter.railGroups
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.MerchantOffer
@@ -81,9 +77,9 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     var filtering by remember { mutableStateOf(false) }
     val prices = remember(offers) { offers.associate { (offer, view) -> view.id to offer.price } }
     val wares = remember(offers) { offers.map { it.second } }
-    val shelf = { draft: ItemFilter -> game.itemShelf(wares, ItemShelf.MERCHANT, draft) { prices[it.id] } }
-    val visible = remember(offers, filterState.filter, game.hero) { shelf(filterState.filter).map { it.id } }
+    val shelf = rememberItemShelf(game, wares, filterState) { prices[it.id] }
     val byId = remember(offers) { offers.associateBy { it.first.item.id } }
+    val visible = remember(shelf, byId) { shelf?.visible.orEmpty().mapNotNull { byId[it.id] } }
     stock?.refreshAt?.takeIf { it > 0 }?.let { at ->
         LaunchedEffect(at) {
             delay((at - ServerClock.now()).coerceAtLeast(0) + RENEW_SLACK_MS)
@@ -99,23 +95,13 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
             if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
             if (offers.isNotEmpty()) item(key = "filter") { ItemSearchBar(filterState, ui("merchant.search"), game.lang, onFilter = { filtering = true }) }
-            if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
-            items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
+            if (offers.isNotEmpty() && shelf != null && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
+            items(visible, key = { it.first.id }) { (offer, view) ->
                 ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
             }
         }
     }
-    if (filtering) {
-        ItemFilterSheet(
-            filterState,
-            railGroups(wares).map { it.first },
-            wares.map { it.rarity }.distinct().sortedByDescending { it.ordinal },
-            modChoices(wares, game.lang),
-            game.lang,
-            game.heroLevel,
-            count = { shelf(it).size },
-        ) { filtering = false }
-    }
+    if (filtering && shelf != null) ItemFilterSheet(filterState, shelf) { filtering = false }
     chosen?.let { offer ->
         OfferSheet(game, offer.item, offer.price, onDismiss = { chosen = null }) {
             chosen = null

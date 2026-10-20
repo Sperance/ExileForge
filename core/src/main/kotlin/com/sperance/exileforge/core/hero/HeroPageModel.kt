@@ -26,7 +26,7 @@ class HeroPageModel(private val prefs: PreferencesRepository, private val screen
      */
     suspend fun showStash(filter: ItemFilter) {
         prefs.saveItemFilter(ItemShelf.STASH, filter)
-        prefs.itemFilters.first { it[ItemShelf.STASH] == filter.copy(query = "") }
+        prefs.itemFilters.first { it[ItemShelf.STASH] == filter }
         openPage.value = HeroPage.STASH
         screens.tab(Landing.HERO)
     }

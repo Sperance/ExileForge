@@ -25,13 +25,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.requirementReason
-import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.filter.ItemType
-import com.sperance.exileforge.core.filter.isWorn
-import com.sperance.exileforge.core.filter.itemShelf
-import com.sperance.exileforge.core.filter.modChoices
-import com.sperance.exileforge.core.filter.railGroups
 import com.sperance.exileforge.core.filter.typeTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
@@ -51,8 +46,8 @@ import org.koin.compose.koinInject
  * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
  *
  * Фильтр - общий фильтр предметов ([ItemShelf.STASH]): строка поиска над списком и шторка «Аккордеон», выбор запоминается на
- * устройстве; рейка - его же «Тип». Список, лоты и счёт рейки запоминаются по копиям, а не по герою: изменившийся кошелёк не
- * перестраивает тысячу строк.
+ * устройстве; рейка - его же «Тип». Список и счёт рейки - витрина ядра ([rememberItemShelf]), собранная вне главного потока; она и
+ * лоты пересобираются по копиям, а не по герою: изменившийся кошелёк не перестраивает тысячу строк.
  *
  * Копия без шаблона в контенте не показывается. «Скрыть надетое» - правило снаряжения, инструменты видны всегда. Лоты - весь тайник, наборы
  * - только видимое; удержание плитки входит в выбор с ней отмеченной, в выборе касание отмечает, удержание - карточка.
@@ -66,11 +61,8 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
     var sheet by remember { mutableStateOf(false) }
     var selling by remember(game.heroId) { mutableStateOf(false) }
     val stash = remember(hero.items, game.index, game.world) { hero.items.mapNotNull { game.view(it) } }
-    val counted = remember(stash, filter.hideWorn) { stash.filterNot { filter.hideWorn && it.isWorn && !it.slot.isTool } }
-    val rail = remember(counted) { railGroups(counted) }
-    val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-    val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.STASH, draft) { game.sellPrice(it.item) } }
-    val visible = remember(stash, filter, hero.level, hero.stats, game.world) { shelf(filter) }
+    val shelf = rememberItemShelf(game, stash, filterState) { game.sellPrice(it.item) }
+    val visible = shelf?.visible.orEmpty()
     val lines = rememberStashLines(game, visible)
     val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, hero.level, game.index) { game.sellLots(stash) }
     val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
@@ -103,7 +95,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            StashRail(rail, counted.size, (filter.type as? ItemType.Group)?.group, game.lang, onSelect = { filterState.update(filter.copy(type = it?.let(ItemType::Group))) }, Modifier.fillMaxHeight().padding(start = 8.dp))
+            StashRail(shelf?.groups.orEmpty(), shelf?.counted?.size ?: 0, (filter.type as? ItemType.Group)?.group, game.lang, onSelect = { filterState.update(filter.copy(type = it?.let(ItemType::Group))) }, Modifier.fillMaxHeight().padding(start = 8.dp))
             LazyColumn(
                 Modifier.weight(1f).fillMaxHeight(),
                 contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
@@ -117,7 +109,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 }
                 if (!selling && lots.isNotEmpty() && read?.contains(SELL_HINT) == false) item(key = "hint") { SellHint(onDismiss = { hintRead() }) }
                 if (hero.overflow.isNotEmpty() && !selling) item(key = "overflow") { StashOverflow(game, model) }
-                if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (stash.isNotEmpty()) ui("filter.empty") else ui("hero.stash_empty_hint")) }
+                if (shelf != null && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (stash.isNotEmpty()) ui("filter.empty") else ui("hero.stash_empty_hint")) }
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
@@ -141,10 +133,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
             ) { model.sellMany(it) }
         }
     }
-    if (filtering) {
-        val mods = remember(stash, game.lang) { modChoices(stash, game.lang) }
-        ItemFilterSheet(filterState, rail.map { it.first }, rarities, mods, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
-    }
+    if (filtering && shelf != null) ItemFilterSheet(filterState, shelf) { filtering = false }
     if (sheet) StashWindow(game, hero.info.autoSell, lots, model) { sheet = false }
 }
 

@@ -49,7 +49,7 @@ import org.koin.compose.viewmodel.koinViewModel
         InfoCard(ui("tester.no_hero"), ui("tester.no_hero_hint"))
         return
     }
-    TrailData(account.heroName, Tip("", ui("tester.for_hero", account.heroName), Muted))
+    TrailData(account.heroName, Tip(body = ui("tester.for_hero", account.heroName), tint = Muted))
     if (account.isTester) FreeProgress(account.freeProgress, enabled) { heroModel.testerGrant("freeProgress", "on" to it.toString()) }
     ForgePanel {
         Engraved(ui("tester.currency"))

@@ -164,7 +164,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Spacer(Modifier.width(10.dp))
             Text("${(total - game.characterSlotsLeft).coerceIn(0, total)}/$total", style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, modifier = Modifier.alpha(.75f))
         }
-        if (explain) TipCallout(Tip("", ui("chars.slots_full"), Muted)) { explain = false }
+        if (explain) TipCallout(Tip(body = ui("chars.slots_full"), tint = Muted)) { explain = false }
     }
 }
 
@@ -321,7 +321,7 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
             modifier = Modifier.fillMaxWidth(),
             onDisabledClick = if (slot) null else ({ explain = true }),
         ) { Text(ui("chars.restore")) }
-        if (explain) TipCallout(Tip("", ui("chars.restore_no_slot"), Muted)) { explain = false }
+        if (explain) TipCallout(Tip(body = ui("chars.restore_no_slot"), tint = Muted)) { explain = false }
     }
     ForgeButton(state = ButtonState.of(!game.busy), onClick = onErase, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger) {
         Text(ui("chars.erase_do"))

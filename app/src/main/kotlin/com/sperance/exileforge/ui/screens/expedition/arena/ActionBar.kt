@@ -225,7 +225,7 @@ internal fun Modifier.flaskTap(view: FlaskView, why: MutableState<String?>, live
 
 /** Подсказка погашенной фляги - почему её глоток впустую ([flaskTap]); касание её прячет. */
 @Composable internal fun FlaskWhy(why: MutableState<String?>) {
-    why.value?.let { TipCallout(Tip("", it, Muted)) { why.value = null } }
+    why.value?.let { TipCallout(Tip(body = it, tint = Muted)) { why.value = null } }
 }
 
 /** Почему глоток фляги сейчас впустую: её полные полосы по именам - слова подсказки у погашенной плитки. */

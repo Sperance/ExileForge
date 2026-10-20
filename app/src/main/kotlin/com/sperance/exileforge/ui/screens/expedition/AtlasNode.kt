@@ -91,7 +91,7 @@ import kotlin.math.sin
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
             effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
-            lineNote(index, index.modifier(line.code))?.let { note ->
+            lineNote(index, line)?.let { note ->
                 Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
             }
             if (node.kind != AtlasNodeKind.START) {

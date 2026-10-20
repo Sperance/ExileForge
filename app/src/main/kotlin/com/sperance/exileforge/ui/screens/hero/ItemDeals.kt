@@ -32,7 +32,7 @@ internal enum class ItemDeal { AUCTION, WORN }
 
 /**
  * Сделки с вещью тайника - один путь для листа вещи и карточки кузницы: лот через лист выставления. Надетую вещь не выставить (`AU_010`) -
- * сделка предлагает её снять. Продажа торговцу - удержанием в ряду своей вещи ([OwnItemActions]), без листа. Листы рисует [ItemDealSheets].
+ * сделка предлагает её снять. Продажа торговцу - удержанием в ряду своей вещи ([com.sperance.exileforge.ui.components.OwnItemActions]), без листа. Листы рисует [ItemDealSheets].
  */
 @Stable
 class ItemDeals internal constructor() {

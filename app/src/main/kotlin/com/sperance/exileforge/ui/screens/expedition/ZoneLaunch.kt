@@ -30,13 +30,11 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
-import com.sperance.exileforge.core.display.ItemLine
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.MapCapture
+import com.sperance.exileforge.core.display.MapLine
+import com.sperance.exileforge.core.display.MapLines
 import com.sperance.exileforge.core.display.influenceTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.lineNote
-import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.signedNumber
@@ -122,7 +120,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
 
 /** Пунктирный «?» вместо карт: в тайнике нет карты зоны уровня [level]; касание - откуда они берутся. */
 @Composable private fun NoMaps(level: Int) {
-    Tipped({ Tip("", ui("expedition.launch_no_maps", level), Muted) }) {
+    Tipped({ Tip(body = ui("expedition.launch_no_maps", level), tint = Muted) }) {
         Box(Modifier.size(52.dp).background(Abyss).dashedBorder(Muted, RectangleShape), contentAlignment = Alignment.Center) {
             Text("?", color = Muted, style = MaterialTheme.typography.titleMedium)
         }
@@ -160,11 +158,11 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             val title = listOfNotNull(rarityTitle(rarity, game.lang), picked.item.mapTier.takeIf { it > 0 }?.let { ui("expedition.launch_tier", it) }).joinToString(" · ")
             val note = listOfNotNull(ui("expedition.launch_rarity_line", number(own)).takeIf { own > 0 }, ui("expedition.launch_spent")).joinToString("\n")
-            TapText(title, tint, MaterialTheme.typography.titleSmall, { Tip("", note, tint) }, Modifier.weight(1f))
+            TapText(title, tint, MaterialTheme.typography.titleSmall, { Tip(body = note, tint = tint) }, Modifier.weight(1f))
             Figure(bonus.quantity, ui("expedition.launch_loot"))
             Figure(bonus.rarity, ui("expedition.launch_rarity"))
         }
-        lines(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
+        MapLines.of(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
         capture?.let { CaptureLine(it) }
     }
 }
@@ -187,7 +185,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
         Box(Modifier.size(16.dp).border(1.dp, tint, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
             Text(name.take(1), color = tint, fontSize = 10.sp, fontWeight = FontWeight.Bold)
         }
-        TapText(ui("expedition.capture.title", name), tint, MaterialTheme.typography.bodySmall, { Tip("", parts.joinToString("\n"), tint) })
+        TapText(ui("expedition.capture.title", name), tint, MaterialTheme.typography.bodySmall, { Tip(body = parts.joinToString("\n"), tint = tint) })
         Text(
             ui("expedition.capture.short", number(capture.power), number(capture.items)),
             color = Muted,
@@ -214,34 +212,6 @@ internal fun tierGate(index: ContentIndex, level: Int?): String? {
 }
 
 /**
- * The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one.
- *
- * Атлас усиливает только строки `scalable` (печать, флаги и счётные - как есть); риск строки с условием платится, только если условие на
- * карте есть.
- */
-internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> {
-    val roller = LootRoller(index)
-    val bound = map.lines.map { line -> line.definition?.let { def -> def to roller.mapValues(def, line.values, atlasEffect) } }
-    val all = bound.filterNotNull().flatMap { (def, values) -> def.bind(values) }.groupingBy { it.first.stat }.fold(0.0) { sum, (_, value) -> sum + value }
-    return map.lines.mapIndexed { i, line -> line(index, line, bound[i]?.second, all) }
-}
-
-/** Строка карты [line] со значениями [values] (null - как выпала) и меткой риска среди всех строк карты [all]. */
-private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all: Map<String, Double>): MapLine {
-    val effects = line.definition?.effects.orEmpty()
-    val kinds = effects.map { MapLineKind.of(index, it.stat) }
-    val kind = when {
-        MapLineKind.HARM in kinds -> MapLineKind.HARM
-        MapLineKind.REWARD in kinds -> MapLineKind.REWARD
-        else -> MapLineKind.CONTENT
-    }
-    val def = line.definition
-    val shown = values ?: line.values
-    val risk = def?.bind(shown).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value, all) }
-    return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk, lineNote(index, def))
-}
-
-/**
  * Строка карты ромбом цвета вида; касание текста - пояснение её характеристики ([MapLine.note]); доля опасности к добыче - «8%» справа,
  * касание объясняет; бафф героя оплачивается наградой карты.
  */
@@ -253,7 +223,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Rhombus(tint, 7.dp)
-        Tipped(line.note?.let { note -> { Tip("", note, tint) } }, Modifier.weight(1f)) {
+        Tipped(line.note?.let { note -> { Tip(body = note, tint = tint) } }, Modifier.weight(1f)) {
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodySmall)
         }
         if (line.kind == MapLineKind.HARM && line.risk > 0) {

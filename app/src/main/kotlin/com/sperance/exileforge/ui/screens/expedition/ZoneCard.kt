@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
-import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
@@ -61,9 +60,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
 internal data class StashMap(val item: ItemInstance, val view: ItemView)
-
-/** A line of the picked map: its sentence, what it is, and what it pays if it is a harm; [note] - пояснение её характеристики по касанию. */
-internal data class MapLine(val text: String, val kind: MapLineKind, val risk: Double, val note: String? = null)
 
 /**
  * How many maps of each zone the stash holds. Read off the items' zone alone: building a full view of every
@@ -167,7 +163,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             icon = ForgeGlyphs.Portal,
             onDisabledClick = why?.let { { explain = true } },
         ) { Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        if (explain && why != null) TipCallout(Tip("", why, Muted)) { explain = false }
+        if (explain && why != null) TipCallout(Tip(body = why, tint = Muted)) { explain = false }
     }
 }
 
@@ -233,7 +229,7 @@ private const val SEED_TICK_MS = 1000L
             Text(ui("expedition.unknown_zone"), color = Muted, style = style, modifier = Modifier.weight(1f))
         } else {
             val name = mapTitle(zone.code)
-            Box(Modifier.weight(1f)) { TapText(name, GoldBright, style, { Tip("", mapDescription(zone.code.value)) }, maxLines = 2) }
+            Box(Modifier.weight(1f)) { TapText(name, GoldBright, style, { Tip(body = mapDescription(zone.code.value)) }, maxLines = 2) }
         }
         val (label, tint) = when (token.state) {
             TokenState.PASSED -> ui("expedition.token_passed") to Gold

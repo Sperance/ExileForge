@@ -200,16 +200,18 @@ fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, ca
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
 
-/** Группы характеристик, у каждой из которых есть пояснение в словаре сервера (`stat.desc.<код>`, `LocalizationTest`). */
-private val explainedGroups = setOf(StatGroup.ATLAS, StatGroup.MAP)
-
 /**
- * Пояснение строки модификатора [def]: что делает её характеристика, словами сервера (`stat.desc.<код>`). Атлас печатает его серой
- * строкой под строкой узла, карта - подсказкой по касанию строки; характеристика без пояснения (не Атласа и не карты) - null.
+ * Пояснение строки модификатора [def]: что делает её характеристика, словами сервера (`stat.desc.<код>`) с числами правил `{r:…}`
+ * ([com.sperance.exileforge.rules.text.numbered]). Пояснение есть у групп [StatGroup.described]: Атлас печатает его серой строкой
+ * под строкой узла, карта - подсказкой по касанию строки. У строки из нескольких эффектов учитывается только первый: его
+ * характеристика решает, есть ли пояснение, и даёт его текст. Характеристика без пояснения или подстановка без числа - null.
  */
 fun lineNote(index: ContentIndex, def: ModifierDef?): String? = def?.effectOf(0)?.stat
-    ?.takeIf { index.stats[it]?.group in explainedGroups }
-    ?.let { loc(LocaleKey.statDescription(it)) }
+    ?.takeIf { index.stats[it]?.group?.described == true }
+    ?.let { index.numbered(loc(LocaleKey.statDescription(it))) }
+
+/** Пояснение строки [line] узла Атласа ([lineNote] её модификатора). */
+fun lineNote(index: ContentIndex, line: Line): String? = lineNote(index, index.modifier(line.code))
 
 /**
  * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. Плюс шаблона перед

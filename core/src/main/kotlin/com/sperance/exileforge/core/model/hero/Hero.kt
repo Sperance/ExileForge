@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
-import com.sperance.exileforge.rules.RuleViolation
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -149,12 +148,7 @@ data class HeroView(
      */
     fun jewelFree(index: ContentIndex, item: ItemInstance, socket: String? = null): Boolean {
         val template = index.template(item.template) ?: return true
-        return try {
-            TreeAllocation.requireUniqueJewelFree(template, jewels.filter { (place, jewel) -> place != socket && jewel.id != item.id }.values.map { it.template })
-            true
-        } catch (refused: RuleViolation) {
-            false
-        }
+        return TreeAllocation.uniqueJewelFree(template, jewels.filter { (place, jewel) -> place != socket && jewel.id != item.id }.values.map { it.template })
     }
 
     /**

@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.requirementReason
+import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
@@ -80,16 +81,15 @@ internal object JewelOffers {
     fun candidate(index: ContentIndex, item: ItemInstance): Boolean = !item.equipped && !item.socketed && index.template(item.template)?.slot == Slot.JEWEL
 
     /**
-     * Кандидаты в гнездо [socket] героя игры [game]: сперва те, что встанут, по Мощи героя с ними - сильнейший первым, ослабляющие
-     * героя - последними; уникальный, что уже стоит в другом гнезде, - в самом конце. Считать вне главного потока.
+     * Кандидаты в гнездо [socket] героя [hero], каким его захватил вызов: сперва те, что встанут, по Мощи героя с ними - сильнейший
+     * первым, ослабляющие героя - последними; уникальный, что уже стоит в другом гнезде, - в самом конце. Считать вне главного потока.
      */
-    fun of(game: GameUi, index: ContentIndex, socket: String): List<JewelOffer> {
-        val hero = game.hero ?: return emptyList()
+    fun of(hero: HeroView, index: ContentIndex, socket: String): List<JewelOffer> {
         val now = hero.might?.value
         return hero.items.filter { candidate(index, it) }.mapNotNull { item ->
-            val view = game.view(item) ?: return@mapNotNull null
+            val view = ItemView.of(item, index) ?: return@mapNotNull null
             if (!hero.jewelFree(index, item, socket)) return@mapNotNull JewelOffer(item, view, false, null, Comparison(emptyList()))
-            val outcome = game.socketing(item, socket)
+            val outcome = hero.socketing(index, item, socket)
             val might = now?.let { before -> outcome.might?.let { MightShift(before, it.value) } }
             JewelOffer(item, view, true, might, Comparison.of(outcome.delta, index, sheet = hero.figures.values, level = hero.level))
         }.sortedWith(compareByDescending<JewelOffer> { it.free }.thenByDescending { it.might?.after ?: 0.0 })
@@ -107,7 +107,8 @@ internal object JewelOffers {
  * статус: работает, бездействует (вторая копия уникального - причина правил) или ждёт, пока гнездо не взято. «Вытащить» -
  * удержанием, «Заменить» и «Вставить» открывают лист выбора ([JewelPicker]); прежний самоцвет уходит в тайник.
  *
- * Сравнение кандидатов считается вне главного потока один раз на героя, контент и гнездо - и только когда оно на экране.
+ * Сравнение кандидатов считается вне главного потока один раз на входы расчёта - вещи, дерево, уровень, класс, умения, законы и дар
+ * героя, - контент и гнездо, и только когда оно на экране; сменились входы - прежний список гаснет до нового.
  */
 @Composable internal fun SocketContents(
     game: GameUi,
@@ -124,8 +125,9 @@ internal object JewelOffers {
     val free = remember(hero, index) { hero.items.count { JewelOffers.candidate(index, it) } }
     var picking by remember(node.code) { mutableStateOf(false) }
     val measured = allocated && free > 0 && (inside == null || picking)
-    val offers by produceState<List<JewelOffer>?>(null, hero, index, node.code, measured) {
-        value = if (measured) withContext(Dispatchers.Default) { JewelOffers.of(game, index, node.code) } else null
+    val offers by produceState<List<JewelOffer>?>(null, hero.items, hero.tree, hero.level, hero.heroClass, hero.skills, hero.info.laws, hero.info.fate, index, node.code, measured) {
+        value = null
+        if (measured) value = withContext(Dispatchers.Default) { JewelOffers.of(hero, index, node.code) }
     }
 
     val held = inside?.let(game::view)

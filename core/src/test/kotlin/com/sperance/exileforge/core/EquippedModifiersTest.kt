@@ -246,6 +246,6 @@ private class ItemLines(private val index: ContentIndex) {
     private fun veils(slot: Slot): List<String> = if (slot.isJewelLike || slot.isFlask) {
         emptyList()
     } else {
-        listOf(Source.PREFIX, Source.SUFFIX).map { side -> listOfNotNull(Veils.TABLE, slot.tag.takeIf { slot.isTool }, side.name.lowercase()).joinToString(":") }
+        listOf(Source.PREFIX, Source.SUFFIX).map { side -> Veils.table(slot, side) }
     }
 }

@@ -58,7 +58,7 @@ class ContentSmokeTest {
                 (1L..3L).forEach { seed ->
                     val item = factory.create("item", template, rarity, Dice(seed))
                     val affixes = item.rolls.count { index.modifier(it.code)?.affix == true }
-                    val floor = index.limits(item.rarity, template.slot).floor.coerceAtLeast(1)
+                    val floor = index.rarityLimits(item.rarity, template.slot).floor.coerceAtLeast(1)
                     assertTrue(item.rarity != Rarity.COMMON && affixes >= floor, "${template.code} ${item.rarity} seed $seed: $affixes affixes, floor $floor")
                     checked++
                 }

@@ -16,9 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
@@ -33,23 +31,21 @@ import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * One item of the stash: its card, and what can be done with it.
  *
- * The card scrolls; the actions do not — they sit in a row at the foot of the sheet, so the thing a
- * player came to do is never below the fold. Each one is a single tap: wearing and taking off at
- * once, an orb and the crafting bench in the forge, opened over this item, a listing through a small sheet of its own, and selling to
- * the merchant through the held confirmation, because that one cannot be taken back. Every rule behind them is the
+ * The card scrolls; the actions do not — they sit at the foot of the sheet ([SheetFooter], как у общей карточки), so the thing a
+ * player came to do is never below the fold: широкой кнопкой надеть или снять (`wearOffer`) и «⋯» - заменить надетую, замок,
+ * аукцион, продажа; под ними - ряд действий своей вещи ([OwnItemActions]): «В кузницу» вне боя. Every rule behind them is the
  * server's, and it checks them again; the client adds the sheet up itself, so wearing
  * is also off for an item whose requirements it misses, and the card says what it would change.
  *
  * Вещь может уйти, пока лист открыт (продана, выставлена, перекатана) - лист закрывается. Запертая вещь недоступна торговцу и аукциону,
  * кузня с ней работает. Вторую копию уникалки не надеть - кнопка гаснет с причиной. Закалка кузнеца - раз на оружие или броню. Самоцвет без
- * свободного взятого гнезда гасит «В дерево». Кнопки «Реликвария» - одна низкая строка. Карта не надевается и в зону не ведёт. Надетую вещь
+ * свободного взятого гнезда гасит «В дерево». Карта не надевается и в зону не ведёт. Надетую вещь
  * не выставить и не продать (`AU_010`, `CH_014`) - касание говорит это. Продажа окончательна: спрашивается по имени с суммой по правилу
  * торговца и осколками.
  */
@@ -57,7 +53,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
-    val smithy = koinViewModel<SmithyViewModel>().model
     val instance = game.hero?.item(itemId)
     val view = instance?.let { game.view(it) }
     if (instance == null || view == null) {
@@ -74,7 +69,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val wear = rememberWearChoice(game, instance)
     val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(.92f).navigationBarsPadding()) {
             val look = relicLook(view.rarity)
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item {
@@ -124,34 +119,15 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             }
             var more by remember(itemId) { mutableStateOf(false) }
             val wornPlace = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
-            Row(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
-                when {
-                    instance.equipped && wornPlace != null -> ForgeButton(onClick = { replacing = wornPlace }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, state = ButtonState.of(can), accent = look.gold.takeIf { look.legend != null }) {
-                        Text(ui("hero.replace"), maxLines = 1)
-                    }
-
-                    offer != null -> ForgeButton(onClick = { offer.run(wear.target) }, modifier = Modifier.weight(1f), size = ButtonSize.Compact, state = ButtonState.of(offer.enabled), accent = look.gold.takeIf { look.legend != null }) {
-                        Text(offer.label, maxLines = 1)
-                    }
-                }
-                ForgeButton(onClick = {
-                    onDismiss()
-                    smithy.open(instance.id, ForgeSection.ORBS)
-                    shell.tab(TAB_CRAFT)
-                }, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(can)) { Text(ui("nav.forge"), maxLines = 1) }
+            val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
+            val menu: @Composable () -> Unit = {
                 Box {
-                    ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, kind = ButtonKind.Secondary, size = ButtonSize.Compact)
+                    ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, kind = ButtonKind.Secondary, size = ButtonSize.Wide)
                     ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
                         if (instance.equipped && wornPlace != null) {
-                            MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
+                            MenuLine(Icons.Outlined.SwapHoriz, ui("hero.replace"), can) {
                                 more = false
-                                onDismiss()
-                                model.unequip(instance.id)
+                                replacing = wornPlace
                             }
                         }
                         MenuLine(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
@@ -166,6 +142,26 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                             more = false
                             deals.sell(instance)
                         }
+                    }
+                }
+            }
+            SheetFooter {
+                if (offer != null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ForgeButton(
+                            onClick = { offer.run(wear.target) },
+                            modifier = Modifier.weight(1f),
+                            size = ButtonSize.Wide,
+                            state = ButtonState.of(offer.enabled),
+                            accent = look.gold.takeIf { look.legend != null },
+                        ) { Text(offer.label, maxLines = 1) }
+                        menu()
+                    }
+                }
+                OwnItemActions(game, instance, onDone = onDismiss) {
+                    if (offer == null) {
+                        Spacer(Modifier.weight(1f))
+                        menu()
                     }
                 }
             }

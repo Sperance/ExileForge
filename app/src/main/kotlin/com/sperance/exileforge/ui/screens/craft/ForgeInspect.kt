@@ -18,7 +18,8 @@ import com.sperance.exileforge.ui.screens.hero.wearOffer
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Карточки вещей кузницы: главное действие - «В кузницу», у вещи, что уже на наковальне, - сменить её ([ForgeTarget.changeKey]); рядом равное - надеть или
+ * Карточки вещей кузницы: главное действие - «В кузницу», у вещи, что уже на наковальне, - сменить её ([ForgeTarget.changeKey]), поэтому
+ * своего «В кузницу» ряда действий по умолчанию карточка не несёт ([Inspect.Copy.forge]); рядом равное - надеть или
  * снять ([wearOffer], тот же выбор, что у листа вещи тайника, с местом из вкладок сравнения карточки); в «⋯» - продажа торговцу с ценой и
  * выставление на аукцион тем же путём, что из тайника ([ItemDeals]).
  */
@@ -38,6 +39,7 @@ internal class ForgeCards(private val game: GameUi, private val hero: HeroViewMo
                 InspectAction(ui("item.sell_merchant"), enabled = can && !item.locked, figure = price?.let { number(it.toDouble()) }) { deals.sell(item) },
                 InspectAction(ui("item.list_auction"), enabled = can && !item.locked) { deals.auction(item) },
             ),
+            forge = false,
         )
     }
 }

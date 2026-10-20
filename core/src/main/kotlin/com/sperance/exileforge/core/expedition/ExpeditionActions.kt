@@ -421,7 +421,7 @@ class ExpeditionActions(
      * счёт сервера и награда каждого события, снимок героя едет с ним.
      *
      * Ключ пачки - на диске до её ухода: потерянный с процессом ответ спрашивается снова. Отклонённое начало боя - не потеря игрока, о нём
-     * не говорят. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
+     * не говорят; прочие отказы - красный тост с причиной сервера поверх тоста добычи. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
      * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
      * офлайн или таймаут - снова скоро.
      */
@@ -446,8 +446,8 @@ class ExpeditionActions(
             j.confirm(report.applied, report.rejected)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
-            report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
+            notices.refused(report.rejected.filter { it !in engages }, report.refusals)
             if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)

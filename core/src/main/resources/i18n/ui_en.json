@@ -1865,6 +1865,8 @@
   "expedition.log_they_skill_on": "{0}: {1} on you",
   "expedition.log_they_skill_self": "{0} uses {1}",
   "expedition.rejected": "The server rejected run events: {0}",
+  "expedition.refused.PACE": "The server did not count {0} event(s): the fight went faster than the hero's might allows",
+  "expedition.refused.RULE": "The server did not count {0} event(s): against the rules",
   "expedition.pending": "The run's results are still on their way: {0}",
   "fight.mana": "Mana {0}/{1}",
   "nav.skills": "Grimoire",

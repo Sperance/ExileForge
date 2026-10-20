@@ -139,7 +139,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
             ) { model.sellMany(it) }
         }
     }
-    if (filtering) ItemFilterSheet(filterState, rail.map { it.first }, rarities, game.lang, count = { shelf(it).size }) { filtering = false }
+    if (filtering) ItemFilterSheet(filterState, rail.map { it.first }, rarities, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
     if (sheet) StashWindow(game, hero.info.autoSell, lots, model) { sheet = false }
 }
 

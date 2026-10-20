@@ -76,6 +76,7 @@ import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.LengthCounter
+import com.sperance.exileforge.ui.components.LevelRangeHeader
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PropertyRow
 import com.sperance.exileforge.ui.components.RarityTiles
@@ -237,20 +238,18 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     StashField.KIND -> filter.kind?.let(::kindTitle).orEmpty()
     StashField.SLOT -> slotTitle(filter.slot, game.lang)
     StashField.RARITY -> rarityTitle(filter.rarity, game.lang)
-    StashField.MIN_LEVEL -> ui("auction.chip_ilvl_from", filter.minLevel)
-    StashField.MAX_LEVEL -> ui("auction.chip_ilvl_to", filter.maxLevel)
+    StashField.LEVEL -> filter.level.title().orEmpty()
 }
 
 /**
- * Отбор хранилища в общем листе-«Аккордеоне», поля витрины аукциона без цены и продавца; ничего не применяется до «Показать».
+ * Отбор хранилища в общем листе-«Аккордеоне», поля витрины аукциона без цены и продавца; вилка уровня - в шапке листа, как у
+ * фильтра предметов ([LevelRangeHeader]); ничего не применяется до «Показать».
  *
  * «Сбросить» применяет сброс сразу и закрывает шторку.
  */
 @Composable private fun StashFilterSheet(game: GameUi, filter: StashFilter, onDismiss: () -> Unit, onApply: (StashFilter) -> Unit) {
     var draft by remember { mutableStateOf(filter) }
     val any = ui("filter.any")
-    val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    val levels = listOf(StashField.MIN_LEVEL, StashField.MAX_LEVEL).filter { it in draft.active() }.joinToString(" · ") { fieldLabel(game, draft, it) }
     val groups = listOf(
         AccordionGroup("kind", ui("auction.what_sold"), draft.kind?.let(::kindTitle) ?: any) {
             ChoiceChips(listOf(null) + StashKind.entries, { it == draft.kind }, { it?.let(::kindTitle) ?: any }) { draft = draft.copy(kind = it) }
@@ -260,26 +259,6 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         },
         AccordionGroup("rarity", ui("filter.rarity"), draft.rarity.takeIf { it.isNotBlank() }?.let { rarityTitle(it, game.lang) } ?: any) {
             RarityTiles(Rarity.entries, { it.name == draft.rarity }) { draft = draft.copy(rarity = if (draft.rarity == it.name) "" else it.name) }
-        },
-        AccordionGroup("level", ui("auction.item_level"), levels.ifBlank { any }) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    draft.minLevel,
-                    { draft = draft.copy(minLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_from")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    draft.maxLevel,
-                    { draft = draft.copy(maxLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_to")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-            }
         },
     )
     FilterAccordionSheet(
@@ -293,6 +272,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         onReset = { onApply(draft.cleared()) },
         onShow = { onApply(draft) },
         onDismiss = onDismiss,
+        header = { LevelRangeHeader(draft.level, game.heroLevel) { draft = draft.copy(level = it) } },
     )
 }
 

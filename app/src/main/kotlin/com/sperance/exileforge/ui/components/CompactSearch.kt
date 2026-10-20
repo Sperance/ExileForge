@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
@@ -33,9 +35,9 @@ import com.sperance.exileforge.ui.theme.Parchment
 /**
  * Плотное поле поиска (40dp): лупа, ввод одной строкой и подсказка [placeholder], пока
  * пусто; басальт в нити `Bronze`. Для списков, где поиск не должен занимать полэкрана. [onSearch] - поиск с клавиатуры (поиск у
- * сервера); null - список сужается на месте по [onValue].
+ * сервера); null - список сужается на месте по [onValue]. [onClear] - крестик очистки справа; null - крестика нет.
  */
-@Composable fun CompactSearchField(value: String, onValue: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, onSearch: (() -> Unit)? = null) {
+@Composable fun CompactSearchField(value: String, onValue: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, onSearch: (() -> Unit)? = null, onClear: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(10.dp)
     val style = MaterialTheme.typography.bodyMedium
     BasicTextField(
@@ -58,6 +60,7 @@ import com.sperance.exileforge.ui.theme.Parchment
                     if (value.isEmpty()) Text(placeholder, color = Muted, style = style, maxLines = 1)
                     field()
                 }
+                onClear?.let { ForgeIconButton(Icons.Outlined.Close, ui("common.clear"), onClick = it, kind = ButtonKind.Text, size = ButtonSize.Compact) }
             }
         },
     )

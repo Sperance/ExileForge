@@ -1,5 +1,7 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,8 +73,8 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 }
 
 /**
- * Строка над списком: порядок коротким словом и сколько видно, справа - значок фильтра; любое нажатие открывает
- * шторку ([ItemFilterSheet]).
+ * Строка над списком: порядок коротким словом, заданная вилка уровня пилюлей («Ур. 27–37») и сколько видно, справа - значок
+ * фильтра; любое нажатие открывает шторку ([ItemFilterSheet]).
  */
 @Composable fun ItemFilterBar(state: ItemFilterState, shown: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val filter = state.filter
@@ -86,26 +88,34 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         onOpen,
         modifier,
         onClear = { state.update(state.shelf.defaults) }.takeIf { filter != state.shelf.defaults },
+        pills = listOfNotNull(filter.level.title().takeIf { FilterFacet.LEVEL in state.shelf.facets }),
     )
 }
 
 /**
- * Строка над любым списком с фильтром: [summary] - порядок и поиск словами, [shown] - сколько
- * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen]. Фильтр сужает список - крестик [onClear] сбрасывает его
- * сразу, без шторки.
+ * Строка над любым списком с фильтром: [summary] - порядок и поиск словами, за ним [pills] - заданные грани пилюлями, [shown] -
+ * сколько видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen]. Фильтр сужает список - крестик [onClear]
+ * сбрасывает его сразу, без шторки.
  */
-@Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier, onClear: (() -> Unit)? = null) {
+@Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier, onClear: (() -> Unit)? = null, pills: List<String> = emptyList()) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            summary,
-            color = GoldBright,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = ui("filter.title"), onClick = onOpen)
+        Row(
+            Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = ui("filter.title"), onClick = onOpen)
                 .padding(horizontal = 6.dp, vertical = 8.dp),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                summary,
+                color = GoldBright,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            pills.forEach { FacetPill(it) }
+        }
         Text(shown.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
         onClear?.let { clear ->
             ForgeIconButton(Icons.Outlined.Close, ui("filter.reset"), onClick = clear, size = ButtonSize.Compact)
@@ -114,15 +124,30 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
     }
 }
 
+/** Заданная грань фильтра в его строке: пилюля в золотой нити, не переносится. */
+@Composable private fun FacetPill(text: String) {
+    val pill = RoundedCornerShape(12.dp)
+    Text(
+        text,
+        color = GoldBright,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.background(Gold.copy(alpha = .16f), pill).border(1.dp, Gold.copy(alpha = .6f), pill).padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
 /**
- * Шторка фильтра списка предметов («Аккордеон»): грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
+ * Шторка фильтра списка предметов («Аккордеон»): в шапке - вилка уровня предмета ([LevelRangeHeader], «Около моего» - от
+ * уровня героя [heroLevel]), грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
  * списке), редкость плитками ([rarities]), качество, порядок, и переключатели «сделано мной», «сделано ремеслом», «могу надеть»,
  * «скрыть надетое».
  * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» сразу
  * применяет обычный списка и закрывает шторку.
  */
 @Composable
-fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: List<Rarity>, lang: Lang, count: (ItemFilter) -> Int, onDismiss: () -> Unit) {
+fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: List<Rarity>, lang: Lang, heroLevel: Int, count: (ItemFilter) -> Int, onDismiss: () -> Unit) {
     val shelf = state.shelf
     var draft by remember { mutableStateOf(state.filter) }
     val any = ui("filter.any")
@@ -166,6 +191,11 @@ fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: L
             onDismiss()
         },
         onDismiss = onDismiss,
+        header = if (has(FilterFacet.LEVEL)) {
+            { LevelRangeHeader(draft.level, heroLevel) { draft = draft.copy(level = it) } }
+        } else {
+            null
+        },
     )
 }
 

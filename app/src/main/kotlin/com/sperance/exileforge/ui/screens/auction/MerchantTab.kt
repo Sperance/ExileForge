@@ -117,6 +117,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             railGroups(wares).map { it.first },
             wares.map { it.rarity }.distinct().sortedByDescending { it.ordinal },
             game.lang,
+            game.heroLevel,
             count = { shelf(it).size },
         ) { filtering = false }
     }

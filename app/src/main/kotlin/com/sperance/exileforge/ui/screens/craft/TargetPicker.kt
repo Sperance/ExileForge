@@ -66,6 +66,6 @@ internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilt
     if (filtering) {
         val groups = remember(stash) { railGroups(stash).map { it.first } }
         val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-        ItemFilterSheet(filterState, groups, rarities, game.lang, count = { shelf(it).size }) { filtering = false }
+        ItemFilterSheet(filterState, groups, rarities, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
     }
 }

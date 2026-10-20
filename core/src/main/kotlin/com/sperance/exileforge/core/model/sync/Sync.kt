@@ -27,7 +27,7 @@ import kotlinx.serialization.json.JsonElement
  * Ревизия API, против которой написан клиент: совпадает с `API_REVISION` закреплённого сервера (сабмодуль `backend/`) и меняется
  * вместе с ним. История ревизий - `audit/versions.md`.
  */
-const val API_REVISION = 95
+const val API_REVISION = 96
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

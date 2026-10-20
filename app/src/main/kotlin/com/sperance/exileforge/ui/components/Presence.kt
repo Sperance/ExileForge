@@ -51,8 +51,5 @@ fun presenceText(online: Boolean, lastSeenAt: Long, now: Long = System.currentTi
     }
 }
 
-/** «был N назад» строкой состава и карточки; в сети - «в сети». */
-fun seenAgoText(online: Boolean, lastSeenAt: Long, now: Long = System.currentTimeMillis()): String = if (online) ui("presence.online") else ui("presence.was", presenceText(false, lastSeenAt, now))
-
 private const val MINUTE_MS = 60_000L
 private const val DAY_MS = 86_400_000L

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.BodyModel
+import com.sperance.exileforge.core.campaign.Draughts
 import com.sperance.exileforge.core.campaign.HeroBar
 import com.sperance.exileforge.core.campaign.HeroBars
 import com.sperance.exileforge.core.campaign.HeroCharges
@@ -95,6 +96,9 @@ class Battle(
     /** Как враги выходят на поле: раундами собранных стай или подкреплением по очереди. */
     muster: Muster = Muster.Rounds,
 ) {
+    /** Глотки фляг пояса по местам: снимок кадра и проверки «впустую» не строят их заново. */
+    private val draughts = Draughts()
+
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
         /** The sheet as it stands: the hero's changes under the auras of the foes still standing and with what lies on them. */
@@ -558,9 +562,16 @@ class Battle(
     fun lifeReserved(): Double = kit.reserve(ReservePool.LIFE, heroFighter.body).held
     internal fun manaCap(fighter: Fighter): Double = if (fighter === heroFighter) manaCap() else fighter.body.maxMana
 
-    /** Полосы героя, что меряют, впустую ли глоток фляги [flask] сейчас ([com.sperance.exileforge.core.campaign.Draught.waste]); пусто - глоток пьётся. */
-    internal fun waste(flask: BeltFlask): List<HeroBar> = heroFighter.let { hero ->
-        flask.sheet.draught(hero.body, hero.life, manaCap()).waste(HeroBars(hero.life, hero.body.maxLife, hero.mana, manaCap(), hero.shield, hero.body.maxShield))
+    /** Полосы героя сейчас: запас и предел каждой (у маны - свободное от аур). */
+    internal fun bars(): HeroBars = heroFighter.let { hero -> HeroBars(hero.life, hero.body.maxLife, hero.mana, manaCap(), hero.shield, hero.body.maxShield) }
+
+    /**
+     * Полосы героя, что меряют, впустую ли глоток фляги [flask] места [slot] сейчас ([com.sperance.exileforge.core.campaign.Draught.waste]);
+     * пусто - глоток пьётся.
+     */
+    internal fun waste(slot: Int, flask: BeltFlask): List<HeroBar> {
+        val bars = bars()
+        return draughts.of(slot, flask.sheet, heroFighter.body, bars.life, bars.maxMana).waste(bars)
     }
 
     /** Uses the skill of active slot [slot] at the next slice, if it is ready and the mana is there — its condition aside. */

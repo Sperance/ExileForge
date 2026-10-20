@@ -77,7 +77,7 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
             running?.let { d -> ((d.until - time) / d.duration).toFloat().coerceIn(0f, 1f) } ?: 0f,
             it.condition,
             flaskLock(i),
-            waste(it),
+            waste(i, it),
         )
     }
 }

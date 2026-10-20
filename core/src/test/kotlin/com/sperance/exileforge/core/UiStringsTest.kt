@@ -262,6 +262,7 @@ class UiStringsTest {
             }
             com.sperance.exileforge.core.campaign.BuffSource.entries.forEach { add("fight.part_${it.name.lowercase()}") }
             Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
+            com.sperance.exileforge.core.campaign.HeroBar.entries.forEach { add(it.fullKey) }
             com.sperance.exileforge.core.campaign.run.CastState.entries.forEach { add("boss.cast.${it.name}") }
             AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
             AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }

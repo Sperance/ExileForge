@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.EffectOrigins
+import com.sperance.exileforge.core.campaign.Draughts
 import com.sperance.exileforge.core.campaign.FightPulse
 import com.sperance.exileforge.core.campaign.HeroBars
 import com.sperance.exileforge.core.campaign.HeroBuild
@@ -197,6 +198,9 @@ class ExpeditionRun(
     /** Секунда захода, когда карта ранила героя в последний раз: с неё отсчитывается задержка перезарядки щита. */
     internal var hitAt = Double.NEGATIVE_INFINITY
     internal val kit: Loadout get() = build.gear.kit
+
+    /** Глотки фляг пояса по местам на карте: снимок кадра и глоток в пути не строят их заново. */
+    internal val draughts = Draughts()
 
     /** Темп похода из контента: паузы боя. */
     internal val pace: ExpeditionRules get() = index.campaign.expedition

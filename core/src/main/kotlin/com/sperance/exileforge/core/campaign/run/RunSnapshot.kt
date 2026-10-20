@@ -23,7 +23,6 @@ import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
-import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.hud
 import com.sperance.exileforge.core.campaign.shownLife
 import com.sperance.exileforge.core.campaign.shownMax
@@ -152,20 +151,23 @@ internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered
 /** Сундук [chest] открыт в этом заходе, а ответа на него ещё нет: он приоткрыт и ждёт. */
 fun ExpeditionRun.waiting(chest: Chest): Boolean = chest.event?.let(::awaits) == true
 
-internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
-    flask?.let {
-        val left = flaskLeft.getOrNull(i) ?: 0.0
-        FlaskView(
-            i,
-            it.sheet.code,
-            it.sheet.kind,
-            (charges.getOrNull(i) ?: 0.0).toInt(),
-            it.sheet.maxCharges.toInt(),
-            kotlin.math.ceil(it.sheet.perUse(hero::get) - 1e-9).toInt(),
-            if (left > 0) (left / it.sheet.duration(hero::get)).toFloat().coerceIn(0f, 1f) else 0f,
-            it.condition,
-            full = it.sheet.draught(hero, life, manaCap()).waste(bars()),
-        )
+internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> {
+    val bars = bars()
+    return kit.flasks.mapIndexed { i, flask ->
+        flask?.let {
+            val left = flaskLeft.getOrNull(i) ?: 0.0
+            FlaskView(
+                i,
+                it.sheet.code,
+                it.sheet.kind,
+                (charges.getOrNull(i) ?: 0.0).toInt(),
+                it.sheet.maxCharges.toInt(),
+                kotlin.math.ceil(it.sheet.perUse(hero::get) - 1e-9).toInt(),
+                if (left > 0) (left / it.sheet.duration(hero::get)).toFloat().coerceIn(0f, 1f) else 0f,
+                it.condition,
+                fullBars = draughts.of(i, it.sheet, hero, bars.life, bars.maxMana).waste(bars),
+            )
+        }
     }
 }
 

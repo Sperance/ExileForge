@@ -141,7 +141,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * В ключе экранов - язык и размер словаря: пришедшие с сервера имена перерисовывают экраны, что печатали код. Карта мира строится, как
  * только пришла кампания, вне главного потока; слой пергамента живёт с оболочкой. Хозяева поверх всего: системные листы (отчёт и настройки,
  * аккорд громкости), отчёты, справки, карточки предмета, умения и игрока, экран санкции, письма. Прогрев, поход и испытание - не экраны
- * стека, а состояния игры, что накрывают всё; поход, испытание и Разлом ставят «герой в бою» ([com.sperance.exileforge.ui.screens.hero.LocalInFight]). Тосты - один слой над всеми ними ([ToastLayer]), сюжетом и прологом тоже.
+ * стека, а состояния игры, что накрывают всё; «герой в бою» ([com.sperance.exileforge.ui.screens.hero.LocalInFight]) - заход героя по состоянию сервера ([com.sperance.exileforge.core.model.hero.HeroView.inRun]). Тосты - один слой над всеми ними ([ToastLayer]), сюжетом и прологом тоже.
  */
 @Composable internal fun ForgeScreens() {
     val shell: ShellViewModel = koinViewModel()
@@ -168,7 +168,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     com.sperance.exileforge.ui.components.LocalContentIndex provides game.index,
                     com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
                     com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
-                    com.sperance.exileforge.ui.screens.hero.LocalInFight provides (expedition != null || trial != null || rift.open),
+                    com.sperance.exileforge.ui.screens.hero.LocalInFight provides (game.hero?.inRun == true),
                 ) {
                     com.sperance.exileforge.ui.components.FateSightHost(game) {
                         com.sperance.exileforge.ui.components.LoreHost(game) {

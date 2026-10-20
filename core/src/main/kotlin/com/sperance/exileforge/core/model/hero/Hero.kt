@@ -124,6 +124,12 @@ data class HeroView(
     /** What is worn on the body, by the place it fills; jewels are in [jewels]. */
     val equipped: Map<Slot, ItemInstance> get() = items.filter { it.equipped && !it.socketed }.associateBy { it.slot!! }
 
+    /**
+     * Герой в заходе по сохранённому сервером состоянию - открыт поход по карте, испытание или Разлом: снаряжение взято на входе,
+     * до возвращения в город надетое не продать (сервер - `CH_043`), кузница закрыта.
+     */
+    val inRun: Boolean get() = campaign.run != null || campaign.trials.open
+
     /** Jewels sitting in tree sockets, keyed by the socket each one fills. */
     val jewels: Map<String, ItemInstance> get() = items.filter { it.socketed }.associateBy { it.socket!! }
 

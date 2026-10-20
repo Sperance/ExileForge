@@ -35,7 +35,7 @@ import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.theme.LifeRed
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Герой сейчас в бою - поход, испытание или Разлом: снаряжение взято на входе, кузница закрыта. Ставит корень экранов. */
+/** Герой сейчас в заходе - поход, испытание или Разлом по состоянию сервера ([com.sperance.exileforge.core.model.hero.HeroView.inRun]): снаряжение взято на входе, кузница закрыта. Ставит корень экранов. */
 val LocalInFight = compositionLocalOf { false }
 
 /**

@@ -19,9 +19,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.PickOption
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.redemptionReward
@@ -119,20 +120,15 @@ private fun rewardLine(reward: RedemptionReward): String {
 }
 
 /**
- * What a reward of [kind] may name, out of the content on screen: every stacking item by category,
- * or every template by slot and level, keyed by code. Empty for the kinds that name nothing, and
- * before the content has been read.
+ * Что может назвать награда вида [kind] из контента на экране: стопки по полкам сумки или шаблоны по месту и уровню, ключ - код.
+ * Пусто у видов, что ничего не называют, и пока контент не прочитан.
  */
-private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, String> {
-    val index = game.index ?: return emptyMap()
+private fun rewardOptions(game: GameUi, kind: RedemptionKind): List<PickOption> {
+    val index = game.index ?: return emptyList()
     return when (kind) {
-        RedemptionKind.ITEM -> index.items.values.sortedWith(compareBy({ it.category }, { itemTitle(it.code.value) }))
-            .associate { it.code.value to itemTitle(it.code.value) }
-
-        RedemptionKind.EQUIPMENT -> index.templates.values.sortedWith(compareBy({ it.slot }, { it.level }))
-            .associate { it.code to "${equipmentTitle(it.code)} · ${slotTitle(it.slot, game.lang)} · ${it.level}" }
-
-        RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyMap()
+        RedemptionKind.ITEM -> PickOptions.items(index)
+        RedemptionKind.EQUIPMENT -> PickOptions.templates(index)
+        RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyList()
     }
 }
 
@@ -172,17 +168,15 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
 
         OrnateDivider(Gold)
         Engraved(ui("redemption.reward"))
-        Spinner(
-            ui("redemption.kind"),
-            kind.name,
-            RedemptionKind.entries.associate { it.name to ui("enum.reward.${it.name}") },
-            !game.busy,
-            glyph = Glyph.CURRENCY,
-        ) {
+        val kinds = remember(game.lang) { PickOptions.redemptionKinds() }
+        ForgePicker(ui("redemption.kind"), kind.name, kinds, enabled = !game.busy) {
             kind = RedemptionKind.valueOf(it)
             item = ""
         }
-        if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(game, kind), !game.busy, glyph = Glyph.ITEM) { item = it }
+        if (needsCode) {
+            val options = remember(game.index, game.lang, kind) { rewardOptions(game, kind) }
+            ForgePicker(ui("enum.reward.${kind.name}"), item, options, enabled = !game.busy) { item = it }
+        }
         OutlinedTextField(
             amount,
             { amount = it },

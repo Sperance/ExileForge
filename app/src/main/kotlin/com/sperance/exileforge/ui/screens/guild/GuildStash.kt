@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
@@ -59,6 +60,7 @@ import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.components.ForgePanel
+import com.sperance.exileforge.ui.components.ForgePicker
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ForgeSheetDefaults
 import com.sperance.exileforge.ui.components.GoldCost
@@ -74,7 +76,6 @@ import com.sperance.exileforge.ui.components.RarityTiles
 import com.sperance.exileforge.ui.components.SearchBar
 import com.sperance.exileforge.ui.components.SearchFilter
 import com.sperance.exileforge.ui.components.SheetBody
-import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.components.chips
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -96,7 +97,8 @@ import com.sperance.exileforge.ui.theme.rarityColor
  * ([StashTakePrice]), взять и положить - удержанием.
  *
  * Участник и офицер видят «N/M» на сегодня, глава - без ограничений; под ними - пределы каждой роли одной строкой.
- * Чипы вкладок - их имена ([GuildText.stashTab]); у кого право настраивать вкладки - порог ранга и имя открытой вкладки.
+ * Чипы вкладок - их имена ([GuildText.stashTab]); у кого право настраивать вкладки - порог ранга общим выбором ([ForgePicker]:
+ * ранги с порогом вклада и числом членов гильдии в ранге) вместо строки порога и имя открытой вкладки.
  */
 @Composable internal fun StashTab(game: GameUi, vm: GuildViewModel, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
@@ -121,16 +123,18 @@ import com.sperance.exileforge.ui.theme.rarityColor
                     }
                 }
                 PropertyRow(ui("guild.stash_places"), "${inTab.size} / ${stash.tabSize}", Glyph.ITEM)
-                PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), Glyph.CHARACTER)
+                val configures = me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS)
+                if (!configures || ranks.isEmpty()) PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), Glyph.CHARACTER)
                 Text(
                     if (stash.takesPerDay < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft.coerceAtLeast(0), stash.takesPerDay),
                     color = Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
                 roleTakesLine(stash)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-                val configures = me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS)
                 if (configures && ranks.isNotEmpty()) {
-                    Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
+                    val members = guilds.mine?.guild?.members
+                    val options = remember(ranks, members, game.lang) { PickOptions.ranks(ranks, members) }
+                    ForgePicker(ui("guild.stash_rank_set"), minRank.toString(), options, enabled = !game.busy, hint = ui("guild.stash_rank_hint")) {
                         vm.tabRank(tab, it.toInt())
                     }
                 }

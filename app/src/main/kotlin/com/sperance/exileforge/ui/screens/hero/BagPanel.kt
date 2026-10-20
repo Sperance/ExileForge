@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.display.BagCategory
 import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
@@ -61,22 +62,6 @@ import kotlinx.coroutines.withContext
 /** One stack of the bag: the item's code and how many the hero holds. */
 data class BagStack(val code: String, val amount: Long)
 
-/** A shelf of the bag: each has its heading over its own run of cells; books and essences too. */
-enum class BagCategory(val key: String) {
-    CHESTS("bag.section_chests"),
-    ORBS("bag.section_orbs"),
-
-    /** Печати Атласа: валюта только для карт. */
-    SEALS("bag.section_seals"),
-    ESSENCES("bag.section_essences"),
-    BOOKS("bag.section_books"),
-
-    /** Руны умений: вставляются в гнёзда гримуара. */
-    RUNES("bag.section_runes"),
-    MATERIALS("bag.section_materials"),
-    OTHER("bag.section_other"),
-}
-
 /**
  * The bag by category — orbs, then essences, books and materials, then whatever the content does not
  * name — each by rarity, then by name. A stack has no rarity of its own, so its worth stands
@@ -84,16 +69,7 @@ enum class BagCategory(val key: String) {
  */
 fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
     val index = game.index
-    fun category(code: String) = when (index?.item(ItemCode(code))?.category) {
-        Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
-        Item.ATLAS_SEAL -> BagCategory.SEALS
-        Item.ESSENCE -> BagCategory.ESSENCES
-        Item.BOOK -> BagCategory.BOOKS
-        Item.RUNE -> BagCategory.RUNES
-        Item.MATERIAL -> BagCategory.MATERIALS
-        Item.CHEST -> BagCategory.CHESTS
-        else -> BagCategory.OTHER
-    }
+    fun category(code: String) = BagCategory.of(index?.item(ItemCode(code)))
     fun worth(code: String) = index?.item(ItemCode(code))?.price ?: 0L
     val byCategory = game.hero?.bag.orEmpty().filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
         .sortedWith(compareBy({ -worth(it.code) }, { itemTitle(it.code) }))

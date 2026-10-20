@@ -92,7 +92,7 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(mode.label, color = GoldBright, style = relicName(15), modifier = Modifier.weight(1f, fill = false))
-                    InfoMark(mode.label, tip = info)
+                    InfoMark(mode.label, info)
                 }
                 note?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
                 chip?.let {

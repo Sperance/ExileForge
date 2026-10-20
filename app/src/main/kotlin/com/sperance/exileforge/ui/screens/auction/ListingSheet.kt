@@ -110,7 +110,7 @@ fun ListingSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                 GoldCost(it)
-                InfoHint(ui("sell.listing_fee"), Rune) { Text(ui("sell.note"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                InfoMark(ui("sell.listing_fee"), Rune) { Text(ui("sell.note"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
             }
         }
         closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }

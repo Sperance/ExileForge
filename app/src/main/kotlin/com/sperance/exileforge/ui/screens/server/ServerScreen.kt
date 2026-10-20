@@ -206,7 +206,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                 { draft = it.take(account.inputs.server) },
                 enabled = !account.busy,
                 label = { Text(ui("account.server_address")) },
-                trailingIcon = { InfoMark(ui("account.server_address")) { Tip("", ui("account.address_hint"), Muted) } },
+                trailingIcon = { InfoMark(ui("account.server_address"), tip = { Tip("", ui("account.address_hint"), Muted) }) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )

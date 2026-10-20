@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.components.InfoHint
+import com.sperance.exileforge.ui.components.InfoMark
 import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
@@ -220,7 +220,7 @@ internal fun compactCount(amount: Long): String = when {
 @Composable private fun BoundPlate() {
     Row(Modifier.fillMaxWidth().depthInset(RoundedCornerShape(12.dp)).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(ui("bag.bound"), color = Brass, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-        InfoHint(ui("bag.bound"), Brass) { Text(ui("bag.bound_tip"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        InfoMark(ui("bag.bound"), Brass, tint = Brass) { Text(ui("bag.bound_tip"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

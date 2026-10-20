@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
@@ -57,24 +58,36 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     }
 }
 
-/** Значок ⓘ: касание раскрывает пояснение [body] окном у значка; [label] - имя значка для чтения с экрана. */
-@Composable fun InfoHint(label: String, tint: Color, body: @Composable ColumnScope.() -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        ForgeIconButton(Icons.Outlined.Info, label, onClick = { open = true }, size = ButtonSize.Small)
-        if (open) TipCallout(tint, onClose = { open = false }, body = body)
-    }
+/**
+ * Значок ⓘ: касание открывает [tip] окном у значка - пояснение вместо сноски на экране; подсказка читается при открытии, её числа
+ * свежие. [label] - имя для чтения с экрана, [tint] - цвет значка.
+ */
+@Composable fun InfoMark(label: String, tip: () -> Tip, modifier: Modifier = Modifier, tint: Color = Muted) {
+    InfoGlyph(label, modifier, tint) { close -> TipCallout(tip(), onClose = close) }
 }
 
 /**
- * Значок ⓘ: касание открывает [tip] окном у значка - пояснение вместо сноски на экране. [label] - имя для чтения с экрана,
- * [tint] - цвет значка; зона касания - 36 dp.
+ * Значок ⓘ со своим содержимым окна [body] - для пояснений, которым мало строк [Tip]; [accent] - цвет рамки окна, [tint] - цвет
+ * значка, [label] - имя для чтения с экрана.
  */
-@Composable fun InfoMark(label: String, modifier: Modifier = Modifier, tint: Color = Muted, tip: () -> Tip) {
-    Tipped(tip, modifier.size(36.dp), contentAlignment = Alignment.Center) {
-        Icon(Icons.Outlined.Info, label, tint = tint, modifier = Modifier.size(18.dp))
+@Composable fun InfoMark(label: String, accent: Color, modifier: Modifier = Modifier, tint: Color = Muted, body: @Composable ColumnScope.() -> Unit) {
+    InfoGlyph(label, modifier, tint) { close -> TipCallout(accent, close, body) }
+}
+
+/**
+ * Сам значок ⓘ: знак 18 dp в общей зоне касания 44 dp ([touchZone]), касание открывает окно [callout] у знака, его клюв - на знаке;
+ * окно закрывается своим `close`.
+ */
+@Composable private fun InfoGlyph(label: String, modifier: Modifier, tint: Color, callout: @Composable (close: () -> Unit) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier.clickable(role = Role.Button, onClickLabel = label) { open = true }.touchZone().size(InfoGlyphSide), contentAlignment = Alignment.Center) {
+        Icon(Icons.Outlined.Info, label, tint = tint, modifier = Modifier.fillMaxSize())
+        if (open) callout { open = false }
     }
 }
+
+/** Сторона знака ⓘ. */
+private val InfoGlyphSide = 18.dp
 
 /** The window itself, anchored to whatever holds it. Пустой заголовок не печатается; под строками - [footer] (действие подсказки), если есть. */
 @Composable fun TipCallout(tip: Tip, footer: (@Composable ColumnScope.() -> Unit)? = null, onClose: () -> Unit) {

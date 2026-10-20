@@ -348,7 +348,7 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
             enabled = !game.busy,
             label = { Text(ui("common.name")) },
             suffix = { Text("${name.length}/${game.inputs.heroName}", color = Muted, style = MaterialTheme.typography.labelMedium) },
-            trailingIcon = { InfoMark(rules) { Tip(rules, ui("common.name_charset"), Muted) } },
+            trailingIcon = { InfoMark(rules, tip = { Tip(rules, ui("common.name_charset"), Muted) }) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )

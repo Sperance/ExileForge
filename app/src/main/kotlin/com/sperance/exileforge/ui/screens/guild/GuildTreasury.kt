@@ -112,7 +112,7 @@ private fun giveLabel(form: GiveForm): String = when (form.block) {
             modifier = Modifier.weight(1f),
         )
         rules?.let {
-            InfoHint(ui("guild.give_limit_about"), Gold) {
+            InfoMark(ui("guild.give_limit_about"), Gold) {
                 TipText(ui("guild.give_limit_tip", number(it.contribution.dailyPerLevel.toDouble()), loc("guild.branch.$LIMIT_BRANCH")))
                 TipText(ui("guild.give_where_tip"), Muted)
             }
@@ -128,7 +128,7 @@ private fun giveLabel(form: GiveForm): String = when (form.block) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(GuildText.rank(me.rank), color = Rune, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             MutedText(ui("guild.rank_total", number(me.contribution.toDouble())))
-            rules?.let { InfoHint(ui("guild.rank_about"), Rune) { TipText(rankSteps(it)) } }
+            rules?.let { InfoMark(ui("guild.rank_about"), Rune) { TipText(rankSteps(it)) } }
         }
         when {
             rules == null -> Unit

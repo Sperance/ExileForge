@@ -123,7 +123,7 @@ import com.sperance.exileforge.ui.theme.*
             Text(bill?.payLabel(label) ?: label, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         bill?.let { GoldCost(it) }
-        InfoHint(ui("auction.extend_about"), Rune) { Text(ui("auction.extend_tip", rules.extendMax), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        InfoMark(ui("auction.extend_about"), Rune) { Text(ui("auction.extend_tip", rules.extendMax), color = Parchment, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -168,7 +168,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
                     }
                     Spacer(Modifier.weight(1f))
                     game.index?.rules?.auction?.let { rules ->
-                        InfoHint(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", rules.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                        InfoMark(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", rules.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
                 DealTable(game, ui("auction.history_earned"), ledger.received, open)

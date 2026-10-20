@@ -31,9 +31,9 @@ import com.sperance.exileforge.ui.components.InspectButton
 import com.sperance.exileforge.ui.components.InspectChoice
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.OwnItemActions
 import com.sperance.exileforge.ui.components.SheetFooter
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.hero.OwnItemActions
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.screens.hero.wearable

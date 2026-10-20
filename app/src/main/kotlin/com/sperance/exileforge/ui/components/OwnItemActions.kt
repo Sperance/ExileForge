@@ -1,4 +1,4 @@
-package com.sperance.exileforge.ui.screens.hero
+package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ColumnScope
@@ -24,14 +24,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.ShellViewModel
-import com.sperance.exileforge.ui.components.ButtonGold
-import com.sperance.exileforge.ui.components.ButtonKind
-import com.sperance.exileforge.ui.components.ButtonSize
-import com.sperance.exileforge.ui.components.ButtonState
-import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.Hold
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.theme.LifeRed
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -39,8 +34,8 @@ import org.koin.compose.viewmodel.koinViewModel
 val LocalInFight = compositionLocalOf { false }
 
 /**
- * Действия своей вещи по умолчанию - один ряд малых кнопок под главным действием карточки, где бы её ни открыли (общий хозяин карточек,
- * лист вещи тайника, добыча захода): «В кузницу» открывает кузницу с этой вещью - только вне боя ([LocalInFight]) и если место не ведёт
+ * Действия своей вещи по умолчанию - один ряд малых кнопок под главным действием карточки, где бы её ни открыли (общий хозяин карточек
+ * [ItemInspectorHost], лист вещи тайника, добыча захода, лист инструмента профессии): «В кузницу» открывает кузницу с этой вещью - только вне боя ([LocalInFight]) и если место не ведёт
  * в кузницу само ([forge]); «Продать» с ценой торговца - удержанием, без окна подтверждения. Надетую вне боя сервер снимает и продаёт
  * одной операцией - кнопка «Снять и продать» со знаком предупреждения; в бою надетую не продать, вставленный самоцвет и запертую вещь
  * тоже - кнопка погашена, причина строкой под рядом. Вещь тайника продаётся и в походе. Чужая вещь - не в снаряжении и не в тайнике

@@ -41,7 +41,6 @@ import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
-import com.sperance.exileforge.ui.screens.hero.OwnItemActions
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.WearChoice
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice

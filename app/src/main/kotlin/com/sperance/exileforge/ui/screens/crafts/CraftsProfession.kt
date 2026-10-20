@@ -62,7 +62,6 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
@@ -73,7 +72,6 @@ import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
-import com.sperance.exileforge.ui.screens.hero.OwnItemActions
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -144,7 +142,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 @Composable internal fun ProfessionWindow(game: GameUi, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
     BackHandler { vm.openProfession("") }
     var picking by remember { mutableStateOf(false) }
-    var toolOpen by remember { mutableStateOf(false) }
+    var toolOpen by remember(profession.equipped?.id) { mutableStateOf(false) }
     var chosen by remember { mutableStateOf<JobView?>(null) }
     var group by remember(profession.code) { mutableStateOf<String?>(null) }
     val work = crafts.state?.work?.takeIf { it.profession == profession.code }
@@ -162,9 +160,8 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         }
     }
     chosen?.let { job -> JobSheet(game, vm, crafts, profession, job, current = work?.job == job.code) { chosen = null } }
-    val tool = profession.equipped
-    if (toolOpen && tool != null) {
-        ToolSheet(game, profession, tool, onDismiss = { toolOpen = false }) {
+    if (toolOpen) {
+        ToolSheet(game, profession, onDismiss = { toolOpen = false }) {
             toolOpen = false
             picking = true
         }
@@ -234,28 +231,33 @@ internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.ta
 }
 
 /**
- * Лист надетого инструмента [tool] профессии за кнопкой шапки: полная карточка, что дают он и древо, «Сменить инструмент» и под ней
- * общий ряд действий своей вещи ([OwnItemActions]: «В кузницу», «Снять и продать» удержанием) - действие ряда закрывает лист.
- * Без инструмента кнопка шапки открывает выбор инструмента, а не лист.
+ * Лист надетого инструмента профессии [profession] за кнопкой шапки: полная карточка и что дают он и древо прокручиваются над
+ * закреплённым подвалом ([SheetFooter]) - «Сменить инструмент» и под ней общий ряд действий своей вещи ([OwnItemActions]: «В кузницу»,
+ * «Снять и продать» удержанием); действие ряда закрывает лист. Без инструмента листа нет: кнопка шапки открывает выбор инструмента.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ToolSheet(game: GameUi, profession: ProfessionView, tool: ItemInstance, onDismiss: () -> Unit, onChange: () -> Unit) {
+internal fun ToolSheet(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onChange: () -> Unit) {
+    val tool = profession.equipped ?: return
     ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Engraved(ui("crafts.tool"))
-            val view = game.view(tool)
-            if (view != null) {
-                ItemCard(view, detailed = true, price = game.sellPrice(view.item))
-            } else {
-                Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            Column(
+                Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Engraved(ui("crafts.tool"))
+                val view = game.view(tool)
+                if (view != null) {
+                    ItemCard(view, detailed = true, price = game.sellPrice(view.item))
+                } else {
+                    Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                }
+                BonusChips(profession)
             }
-            BonusChips(profession)
-            ForgeButton(state = ButtonState.of(!game.busy), onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
-            OwnItemActions(game, tool, onDone = onDismiss)
+            SheetFooter {
+                ForgeButton(state = ButtonState.of(!game.busy), onClick = onChange, modifier = Modifier.fillMaxWidth()) { Text(ui("crafts.change_tool")) }
+                OwnItemActions(game, tool, onDone = onDismiss)
+            }
         }
     }
 }

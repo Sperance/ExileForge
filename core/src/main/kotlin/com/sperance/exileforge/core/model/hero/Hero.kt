@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.trade.MerchantStock
-import com.sperance.exileforge.rules.RuleViolation
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -124,6 +123,12 @@ data class HeroView(
     /** What is worn on the body, by the place it fills; jewels are in [jewels]. */
     val equipped: Map<Slot, ItemInstance> get() = items.filter { it.equipped && !it.socketed }.associateBy { it.slot!! }
 
+    /**
+     * Герой в заходе по сохранённому сервером состоянию - открыт поход по карте, испытание или Разлом: снаряжение взято на входе,
+     * до возвращения в город надетое не продать (сервер - `CH_043`), кузница закрыта.
+     */
+    val inRun: Boolean get() = campaign.run != null || campaign.trials.open
+
     /** Jewels sitting in tree sockets, keyed by the socket each one fills. */
     val jewels: Map<String, ItemInstance> get() = items.filter { it.socketed }.associateBy { it.socket!! }
 
@@ -143,12 +148,7 @@ data class HeroView(
      */
     fun jewelFree(index: ContentIndex, item: ItemInstance, socket: String? = null): Boolean {
         val template = index.template(item.template) ?: return true
-        return try {
-            TreeAllocation.requireUniqueJewelFree(template, jewels.filter { (place, jewel) -> place != socket && jewel.id != item.id }.values.map { it.template })
-            true
-        } catch (refused: RuleViolation) {
-            false
-        }
+        return TreeAllocation.uniqueJewelFree(template, jewels.filter { (place, jewel) -> place != socket && jewel.id != item.id }.values.map { it.template })
     }
 
     /**

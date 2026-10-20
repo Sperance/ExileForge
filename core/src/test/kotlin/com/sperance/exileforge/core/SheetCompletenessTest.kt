@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
@@ -53,42 +54,52 @@ class SheetCompletenessTest {
     }
 
     /**
-     * Строка героя без условия с любого носителя двигает итог своей строки сводки на эталонном герое ([REFERENCE]): цифра её
-     * характеристики, строки, частью которой она объявлена, или того, что бой читает вместе с ней ([FightReading]). Так ловится
-     * «увеличение без базы» - «увеличение» или «больше» характеристики, которой у героя нет, ничего не меняет и в сводке не видно.
+     * Строка героя без условия с любого носителя двигает итог своей строки сводки на эталонном герое ([REFERENCE]) - строка класса
+     * на эталоне своего класса: цифра её характеристики, строки, частью которой она объявлена, или того, что бой читает вместе с ней
+     * ([FightReading]). Так ловится «увеличение без базы» - «увеличение» или «больше» характеристики, которой у героя нет, ничего не
+     * меняет и в сводке не видно.
      */
     @Test
     fun every_hero_line_moves_its_summary_row() {
-        val heroClass = index.classes.classes.first()
-        val hero = SheetCalculator(index).hero(LEVEL, heroClass, listOf(TakenNode(heroClass.startNode)), emptyList())
-        val base = hero.operations + REFERENCE.map { (stat, value) -> StatOperation(stat, Op.ADD, value) }
-        fun summary(extra: List<StatOperation>): Map<String, Double> {
-            val model = SheetModel(hero.base, base + extra, index)
-            val kit = Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), model.plain, index.powers, index.rules.charges)
-            return CombatSheet(index, model, LEVEL, kit).values
-        }
-        val before = summary(emptyList())
+        val classes = index.classes.classes
+        val references = classes.associate { it.code to Reference(it) }
+        val owners = classes.flatMap { heroClass -> heroClass.lines.map { it.code to heroClass.code } }.toMap()
         val rarityLines = index.campaign.rarities.flatMapTo(HashSet()) { rule -> rule.lines.map { it.code } }
-        val lines = heroDefs.filter { it.code !in rarityLines }.flatMap { def ->
-            def.effects.filter { it.condition == null && registry[it.stat]?.group == StatGroup.HERO }.map { def to it }
-        }
-        assertTrue(lines.size >= 300, "строк героя мало: тест ничего не доказал (${lines.size})")
-        val still = lines.filter { (_, effect) ->
+        val heroLines = heroDefs.flatMap { def -> def.effects.filter { it.condition == null && registry[it.stat]?.group == StatGroup.HERO }.map { def to it } }
+        val lines = heroLines.filter { (def) -> def.code !in rarityLines }
+        assertTrue(heroLines.isNotEmpty() && lines.size >= heroLines.size * MIN_SHARE, "проверено мало строк героя: тест ничего не доказал (${lines.size} из ${heroLines.size})")
+        val still = lines.filter { (def, effect) ->
+            val reference = references.getValue(owners[def.code] ?: classes.first().code)
             val targets = StatSpread.targets(effect.stat, effect.op)
             val rows = targets + targets.map(registry::row) + FightReading.entries.filter { it.from in targets }.map { it.stat }
-            probes(effect.stat, effect.op).none { value ->
-                val after = summary(listOf(StatOperation(effect.stat, effect.op, value, effect.perStat, effect.perAmount)))
-                rows.any { abs((after[it] ?: 0.0) - (before[it] ?: 0.0)) > MOVED }
+            probes(effect.stat, effect.op, reference.plain[effect.stat] ?: 0.0).none { value ->
+                val after = reference.summary(listOf(StatOperation(effect.stat, effect.op, value, effect.perStat, effect.perAmount)))
+                rows.any { abs((after[it] ?: 0.0) - (reference.before[it] ?: 0.0)) > MOVED }
             }
         }.map { (def, effect) -> "${def.code.value}:${effect.stat}:${effect.op}" }
         assertEquals(emptyList(), still, "строки героя, что не двигают свою строку сводки")
     }
 
-    /** Числа пробы: флаг - единица, замена (`SET`) - заметная величина и запрет, остальное - заметная величина. */
-    private fun probes(stat: String, op: Op): List<Double> = when {
+    /** Эталонный герой класса [heroClass] уровня [LEVEL] с [REFERENCE]: итог характеристик [plain] и сводка без проб [before]. */
+    private inner class Reference(private val heroClass: HeroClass) {
+        private val hero = SheetCalculator(index).hero(LEVEL, heroClass, listOf(TakenNode(heroClass.startNode)), emptyList())
+        private val base = hero.operations + REFERENCE.map { (stat, value) -> StatOperation(stat, Op.ADD, value) }
+        val plain: Map<String, Double> = SheetModel(hero.base, base, index).plain
+        val before: Map<String, Double> = summary(emptyList())
+
+        /** Сводка эталона со строками [extra] сверх него. */
+        fun summary(extra: List<StatOperation>): Map<String, Double> {
+            val model = SheetModel(hero.base, base + extra, index)
+            val kit = Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), model.plain, index.powers, index.rules.charges)
+            return CombatSheet(index, model, LEVEL, kit).values
+        }
+    }
+
+    /** Числа пробы в обе стороны: флаг - единица, замена (`SET`) - база эталона [base] ± заметная величина, остальное - ± заметная величина. */
+    private fun probes(stat: String, op: Op, base: Double): List<Double> = when {
         registry[stat]?.unit == StatUnit.FLAG -> listOf(1.0)
-        op == Op.SET -> listOf(PROBE, 0.0)
-        else -> listOf(PROBE)
+        op == Op.SET -> listOf(base + PROBE, base - PROBE)
+        else -> listOf(PROBE, -PROBE)
     }
 
     @Test
@@ -136,6 +147,9 @@ class SheetCompletenessTest {
 
         /** Число пробы строки. */
         const val PROBE = 30.0
+
+        /** Какая доля строк героя должна попасть в пробу, чтобы тест что-то доказывал. */
+        const val MIN_SHARE = 0.9
 
         /** Сдвиг меньше этого - не сдвиг. */
         const val MOVED = 1e-9

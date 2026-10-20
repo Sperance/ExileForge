@@ -168,6 +168,9 @@ fun GameUi.itemSeals(item: ItemInstance): List<CardSeal> = HeroLens.itemSeals(in
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.socketing(jewel: ItemInstance, socket: String): WearOutcome = HeroLens.socketing(index, hero, jewel, socket)
+
+/** Что даст самоцвет [jewel] в гнезде [socket] этому герою над контентом [index] ([HeroLens.socketing]) - расчёт над захваченным героем. */
+fun HeroView.socketing(index: ContentIndex, jewel: ItemInstance, socket: String): WearOutcome = HeroLens.socketing(index, this, jewel, socket)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)

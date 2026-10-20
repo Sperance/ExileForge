@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.guildEntryLevels
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
@@ -39,19 +38,20 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
  *
  * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат. Порог вступления - в границах
- * правил ([guildEntryLevels]): поле начинается с открытия гильдий.
+ * правил ([com.sperance.exileforge.rules.content.ContentIndex.guildEntryLevels]): поле начинается с открытия гильдий.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Founding) {
-    val rules = game.index?.guilds ?: return
+    val index = game.index ?: return
+    val rules = index.guilds
     var name by remember { mutableStateOf("") }
     var tag by remember { mutableStateOf("") }
     var faction by remember { mutableStateOf(rules.factions.firstOrNull()?.code.orEmpty()) }
     var emblem by remember { mutableStateOf(rules.emblems.firstOrNull().orEmpty()) }
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
-    val levels = remember(game.index) { guildEntryLevels(game.index) }
+    val levels = remember(index) { index.guildEntryLevels }
     var minLevel by remember(levels.first) { mutableIntStateOf(levels.first) }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)

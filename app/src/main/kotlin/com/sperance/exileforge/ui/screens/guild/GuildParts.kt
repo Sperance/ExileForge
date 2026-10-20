@@ -137,7 +137,7 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
 }
 
 /**
- * Уровень героя для вступления степпером «−»/«+» с шагом 1 в границах [levels] (правила гильдий, `guildEntryLevels`): на краю
+ * Уровень героя для вступления степпером «−»/«+» с шагом 1 в границах [levels] (правила гильдий, `ContentIndex.guildEntryLevels`): на краю
  * кнопка погашена, удержание листает с ускорением. [changed] - значение правлено и не сохранено (точка у подписи).
  */
 @Composable internal fun MinLevelStepper(value: Int, levels: IntRange, enabled: Boolean, changed: Boolean = false, onChange: (Int) -> Unit) {

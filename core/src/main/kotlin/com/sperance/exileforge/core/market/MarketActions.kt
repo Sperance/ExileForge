@@ -43,14 +43,13 @@ class MarketActions(
 
     fun tab(tab: Int) = market { it.copy(tab = tab) }
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
-    fun showOwnLots(show: Boolean) = market { it.copy(showOwnLots = show) }
 
     /**
      * Лоты одного продавца [sellerId] по имени [name] («Лоты игрока» карточки игрока): витрина, суженная до него, с первой
      * страницы; свои лоты при этом не прячутся.
      */
     fun sellerLots(sellerId: String, name: String) {
-        market { it.copy(tab = SHOWCASE_TAB, filter = AuctionFilter(sellerId = sellerId, sellerName = name), showOwnLots = it.showOwnLots || sellerId == heroes.heroId) }
+        market { it.copy(tab = SHOWCASE_TAB, filter = AuctionFilter(sellerId = sellerId, sellerName = name, showOwnLots = it.filter.showOwnLots || sellerId == heroes.heroId)) }
         loadShowcase()
     }
 
@@ -83,7 +82,7 @@ class MarketActions(
     }
 
     /** Фильтр, как его читает сервер: свои лоты убраны, если не просили, названия на языке экрана. */
-    private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
+    private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.filter.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
 
     /**
      * [glance] - площадь Города: без полосы. Ниже уровня аукциона площадь не спрашивает свои лоты вовсе - замок на плитке здания;

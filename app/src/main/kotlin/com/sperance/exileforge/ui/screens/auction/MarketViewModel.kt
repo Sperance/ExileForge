@@ -25,7 +25,6 @@ class MarketViewModel(
 
     fun tab(tab: Int) = actions.tab(tab)
     fun filter(filter: AuctionFilter) = actions.filter(filter)
-    fun showOwnLots(show: Boolean) = actions.showOwnLots(show)
     fun loadShowcase() = actions.loadShowcase()
     fun moreShowcase() = actions.moreShowcase()
     fun loadMyLots(glance: Boolean = false) = actions.loadMyLots(glance)

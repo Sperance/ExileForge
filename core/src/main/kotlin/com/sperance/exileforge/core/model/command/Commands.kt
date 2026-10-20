@@ -120,16 +120,17 @@ data class ApiCapabilities(val routes: Set<String>) {
     val heroSheet: List<String> = emptyList(),
     /**
      * Игрок отметил «Добавить логи сервера»: сервер добавит в Issue его строки лога за 15 минут до отчёта без личного. Только у ошибки
-     * из формы; падению сервер добавляет лог сам.
+     * из формы; падению и зависанию сервер добавляет лог сам.
      */
     val serverLog: Boolean = false,
 )
 
 /**
  * Стек падения клиента и версия сборки ([buildVersion] - `versionName`), в которой оно случилось: по ней сервер берёт карту
- * R8 для расшифровки, а не по версии, что шлёт отчёт. Одинаковые падения склеивает сервер.
+ * R8 для расшифровки, а не по версии, что шлёт отчёт. Одинаковые падения склеивает сервер. [at] - когда оно случилось по часам
+ * устройства (мс): от него сервер берёт лог сервера за 15 минут до падения; 0 - время неизвестно.
  */
-@Serializable data class CrashTrace(val stack: String, val buildVersion: String)
+@Serializable data class CrashTrace(val stack: String, val buildVersion: String, val at: Long = 0)
 
 /** Ответ на приём отчёта: [id] записанного отчёта. Снимков экрана нет. */
 @Serializable data class FiledReport(val id: String)

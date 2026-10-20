@@ -119,7 +119,7 @@ class CrashKeeper(context: Context) :
             fun of(file: File, text: String): KeptCrash? {
                 val stack = text.substringAfter(SPLIT, "").takeIf { it.isNotBlank() } ?: return null
                 val head = text.substringBefore(SPLIT).lines()
-                return KeptCrash(file, file.stamp, file.name.endsWith(SENT), head.getOrNull(1).orEmpty(), CrashTrace(stack, head.first()), head.getOrNull(2)?.toIntOrNull())
+                return KeptCrash(file, file.stamp, file.name.endsWith(SENT), head.getOrNull(1).orEmpty(), CrashTrace(stack, head.first(), file.stamp), head.getOrNull(2)?.toIntOrNull())
             }
         }
     }

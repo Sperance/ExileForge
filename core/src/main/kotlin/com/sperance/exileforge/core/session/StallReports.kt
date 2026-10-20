@@ -42,11 +42,14 @@ class StallReports(
         return due
     }
 
-    /** Причина - первые строки журнала раннера (кто держал полосу и [ORIGIN_FRAMES] кадров, откуда) - прямо в тексте отчёта. */
+    /**
+     * Причина - первые строки журнала раннера (кто держал полосу и [ORIGIN_FRAMES] кадров, откуда) - прямо в тексте отчёта; ключ
+     * контекста `auto` - отчёт собрал клиент сам: сервер ставит метку `auto` и всегда добавляет лог сервера.
+     */
     private fun request(stall: Stall) = BugReportRequest(
         text = (listOf("runner stall: ${stall.key}") + stall.details.lines().filter { it.isNotBlank() }.take(REASON_LINES)).joinToString("\n"),
         screen = SCREEN,
-        context = mapOf("key" to stall.key),
+        context = mapOf("key" to stall.key, "auto" to "true"),
     )
 
     private companion object {

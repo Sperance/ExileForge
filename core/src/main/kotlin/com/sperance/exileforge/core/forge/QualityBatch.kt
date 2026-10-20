@@ -21,11 +21,11 @@ enum class BatchLimit {
 }
 
 /**
- * Пачка сфер качества над целью кузницы - одним запросом, как сервер: путь до потолка [climb] (правило [ForgeTarget.qualityClimb]),
- * сбор золотом [fee] за каждую сферу и что позволяет сумка - [bounds] по каждому пределу. [max] - наибольшая пачка, [limit] - что
- * её держит; [max] 0 - не ляжет ни одна.
+ * Пачка сфер качества над целью кузницы - одним запросом, как сервер: путь до потолка [climb] (правило [ForgeTarget.qualityClimb])
+ * и сколько сфер позволяет каждый предел ([bounds]: потолок, золото на сбор, сумка). [max] - наибольшая пачка, [limit] - что её
+ * держит; [max] 0 - не ляжет ни одна.
  */
-class QualityBatch private constructor(val climb: QualityClimb, val fee: Long, val bounds: Map<BatchLimit, Long>) {
+class QualityBatch private constructor(val climb: QualityClimb, bounds: Map<BatchLimit, Long>) {
     private val least = bounds.entries.minBy { it.value }
 
     val max: Int = least.value.coerceAtLeast(0).toInt()
@@ -34,9 +34,6 @@ class QualityBatch private constructor(val climb: QualityClimb, val fee: Long, v
 
     /** Сколько сфер нужно до потолка. */
     val need: Int get() = climb.orbs
-
-    /** Предел [kind] пачки; у пачки без знамения или без сбора такого предела нет. */
-    operator fun get(kind: BatchLimit): Long? = bounds[kind]
 
     companion object {
         /**
@@ -52,7 +49,7 @@ class QualityBatch private constructor(val climb: QualityClimb, val fee: Long, v
                 put(BatchLimit.ORBS, held(Orb.QUALITY_ORB.name))
                 omen?.let { put(BatchLimit.OMENS, held(it.code)) }
             }
-            return QualityBatch(climb, fee, bounds)
+            return QualityBatch(climb, bounds)
         }
     }
 }

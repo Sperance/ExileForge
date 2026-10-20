@@ -319,6 +319,8 @@
   "common.icon": "Icon",
   "common.item": "Item",
   "common.level_short": "Lv. {0}",
+  "time.days_hours": "{0}d {1}h",
+  "time.hours_minutes": "{0}h {1}m",
   "common.loading": "Loading…",
   "common.name": "Name",
   "common.no_options": "No matching options",

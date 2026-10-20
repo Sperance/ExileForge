@@ -432,8 +432,6 @@
   "crafts.percent": "{0}%",
   "crafts.pick_tool": "Инструменты в тайнике",
   "crafts.ratio": "{0}/{1}",
-  "crafts.section_craft": "Ремесло",
-  "crafts.section_gather": "Добыча",
   "crafts.start": "Начать работу",
   "crafts.starved": "Материалы кончились — работа остановлена",
   "crafts.stock": "{0}: {1} — хватит на {2} {3} · {4}",

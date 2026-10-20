@@ -432,8 +432,6 @@
   "crafts.percent": "{0}%",
   "crafts.pick_tool": "Tools in the stash",
   "crafts.ratio": "{0}/{1}",
-  "crafts.section_craft": "Crafting",
-  "crafts.section_gather": "Gathering",
   "crafts.start": "Start working",
   "crafts.starved": "Materials ran out — the work stopped",
   "crafts.stock": "{0}: {1} — enough for {2} {3} · {4}",

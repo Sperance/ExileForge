@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemFilters
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.LaunchLines
+import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +28,9 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
 
     /** Правка настроек от записанного на устройстве, атомарно в хранилище: на старте поток ещё может держать умолчания, а параллельные правки не затирают друг друга. */
     suspend fun editSettings(edit: GameSettings.() -> GameSettings) = store.editGameSettings { it.edit() }
+
+    /** Скорость начала любого боя (поход, испытания, Разлом): [GameSettings.fightSpeed] среди скоростей [rules]; незнакомая - первая из них. */
+    fun fightSpeed(rules: FightRules): Int = settings.value.fightSpeed.takeIf { it in rules.speeds } ?: rules.speeds.first()
 
     suspend fun saveItemFilter(shelf: ItemShelf, value: ItemFilter) = store.saveItemFilters(itemFilters.value.with(shelf, value))
 

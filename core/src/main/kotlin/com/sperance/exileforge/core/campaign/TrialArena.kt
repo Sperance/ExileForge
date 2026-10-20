@@ -94,6 +94,8 @@ class TrialArena(
     private val onEvent: (TrialEvent) -> Unit,
     /** Часы устройства, мс эпохи: по ним идут часы раша - стена с входа, как её мерит сервер. */
     private val clock: () -> Long = System::currentTimeMillis,
+    /** Скорость боя на входе, дальше её меняет кнопка скорости. */
+    speed: Int = 1,
 ) : Simulation {
     val rules = index.campaign.combat
     private val trials: TrialRules = checkNotNull(index.campaign.trials) { "campaign: no trials" }
@@ -157,7 +159,7 @@ class TrialArena(
 
     /** Листы поверх боя, что его держат (меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
-    private var speed = 1
+    private var speed = speed
     private var reported = 0
     private var fought = 0L
     private var cleared = 0

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.Gavel
@@ -159,6 +160,14 @@ internal enum class SettingsPage(val title: String) {
         ReportRows()
     }
     RowGroup(ui("settings.fight")) {
+        ChoiceRow(
+            Icons.Outlined.FastForward,
+            ui("settings.speed"),
+            settingsModel.speeds,
+            set.fightSpeed,
+            { ui("settings.speed.option", it) },
+            note = ui("settings.speed_note"),
+        ) { change { copy(fightSpeed = it) } }
         ChoiceRow(Icons.Outlined.Whatshot, ui("settings.damage"), DamageNumbers.entries, set.damageNumbers, { ui("settings.damage.${it.name}") }) {
             change { copy(damageNumbers = it) }
         }

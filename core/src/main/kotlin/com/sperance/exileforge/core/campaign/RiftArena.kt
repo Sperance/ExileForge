@@ -92,6 +92,8 @@ class RiftArena(
     private val gear: HeroGear,
     /** Счёт Предначертания забега: перелив маны живёт на весь забег, арены забега делят его. */
     private val fateRun: com.sperance.exileforge.core.campaign.combat.FateRun = com.sperance.exileforge.core.campaign.combat.FateRun(),
+    /** Скорость боя на входе, дальше её меняет кнопка скорости. */
+    speed: Int = 1,
     private val onEnd: (RiftAct.Fight) -> Unit,
 ) : Simulation {
     val combat = index.campaign.combat
@@ -132,7 +134,7 @@ class RiftArena(
 
     /** Листы поверх боя, что его держат (меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
-    private var speed = 1
+    private var speed = speed
     private var elapsed = 0.0
     private var hurt = false
     private var drunk = 0

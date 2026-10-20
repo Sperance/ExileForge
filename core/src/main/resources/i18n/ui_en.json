@@ -3527,6 +3527,8 @@
   "bug.queued": "The report is saved — it goes out once there is a connection",
   "bug.refused": "The report was not accepted: {0}",
   "bug.copy": "Copy the text",
+  "bug.server_log": "Add server logs to the report",
+  "bug.server_log_tip": "Server lines from the 15 minutes before the report, with no personal data — they help find the cause",
   "auth.other_server": "Connected to another server: {0}",
   "auth.server_reset": "Back to the main server",
   "trials.title": "Trials",

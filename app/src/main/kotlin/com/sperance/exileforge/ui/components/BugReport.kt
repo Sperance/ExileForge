@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,10 +22,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
@@ -70,7 +75,8 @@ val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
  * «Мои отчёты» и «Известные» ([onReports]); подсказки «Похожее уже известно» во время набора нет.
  *
  * Только отчёт об ошибке; черновик возвращается с устройства и пишется по мере набора. У администратора сверху - таблетки темы
- * «Ошибка | Улучшение» ([ReportTopic]), черновик у тем общий.
+ * «Ошибка | Улучшение» ([ReportTopic]), черновик у тем общий. Вошедший игрок может отметить «Добавить логи сервера» ([ServerLogConsent]);
+ * отметка не запоминается - у каждого отчёта она снята.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,6 +93,7 @@ fun BugSheet(
     val kind = FeedbackKind.BUG
     var text by remember { mutableStateOf("") }
     var topic by remember { mutableStateOf(ReportTopic.ERROR) }
+    var serverLog by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (text.isEmpty()) text = drafts.read().texts[kind].orEmpty()
     }
@@ -100,7 +107,7 @@ fun BugSheet(
                 state = ButtonState.of(text.isNotBlank()),
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind, topic = topic))
+                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind, topic = topic, serverLog = serverLog))
                     onDismiss()
                 },
             ) { Text(ui("bug.send")) }
@@ -124,6 +131,7 @@ fun BugSheet(
             modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
         )
         if (game.session.signedIn) {
+            ServerLogConsent(serverLog) { serverLog = it }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ReportsTab.entries.forEach { tab ->
                     ForgeButton(onClick = {
@@ -133,6 +141,22 @@ fun BugSheet(
                 }
             }
         }
+    }
+}
+
+/**
+ * Галочка согласия на лог сервера в отчёте ([BugReportRequest.serverLog]): касание всей строки переключает её, ⓘ рядом объясняет,
+ * что уйдёт.
+ */
+@Composable private fun ServerLogConsent(checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).toggleable(checked, role = Role.Checkbox, onValueChange = onChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Checkbox(checked, onCheckedChange = null, colors = CheckboxDefaults.colors(checkedColor = Gold, uncheckedColor = Muted, checkmarkColor = Ink))
+        Text(ui("bug.server_log"), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f, fill = false))
+        InfoMark(ui("bug.server_log"), tip = { Tip("", ui("bug.server_log_tip"), Muted) })
     }
 }
 

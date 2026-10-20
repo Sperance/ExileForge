@@ -61,7 +61,7 @@ class SheetCompletenessTest {
      */
     @Test
     fun every_hero_line_moves_its_summary_row() {
-        val classes = index.classes.classes
+        val classes = index.classes.classes.mapNotNull { index.heroClass(it.code) }
         val references = classes.associate { it.code to Reference(it) }
         val owners = classes.flatMap { heroClass -> heroClass.lines.map { it.code to heroClass.code } }.toMap()
         val rarityLines = index.campaign.rarities.flatMapTo(HashSet()) { rule -> rule.lines.map { it.code } }

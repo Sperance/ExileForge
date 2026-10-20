@@ -255,7 +255,7 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
                     RoleMark(accountRole(game.session.profile?.role))
                     TesterMark(character.tester)
                 }
-                MutedText(heroClass?.let(::classTitle) ?: ui("chars.unknown"), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                Text(heroClass?.let(::classTitle) ?: ui("chars.unknown"), color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (playable) {
                 ForgeIconButton(Icons.Outlined.DeleteOutline, ui("chars.release_do"), onClick = onDelete, kind = ButtonKind.Danger, size = ButtonSize.Small, state = ButtonState.of(!game.busy))

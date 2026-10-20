@@ -8,8 +8,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -282,14 +284,16 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 /**
  * What the content says of a stack under its description: an essence's guaranteed line by kind of item, where it is found and where it goes - работы профессий; закрытые по уровню героя [levels] - серым с нужным уровнем.
  *
- * Обратный указатель всего контента строится раз на контент вне главного потока; до этого карточка не показывает ничего.
+ * Обратный указатель всего контента строится раз на контент вне главного потока; до этого карточка не показывает ничего. Источников - первые
+ * [MAX_SOURCES] с шансом и его единицей, остальные - строкой «ещё N»: касание раскрывает их на месте карточки.
  */
 @Composable private fun StackLore(index: ContentIndex, code: String, levels: Map<String, Int>) {
     val guarantees = remember(index, code) { essenceGuarantees(index, code) }
     val sourceIndex by produceState<Map<String, List<ItemSource>>>(emptyMap(), index) {
         value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
     }
-    val sources = sourceIndex[code].orEmpty().take(MAX_SOURCES)
+    val sources = sourceIndex[code].orEmpty()
+    var allSources by remember(code) { mutableStateOf(false) }
     val useIndex by produceState<Map<String, List<ItemUse>>>(emptyMap(), index) {
         value = withContext(Dispatchers.Default) { itemUseIndex(index) }
     }
@@ -308,11 +312,18 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
     if (sources.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Engraved(ui("bag.sources"))
-            sources.forEach { source ->
+            (if (allSources) sources else sources.take(MAX_SOURCES)).forEach { source ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(source.title(), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                     source.chanceText()?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
                 }
+            }
+            if (!allSources && sources.size > MAX_SOURCES) {
+                MutedText(
+                    ui("bag.sources_more", sources.size - MAX_SOURCES),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.clickable(role = Role.Button) { allSources = true }.padding(vertical = 4.dp),
+                )
             }
         }
     }
@@ -331,5 +342,5 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 /** «Идёт в» показывает столько работ, остальные - числом. */
 private const val MAX_USES = 6
 
-/** A card lists this many sources at most: the first by kind — works, monsters, bosses, chests — say enough. */
+/** Карточка сразу показывает столько источников - первые по виду; остальные - строкой «ещё N», касание раскрывает их на месте. */
 private const val MAX_SOURCES = 5

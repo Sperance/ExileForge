@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.model.fate.FateCard
+import com.sperance.exileforge.rules.content.AdditiveEffect
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
@@ -98,6 +99,14 @@ fun atlasNodeTitle(code: String): String = loc(LocaleKey.atlasNodeName(code))
 fun professionTitle(code: String): String = loc(LocaleKey.professionName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = loc(LocaleKey.jobName(code))
+
+/**
+ * Что даёт добавка работы: строка кузнеца - характеристики её модификатора из [index] («строка: Здоровье»), лишние единицы - «+1 за цикл».
+ */
+fun additiveTitle(effect: AdditiveEffect, index: ContentIndex?): String = when (effect) {
+    is AdditiveEffect.Modifier -> ui("crafts.additive.modifier", index?.modifier(effect.code)?.effects.orEmpty().map { statTitle(it.stat) }.distinct().joinToString(", "))
+    is AdditiveEffect.Yield -> ui("crafts.additive.yield", effect.units)
+}
 
 /** What a choosing work was told to make: the item, the smith's group and attribute, the tool base or the skill of a tier ritual. */
 fun choiceTitle(choice: String): String = locFirst(LocaleKey.itemName(choice), LocaleKey.choiceName(choice), LocaleKey.equipmentName(choice), LocaleKey.skillName(choice))

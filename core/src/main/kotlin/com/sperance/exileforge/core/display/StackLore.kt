@@ -6,7 +6,9 @@ import com.sperance.exileforge.rules.content.Essence
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobRecipes
+import com.sperance.exileforge.rules.content.LootChest
 import com.sperance.exileforge.rules.content.MonsterCode
+import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
@@ -46,12 +48,38 @@ private fun essenceShare(index: ContentIndex, essence: Essence): Double {
     return if (essence.special || tiers < 2) 1.0 else (essence.tier - 1).toDouble() / (tiers - 1)
 }
 
-/** Where a stack comes from, by kind; the order is the order a card lists them in. */
-enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, TRIALS, KEY, MAPS, ABYSS, RUSH, MERCHANT, SALE, FIND }
+/** На что приходится шанс источника: убийство, открытый сундук, удачный цикл работы, награда или задание. */
+enum class ChanceUnit { KILL, CHEST, CYCLE, REWARD, QUEST }
+
+/**
+ * Откуда стопка берётся, по видам; порядок - порядок строк карточки. [per] - на что приходится шанс строки этого вида. Сундук-добыча
+ * ([LOOT_CHEST]) - открытый сундук-стопка, награда задания - [QUEST], сундук забега Разлома - [RIFT].
+ */
+enum class SourceKind(val per: ChanceUnit) {
+    WORK(ChanceUnit.CYCLE),
+    MONSTERS(ChanceUnit.KILL),
+    BOSSES(ChanceUnit.KILL),
+    CHESTS(ChanceUnit.CHEST),
+    LOOT_CHEST(ChanceUnit.CHEST),
+    CORRUPTED(ChanceUnit.KILL),
+    CRYSTALS(ChanceUnit.KILL),
+    VAAL(ChanceUnit.REWARD),
+    TRIALS(ChanceUnit.REWARD),
+    KEY(ChanceUnit.REWARD),
+    MAPS(ChanceUnit.REWARD),
+    ABYSS(ChanceUnit.REWARD),
+    RIFT(ChanceUnit.CHEST),
+    RUSH(ChanceUnit.CHEST),
+    QUEST(ChanceUnit.QUEST),
+    MERCHANT(ChanceUnit.REWARD),
+    SALE(ChanceUnit.REWARD),
+    FIND(ChanceUnit.CYCLE),
+}
 
 /**
  * One way to come by a stack: its [kind], the zone [levels] it is found in, the best [chance] in percent where the
- * content gives one, and for a work what names it — [ref] the profession, [detail] the work.
+ * content gives one, and for a work what names it — [ref] the profession, [detail] the work. У сундука-добычи [levels] - его тиры,
+ * [ref] - вид сундука, [detail] - сундук младшего из тиров, [level] - этот тир.
  */
 data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0)
 
@@ -72,10 +100,15 @@ fun ItemSource.title(): String = when (kind) {
     SourceKind.FIND -> ui("source.FIND", professionTitle(ref), jobTitle(detail))
     SourceKind.KEY -> ui("source.KEY", level, itemTitle(ref))
     SourceKind.SALE -> ui("source.SALE", ref.split(',').joinToString(", ") { ui("stash.rarity_many.$it").lowercase() }, level)
-    else -> levels?.let { ui("source.$kind", if (it.first == it.last) "${it.first}" else "${it.first}–${it.last}") } ?: ui("source.$kind")
+    SourceKind.LOOT_CHEST -> ui("source.LOOT_CHEST", itemTitle(detail), levels?.let(::span).orEmpty())
+    else -> levels?.let { ui("source.$kind", span(it)) } ?: ui("source.$kind")
 }
 
-fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("source.chance", number(it)) }
+/** Промежуток уровней или тиров строки: «12» или «12–30». */
+private fun span(range: IntRange): String = if (range.first == range.last) "${range.first}" else "${range.first}–${range.last}"
+
+/** Шанс строки с единицей её вида: «до 2% за убийство». */
+fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("source.chance", number(it), ui("source.per.${kind.per}")) }
 
 /** Куда идёт стопка: работа [job] профессии [profession] с её уровня [level] берёт [amount] за цикл. */
 data class ItemUse(val profession: String, val job: String, val level: Int, val amount: Long)
@@ -122,10 +155,14 @@ private class SourceIndex(private val index: ContentIndex) {
     /** Печати Атласа - любая награда захода по карте-предмету; осколки - продажа вещей этих редкостей торговцу. */
     fun build(): Map<String, List<ItemSource>> {
         monsters()
+        drops()
         chests()
+        lootChests()
         crystals()
         works()
         trials()
+        quests()
+        rift()
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
@@ -155,8 +192,48 @@ private class SourceIndex(private val index: ContentIndex) {
         }
     }
 
+    /**
+     * Книги и руны с редких монстров и боссов: книга - умения, что открыто не выше уровня зоны с запасом `books.reach`, руна - что
+     * падает не выше него. Какая именно - по весам, шанса у строки нет.
+     */
+    private fun drops() {
+        val levels = index.campaign.zones.map { it.level }
+        val books = index.skills.rules.books
+        val runes = index.skills.rules.progress.runeDrops
+        val dropped = { code: String, open: (Int) -> Boolean, rare: Double, boss: Double ->
+            levels.filter(open).takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }?.let { range ->
+                if (rare > 0) add(code, ItemSource(SourceKind.MONSTERS, range))
+                if (boss > 0) add(code, ItemSource(SourceKind.BOSSES, range))
+            }
+        }
+        index.skills.skills.forEach { skill -> dropped(skill.book, { skill.unlock <= it + books.reach }, books.rare, books.boss) }
+        index.skills.runes.forEach { rune -> dropped(rune.code, { rune.dropLevel <= it }, runes.rare, runes.boss) }
+    }
+
     private fun chests() = index.campaign.zones.forEach { zone ->
         stacks(zone.chestLoot).forEach { (code, chance) -> add(code, ItemSource(SourceKind.CHESTS, zone.level..zone.level, chance)) }
+    }
+
+    /**
+     * Сундуки-добыча ([LootChest]): тир сундука падает с монстров и боссов зон своего тира (не ниже `minLevel`) и из награды испытания
+     * на верхнем уровне тира; открытый - отдаёт стопки таблицы своего тира, стопки `items` наверняка и руны не выше верхнего уровня тира.
+     */
+    private fun lootChests() {
+        val levels = index.campaign.zones.map { it.level }
+        index.campaign.lootChests.forEach { chest ->
+            chest.tiers.forEach { tier ->
+                val code = chest.tierCode(tier)
+                levels.filter { it >= chest.minLevel && LootChest.tierOf(it) == tier }.takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }?.let { range ->
+                    if (chest.dropChance > 0) add(code, ItemSource(SourceKind.MONSTERS, range, chest.dropChance * PERCENT))
+                    if (chest.bossChance + chest.finaleChance > 0) add(code, ItemSource(SourceKind.BOSSES, range, (chest.bossChance + chest.finaleChance) * PERCENT))
+                }
+                chest.trialOdds(LootChest.levelOf(tier)).takeIf { it > 0 }?.let { add(code, ItemSource(SourceKind.TRIALS, chance = it * PERCENT)) }
+                val inside = { item: String, chance: Double? -> add(item, ItemSource(SourceKind.LOOT_CHEST, tier..tier, chance, ref = chest.code, detail = code, level = tier)) }
+                chest.tableOf(tier)?.let { stacks(it) }?.forEach { (item, chance) -> inside(item, chance) }
+                chest.items.forEach { (item, range) -> inside(item, PERCENT.takeIf { range.firstOrNull()?.let { it > 0 } == true }) }
+                if (chest.runeChance > 0) index.skills.runes.filter { it.dropLevel <= LootChest.levelOf(tier) }.forEach { inside(it.code, null) }
+            }
+        }
     }
 
     /** An essence of a tier lies in the crystals of zones of that tier, and of the next one, which sometimes gives one lower; a special one only by a Vaal orb. */
@@ -202,6 +279,28 @@ private class SourceIndex(private val index: ContentIndex) {
                 job.extra.forEach { add(it.item, ItemSource(SourceKind.FIND, chance = it.chance, ref = profession.code, detail = job.code)) }
             }
         }
+    }
+
+    /**
+     * Награда задания: сферы своей редкости - по весам, без шанса; сундук-добыча любого тира - с шансом сундука редкости на долю его веса,
+     * лучший из редкостей.
+     */
+    private fun quests() = index.quests.rarities.forEach { rule ->
+        rule.orbs.forEach { add(it.code, ItemSource(SourceKind.QUEST)) }
+        val weights = rule.chests.sumOf { it.weight }.takeIf { it > 0 } ?: return@forEach
+        rule.chests.forEach { pick ->
+            val chest = index.campaign.lootChests.firstOrNull { it.code == pick.code } ?: return@forEach
+            val chance = rule.chestChance * pick.weight / weights * PERCENT
+            chest.tiers.forEach { add(chest.tierCode(it), ItemSource(SourceKind.QUEST, chance = chance)) }
+        }
+    }
+
+    /** Сундук забега Разлома: сферы его таблицы и таблиц призов недели, стопки сверх сундука со своим шансом и ключ Разлома. */
+    private fun rift() {
+        val rift = index.campaign.trials?.rift ?: return
+        (listOf(rift.chest.orbTable) + rift.prizes.map { it.orbTable }).distinct().forEach { table -> stacks(table).forEach { (code, chance) -> add(code, ItemSource(SourceKind.RIFT, chance = chance)) } }
+        rift.chest.extras.forEach { add(it.item, ItemSource(SourceKind.RIFT, chance = it.chance * PERCENT)) }
+        add(RiftRules.KEY, ItemSource(SourceKind.RIFT, chance = rift.chest.keyChance * PERCENT))
     }
 
     /** The crest and the seal fall from any reward of a run; the rush's key is put together from crests. */
@@ -251,8 +350,11 @@ private class SourceIndex(private val index: ContentIndex) {
         maxOf(a, b)
     }
 
-    /** One line per kind for the zone-wide sources — their levels joined, their best chance — and one per work and shelf. */
-    private fun merge(sources: List<ItemSource>): List<ItemSource> = sources.groupBy { if (it.levels != null) it.kind.name else "${it.kind}:${it.ref}:${it.detail}" }.values
+    /**
+     * One line per kind for the zone-wide sources — their levels joined, their best chance — and one per work and shelf; у сундука-добычи -
+     * строка на вид сундука с его тирами.
+     */
+    private fun merge(sources: List<ItemSource>): List<ItemSource> = sources.groupBy { if (it.levels != null) "${it.kind}:${it.ref}" else "${it.kind}:${it.ref}:${it.detail}" }.values
         .map { same ->
             same.reduce { a, b ->
                 a.copy(
@@ -263,4 +365,8 @@ private class SourceIndex(private val index: ContentIndex) {
             }
         }
         .sortedWith(compareBy({ it.kind.ordinal }, { it.level }))
+
+    private companion object {
+        const val PERCENT = 100.0
+    }
 }

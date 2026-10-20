@@ -118,10 +118,10 @@ private sealed interface AlbumPick {
 }
 
 /**
- * Найденные уникалки: сверху общий счёт «найдено из всех», ниже чипы пулов со счётом; выбранный пул -
+ * Найденные уникалки: сверху общий счёт «найдено из всех», ниже чипы пулов со счётом - только пулов с находками; выбранный пул -
  * плашка с прогрессом и числом ненайденных, под ней найденные с датой первой находки, свежие первыми. Ненайденные не
- * называются - только числом. Чип «Боссы» - список боссов со счётом, только с находками, раскрытый босс показывает свои находки. Нажатие на
- * находку - полная карточка шаблона со вилками строк.
+ * называются - только числом. Чип «Боссы» - список боссов со счётом, только с находками, раскрытый босс показывает свои находки.
+ * Выбранный пул или боссы без находок - выбор «Все». Нажатие на находку - полная карточка шаблона со вилками строк.
  *
  * Печать - наименьший номер копии в мире героя; номера не было - печати нет.
  */
@@ -145,17 +145,23 @@ private sealed interface AlbumPick {
                         return@Column
                     }
                     val bosses = album.bossesFound(known)
+                    val pools = album.pools.filter { it.count(known) > 0 }
+                    val shown = when (val chosen = pick) {
+                        AlbumPick.All -> chosen
+                        is AlbumPick.Pool -> chosen.takeIf { pools.any { it.tag == chosen.tag } } ?: AlbumPick.All
+                        AlbumPick.Bosses -> chosen.takeIf { bosses.isNotEmpty() } ?: AlbumPick.All
+                    }
                     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                PoolChip(ui("common.all"), pick == AlbumPick.All) { pick = AlbumPick.All }
-                                album.pools.forEach { pool ->
-                                    PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), pick == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
+                                PoolChip(ui("common.all"), shown == AlbumPick.All) { pick = AlbumPick.All }
+                                pools.forEach { pool ->
+                                    PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), shown == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
                                 }
-                                if (bosses.isNotEmpty()) PoolChip(ui("history.bosses"), pick == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
+                                if (bosses.isNotEmpty()) PoolChip(ui("history.bosses"), shown == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
                             }
                         }
-                        when (val chosen = pick) {
+                        when (val chosen = shown) {
                             AlbumPick.All -> {
                                 val all = album.found(known)
                                 if (all.isEmpty()) item { InfoCard(ui("history.empty"), ui("history.empty_hint")) }
@@ -163,7 +169,7 @@ private sealed interface AlbumPick {
                             }
 
                             is AlbumPick.Pool -> {
-                                val pool = album.pools.firstOrNull { it.tag == chosen.tag } ?: return@LazyColumn
+                                val pool = pools.first { it.tag == chosen.tag }
                                 item { PoolPlate(pool, known) }
                                 items(pool.found(known), key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
                             }

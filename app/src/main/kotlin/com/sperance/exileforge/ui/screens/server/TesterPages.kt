@@ -47,7 +47,7 @@ import org.koin.compose.viewmodel.koinViewModel
         InfoCard(ui("tester.no_hero"), ui("tester.no_hero_hint"))
         return
     }
-    MutedText(ui("tester.for_hero", account.heroName))
+    TrailData(account.heroName, Tip("", ui("tester.for_hero", account.heroName), Muted))
     ForgePanel {
         Engraved(ui("tester.currency"))
         NumberGrant(ui("tester.gold"), "1000000", account.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }

@@ -267,24 +267,29 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-/** A row of the settings: the glyph, the name with a line under it, and what sets it on the right; [onClick] - касание всей строки. */
+/**
+ * A row of the settings: the glyph, the name with a line under it, and what sets it on the right; [onClick] - касание всей строки.
+ * Краски - [LocalMenuPalette]: в меню забега - краски режима.
+ */
 @Composable internal fun SettingRow(icon: ImageVector, label: String, note: String? = null, onClick: (() -> Unit)? = null, trailing: @Composable RowScope.() -> Unit) {
+    val palette = LocalMenuPalette.current
     Row(
         Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier).padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, null, tint = Gold, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = palette.accent, modifier = Modifier.size(20.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            Text(label, color = palette.text, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            note?.let { Text(it, color = palette.muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
         }
         trailing()
     }
 }
 
 @Composable internal fun SwitchRow(icon: ImageVector, label: String, note: String?, on: Boolean, onChange: (Boolean) -> Unit) = SettingRow(icon, label, note) {
-    Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Gold, checkedThumbColor = Parchment, uncheckedTrackColor = PanelRaised))
+    val palette = LocalMenuPalette.current
+    Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = palette.accent, checkedThumbColor = palette.text, uncheckedTrackColor = palette.well))
 }
 
 /** A choice of a few: the options side by side as one segmented strip, the chosen one lit. */
@@ -298,16 +303,17 @@ internal enum class SettingsPage(val title: String) {
     onChoose: (T) -> Unit,
 ) = SettingRow(icon, label, note) {
     val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.clip(shape).background(PanelRaised, shape).padding(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    val palette = LocalMenuPalette.current
+    Row(Modifier.clip(shape).background(palette.well, shape).padding(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         options.forEach { option ->
             val on = option == chosen
             Text(
                 title(option),
-                color = if (on) Ink else Muted,
+                color = if (on) palette.onAccent else palette.muted,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
-                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (on) Gold else PanelRaised).clickable { onChoose(option) }
+                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(if (on) palette.accent else palette.well).clickable { onChoose(option) }
                     .padding(horizontal = 8.dp, vertical = 5.dp),
             )
         }

@@ -263,6 +263,13 @@ fun clock(millis: Long): String {
     return if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60) else "%d:%02d".format(seconds / 60, seconds % 60)
 }
 
+/** Долгий срок до конца: «3 д 14 ч», меньше суток - «14 ч 05 мин». */
+fun timeLeft(millis: Long): String {
+    val minutes = (millis / 60_000).coerceAtLeast(0)
+    val hours = minutes / 60
+    return if (hours >= 24) ui("time.days_hours", hours / 24, hours % 24) else ui("time.hours_minutes", hours, "%02d".format(minutes % 60))
+}
+
 /**
  * Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14" reads «Требуется 30 силы»:
  * the hero's own figure is on the hero screen already, so only the need is told.

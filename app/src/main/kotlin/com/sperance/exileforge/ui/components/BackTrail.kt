@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,6 +25,13 @@ import com.sperance.exileforge.ui.theme.Rune
 
 /** Высота строки цепочки. */
 private val TRAIL_HEIGHT = 40.dp
+
+/**
+ * Краски строки цепочки: стрелка [arrow], звенья выше [link], где игрок сейчас [here], данные экрана [data]. По умолчанию - краски
+ * Кузницы; экран со своей палитрой (Разлом) даёт свои.
+ */
+@Immutable
+data class TrailColors(val arrow: Color = Gold, val link: Color = Muted, val here: Color = Parchment, val data: Color = Rune)
 
 /**
  * Звено цепочки: подпись уровня (вложенный уровень может её уточнить - [TrailTitle]), данные экрана справа в строке ([TrailData]) и как
@@ -52,15 +60,16 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 /**
  * Хозяин цепочки «назад» - экран-хаб ([root] - его имя: «Город», «Развитие», «Поход»): одна строка ~40dp
  * «← Город › Гильдия [TAG] › Состав» над [content]. Вложенные уровни встают в неё сами ([TrailLevel]); пока их нет - строки нет.
- * Стрелка и системный «назад» - на уровень вверх, нажатие звена - прыжок к нему (уровни глубже закрываются по очереди).
+ * Стрелка и системный «назад» - на уровень вверх, нажатие звена - прыжок к нему (уровни глубже закрываются по очереди). [colors] - краски
+ * строки.
  */
-@Composable fun BackTrailHost(root: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+@Composable fun BackTrailHost(root: String, modifier: Modifier = Modifier, colors: TrailColors = TrailColors(), content: @Composable () -> Unit) {
     val state = remember { TrailState() }
     val levels = state.levels.toSortedMap().values.toList()
     val up = levels.lastOrNull()
     BackHandler(enabled = up != null) { up?.back?.value?.invoke() }
     Column(modifier.fillMaxSize()) {
-        if (up != null) BackTrail(root, levels)
+        if (up != null) BackTrail(root, levels, colors)
         Box(Modifier.weight(1f).fillMaxWidth()) {
             CompositionLocalProvider(LocalTrail provides TrailScope(state, 0), content = content)
         }
@@ -100,8 +109,9 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 
 /**
  * Данные экрана справа в строке цепочки, пока вызов на экране: Гримуар - «Ур. 25 · ✦ 215 · ⛓ 30%», уникальные - «34 / 210». Своей
- * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда. [tip] - пояснение данных по касанию (срок сброса
- * доски заданий и как задания засчитываются); нет - данные не нажимаются.
+ * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда; перевод строки в [data] ставит данные столбиком
+ * (срок над уровнем у Разлома). [tip] - пояснение данных по касанию (срок сброса доски заданий и как задания засчитываются); нет -
+ * данные не нажимаются.
  */
 @Composable fun TrailData(data: String, tip: Tip? = null) {
     val scope = LocalTrail.current ?: return
@@ -122,20 +132,20 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
  *
  * Прыжок к звену (0 - корень): уровни глубже закрываются, начиная с самого глубокого.
  */
-@Composable private fun BackTrail(root: String, levels: List<TrailEntry>) {
+@Composable private fun BackTrail(root: String, levels: List<TrailEntry>, colors: TrailColors) {
     val jump = { keep: Int -> levels.drop(keep).asReversed().forEach { it.back.value() } }
     Row(Modifier.fillMaxWidth().height(TRAIL_HEIGHT).padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, accent = Gold)
+        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, accent = colors.arrow)
         val data = levels.last().data
         val tip = levels.last().tip
         Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.shown }
             names.forEachIndexed { i, name ->
-                if (i > 0) Text(" › ", color = Muted, style = MaterialTheme.typography.labelLarge)
+                if (i > 0) Text(" › ", color = colors.link, style = MaterialTheme.typography.labelLarge)
                 val here = i == names.lastIndex
                 Text(
                     name,
-                    color = if (here) Parchment else Muted,
+                    color = if (here) colors.here else colors.link,
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -147,9 +157,9 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
             Tipped(tip?.let { t -> { t } }, Modifier.weight(1f).fillMaxHeight().padding(start = 8.dp), contentAlignment = Alignment.CenterEnd) {
                 Text(
                     it,
-                    color = Rune,
+                    color = colors.data,
                     style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
-                    maxLines = 1,
+                    maxLines = it.lines().size,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth(),

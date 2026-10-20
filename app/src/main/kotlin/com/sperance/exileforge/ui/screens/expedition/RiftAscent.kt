@@ -268,13 +268,28 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
             Text(
                 it.uppercase(),
                 color = RiftColors.Dim,
-                style = relicName(9),
+                style = relicName(11),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 modifier = Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).width(NODE_BOX * 2.4f),
             )
         }
     }
+}
+
+/** Знак вида узла вне карты (лист узла): шестигранник-руна цвета вида со знаком внутри, без дыхания. */
+@Composable internal fun NodeSeal(kind: RiftNodeKind, modifier: Modifier = Modifier) {
+    val tint = kind.color()
+    Box(
+        modifier.drawWithCache {
+            val hex = hexagon(size.center, size.minDimension * .45f)
+            onDrawBehind {
+                drawPath(hex, RiftColors.Ground2)
+                drawPath(hex, tint, style = Stroke(1.5.dp.toPx()))
+            }
+        },
+        contentAlignment = Alignment.Center,
+    ) { Icon(kind.glyph(), null, tint = tint, modifier = Modifier.fillMaxSize(.5f)) }
 }
 
 /** Шестигранник радиуса [r] вокруг [c], вершиной вбок. */

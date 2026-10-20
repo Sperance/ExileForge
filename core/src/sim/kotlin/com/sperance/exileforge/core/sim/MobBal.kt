@@ -1500,7 +1500,7 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
 
         /**
          * Сводка `-Pmode=trials`: доля зачисток раша по ступени против [RushTarget], доля героев, дошедших до этажа цели башни,
-         * и награда испытаний в минуту долей заходов в минуту ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта; у раша ещё
+         * и награда испытаний в минуту долей заходов в минуту и в цели ли она ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта; у раша ещё
          * доля зачисток, что уложились в `rush.seconds` на босса (бонус скорости).
          */
         fun summary(index: ContentIndex, rows: List<Row>): List<Row> {
@@ -1512,14 +1512,14 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
                 val pay = list.sumOf { it.values[7] as Double } / (list.sumOf { it.values[8] as Double } / 60) / perMinute
                 val cleared = list.filter { it.values[6] == true }
                 val fast = if (cleared.isEmpty()) 0.0 else cleared.count { it.values[9] == true }.toDouble() / cleared.size
-                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, fast))
+                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, RewardTarget.rush(pay), fast))
             }
             val farms = rows.filter { it.values[0] == "farm" }.groupBy { it.values[1] as Int }
             val tower = rows.filter { it.values[0] == "tower" }.groupBy { it.values[1] as Int }.toSortedMap().map { (level, list) ->
                 val reached = list.count { it.values[5] == true }.toDouble() / list.size
                 val farm = farms[level].orEmpty()
                 val pay = farm.sumOf { it.values[6] as Double } / (farm.sumOf { it.values[7] as Double } / 60) / perMinute
-                Row(listOf("towersum", level, reached, TowerTarget.SHARE, pay))
+                Row(listOf("towersum", level, reached, TowerTarget.SHARE, pay, RewardTarget.tower(pay)))
             }
             return rush + tower
         }
@@ -1544,7 +1544,17 @@ object TowerTarget {
     fun floor(level: Int): Int = (level - BELOW).coerceAtLeast(1)
 }
 
-/** Награда испытаний (RULES «Общее», цели баланса): опыт и золото в минуту - не меньше [SHARE] обычного захода своего уровня в минуту. */
+/**
+ * Награда испытаний (RULES «Общее», цели баланса): опыт и золото в минуту - не меньше [SHARE] обычного захода своего уровня в минуту,
+ * у ступени раша - и не больше [RUSH_CEILING].
+ */
 object RewardTarget {
     const val SHARE = 1.2
+    const val RUSH_CEILING = 1.5
+
+    /** Награда ступени раша в минуту долей захода в минуту [pay] - в цели. */
+    fun rush(pay: Double): Boolean = pay in SHARE..RUSH_CEILING
+
+    /** Награда фарма башни в минуту долей захода в минуту [pay] - в цели. */
+    fun tower(pay: Double): Boolean = pay >= SHARE
 }

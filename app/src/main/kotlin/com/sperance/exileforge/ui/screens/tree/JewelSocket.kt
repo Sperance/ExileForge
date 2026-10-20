@@ -30,8 +30,8 @@ import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.requirementReason
-import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
 import com.sperance.exileforge.core.sheet.socketing

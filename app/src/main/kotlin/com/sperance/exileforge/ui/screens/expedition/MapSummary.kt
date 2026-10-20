@@ -59,6 +59,7 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.SaleMarked
 import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellLine
 import com.sperance.exileforge.ui.components.SellPick
@@ -332,7 +333,10 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
             val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
             when {
                 lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, onClick = toggle) }
-                lot != null -> PieceLine(piece, presence, onLongClick = { onSelect(piece.id) }) { onItem(piece) }
+                lot != null -> {
+                    val marked = lot.chosen(piece.id)
+                    SaleMarked(marked) { PieceLine(piece, presence, selected = marked, onLongClick = { onSelect(piece.id) }) { onItem(piece) } }
+                }
                 else -> PieceLine(piece, presence) { onItem(piece) }
             }
         }

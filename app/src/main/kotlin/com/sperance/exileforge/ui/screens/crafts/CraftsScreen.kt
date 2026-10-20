@@ -99,8 +99,9 @@ import kotlin.math.ceil
  * server behind it, and runs the cycle's bar smoothly on the device's clock set by the server's.
  *
  * Экран с ремёслами спрашивает снова тихо; досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]) и только если прошлый ответ старше срока
- * свежести. Разделы плиток считаются раз на ответ. Вкладка нажата снова - окно профессии закрывается, плитки наверх. Досчёт после
- * отлучки, ещё не показанный, открывается листом «Пока вас не было» ([AwaySheet]) поверх плиток и окна профессии.
+ * свежести. Плитки идут одной сеткой в порядке сервера, ряды считаются раз на ответ. Вкладка нажата снова - окно профессии
+ * закрывается, плитки наверх. Досчёт после отлучки, ещё не показанный, открывается листом «Пока вас не было» ([AwaySheet]) поверх
+ * плиток и окна профессии.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,10 +123,7 @@ fun CraftsScreen() {
     val crafts = held.state
     val offset = held.offset
     val list = rememberLazyListState()
-    val sections = remember(crafts?.professions) {
-        val (crafting, gathering) = crafts?.professions.orEmpty().partition { it.crafting }
-        listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.map { (title, group) -> title to group.chunked(TILES) }
-    }
+    val rows = remember(crafts?.professions) { crafts?.professions.orEmpty().chunked(TILES) }
     OnReselect(TAB_CRAFTS) {
         vm.openProfession("")
         list.animateScrollToItem(0)
@@ -143,13 +141,10 @@ fun CraftsScreen() {
                 return@LazyColumn
             }
             item { WorkPlaque(game, vm, held, offset) { CraftsGlossaryButton(crafts.rules, note = true) } }
-            sections.forEach { (title, rows) ->
-                item { SectionRule(ui(title)) }
-                items(rows, key = { it.first().code }) { row ->
-                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
-                        repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
-                    }
+            items(rows, key = { it.first().code }) { row ->
+                Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
+                    repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

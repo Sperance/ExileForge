@@ -139,9 +139,6 @@ internal val GameUi.heldWork: ItemInstance? get() = hero?.crafts?.work?.held
 /** Имя идущей работы [work]: у работы над вещью - с именем этой вещи, иначе с выбранным вариантом. */
 internal fun workTitle(game: GameUi, work: WorkView): String = game.heldWork?.let { held -> "${jobTitle(work.job)} · ${game.view(held)?.title ?: equipmentTitle(held.template)}" } ?: workTitle(work)
 
-/** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
-val ProfessionView.crafting get() = jobs.any { it.inputs.isNotEmpty() }
-
 /**
  * Сколько сумка ещё держит работу: вход, что кончится первым, сколько его в сумке и на сколько циклов хватит - каждая примесь,
  * с которой работу начали, тоже уходит каждый цикл. Пара - код этого входа и строка; работа без входа - null. Только показ:

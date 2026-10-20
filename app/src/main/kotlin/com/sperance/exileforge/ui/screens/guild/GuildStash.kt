@@ -54,6 +54,7 @@ import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
+import com.sperance.exileforge.ui.components.ChipSize
 import com.sperance.exileforge.ui.components.ChoiceChips
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
@@ -72,12 +73,12 @@ import com.sperance.exileforge.ui.components.LengthCounter
 import com.sperance.exileforge.ui.components.LevelRangeHeader
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PropertyRow
-import com.sperance.exileforge.ui.components.RarityTiles
+import com.sperance.exileforge.ui.components.RarityChoice
 import com.sperance.exileforge.ui.components.SearchBar
 import com.sperance.exileforge.ui.components.SearchFilter
 import com.sperance.exileforge.ui.components.SheetBody
-import com.sperance.exileforge.ui.components.chips
 import com.sperance.exileforge.ui.components.inputs
+import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -134,8 +135,8 @@ import com.sperance.exileforge.ui.theme.rarityColor
                 if (configures && ranks.isNotEmpty()) {
                     val members = guilds.mine?.guild?.members
                     val options = remember(ranks, members, game.lang) { PickOptions.ranks(ranks, members) }
-                    ForgePicker(ui("guild.stash_rank_set"), minRank.toString(), options, enabled = !game.busy, hint = ui("guild.stash_rank_hint")) {
-                        vm.tabRank(tab, it.toInt())
+                    ForgePicker(ui("guild.stash_rank_set"), minRank, options, enabled = !game.busy, hint = ui("guild.stash_rank_hint")) { rank ->
+                        rank?.let { vm.tabRank(tab, it) }
                     }
                 }
                 if (configures) {
@@ -195,9 +196,10 @@ import com.sperance.exileforge.ui.theme.rarityColor
     var sheet by remember { mutableStateOf(false) }
     SearchBar(
         filter.title,
-        { onFilter(filter.copy(title = it.take(game.inputs.search))) },
+        { onFilter(filter.copy(title = it)) },
         ui("guild.stash_search"),
-        filter = SearchFilter(filter.narrowings(game.lang).chips(onFilter), onOpen = { sheet = true }, onReset = { onFilter(filter.cleared()) }),
+        filter = SearchFilter(rememberChips(filter.narrowings(game.lang), onFilter), onOpen = { sheet = true }, onReset = { onFilter(filter.cleared()) }),
+        maxLength = game.inputs.search,
     )
     if (sheet) {
         StashFilterSheet(game, filter, onDismiss = { sheet = false }) {
@@ -229,7 +231,7 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
             ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
         },
         AccordionGroup("rarity", ui("filter.rarity"), draft.rarity.takeIf { it.isNotBlank() }?.let { rarityTitle(it, game.lang) } ?: any) {
-            RarityTiles(Rarity.entries, { it.name == draft.rarity }) { draft = draft.copy(rarity = if (draft.rarity == it.name) "" else it.name) }
+            RarityChoice(Rarity.entries, { it?.name == draft.rarity }, { picked -> draft = draft.copy(rarity = picked?.name?.takeIf { it != draft.rarity }.orEmpty()) }, mode = ChipMode.Filter, size = ChipSize.Dense)
         },
     )
     FilterAccordionSheet(

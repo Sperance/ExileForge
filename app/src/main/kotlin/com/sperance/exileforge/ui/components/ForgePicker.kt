@@ -78,15 +78,16 @@ import kotlin.math.roundToInt
  * короткое подназвание ([PickOption.chipLine]), шеврон; ничего не выбрано - «Выбрать». Касание открывает нижнюю шторку: шапка - [label],
  * пояснение [hint] и, с [PickList.SEARCH_FROM] вариантов, их число и плотный поиск, закреплённые над списком; список - карточки-строки
  * [options] по группам с заголовками. Выбор варианта закрывает шторку и отдаёт его ключ в [onPick]; [value] - ключ выбранного сейчас.
+ * Ключ - типа вызывающего [K]: «любое» - вариант с ключом null; вызывающий строку не разбирает.
  */
-@Composable fun ForgePicker(
+@Composable fun <K> ForgePicker(
     label: String,
-    value: String,
-    options: List<PickOption>,
+    value: K?,
+    options: List<PickOption<K>>,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     hint: String? = null,
-    onPick: (String) -> Unit,
+    onPick: (K?) -> Unit,
 ) {
     val list = remember(options) { PickList(options) }
     var open by remember { mutableStateOf(false) }
@@ -121,9 +122,12 @@ import kotlin.math.roundToInt
     }
 }
 
-/** Шторка выбора: шапка с поиском закреплена, ниже - группы карточек-строк; при открытии список стоит на выбранном [value]. */
+/**
+ * Шторка выбора: шапка с поиском (общая строка [SearchBar]) закреплена, ниже - группы карточек-строк; при открытии список стоит на
+ * выбранном [value].
+ */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun PickSheet(title: String, hint: String?, list: PickList, value: String, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+@Composable private fun <K> PickSheet(title: String, hint: String?, list: PickList<K>, value: K?, onDismiss: () -> Unit, onPick: (K?) -> Unit) {
     var query by remember { mutableStateOf("") }
     val sections = remember(list, query) { list.sections(query) }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = remember(list, value) { list.row(value) })
@@ -136,15 +140,7 @@ import kotlin.math.roundToInt
                     if (list.searchable) Text(list.options.size.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
                 }
                 hint?.let { MutedText(it) }
-                if (list.searchable) {
-                    CompactSearchField(
-                        query,
-                        { query = it.take(DefaultInputs.search) },
-                        ui("common.find_option"),
-                        Modifier.fillMaxWidth(),
-                        onClear = if (query.isEmpty()) null else ({ query = "" }),
-                    )
-                }
+                if (list.searchable) SearchBar(query, { query = it }, ui("common.find_option"))
             }
         },
     ) {
@@ -159,7 +155,7 @@ import kotlin.math.roundToInt
             ) {
                 sections.forEach { section ->
                     section.title?.let { group -> stickyHeader(key = "group:$group") { GroupHead(group, section.options.size) } }
-                    items(section.options, key = { it.key }) { option -> PickRow(option, option.key == value) { onPick(option.key) } }
+                    items(section.options, key = { option -> option.key?.let { "key:$it" } ?: ANY_ROW }) { option -> PickRow(option, option.key == value) { onPick(option.key) } }
                 }
             }
         }
@@ -170,7 +166,7 @@ import kotlin.math.roundToInt
  * Карточка-строка варианта: полоса цвета [PickOption.accent] слева, знак, имя и подназвание (переносятся целиком), данные ровной
  * колонкой справа. Выбранный сейчас ([current]) - в золотой рамке на подсвеченном фоне и с пометкой «Сейчас».
  */
-@Composable private fun PickRow(option: PickOption, current: Boolean, onPick: () -> Unit) {
+@Composable private fun PickRow(option: PickOption<*>, current: Boolean, onPick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val accent = option.accent.paint()
     Row(
@@ -196,7 +192,7 @@ import kotlin.math.roundToInt
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.weight(1f, fill = false),
                 )
-                if (current) SummaryChip(ui("picker.now"), Gold)
+                if (current) TagChip(ui("picker.now"), Gold)
             }
             option.subtitle?.let { Text(it, color = if (current) Quiet else Muted, style = MaterialTheme.typography.bodySmall) }
         }
@@ -252,6 +248,9 @@ private val Ladder = listOf(Quiet, Rune, Gold, Boon, rarityColor("UNIQUE"))
 
 /** Цвета групп по кругу. */
 private val Bands = listOf(ShieldCyan, Crafted, Brass, Vital, Elder, Ember, Rune)
+
+/** Ключ строки варианта «любое» (ключ null) в списке шторки. */
+private const val ANY_ROW = "any"
 
 /** Ширина цветной полосы карточки-строки. */
 private val BarWidth = 5.dp

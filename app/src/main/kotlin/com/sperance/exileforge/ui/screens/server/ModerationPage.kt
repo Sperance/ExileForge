@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.admin.ModerationFilters
 import com.sperance.exileforge.core.admin.ModerationTab
@@ -79,7 +78,7 @@ import org.koin.compose.viewmodel.koinViewModel
         ui("moderation.search"),
         onSearch = { vm.load(0) },
         filter = SearchFilter(
-            state.filters.narrowings(account.index).chips(vm::filter),
+            rememberChips(state.filters.narrowings(account.lang, account.index), vm::filter),
             onOpen = { filtering = true },
             onReset = { vm.filter(ModerationFilters.DEFAULT) },
             enabled = !account.busy,
@@ -130,46 +129,32 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Лист «Фильтры»: порядок сегментами, дары - поиск и сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор -
- * черновик листа: в список он уходит по «Показать» ([onApply]); «Сбросить» в подвале сразу применяет обычный отбор и закрывает лист.
+ * Лист «Фильтры» - общая шторка-«Аккордеон» ([FilterAccordionSheet]): порядок фишками, дар - фишками с поиском по дарам
+ * ([SearchChoice]: «Все дары» и «Без дара» первыми, дары контента по имени). Выбор - черновик листа: в список он уходит по «Показать»
+ * ([onApply]); «Сбросить» сразу применяет обычный отбор и закрывает лист.
  */
 @Composable private fun FiltersSheet(account: AccountUi, current: ModerationFilters, onDismiss: () -> Unit, onApply: (ModerationFilters) -> Unit) {
     var draft by remember(current) { mutableStateOf(current) }
-    var query by remember { mutableStateOf("") }
-    val resettable = draft != ModerationFilters.DEFAULT || current != ModerationFilters.DEFAULT
-    val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
-    val options = remember(fates, query) {
-        val found = fates.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }.map { it.title to ModerationFate.Chosen(it.code) }
-        val fixed = listOf(ui("moderation.fate.all") to ModerationFate.All, ui("moderation.fate.none") to ModerationFate.Fateless)
-        (if (query.isBlank()) fixed else emptyList()) + found
-    }
-    ForgeSheet(
-        onDismissRequest = onDismiss,
-        body = SheetBody.Scroll(spacing = 8.dp),
-        footer = {
-            ForgeButton(onClick = { onApply(ModerationFilters.DEFAULT) }, state = ButtonState.of(resettable), modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("moderation.filters.reset")) }
-            ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
-        },
-    ) {
-        Text(ui("moderation.filters"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-        SheetLabel(ui("moderation.filters.sort"))
-        PillTabs(
-            ModerationSort.entries.map { ui("moderation.sort_short.${it.name}") },
-            draft.sort.ordinal,
-            { draft = draft.copy(sort = ModerationSort.entries[it]) },
-            segmented = true,
-        )
-        SheetLabel(ui("moderation.fate.title"))
-        SearchBar(query, { query = it.take(account.inputs.search) }, ui("moderation.filters.fate_search"))
-        FateGrid(options) { (title, fate) ->
-            FateOption(title, mark = fate is ModerationFate.Chosen, selected = draft.fate == fate) { draft = draft.copy(fate = fate) }
-        }
-        if (options.isEmpty()) MutedText(ui("moderation.none"))
-    }
+    val fixed = remember(account.lang) { ModerationFilters.fixedFates(account.lang) }
+    val fates = remember(account.index, account.lang) { ModerationFilters.fates(account.index) }
+    val fateTitle = (fixed + fates).firstOrNull { it.key == draft.fate }?.title ?: ui("moderation.fate.all")
+    FilterAccordionSheet(
+        groups = listOf(
+            AccordionGroup("sort", ui("moderation.filters.sort"), ui("moderation.sort_short.${draft.sort.name}")) {
+                ChoiceChips(ModerationSort.entries, { it == draft.sort }, { ui("moderation.sort_short.${it.name}") }) { draft = draft.copy(sort = it) }
+            },
+            AccordionGroup("fate", ui("moderation.fate.title"), fateTitle) {
+                SearchChoice(fates, draft.fate, ui("moderation.filters.fate_search"), fixed) { picked -> picked?.let { draft = draft.copy(fate = it) } }
+            },
+        ),
+        switches = emptyList(),
+        show = ui("common.show"),
+        resettable = draft != ModerationFilters.DEFAULT || current != ModerationFilters.DEFAULT,
+        onReset = { onApply(ModerationFilters.DEFAULT) },
+        onShow = { onApply(draft) },
+        onDismiss = onDismiss,
+    )
 }
-
-/** Подпись раздела листа фильтров: мелко, заглавными, приглушённо. */
-@Composable private fun SheetLabel(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
 
 /** Плитка дара в сетке листа фильтров и смены дара: выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
 @Composable internal fun FateOption(title: String, mark: Boolean, selected: Boolean, onClick: () -> Unit) {

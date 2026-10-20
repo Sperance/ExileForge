@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.PickList
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
@@ -79,14 +81,9 @@ import kotlin.math.sin
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
 @Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
-    val matches = remember(nodes, rawQuery, game.lang) {
-        val query = rawQuery.trim()
-        if (query.isBlank()) {
-            emptyList()
-        } else {
-            nodes.filter { nodeTitle(it.code).contains(query, true) || it.code.contains(query, true) }.take(8)
-        }
-    }
+    val list = remember(nodes, game.lang) { PickList(PickOptions.nodes(nodes)) }
+    val byCode = remember(nodes) { nodes.associateBy { it.code } }
+    val matches = remember(list, rawQuery) { if (rawQuery.isBlank()) emptyList() else list.found(rawQuery).take(FOUND_SHOWN).mapNotNull { option -> option.key?.let { byCode[it] } } }
     if (rawQuery.isBlank()) return
     ForgePanel {
         Engraved(ui("tree.find_node"))
@@ -113,7 +110,7 @@ import kotlin.math.sin
 internal fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, tag: String?, onTag: (String?) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Engraved(ui("tree.search_filters"))
-        SearchBar(query, { onQuery(it.take(DefaultInputs.search)) }, ui("tree.search_hint"), found = found)
+        SearchBar(query, onQuery, ui("tree.search_hint"), found = found)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TREE_TAGS.forEach { code ->
                 ForgeChip(ui("tree.tag.$code"), tag == code, { onTag(if (tag == code) null else code) }, mode = ChipMode.Choice)
@@ -129,6 +126,9 @@ internal fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, 
         }
     }
 }
+
+/** Сколько найденных узлов показывает поиск древа. */
+private const val FOUND_SHOWN = 8
 
 /** The tags the tree's filter offers: the ones its lines carry most. */
 internal val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")

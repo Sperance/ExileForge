@@ -84,7 +84,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
     val search = remember(query) { ReportSearch(query) }
     val found = feedback.reports.filter { search.matches(it.report.text, it.report.issue, author = it.login) }
-    SearchBar(query, { query = it.take(SEARCH) }, ui("feedback.admin.search"))
+    SearchBar(query, { query = it }, ui("feedback.admin.search"), maxLength = SEARCH)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         Queue.entries.forEach { q ->
             CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {
@@ -372,6 +372,9 @@ private const val REASON = 400
 private const val NOTE = 2000
 private const val SEARCH = 60
 
+/** Редкости вещи-вложения письма на выбор. */
+private val MAIL_RARITIES = listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE)
+
 /**
  * Ведение Issue из игры: слово модерации (уходит комментарием) и действие - ответить, закрыть
  * исправленным, отказом или дублем (с номером оригинала). Судьба приходит из GitHub сразу.
@@ -472,7 +475,7 @@ private const val DUPLICATE_DIGITS = 6
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
-        var item by remember { mutableStateOf("") }
+        var item by remember { mutableStateOf<String?>(null) }
         var amount by remember { mutableStateOf("1") }
         val itemOptions = remember(index, account.lang) { PickOptions.items(index) }
         ForgePicker(ui("tester.item"), item, itemOptions, enabled = !account.busy) { item = it }
@@ -485,21 +488,16 @@ private const val DUPLICATE_DIGITS = 6
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
             )
-            ForgeButton(state = ButtonState.of(item.isNotBlank() && (amount.toLongOrNull() ?: 0) > 0), onClick = { items[item] = (items[item] ?: 0) + amount.toLong() }, kind = ButtonKind.Secondary) {
+            ForgeButton(state = ButtonState.of(item != null && (amount.toLongOrNull() ?: 0) > 0), onClick = { item?.let { code -> items[code] = (items[code] ?: 0) + amount.toLong() } }, kind = ButtonKind.Secondary) {
                 Text(ui("mail.add"))
             }
         }
-        var template by remember { mutableStateOf("") }
+        var template by remember { mutableStateOf<String?>(null) }
         var rarity by remember { mutableStateOf<Rarity?>(null) }
         val templates = remember(index, account.lang) { PickOptions.templates(index) }
         ForgePicker(ui("mail.template"), template, templates, enabled = !account.busy) { template = it }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ForgeChip(ui("mail.template_rarity"), rarity == null, { rarity = null }, mode = ChipMode.Choice)
-            listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
-                ForgeChip(ui("enum.rarity.${r.name}"), rarity == r, { rarity = r }, mode = ChipMode.Choice)
-            }
-        }
-        ForgeButton(state = ButtonState.of(template.isNotBlank()), onClick = { equipment += MailEquipment(template, rarity) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
+        RarityChoice(MAIL_RARITIES, { it == rarity }, { rarity = it }, any = ui("mail.template_rarity"))
+        ForgeButton(state = ButtonState.of(template != null), onClick = { template?.let { equipment += MailEquipment(it, rarity) } }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
         items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
         equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }

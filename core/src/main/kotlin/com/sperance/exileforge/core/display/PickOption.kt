@@ -5,12 +5,13 @@ import com.sperance.exileforge.rules.content.Rarity
 /**
  * Вариант общего выбора из списка - чистые данные, без отрисовки.
  *
- * [key] уходит вызывающему при выборе, [title] - имя варианта, [subtitle] - подназвание под именем в шторке (переносится целиком),
- * [brief] - короткое подназвание под значением на чипе (нет - на чипе [subtitle]), [glyph] - знак по смыслу, [accent] - цвет полосы
- * слева, [data] - короткое значение ровной колонкой справа, [group] - заголовок группы: варианты одной группы идут подряд.
+ * [key] уходит вызывающему при выборе (null - вариант «любое»/«все»), [title] - имя варианта, [subtitle] - подназвание под именем в
+ * шторке (переносится целиком), [brief] - короткое подназвание под значением на чипе (нет - на чипе [subtitle]), [glyph] - знак по
+ * смыслу, [accent] - цвет полосы слева, [data] - короткое значение ровной колонкой справа, [group] - заголовок группы: варианты одной
+ * группы идут подряд; [terms] - слова, по которым вариант тоже находит поиск, но которые не печатаются (код узла).
  */
-data class PickOption(
-    val key: String,
+data class PickOption<out K>(
+    val key: K?,
     val title: String,
     val subtitle: String? = null,
     val brief: String? = null,
@@ -18,6 +19,7 @@ data class PickOption(
     val accent: PickAccent? = null,
     val data: PickData? = null,
     val group: String? = null,
+    val terms: List<String> = emptyList(),
 ) {
     /** Строка под значением на чипе: [brief], а без него - [subtitle]. */
     val chipLine: String? get() = brief ?: subtitle
@@ -48,30 +50,38 @@ sealed interface PickAccent {
 }
 
 /** Группа шторки выбора: заголовок [title] (null - без заголовка) и её варианты [options]. */
-data class PickSection(val title: String?, val options: List<PickOption>)
+data class PickSection<K>(val title: String?, val options: List<PickOption<K>>)
 
 /**
- * Список выбора: [options] в порядке показа. Поиск есть с [SEARCH_FROM] вариантов: запрос ищется в имени и подназвании без учёта
- * регистра, «ё» и лишних пробелов (свёртка поиска игры [ItemSearch.fold]). Группы - подряд идущие варианты с одним [PickOption.group].
+ * Список выбора: [options] в порядке показа - общий поиск по вариантам всех выборов игры (шторка выбора, «по моду», дары модерации,
+ * узлы древа). Шторка ищет с [SEARCH_FROM] вариантов: запрос ищется в имени, подназвании и [PickOption.terms] без учёта регистра, «ё» и
+ * лишних пробелов (свёртка поиска игры [ItemSearch.fold]). Группы - подряд идущие варианты с одним [PickOption.group].
  */
-class PickList(val options: List<PickOption>) {
+class PickList<K>(val options: List<PickOption<K>>) {
+    /** Свёрнутые слова поиска каждого варианта: сворачиваются один раз на список. */
+    private val words: List<List<String>> = options.map { option -> (listOfNotNull(option.title, option.subtitle) + option.terms).map(ItemSearch::fold) }
+
     /** Нужно ли шторке поле поиска. */
     val searchable: Boolean get() = options.size >= SEARCH_FROM
 
-    /** Вариант с ключом [key]; нет такого - null. */
-    fun option(key: String): PickOption? = options.firstOrNull { it.key == key }
+    /** Вариант с ключом [key] (null - вариант «любое», если он есть); нет такого - null. */
+    fun option(key: K?): PickOption<K>? = options.firstOrNull { it.key == key }
+
+    /** Варианты, что находит запрос [query], подряд; пустой запрос - все. */
+    fun found(query: String): List<PickOption<K>> {
+        val wanted = ItemSearch.fold(query)
+        return if (wanted.isEmpty()) options else options.filterIndexed { at, _ -> words[at].any { it.contains(wanted) } }
+    }
 
     /** Варианты, что находит запрос [query], по группам; пустой запрос - все. Ничего не нашлось - пустой список. */
-    fun sections(query: String): List<PickSection> {
-        val wanted = ItemSearch.fold(query)
-        val shown = if (wanted.isEmpty()) options else options.filter { option -> listOfNotNull(option.title, option.subtitle).any { ItemSearch.fold(it).contains(wanted) } }
-        val runs = mutableListOf<Pair<String?, MutableList<PickOption>>>()
-        shown.forEach { option -> runs.lastOrNull()?.takeIf { it.first == option.group }?.second?.add(option) ?: runs.add(option.group to mutableListOf(option)) }
+    fun sections(query: String): List<PickSection<K>> {
+        val runs = mutableListOf<Pair<String?, MutableList<PickOption<K>>>>()
+        found(query).forEach { option -> runs.lastOrNull()?.takeIf { it.first == option.group }?.second?.add(option) ?: runs.add(option.group to mutableListOf(option)) }
         return runs.map { (title, run) -> PickSection(title, run) }
     }
 
     /** Строка варианта [key] в шторке без запроса - заголовки групп тоже строки; нет такого варианта - 0. */
-    fun row(key: String): Int {
+    fun row(key: K?): Int {
         var row = 0
         sections("").forEach { section ->
             if (section.title != null) row++

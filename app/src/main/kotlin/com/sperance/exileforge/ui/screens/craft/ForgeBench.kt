@@ -89,8 +89,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** Приговор верстака над [item] при рецептах героя [hero] ([BenchVerdict]): считается заново лишь при смене вещи или рецептов. */
-@Composable internal fun benchVerdict(hero: HeroView, item: ItemView): BenchVerdict =
-    remember(item.index, item.item, item.template, hero.info.recipes) { BenchVerdict.of(item, hero.info.recipes) }
+@Composable internal fun benchVerdict(hero: HeroView, item: ItemView): BenchVerdict = remember(item.index, item.item, item.template, hero.info.recipes) { BenchVerdict.of(item, hero.info.recipes) }
 
 /**
  * One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. Описание раскрывается

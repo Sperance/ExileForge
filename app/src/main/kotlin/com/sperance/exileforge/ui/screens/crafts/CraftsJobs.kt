@@ -46,8 +46,8 @@ import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.additiveTitle
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.additiveTitle
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
@@ -357,9 +357,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         Spacer(Modifier.height(4.dp))
         when {
             current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = actions.onStop, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
-
             block != null -> ForgeButton(state = ButtonState.of(false), onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
-
             else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = { actions.onStart(job, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
         }
     }

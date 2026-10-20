@@ -3,8 +3,8 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
-import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.Draughts
+import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.FightPulse
 import com.sperance.exileforge.core.campaign.HeroBars
 import com.sperance.exileforge.core.campaign.HeroBuild

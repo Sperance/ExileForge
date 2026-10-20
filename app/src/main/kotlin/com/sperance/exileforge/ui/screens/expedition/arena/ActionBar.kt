@@ -221,8 +221,7 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
  * Касание фляги [view], пока [live]: годная пьётся ([onDrink]), погашенная из-за глотка впустую кладёт в [why] слова её полных полос -
  * их показывает [FlaskWhy].
  */
-internal fun Modifier.flaskTap(view: FlaskView, why: MutableState<String?>, live: Boolean = true, onDrink: () -> Unit): Modifier =
-    clickable(enabled = live && (view.usable || view.wasted)) { if (view.usable) onDrink() else why.value = view.wastedWhy }
+internal fun Modifier.flaskTap(view: FlaskView, why: MutableState<String?>, live: Boolean = true, onDrink: () -> Unit): Modifier = clickable(enabled = live && (view.usable || view.wasted)) { if (view.usable) onDrink() else why.value = view.wastedWhy }
 
 /** Подсказка погашенной фляги - почему её глоток впустую ([flaskTap]); касание её прячет. */
 @Composable internal fun FlaskWhy(why: MutableState<String?>) {

@@ -2,8 +2,8 @@ package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.campaign.FlowMeasure
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.ContentIndex
 import kotlin.math.abs
 import kotlin.math.roundToInt
 

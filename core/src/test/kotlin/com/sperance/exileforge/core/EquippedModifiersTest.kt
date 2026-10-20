@@ -187,12 +187,11 @@ class EquippedModifiersTest {
     private fun top(def: ModifierDef): Roll? = def.bestTierAt(Int.MAX_VALUE)?.let { (tier) -> Roll(def.code, tier, 1.0) }
 
     /** Свой текст строки [def] на носителе [slot] в словаре [table]: имя описания или семейства, иначе шаблон каждого эффекта. */
-    private fun own(def: ModifierDef, slot: Slot, table: Map<String, String>): Boolean =
-        LocaleKey.modifierName(def.code) in table || def.variant != VariantKind.NATURAL && LocaleKey.modifierName(def.family) in table ||
-            def.effects.indices.all { i ->
-                val effect = def.effects[i]
-                ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect)) in table
-            }
+    private fun own(def: ModifierDef, slot: Slot, table: Map<String, String>): Boolean = LocaleKey.modifierName(def.code) in table || def.variant != VariantKind.NATURAL && LocaleKey.modifierName(def.family) in table ||
+        def.effects.indices.all { i ->
+            val effect = def.effects[i]
+            ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect)) in table
+        }
 
     /** Как строка вещи видна герою: строка героя, строка с условием, сила с правилами листа, усилитель своей вещи. */
     private enum class Shown { HERO, CONDITIONAL, POWER, AMPLIFIER }

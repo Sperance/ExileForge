@@ -224,7 +224,7 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
 internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, profession: ProfessionView, work: JobView, current: Boolean, onDismiss: () -> Unit) {
     val crafts = held.state
     var additives by remember(work.code) { mutableStateOf(emptyList<String>()) }
-    val choices = choices(game, work)
+    val choices = remember(game, work) { choices(game, work) }
     val smith = work.kind == JobKind.EQUIPMENT
     var picked by remember(work.code) {
         mutableStateOf(if (smith) SmithChoice.RANDOM.name else (choices.firstOrNull { it.level <= profession.level } ?: choices.firstOrNull())?.choice.orEmpty())
@@ -271,22 +271,22 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     ItemRow(view, selected = view.id == item, price = game.sellPrice(view.item), onLongClick = { inspect(Inspect.Copy(view.item)) }) { target = view.id }
                 }
             }
-            TallestOf(variants, job) { variant ->
-                val chosen = if (variant.choice == SmithChoice.RANDOM.name) emptyList() else additives
-                JobBody(
-                    game, crafts, profession, work, choices, variant, chosen, targets, item, current,
-                    onInspect = inspect,
-                    onHelp = { help = it },
-                    onAdditives = { additives = it },
-                    onStop = {
-                        onDismiss()
-                        vm.stop()
-                    },
-                ) {
+            val sheet = JobSheetState(game, crafts, profession, work, choices, targets, item, current)
+            val actions = JobSheetActions(
+                onInspect = inspect,
+                onHelp = { help = it },
+                onAdditives = { additives = it },
+                onStop = {
                     onDismiss()
-                    if (smith) SmithChoice.of(variant.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
-                    vm.start(variant.code, if (variant.job.targetsItem) item else variant.choice, chosen)
-                }
+                    vm.stop()
+                },
+            ) { variant, chosen ->
+                onDismiss()
+                if (smith) SmithChoice.of(variant.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
+                vm.start(variant.code, if (variant.job.targetsItem) item else variant.choice, chosen)
+            }
+            TallestOf(variants, job) { variant ->
+                JobBody(sheet, variant, if (variant.choice == SmithChoice.RANDOM.name) emptyList() else additives, actions)
             }
         }
     }
@@ -294,35 +294,50 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
 }
 
 /**
- * Что меняет вариант [job] работы [work]: формула, что получится, поля работы, добавки работы ([additives] - уже без них у случайной
- * ковки; [onAdditives] - выбор примесей), короткая заметка и внизу кнопка или причина, почему работу не начать. Идёт в
- * [TallestOf] по всем вариантам: высота блока - по самому высокому, верх листа при смене варианта не двигается.
+ * Общее у всех вариантов листа работы [work] профессии [profession]: [choices] - варианты, что лист предлагает, [targets] - вещи
+ * героя под работу над вещью и выбранная из них [item], [current] - эта работа идёт.
+ */
+private data class JobSheetState(
+    val game: GameUi,
+    val crafts: CraftsState?,
+    val profession: ProfessionView,
+    val work: JobView,
+    val choices: List<JobView>,
+    val targets: List<ItemView>,
+    val item: String,
+    val current: Boolean,
+)
+
+/**
+ * Касания листа работы: [onInspect] - карточка, [onHelp] - статья словаря ремёсел, [onAdditives] - выбор примесей, [onStop] - стоп
+ * идущей работы, [onStart] - запуск варианта с примесями.
+ */
+private class JobSheetActions(
+    val onInspect: (Inspect) -> Unit,
+    val onHelp: (String) -> Unit,
+    val onAdditives: (List<String>) -> Unit,
+    val onStop: () -> Unit,
+    val onStart: (JobView, List<String>) -> Unit,
+)
+
+/**
+ * Что меняет вариант [job] листа [sheet]: формула, что получится, поля работы, добавки работы ([additives] - уже без них у случайной
+ * ковки), короткая заметка и внизу кнопка или причина, почему работу не начать. Идёт в [TallestOf] по всем вариантам: высота блока -
+ * по самому высокому, верх листа при смене варианта не двигается; причина и заметка каждого варианта считаются заново лишь при смене
+ * того, из чего они сложены.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun JobBody(
-    game: GameUi,
-    crafts: CraftsState?,
-    profession: ProfessionView,
-    work: JobView,
-    choices: List<JobView>,
-    job: JobView,
-    additives: List<String>,
-    targets: List<ItemView>,
-    item: String,
-    current: Boolean,
-    onInspect: (Inspect) -> Unit,
-    onHelp: (String) -> Unit,
-    onAdditives: (List<String>) -> Unit,
-    onStop: () -> Unit,
-    onStart: () -> Unit,
-) {
+private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>, actions: JobSheetActions) {
+    val (game, crafts, profession, work, choices, targets, item, current) = sheet
+    val onInspect = actions.onInspect
     val random = job.choice == SmithChoice.RANDOM.name
-    val block = JobBlock.of(game, profession, work, choices, job, additives, targets, item)
+    val block = remember(game, profession, work, choices, job, additives, targets, item) { JobBlock.of(game, profession, work, choices, job, additives, targets, item) }
+    val note = remember(game, job, additives) { shortNote(game, job, additives) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RecipeFormula(game, profession, job, additives) { it?.let(onInspect) }
         ResultLine(game, job) { it?.let(onInspect) }
-        crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code, onHelp) }
+        crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code, actions.onHelp) }
         val offered = crafts?.additives(job).orEmpty()
         if (offered.isNotEmpty() && !random && crafts != null && crafts.maxAdditives > 0) {
             Engraved(ui("crafts.additives", crafts.maxAdditives))
@@ -332,20 +347,20 @@ private fun JobBody(
                     ForgeChip(
                         ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
                         on,
-                        { onAdditives(if (on) additives - code else additives + code) },
+                        { actions.onAdditives(if (on) additives - code else additives + code) },
                         state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),
                     )
                 }
             }
         }
-        shortNote(game, job, additives)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
+        note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         Spacer(Modifier.height(4.dp))
         when {
-            current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onStop, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
+            current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = actions.onStop, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
 
             block != null -> ForgeButton(state = ButtonState.of(false), onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
 
-            else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onStart, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
+            else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = { actions.onStart(job, additives) }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
         }
     }
 }

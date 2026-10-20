@@ -413,9 +413,9 @@ internal const val FOUNTAIN_TAP = .9
 }
 
 /**
- * Уход у открытого выхода ([RunHud.exitOffered]) - лист с удержанием: завершить карту, из зоны Ваал - вернуться на карту; строка
- * «Останется» - только когда на карте что-то осталось. Отказ ([onLeave]) - герой отходит, лист встаёт снова лишь после шага прочь
- * из радиуса выхода. Заход стоит, пока лист открыт.
+ * Уход у открытого выхода ([RunHud.exitOffered]) - лист с удержанием: вопрос «Завершить карту?» (из зоны Ваал - «Вернуться на
+ * карту?») и строка «Останется» - только когда на карте что-то осталось, поясняющих строк нет. Отказ ([onLeave]) - герой
+ * отходит, лист встаёт снова лишь после шага прочь из радиуса выхода. Заход стоит, пока лист открыт.
  */
 @Composable private fun ExitOffer(run: ExpeditionRun, hud: RunHud, onTake: () -> Unit, onLeave: () -> Unit) {
     HoldsRun(run)
@@ -429,9 +429,7 @@ internal const val FOUNTAIN_TAP = .9
     ConfirmSheet(
         title = if (vaal) ui("vaal.exit_q") else ui("expedition.exit_q"),
         confirm = if (vaal) ui("vaal.exit") else ui("expedition.exit"),
-        subtitle = mapTitle(hud.mapCode),
         ledger = if (left.isEmpty()) emptyList() else listOf(LedgerLine(ui("expedition.exit_left"), left)),
-        note = if (vaal) ui("vaal.exit_note") else ui("expedition.exit_note"),
         holdMillis = Hold.CONFIRM_MS,
         onDismiss = onLeave,
         onConfirm = onTake,

@@ -124,7 +124,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 clearSpoils()
                 slain = null
                 report = null
-                if (vaal && bossDown) exit()
             }
 
             RunPhase.DEAD, RunPhase.CLEARED -> {
@@ -191,7 +190,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.TakeFountain -> fountain?.takeIf { phase == RunPhase.MAP && !it.used }?.let(::drink)
 
-        RunCommand.TakeExit -> if (phase == RunPhase.MAP && world.atExit) {
+        RunCommand.TakeExit -> if (phase == RunPhase.MAP && world.atExit && !world.exitArmed) {
             exitOffered = false
             exit()
         }

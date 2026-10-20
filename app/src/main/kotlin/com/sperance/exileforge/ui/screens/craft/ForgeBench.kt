@@ -49,13 +49,16 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
  * Only the recipes the hero has found are offered; the rest of the bench stays hidden.
- * Рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]).
+ * Рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]); строка
+ * верстака, которую снять нельзя, погашена с причиной [Bench.uncraftBlockedBy].
  */
 @Composable internal fun BenchLedger(game: GameUi, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
     val recipes = game.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
     val refusals = benchRefusals(index, hero, item)
     val crafted = item.lines.firstOrNull { it.marks.crafted }
     val scouring = index.rules.bench.uncraftOrb
+    val bench = remember(index) { Bench(index) }
+    val held = remember(bench, item.item) { bench.uncraftBlockedBy(item.item, item.template)?.let { refusalText(it) } }
     Column {
         crafted?.let {
             LedgerRow(
@@ -64,8 +67,9 @@ import org.koin.compose.viewmodel.koinViewModel
                 it.text,
                 ui("bench.current") + " · " + ui("bench.cost_line", itemTitle(scouring.name), 1, hero.count(scouring.name)),
                 "×",
-                selected = chosen == UNCRAFT,
+                selected = chosen == UNCRAFT && held == null,
                 ink = ModBlue,
+                refusal = held,
             ) { onChoose(UNCRAFT) }
         }
         recipes.forEach { recipe ->

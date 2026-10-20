@@ -112,6 +112,9 @@ import kotlinx.serialization.Serializable
 
     /** Отпечаток последнего ответа: сменился - ответ новый; null - ответа нет. */
     val replyPrint: String? get() = reply.takeIf { it.isNotBlank() }?.hashCode()?.toString()
+
+    /** Переписка карточки автора по порядку ([conversation]). */
+    val thread: List<IssueNote> get() = conversation(reason, answers, issue)
 }
 
 /**
@@ -163,7 +166,18 @@ import kotlinx.serialization.Serializable
     val topic: ReportTopic = ReportTopic.ERROR,
     /** Ответы автора из игры, пока у отчёта нет Issue; с Issue они - в переписке [IssueView.notes]. */
     val answers: List<IssueNote> = emptyList(),
-)
+) {
+    /** Переписка тикета модерации по порядку ([conversation]). */
+    val thread: List<IssueNote> get() = conversation(reason, answers, issue)
+}
+
+/**
+ * Переписка отчёта по порядку: слово модерации [reason] и ответы автора [answers] - сервер шлёт их, пока у отчёта нет Issue, - затем
+ * переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и автор. С Issue слово и ответы - его первые комментарии в том
+ * же порядке, дважды они не встают.
+ */
+private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> =
+    listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
 
 /**
  * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести по машине состояний сервера,

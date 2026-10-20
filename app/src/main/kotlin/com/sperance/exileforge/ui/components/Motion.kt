@@ -18,7 +18,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.sperance.exileforge.core.app.GameSettings
-import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.rules.content.ContentIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -48,9 +47,6 @@ val LocalContentIndex = staticCompositionLocalOf<ContentIndex?> { null }
  * null - приложения нет (превью), место держит состояние само.
  */
 val LocalSettingsEdit = staticCompositionLocalOf<((GameSettings.() -> GameSettings) -> Unit)?> { null }
-
-/** Вибрации игры для мест без своей модели (удержание кнопки, отметка в сумке, проба в настройках); null - приложения нет (превью). */
-val LocalBuzzes = staticCompositionLocalOf<Buzzes?> { null }
 
 /**
  * Общие часы декора: секунды одним циклом на всё приложение, шагом около 30 раз в секунду (между шагами спят [SLEEP_MS]) - декор не держит

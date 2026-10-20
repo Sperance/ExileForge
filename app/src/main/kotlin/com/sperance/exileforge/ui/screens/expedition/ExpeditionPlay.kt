@@ -175,7 +175,7 @@ import kotlin.math.roundToInt
                 RunPhase.FIGHT -> RunFight(live) { frame, fight ->
                     ArenaOverlay(
                         game, frame, fight, fight.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance, clock,
-                        onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
+                        onCommand = model::runCommand, onLogFilter = shell::logFilter,
                         biome = run.zone.biome,
                         shares = { boss -> BuffSources.of(run.mapSources, run.runLines, run.pacts, boss) },
                         mapEffects = run.mapEffects,

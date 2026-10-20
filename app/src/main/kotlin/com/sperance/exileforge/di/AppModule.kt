@@ -71,6 +71,7 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.platform.BugDelivery
+import com.sperance.exileforge.platform.Haptics
 import com.sperance.exileforge.platform.StallWatchdog
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.FeedbackViewModel
@@ -154,6 +155,7 @@ val appModule = module {
     singleOf(::LetterActions)
     singleOf(::HeroReads)
     single { Buzzes() }
+    single { Haptics(androidContext()) }
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }

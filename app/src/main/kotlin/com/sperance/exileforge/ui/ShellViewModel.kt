@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.Building
-import com.sperance.exileforge.core.app.Buzz
 import com.sperance.exileforge.core.app.ConnectionActions
 import com.sperance.exileforge.core.app.Foreground
 import com.sperance.exileforge.core.app.GameSlice
@@ -30,7 +29,6 @@ import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
-import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
@@ -60,7 +58,6 @@ class ShellViewModel(
     private val navigator: Navigator,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val buzzer: Buzzes,
     private val prefs: PreferencesRepository,
     private val bugs: BugDelivery,
     /** Что прикладывается к отчёту об ошибке: падения клиента, снимок героя, журнал сбоев. */
@@ -100,9 +97,6 @@ class ShellViewModel(
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.core.expedition.RiftState> = rift.state
-
-    /** Что телефон отзывает вибрацией, уже по настройкам. */
-    val buzzes: SharedFlow<Buzz> get() = buzzer.flow
 
     fun warmUp() = warming.start()
 
@@ -183,7 +177,6 @@ class ShellViewModel(
 
     fun dismissMessage() = commands.dismissMessage()
     fun dismissNotice() = notices.dismiss()
-    fun buzz(kind: Buzz) = buzzer.buzz(kind)
 
     /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков. */
     fun logFilter(kinds: Set<LogKind>) {

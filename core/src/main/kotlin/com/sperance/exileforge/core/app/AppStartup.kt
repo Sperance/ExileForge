@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.app
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.deviceLanguage
 import com.sperance.exileforge.core.network.refusalLine
+import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ConnectionEventsHub

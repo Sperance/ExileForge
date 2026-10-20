@@ -52,7 +52,6 @@ import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftMutator
 import com.sperance.exileforge.rules.content.RiftNodeKind
@@ -195,10 +194,7 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
 }
 
 /** Сколько осталось до конца недели [endsAt] (мс эпохи сервера): «3 д 14 ч», в последние сутки - «14 ч 05 мин». */
-@Composable private fun weekLeft(endsAt: Long): String {
-    val now by rememberNow(WEEK_TICK_MS)
-    return timeLeft(endsAt - now - ServerClock.offset)
-}
+@Composable private fun weekLeft(endsAt: Long): String = timeLeft(rememberServerLeft(endsAt, WEEK_TICK_MS))
 
 /** Такт часов срока недели. */
 private const val WEEK_TICK_MS = 15_000L
@@ -825,7 +821,7 @@ private const val SPARKS = 14
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
+            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, pulse = arena.pulse)
         }
         val shape = RoundedCornerShape(10.dp)
         Column(

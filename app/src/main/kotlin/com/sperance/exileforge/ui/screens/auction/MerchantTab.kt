@@ -133,8 +133,8 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
  * сервера, тикает живыми часами экрана; касание - когда товар обновится.
  */
 @Composable private fun MerchantTrail(money: Long?, refreshAt: Long?) {
-    val now by rememberNow(TRAIL_TICK_MS)
-    val left = refreshAt?.takeIf { it > 0 }?.let { countdown(((it - now - ServerClock.offset) / 1_000).coerceAtLeast(0)) }
+    val leftMs = rememberServerLeft(refreshAt ?: 0, TRAIL_TICK_MS)
+    val left = refreshAt?.takeIf { it > 0 }?.let { countdown(leftMs / 1_000) }
     val data = listOfNotNull(money?.let { ui("merchant.gold_amount", number(it.toDouble())) }, left?.let { ui("merchant.trail_renews", it) }).joinToString(" · ")
     if (data.isNotEmpty()) TrailData(data, left?.let { Tip(ui("merchant.renews", it)) })
 }

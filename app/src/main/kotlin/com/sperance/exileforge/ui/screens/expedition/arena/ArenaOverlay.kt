@@ -15,13 +15,13 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.app.Buzz
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CombatRules
@@ -43,8 +43,8 @@ private const val HERO_CARD = -1
  * strike — is laid open, its numbers held against the hero's.
  *
  * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
- * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра. Часы арены читаются только в рисовании ([FightFrame]). Пауза и отклик -
- * раз при падении здоровья через свою черту, отклик - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
+ * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра. Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
+ * раз при падении здоровья через свою черту, вибрация - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
  * бой. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
  * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление.
  */
@@ -58,7 +58,6 @@ private const val HERO_CARD = -1
     clock: State<Float>,
     onCommand: (RunCommand) -> Unit,
     onLogFilter: (Set<LogKind>) -> Unit = {},
-    onBuzz: (Buzz) -> Unit = {},
     biome: String = "",
     shares: (Boolean) -> List<BuffShare> = { emptyList() },
     mapEffects: Map<String, Double> = emptyMap(),
@@ -72,8 +71,9 @@ private const val HERO_CARD = -1
     val low = share * 100 < settings.autoPause
     val danger = share < DANGER_SHARE
     LaunchedEffect(low) { if (low && fight.started && !fight.paused && fight.outcome == null) onCommand(RunCommand.Pause) }
-    LaunchedEffect(danger) { if (danger && fight.outcome == null) onBuzz(Buzz.DANGER) }
-    LaunchedEffect(fight.outcome) { if (fight.outcome == Outcome.LOSS) onBuzz(Buzz.DANGER) }
+    val buzzes = LocalBuzzes.current
+    LaunchedEffect(danger) { if (danger && fight.outcome == null) buzzes?.buzz(Buzz.DANGER) }
+    LaunchedEffect(fight.outcome) { if (fight.outcome == Outcome.LOSS) buzzes?.buzz(Buzz.DANGER) }
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.round) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }

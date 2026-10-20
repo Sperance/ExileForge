@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
@@ -23,7 +24,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * The auction opens at a level the server keeps to itself, so the screen does not guard the gate:
  * it asks, and turns the refusal into an explanation.
  *
- * Без шапки: строка Города уже называет здание, вкладки несут «?». Открытие вкладки наполняет списки; лист героя нужен правилам, чтобы
+ * Без шапки: строка Города уже называет здание; места лотов - числом «занято/всего» у вкладки «Мои лоты» ([slotsBadge]). Открытие вкладки наполняет списки; лист героя нужен правилам, чтобы
  * пометить лот, который не надеть. Вещь выставляют из её карточки, стопку - из сумки. Вкладки перечитываются потягиванием.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,10 +50,9 @@ fun AuctionScreen() {
             }
             return@Column
         }
-        val mine = market.ownLots.count { !it.expiredBack }
-        val tabs = listOf(ui("auction.showcase"), if (mine > 0) ui("auction.my_lots_n", mine) else ui("auction.my_lots"), ui("auction.history"))
+        val tabs = listOf(ui("auction.showcase"), ui("auction.my_lots"), ui("auction.history"))
         val tab = market.tab.coerceIn(tabs.indices)
-        PillTabs(tabs, tab, model::tab, enabled = !busy)
+        PillTabs(tabs, tab, model::tab, enabled = !busy, badges = listOf(null, slotsBadge(market)))
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
@@ -64,3 +64,7 @@ fun AuctionScreen() {
         }
     }
 }
+
+/** Места лотов у вкладки «Мои лоты»: «3/5», все заняты - красным; пока мест не знаем - число своих лотов на продаже. */
+private fun slotsBadge(market: Market): TabBadge? = market.slots?.let { TabBadge(ui("auction.slots_value", it.used, it.limit), alert = it.full) }
+    ?: market.ownLots.count { !it.expiredBack }.takeIf { it > 0 }?.let { TabBadge(it.toString()) }

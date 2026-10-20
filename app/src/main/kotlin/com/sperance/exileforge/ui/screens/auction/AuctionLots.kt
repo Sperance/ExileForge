@@ -49,6 +49,7 @@ import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.AuctionRules
 import com.sperance.exileforge.rules.trade.AuctionFees
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -60,58 +61,46 @@ import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.theme.*
 
-/** Свои лоты и история сделок. */
 /**
  * The hero's own lots that are still on sale, and those whose time ran out; withdrawn and sold lots leave this list.
  *
- * Места лотов одинаковы у всех героев и не покупаются. Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату
- * выставления против кошелька; истёкший лот возвращается сразу в тайник (письмом - только когда места нет), строка ниже продающихся
- * называет, куда он вернулся.
+ * Места лотов одинаковы у всех героев и не покупаются; сколько занято - числом у вкладки, не в списке. Строка лота - «ещё 14 ч 05 мин»
+ * (в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
+ * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
+ * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
  */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
+    val rules = game.index?.rules?.auction
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        market.slots?.let { slots ->
-            item {
-                ForgePanel {
-                    PropertyRow(ui("auction.slots"), ui("auction.slots_value", slots.used, slots.limit), Glyph.ITEM)
-                    if (slots.full) Text(ui("auction.slots_full"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        }
         if (market.ownLots.isEmpty()) {
             item {
                 InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
             }
         }
         items(market.ownLots, key = { it.id }) { lot ->
-            val rules = game.index?.rules?.auction
-            LotRow(game, lot, mark = lotExpiry(lot)?.let { if (rules != null && lot.extendable(rules)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
+            val mark = lotReturn(lot) ?: lotLeft(lot)?.let { left ->
+                ui("auction.left", left) + if (rules != null && lot.extendable(rules)) " · " + ui("auction.extend_now") else ""
+            }
+            LotRow(game, lot, mark = mark, withSeller = false) { openLot = lot.id }
         }
     }
     market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
-        val extendable = game.index?.rules?.auction?.let { lot.extendable(it) } == true
-        val fee = game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L
         LotSheet(
             game,
             lot,
             action = ui("auction.withdraw"),
             enabled = !game.busy && lot.onSale,
-            note = lotExpiry(lot),
+            note = lotReturn(lot),
             onDismiss = { openLot = null },
-            extra = if (extendable) {
-                (
-                    {
-                        val bill = game.goldBill(fee)
-                        bill?.let { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { GoldCost(it) } }
-                        ForgeButton(state = ButtonState.of(!game.busy && bill?.affordable == true), onClick = {
-                            openLot = null
-                            vm.extend(lot.id)
-                        }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                            Text(bill?.payLabel(ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee)) ?: ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee))
-                        }
+            left = lotLeft(lot),
+            extra = if (rules != null && lot.extendable(rules)) {
+                {
+                    ExtendRow(game, game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L, rules) {
+                        openLot = null
+                        vm.extend(lot.id)
                     }
-                    )
+                }
             } else {
                 null
             },
@@ -122,12 +111,29 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/**
+ * Продление своего лота в листе: «Продлить на N дн.» (не хватает золота - недостача, кнопка погашена), рядом один чип платы [fee]
+ * против кошелька и ⓘ - когда и сколько раз продлевают ([rules]).
+ */
+@Composable private fun ExtendRow(game: GameUi, fee: Long, rules: AuctionRules, onExtend: () -> Unit) {
+    val bill = game.goldBill(fee)
+    val label = ui("auction.extend_days", rules.lotDays)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ForgeButton(state = ButtonState.of(!game.busy && bill?.affordable == true), onClick = onExtend, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) {
+            Text(bill?.payLabel(label) ?: label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        bill?.let { GoldCost(it) }
+        InfoHint(ui("auction.extend_about"), Rune) { Text(ui("auction.extend_tip", rules.extendMax), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
 /** Which deals the history shows. */
 internal enum class DealFilter { ALL, SOLD, BOUGHT }
 
 /**
  * The hero's deals of the last days: what they sold and to whom, what they bought and from whom, the copy as it
- * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger]).
+ * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger]), сколько хранятся сделки - в ⓘ
+ * у отбора.
  *
  * Стопку и сферу открывает общая карточка, товар - карточка лота.
  */
@@ -156,14 +162,17 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DealFilter.entries.forEach { f ->
                         ForgeChip(ui("auction.history_${f.name.lowercase()}"), filter == f, { filter = f }, mode = ChipMode.Choice)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    game.index?.rules?.auction?.let { rules ->
+                        InfoHint(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", rules.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
                 DealTable(game, ui("auction.history_earned"), ledger.received, open)
                 DealTable(game, ui("auction.history_spent"), ledger.spent, open)
-                MutedText(ui("auction.history_note"), style = MaterialTheme.typography.labelMedium)
             }
         }
         if (shown.isEmpty()) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint")) }

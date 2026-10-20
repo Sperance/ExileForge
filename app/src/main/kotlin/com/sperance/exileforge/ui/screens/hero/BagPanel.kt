@@ -41,6 +41,7 @@ import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.InfoHint
 import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
@@ -172,7 +173,7 @@ internal fun compactCount(amount: Long): String = when {
  *
  * The forge is offered for an orb that is applied to items — Regret is spent on the tree and the
  * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack but one bound to the hero
- * (`ContentIndex.bound`): у такой стопки кнопки аукциона нет.
+ * (`ContentIndex.bound`): у такой стопки вместо кнопки аукциона - плашка «Привязан к герою» с причиной в ⓘ ([BoundPlate]).
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  *
  * [onRead] - книга умения класса читается сразу, [onEssence] - эссенция в кузню, [onOpenChest] - сундук-добыча открывается на месте,
@@ -200,6 +201,7 @@ internal fun compactCount(amount: Long): String = when {
     val bound = game.index?.bound(code) == true
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
+        if (bound) BoundPlate()
         RowActions(Modifier.fillMaxWidth()) {
             val idle = ButtonState.of(!game.busy)
             if (!bound) RowButton(ui("hero.action_auction"), onClick = { onAuction(code) }, kind = ButtonKind.Secondary, state = idle)
@@ -211,6 +213,14 @@ internal fun compactCount(amount: Long): String = when {
             }
             if (chest) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
         }
+    }
+}
+
+/** Плашка привязанной к герою стопки: на аукцион и во вклад гильдии её не отдать, почему - в ⓘ. */
+@Composable private fun BoundPlate() {
+    Row(Modifier.fillMaxWidth().depthInset(RoundedCornerShape(12.dp)).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(ui("bag.bound"), color = Brass, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        InfoHint(ui("bag.bound"), Brass) { Text(ui("bag.bound_tip"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
     }
 }
 

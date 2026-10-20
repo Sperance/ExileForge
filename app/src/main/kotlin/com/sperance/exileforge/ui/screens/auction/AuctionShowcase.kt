@@ -126,6 +126,7 @@ import org.koin.compose.viewmodel.koinViewModel
             enabled = !game.busy && !own && short == null,
             note = if (own) ui("auction.own_lot") else short,
             onDismiss = { openLot = null },
+            seller = !own,
         ) {
             openLot = null
             confirmBuy = lot.id

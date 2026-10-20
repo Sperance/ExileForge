@@ -34,22 +34,24 @@ const val ANY_ORB = ""
  * её имя - под сеткой. Одна на лист продажи аукциона и фильтр витрины.
  *
  * [selected] и ответ [onPick] - код предмета сферы. С подписью [any] первой встаёт плитка пустого выбора
- * ([ANY_ORB]) - «любая сфера» фильтра; без неё выбрать можно только сферу из [orbs].
+ * ([ANY_ORB]) - «любая сфера» фильтра; без неё выбрать можно только сферу из [orbs]. [label] null - без подписи над сеткой; [named] false -
+ * имя выбранной под сеткой не печатается (его несёт место, например подпись поля цены).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun OrbGrid(
-    label: String,
+    label: String?,
     orbs: List<Item>,
     selected: String,
     onPick: (String) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     any: String? = null,
+    named: Boolean = true,
 ) {
     val byPrice = remember(orbs) { orbs.sortedBy { it.price } }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, color = Muted, style = MaterialTheme.typography.labelMedium)
+        label?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
         FlowRow(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             any?.let { OrbTile(selected == ANY_ORB, enabled, { onPick(ANY_ORB) }) { Icon(ForgeGlyphs.Orb, it, Modifier.size(22.dp), tint = Muted) } }
             byPrice.forEach { item ->
@@ -57,13 +59,15 @@ fun OrbGrid(
                 OrbTile(selected == code, enabled, { onPick(code) }) { OrbGlyph(Orb.of(code), Modifier.size(30.dp), itemTitle(code)) }
             }
         }
-        Text(
-            if (selected == ANY_ORB) any.orEmpty() else itemTitle(selected),
-            color = GoldBright,
-            style = MaterialTheme.typography.titleSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (named) {
+            Text(
+                if (selected == ANY_ORB) any.orEmpty() else itemTitle(selected),
+                color = GoldBright,
+                style = MaterialTheme.typography.titleSmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

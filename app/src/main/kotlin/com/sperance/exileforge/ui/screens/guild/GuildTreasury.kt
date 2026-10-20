@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -189,15 +188,6 @@ private fun rankSteps(rules: GuildRules): String = ui("guild.rank_tip", rules.ra
 
 /** Корона первого места недели - тот же знак, что у главы (`GuildRoleMark`). */
 private const val LEADER_CROWN = "♛"
-
-/** Значок ⓘ: касание раскрывает пояснение [body] окном у значка. */
-@Composable private fun InfoHint(label: String, tint: Color, body: @Composable ColumnScope.() -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        ForgeIconButton(Icons.Outlined.Info, label, onClick = { open = true }, size = ButtonSize.Small)
-        if (open) TipCallout(tint, onClose = { open = false }, body = body)
-    }
-}
 
 @Composable private fun TipText(text: String, color: Color = Parchment) {
     Text(text, color = color, style = MaterialTheme.typography.bodySmall)

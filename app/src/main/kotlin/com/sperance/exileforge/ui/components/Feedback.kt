@@ -238,11 +238,26 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
 private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownReport> = all.filter { search.matches(it.text, it.issue) }
     .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 
-/** Ответить в Issue можно, пока он открыт. */
+/**
+ * Свой отчёт: поле ответа - пока сервер разрешает ответ ([OwnReport.answerable]: на модерации, до выгрузки или с открытым Issue), иначе
+ * его нет; пока идёт загрузка ([enabled] - нет), поле погашено, но на месте.
+ */
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
-    val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
-    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, reportThread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer, topic = own.topic) {
+    ReportTicket(
+        own.kind,
+        own.text,
+        fate,
+        own.issue,
+        own.createdAt,
+        reportThread(own.issue, own.reason, own.answers),
+        dim = fate.closed && !focused,
+        fresh = fresh,
+        focused = focused,
+        onAnswer = onAnswer.takeIf { own.answerable },
+        answering = enabled,
+        topic = own.topic,
+    ) {
         Score(own.likes, own.dislikes)
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }

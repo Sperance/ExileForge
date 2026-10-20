@@ -102,6 +102,10 @@ import kotlinx.serialization.Serializable
     val issue: IssueView? = null,
     /** Тема ошибки: у улучшения карточка несёт «Идея». */
     val topic: ReportTopic = ReportTopic.ERROR,
+    /** Свои ответы, пока у отчёта нет Issue: сервер перенесёт их в Issue; с Issue они - в переписке [IssueView.notes]. */
+    val answers: List<IssueNote> = emptyList(),
+    /** Можно ли ответить - решает сервер: отчёт на модерации или ждёт выгрузки, либо его Issue открыт; иначе поля ответа нет. */
+    val answerable: Boolean = false,
 ) {
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
@@ -157,6 +161,8 @@ import kotlinx.serialization.Serializable
     val failureCount: Int = 0,
     /** Тема ошибки: у улучшения карточка несёт «Идея». */
     val topic: ReportTopic = ReportTopic.ERROR,
+    /** Ответы автора из игры, пока у отчёта нет Issue; с Issue они - в переписке [IssueView.notes]. */
+    val answers: List<IssueNote> = emptyList(),
 )
 
 /**

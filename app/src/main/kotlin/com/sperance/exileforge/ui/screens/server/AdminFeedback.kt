@@ -229,7 +229,7 @@ private val FullReport.where: String get() = place.ifBlank { screen }
         fate,
         issue,
         report.createdAt,
-        reportThread(issue, report.reason),
+        reportThread(issue, report.reason, report.answers),
         dim = false,
         version = report.clientVersion,
         focused = true,

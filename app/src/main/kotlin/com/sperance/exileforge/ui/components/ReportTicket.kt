@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.IssueNote
 import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.ReportTopic
@@ -35,7 +36,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Карточка отчёта - тикет, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
  * логин, герой ссылкой на его карточку и место); текст до трёх строк; переписка цитатами;
- * ответ автора; [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
+ * поле ответа автора ([onAnswer]; null - поля нет, [answering] - нет - погашено на время загрузки); [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
  * места, а с [issueLink] (по умолчанию - [LocalIssueLinks]) перед ними - «Issue #N ↗» ([IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
  * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
  * (у модерации сворачивает тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
@@ -52,6 +53,7 @@ import com.sperance.exileforge.ui.theme.*
     fresh: Boolean = false,
     focused: Boolean = false,
     onAnswer: ((String) -> Unit)? = null,
+    answering: Boolean = true,
     onHeader: (() -> Unit)? = null,
     author: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
@@ -77,7 +79,7 @@ import com.sperance.exileforge.ui.theme.*
         author?.let { Box(Modifier.padding(horizontal = 12.dp).padding(top = 4.dp)) { it() } }
         ExpandableText(text, Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = ui("feedback.read_all"))
         thread.forEach { (who, words) -> ThreadNote(who, words) }
-        onAnswer?.let { send -> AnswerField(send) }
+        onAnswer?.let { send -> AnswerField(answering, send) }
         extra?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
         Row(
             Modifier.fillMaxWidth().background(PanelRaised).padding(horizontal = 12.dp, vertical = 4.dp),
@@ -107,10 +109,11 @@ import com.sperance.exileforge.ui.theme.*
 internal fun reportDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
 
 /**
- * Переписка карточки: слово модерации ([reason] - сервер шлёт его, только пока у отчёта нет Issue), затем вся переписка Issue по
- * порядку - разработчик, модерация из игры и автор; с Issue слово модерации - его комментарий, и дважды оно не встаёт.
+ * Переписка карточки: слово модерации ([reason]) и ответы автора ([answers]) - сервер шлёт их, только пока у отчёта нет Issue, -
+ * затем вся переписка Issue по порядку - разработчик, модерация из игры и автор; с Issue слово и ответы - его комментарии (в том же
+ * порядке их кладёт выгрузка), и дважды они не встают.
  */
-internal fun reportThread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
+internal fun reportThread(issue: IssueView?, reason: String, answers: List<IssueNote> = emptyList()): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + (answers + issue?.notes.orEmpty()).map { it.author to it.text }
 
 /** Запись переписки цитатой: разработчик - руной слева, модерация - золотом слева, автор - пергаментом справа. */
 @Composable private fun ThreadNote(who: NoteAuthor, words: String) {
@@ -142,13 +145,16 @@ internal val LocalIssueLinks = staticCompositionLocalOf { false }
     }
 }
 
-/** Ответ автора в Issue: поле и «Отправить»; уходит комментарием в GitHub и встаёт в переписку. */
-@Composable private fun AnswerField(onSend: (String) -> Unit) {
+/**
+ * Ответ автора: поле и «Отправить»; с Issue уходит его комментарием, до Issue копится в отчёте - и встаёт в переписку. [enabled] -
+ * пока идёт загрузка, поле гаснет, но остаётся на месте.
+ */
+@Composable private fun AnswerField(enabled: Boolean, onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
+        OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, enabled = enabled, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
         ForgeButton(
-            state = ButtonState.of(text.isNotBlank()),
+            state = ButtonState.of(enabled && text.isNotBlank()),
             onClick = {
                 onSend(text.trim())
                 text = ""

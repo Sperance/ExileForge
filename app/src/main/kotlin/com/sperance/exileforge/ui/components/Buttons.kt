@@ -184,7 +184,7 @@ private val MinWidth = 58.dp
 private const val FULL_PAUSE_MS = 300L
 
 /** Живая ли кнопка, в которой рисуется содержимое: сумма [ButtonFigure] гаснет вместе с ней. */
-private val LocalButtonLive = staticCompositionLocalOf { true }
+internal val LocalButtonLive = staticCompositionLocalOf { true }
 
 /**
  * Кнопка игры - единственная: экраны зовут её, а не кнопки Material (сторож сборки `:app:forgeButtonsOnly`).

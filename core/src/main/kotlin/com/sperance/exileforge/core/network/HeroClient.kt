@@ -146,10 +146,10 @@ class HeroClient internal constructor(private val http: Transport) {
     }
     suspend fun unsocket(heroId: String, itemId: String): ItemInstance = item("unsocket", heroId, itemId)
 
-    /** Sells an item to a merchant for gold; the copy is gone when this returns. */
-    suspend fun sell(heroId: String, itemId: String): SellOutcome {
+    /** Sells an item to a merchant for gold; the copy is gone when this returns. [unequip] - надетую сервер снимает и продаёт одной записью. */
+    suspend fun sell(heroId: String, itemId: String, unequip: Boolean = false): SellOutcome {
         requireItemId(itemId)
-        return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId))
+        return http.post("$HERO/sell", heroQuery(heroId, "itemId" to itemId, "unequip" to "true".takeIf { unequip }))
     }
 
     /**

@@ -39,15 +39,14 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * The card scrolls; the actions do not — they sit at the foot of the sheet ([SheetFooter], как у общей карточки), so the thing a
  * player came to do is never below the fold: широкой кнопкой надеть или снять (`wearOffer`) и «⋯» - заменить надетую, замок,
- * аукцион, продажа; под ними - ряд действий своей вещи ([OwnItemActions]): «В кузницу» вне боя. Every rule behind them is the
+ * аукцион; под ними - ряд действий своей вещи ([OwnItemActions]): «В кузницу» вне боя и продажа торговцу удержанием. Every rule behind them is the
  * server's, and it checks them again; the client adds the sheet up itself, so wearing
  * is also off for an item whose requirements it misses, and the card says what it would change.
  *
  * Вещь может уйти, пока лист открыт (продана, выставлена, перекатана) - лист закрывается. Запертая вещь недоступна торговцу и аукциону,
  * кузня с ней работает. Вторую копию уникалки не надеть - кнопка гаснет с причиной. Закалка кузнеца - раз на оружие или броню. Самоцвет без
  * свободного взятого гнезда гасит «В дерево». Карта не надевается и в зону не ведёт. Надетую вещь
- * не выставить и не продать (`AU_010`, `CH_014`) - касание говорит это. Продажа окончательна: спрашивается по имени с суммой по правилу
- * торговца и осколками.
+ * не выставить (`AU_010`) - касание говорит это.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -138,10 +137,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                             more = false
                             deals.auction(instance)
                         }
-                        MenuLine(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) {
-                            more = false
-                            deals.sell(instance)
-                        }
                     }
                 }
             }
@@ -158,12 +153,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         menu()
                     }
                 }
-                OwnItemActions(game, instance, onDone = onDismiss) {
-                    if (offer == null) {
-                        Spacer(Modifier.weight(1f))
-                        menu()
-                    }
-                }
+                OwnItemActions(game, instance, onDone = onDismiss) { if (offer == null) menu() }
             }
         }
     }

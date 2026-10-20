@@ -695,7 +695,8 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
 /**
  * Портрет босса [name]: двойная золотая рамка, аура цвета фазы дышит за ним (разгорается после входа стража), удар - вспышкой, крит -
  * коротким толчком (без него при упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза -
- * титулом поверх, павший босс растворяется искрами. Над головой живого босса - лента всех его эффектов ([EffectRibbon]).
+ * титулом поверх, павший босс растворяется искрами. Над головой живого босса - лента всех его эффектов ([EffectRibbon]); её лист
+ * эффектов держит сцена портрета - смерть босса его не закрывает.
  *
  * Толчок крита - к часам кадра, в рисовании; Матерь показывает порванные пуповины.
  */
@@ -713,6 +714,8 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         return sin(crit * PI.toFloat() * 6) * (1 - crit) * 2.5f
     }
     val shape = RoundedCornerShape(12.dp)
+    val shelves = rememberFoeShelves(foe.ailments, foe.held, foe.effects)
+    var effectsOpen by remember { mutableStateOf(false) }
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val breath = .55f + .2f * sin(frame.time * 2f)
@@ -737,10 +740,9 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         boss.cast?.takeIf { foe.alive && it.state == CastState.CASTING }?.let { cast -> Telegraph(cast.progress, frame) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
-        if (foe.alive) {
-            EffectRibbon(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
-        }
+        if (foe.alive) EffectRibbon(shelves, { effectsOpen = true }, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
     }
+    if (effectsOpen) EffectsSheet(ui("fight.shelf.foe", name), shelves.timed, shelves.lasting, null) { effectsOpen = false }
 }
 
 /** Цвет ауры фазы: тёплое золото, затем кровь, затем фиолетовая тьма. */

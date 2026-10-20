@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -57,35 +59,56 @@ import com.sperance.exileforge.ui.theme.*
     if (open) EffectsSheet(title, timed, lasting, null) { open = false }
 }
 
+/** Эффекты стороны боя для ленты и листа: временные ([timedShelf]) и на весь бой ([lasting]). */
+@Immutable
+internal class EffectShelves(val timed: List<Shelved>, val lasting: List<Shelved>) {
+    val isEmpty: Boolean get() = timed.isEmpty() && lasting.isEmpty()
+}
+
+/** Эффекты врага ([EffectShelves]) - пересчёт только при смене его недугов, оглушения и эффектов. */
+@Composable internal fun rememberFoeShelves(ailments: List<AilmentView>, held: Boolean, effects: List<EffectView>): EffectShelves = remember(ailments, held, effects) {
+    EffectShelves(timedShelf(held, ailments, effects), effects.filter { it.lasting }.map { Shelved.Effect(it) })
+}
+
 /**
- * Лента эффектов босса над его головой на арене: все плитки состояний и эффектов стороной 22dp на полупрозрачной подложке, по
- * шесть в строке, лишние - следующей строкой, без «+N». Касание плитки - её выноска, касание ленты - лист эффектов [title].
+ * Лента эффектов босса над его головой на арене: все плитки состояний и эффектов [shelves] стороной 22dp на полупрозрачной подложке,
+ * по шесть в строке, лишние - следующей строкой, без «+N»; последним - чип «≡», его касание - лист эффектов [onOpen]. Касание плитки -
+ * её выноска; подложка касаний не ловит - они уходят портрету под ней (выбор цели).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun EffectRibbon(title: String, ailments: List<AilmentView>, held: Boolean, effects: List<EffectView>, modifier: Modifier = Modifier) {
-    var open by remember { mutableStateOf(false) }
-    val timed = timedShelf(held, ailments, effects)
-    val lasting = effects.filter { it.lasting }.map { Shelved.Effect(it) }
-    if (timed.isNotEmpty() || lasting.isNotEmpty()) {
-        FlowRow(
-            modifier.clip(RibbonShape).background(RibbonVeil).clickable { open = true }.padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-            maxItemsInEachRow = RIBBON_ROW,
-        ) {
-            timed.forEach { ShelfTile(it, RIBBON_TILE) }
-            lasting.forEach { ShelfTile(it, RIBBON_TILE) }
-        }
+internal fun EffectRibbon(shelves: EffectShelves, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    if (shelves.isEmpty) return
+    FlowRow(
+        modifier.clip(RibbonShape).background(RibbonVeil).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        maxItemsInEachRow = RIBBON_ROW,
+    ) {
+        shelves.timed.forEach { ShelfTile(it, RIBBON_TILE) }
+        shelves.lasting.forEach { ShelfTile(it, RIBBON_TILE) }
+        SheetChip(shelves.timed.size + shelves.lasting.size, onOpen)
     }
-    if (open) EffectsSheet(title, timed, lasting, null) { open = false }
 }
 
-/** Плиток в строке ленты эффектов босса, их сторона, подложка и её форма. */
+/** Чип «≡» ленты эффектов: плитка ленты, касание - лист всех [count] эффектов. */
+@Composable private fun SheetChip(count: Int, onOpen: () -> Unit) {
+    val label = ui("fight.shelf.all", count)
+    Box(
+        Modifier.size(RIBBON_TILE).clip(RibbonChip).background(Muted.copy(alpha = .12f)).border(1.dp, Muted, RibbonChip)
+            .clickable(role = Role.Button, onClick = onOpen).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("≡", color = Parchment, fontSize = 12.sp, lineHeight = 12.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Плиток в строке ленты эффектов босса, их сторона, подложка, её форма и форма чипа листа. */
 private const val RIBBON_ROW = 6
 private val RIBBON_TILE = 22.dp
 private val RibbonVeil = Color(0x9E06080A)
 private val RibbonShape = RoundedCornerShape(6.dp)
+private val RibbonChip = RoundedCornerShape(4.dp)
 
 /**
  * Действующий рычаг дара: ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,

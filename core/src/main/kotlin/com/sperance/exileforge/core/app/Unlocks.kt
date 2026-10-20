@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EngineRules
 
 /**
@@ -57,12 +56,3 @@ fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1
  * [guildMin]. Сервер держит то же на каждом пути вступления; клиент гасит кнопку заранее и называет уровень.
  */
 fun guildEntryLevel(rules: EngineRules?, guildMin: Int = 1): Int = maxOf(Feature.GUILD.level(rules), guildMin)
-
-/** Запасной потолок порога вступления в гильдию, пока правила не пришли. */
-const val GUILD_ENTRY_CAP = 100
-
-/**
- * Границы порога вступления, что ставит глава: от открытия гильдий ([guildEntryLevel]) до предела правил гильдий, не выше потолка
- * уровня героя ([ContentIndex.guildEntryLevels]); без правил - до [GUILD_ENTRY_CAP]. Сервер держит те же границы.
- */
-fun guildEntryLevels(index: ContentIndex?): IntRange = index?.guildEntryLevels ?: guildEntryLevel(null)..GUILD_ENTRY_CAP

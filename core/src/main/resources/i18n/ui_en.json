@@ -798,6 +798,7 @@
   "expedition.biome.TIDEVAULT": "tide vault",
   "fight.modifiers": "Modifiers · {0}",
   "fight.no_states": "No states",
+  "fight.effects_count": "Effects · {0}",
   "stall.title": "Main thread stall",
   "start.state.ready": "ready",
   "start.state.reading": "reading…",

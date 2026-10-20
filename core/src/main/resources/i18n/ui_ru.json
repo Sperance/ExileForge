@@ -798,6 +798,7 @@
   "expedition.biome.TIDEVAULT": "приливный свод",
   "fight.modifiers": "Модификаторы · {0}",
   "fight.no_states": "Нет состояний",
+  "fight.effects_count": "Эффекты · {0}",
   "stall.title": "Игра зависла",
   "start.state.ready": "готовы",
   "start.state.reading": "читаются…",

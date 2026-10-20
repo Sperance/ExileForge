@@ -185,6 +185,13 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
         ItemSort.entries,
         ItemFilter(),
     ),
+
+    /** Вещи окна вклада в хранилище гильдии: надетого там нет, тип - вкладки окна (снаряжение и карты), цены нет. */
+    GUILD_DEPOSIT(
+        setOf(FilterFacet.RARITY, FilterFacet.LEVEL, FilterFacet.QUALITY, FilterFacet.MOD, FilterFacet.MINE, FilterFacet.CRAFTED, FilterFacet.SORT),
+        listOf(ItemSort.NEWEST, ItemSort.RARITY, ItemSort.LEVEL),
+        ItemFilter(),
+    ),
 }
 
 /**

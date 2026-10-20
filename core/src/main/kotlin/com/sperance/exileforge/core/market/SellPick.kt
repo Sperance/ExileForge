@@ -2,6 +2,8 @@ package com.sperance.exileforge.core.market
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.pick.PickPreset
+import com.sperance.exileforge.core.pick.Pickable
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.BulkSale
@@ -13,17 +15,15 @@ import com.sperance.exileforge.rules.sheet.Requirements
  * героя. Лотом становится всё, что правила отмечают к продаже ([BulkSale.pickable]: не надето, не вставлено, не заперто) - то же
  * правило проверяет сервер; ценное ([valuable]) продаётся только после подтверждения со списком.
  */
-data class SellLot(val piece: ItemView, val price: Long, val byRules: Boolean) {
-    val id: String get() = piece.id
+data class SellLot(val piece: ItemView, val price: Long, val byRules: Boolean) : Pickable {
+    override val id: String get() = piece.id
 
     /** Ценная вещь ([BulkSale.valuable]): уникальная, мифическая, с влиянием, осквернённая или расколотая. */
     val valuable: Boolean get() = BulkSale.valuable(piece.item)
 }
 
 /** Быстрый набор выбора: «по правилам автопродажи» или вся одна продаваемая редкость. */
-sealed interface SellPreset {
-    fun takes(lot: SellLot): Boolean
-
+sealed interface SellPreset : PickPreset<SellLot> {
     data object Rules : SellPreset {
         override fun takes(lot: SellLot) = lot.byRules
     }
@@ -34,31 +34,6 @@ sealed interface SellPreset {
 
     companion object {
         val ALL: List<SellPreset> = listOf(Rules) + AutoSell.SELLABLE.sortedBy { it.ordinal }.map(::OfRarity)
-    }
-}
-
-/**
- * Выбор продажи, общий для режима продажи тайника и окна конца захода: отмеченные id поверх текущих лотов.
- * Проданное или ушедшее из лотов само выпадает из выбора - счёт и сумма читаются только по живым лотам.
- */
-data class SellSelection(val chosen: Set<String> = emptySet()) {
-    fun picked(lots: List<SellLot>): List<SellLot> = lots.filter { it.id in chosen }
-
-    fun toggle(id: String) = copy(chosen = if (id in chosen) chosen - id else chosen + id)
-
-    /**
-     * Отмечает [ids], которых нет в [seen], - пометки к продаже и отложенная продажа добычи захода, что пришли позже. Уже виденный id
-     * не отмечается снова: снятая отметка не возвращается.
-     */
-    fun mark(ids: Collection<String>, seen: Set<String>) = copy(chosen = chosen + ids.filter { it !in seen })
-
-    /** Набор включён, когда в нём есть лоты и все они отмечены. */
-    fun covers(lots: List<SellLot>, preset: SellPreset): Boolean = lots.filter(preset::takes).let { set -> set.isNotEmpty() && set.all { it.id in chosen } }
-
-    /** Включённый набор снимается целиком, иначе добавляется к выбору. */
-    fun flip(lots: List<SellLot>, preset: SellPreset): SellSelection {
-        val ids = lots.filter(preset::takes).mapTo(HashSet()) { it.id }
-        return copy(chosen = if (covers(lots, preset)) chosen - ids else chosen + ids)
     }
 }
 

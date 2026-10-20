@@ -4,7 +4,6 @@
 
 ## API_REVISION (сервер `Constants.kt`, клиент `core/model/sync/Sync.kt`)
 
-- 88 - 0.15.0 - `StoryBookTaken`, мана умений по уровню умения (сняты `ManaPrice`, `KitSkill.price`), `StatDef.gain`, `rules.album`, `POST admin/fate?code=`, `X-Client-Version`.
 - 89 - 0.16.0 - тайник в `HeroItem`, `ItemInstance.og`, снят автопробег (`auto*`), `atlas.json` с `layout`, `guild/log` - `{entries, more}`, `Mail.link`, `POST admin/feedback/note`.
 - 90 - 0.16.2 - стек падения с версией сборки, отчёты модерации без системных данных, место на доске Мощи, раздел `CHARGES`, `{r:…}` по пути правил.
 - 91 - 0.16.3 - `RunStart.chestStock`, `EventReward.chestStock`, `ActiveMap.sources`, `AuctionLot.returned`, `WorkGains/WorkTally.missed`, `FountainRule.flasks`.
@@ -14,6 +13,7 @@
 - 95 - 0.16.9 - событие журнала `REGEAR` и `RunStart.wearable` (надевание в походе), `RushTier.unique`, `Item.bound`, `GuildRules.entryLevelMax`, снят `POST hero/trials/key`, `hero/sell?unequip`, отказы `CH_043`/`CH_044`.
 - 96 - 0.16.10 - `Job.additives` - код группы, `CraftingRules.additives` - группы с эффектами `AdditiveEffect` (`MODIFIER`/`YIELD`), `CraftsState.additives`; `hero/orb?count` (пачка сферы качества), снят `hero/merchant/buyOrb` и `rules.merchant.orbs`; поля контента `room` (семейство) и `cost` (вариант верстака); `Job.Chart.band` вместо `region`, счётчик `MAP_RUNS`; почта без частотных лимитов и уровня (из `rules.mail` сняты `perDay`/`perRecipient`/`guildPerDay`/`cooldownSeconds`/`windowHours`, из `unlocks` - `MAIL`; `mail/quota` без `to` и полей счёта; `MailGate` - `OPEN`/`MUTED`).
 - 97 - 0.16.11 - `HeroView.freeProgress` (замки прогресса - только тестировщику со свободным прогрессом) и `POST hero/tester/freeProgress?on=`, `RunReport|TrialReport.refusals` (только причины темпа), `run.plausibility.rushBossSeconds`, `TrialRun.nextBoss|wall`.
+- 98 - 0.16.11 - `POST guild/stash/deposit?tab=` - пакетный вклад: тело - посылки `GuildDepositParcel` (копия `itemId` или стопка `code`+`amount`), ответ `GuildDeposited` (`stash`, `placed`, `refused` по `DepositBar`); правило `GuildDeposit`, событие журнала `STASH_IN_MANY`.
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 

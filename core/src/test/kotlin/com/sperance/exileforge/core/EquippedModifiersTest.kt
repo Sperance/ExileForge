@@ -51,7 +51,8 @@ import kotlin.test.assertTrue
  *
  * Сводке по правилам не принадлежат, и сводкой сторож их не проверяет (только текстом карточки): строки инструментов - работа
  * ремесла, и фляг - глоток, лист героя их не берёт ([SheetCalculator.calculate]); силы без правил листа - боя, добычи, ремёсел и
- * слотов - действуют в бою и вне листа, их место - карточка вещи. Строки редкостей ложатся только на монстров, судьбоносная строка
+ * слотов - действуют в бою и вне листа, их место - карточка вещи; свойства самой вещи, что не усиливают её строк (места аффиксов
+ * верстака), - тоже карточка. Строки редкостей ложатся только на монстров, судьбоносная строка
  * Осквернения - не модификатор: её строки дара сводит разбор Предначертания (`SheetExplainTest`).
  */
 class EquippedModifiersTest {
@@ -98,7 +99,7 @@ class EquippedModifiersTest {
     private fun shown(effect: Effect): Shown? = when {
         effect.condition != null -> Shown.CONDITIONAL
         registry[effect.stat]?.group == StatGroup.HERO -> Shown.HERO
-        registry[effect.stat]?.group == StatGroup.ITEM -> Shown.AMPLIFIER
+        Amplify.scope(effect.stat) != null -> Shown.AMPLIFIER
         index.powers.byStat[effect.stat]?.sheet?.isNotEmpty() == true -> Shown.POWER
         else -> null
     }

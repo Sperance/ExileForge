@@ -6,9 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +14,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
@@ -33,7 +29,7 @@ import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
-import com.sperance.exileforge.ui.components.ForgeIconButton
+import com.sperance.exileforge.ui.components.NumberStepper
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
@@ -141,7 +137,6 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
  * кнопка погашена, удержание листает с ускорением. [changed] - значение правлено и не сохранено (точка у подписи).
  */
 @Composable internal fun MinLevelStepper(value: Int, levels: IntRange, enabled: Boolean, changed: Boolean = false, onChange: (Int) -> Unit) {
-    val well = RoundedCornerShape(10.dp)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -150,28 +145,7 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
             }
             Text(ui("guild.level_from", levels.first), color = Muted, style = MaterialTheme.typography.bodySmall)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            ForgeIconButton(
-                Icons.Outlined.Remove,
-                ui("guild.level_down"),
-                { onChange((value - 1).coerceIn(levels)) },
-                kind = ButtonKind.Secondary,
-                state = ButtonState.of(enabled && value > levels.first),
-                repeatOnHold = true,
-            )
-            Box(
-                Modifier.widthIn(min = 52.dp).height(ButtonSize.Wide.height).background(Abyss, well).border(1.dp, Bronze, well).padding(horizontal = 8.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(value.toString(), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold) }
-            ForgeIconButton(
-                Icons.Outlined.Add,
-                ui("guild.level_up"),
-                { onChange((value + 1).coerceIn(levels)) },
-                kind = ButtonKind.Secondary,
-                state = ButtonState.of(enabled && value < levels.last),
-                repeatOnHold = true,
-            )
-        }
+        NumberStepper(value, levels, enabled, ui("guild.level_down"), ui("guild.level_up"), onChange = onChange)
     }
 }
 

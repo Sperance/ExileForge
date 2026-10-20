@@ -42,6 +42,21 @@ fun essenceGuarantees(index: ContentIndex, code: String): List<EssenceGuarantee>
     }
 }
 
+/**
+ * Работа, что сгущает эссенцию [code] в следующую ступень (работа [Job.Condense] профессии, ступени - правило `condense` эссенций):
+ * профессия и уровень ступени из контента; null - эссенция не сгущается (высшая ступень, особая).
+ */
+fun essenceCondense(index: ContentIndex, code: String): ItemUse? {
+    val recipes = JobRecipes(index)
+    return index.professions.professions.firstNotNullOfOrNull { profession ->
+        profession.jobs.filterIsInstance<Job.Condense>().firstNotNullOfOrNull { job ->
+            recipes.options(job, "").map { it.job }.firstOrNull { variant -> variant.inputs.any { it.item == code } }?.let { variant ->
+                ItemUse(profession.code, variant.code, variant.level, variant.inputs.first { it.item == code }.amount)
+            }
+        }
+    }
+}
+
 /** How far up its ladder an essence forces its line: the rules' share, the top for a special one. */
 private fun essenceShare(index: ContentIndex, essence: Essence): Double {
     val tiers = index.essences.tiers.size
@@ -71,7 +86,6 @@ enum class SourceKind(val per: ChanceUnit) {
     RIFT(ChanceUnit.CHEST),
     RUSH(ChanceUnit.CHEST),
     QUEST(ChanceUnit.QUEST),
-    MERCHANT(ChanceUnit.REWARD),
     SALE(ChanceUnit.REWARD),
     FIND(ChanceUnit.CYCLE),
 }
@@ -141,7 +155,7 @@ fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized
 private val useCache = WeakHashMap<ContentIndex, Map<String, List<ItemUse>>>()
 
 /**
- * The reverse of the content: every table, monster, zone, work and shelf, read once into stack → sources.
+ * The reverse of the content: every table, monster, zone and work, read once into stack → sources.
  *
  * Что карточка стопки говорит из одного контента, под описанием сервера: гарантированную строку эссенции по роду вещи на её тире и откуда
  * стопка берётся; сервера ничто не спрашивает.
@@ -166,7 +180,6 @@ private class SourceIndex(private val index: ContentIndex) {
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
-        index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }
         index.rules.sell.shards.entries.groupBy { it.value.shard }.forEach { (shard, grants) ->
             add(shard, ItemSource(SourceKind.SALE, ref = grants.joinToString(",") { it.key.name }, level = grants.first().value.amount.toInt()))
         }

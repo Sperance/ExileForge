@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.FightPulse
+import com.sperance.exileforge.core.campaign.HeroBars
 import com.sperance.exileforge.core.campaign.HeroBuild
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.HudCadence
@@ -390,6 +391,9 @@ class ExpeditionRun(
     internal val abyssRule get() = index.campaign.abyss
 
     internal fun manaCap(): Double = kit.reserve(ReservePool.MANA, hero).free
+
+    /** Полосы героя на карте: по ним глоток фляги меряет, впустую ли он. */
+    internal fun bars(): HeroBars = HeroBars(life, hero.maxLife, mana, manaCap(), shield, hero.maxShield)
 
     /**
      * Набор сменён между боями: здоровье, мана и щит держат число под новым максимумом. Фляга, что встала на место другой, - пустая и без

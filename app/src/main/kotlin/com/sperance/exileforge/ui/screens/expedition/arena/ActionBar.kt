@@ -195,12 +195,14 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
     }
 }
 
+/** Фляга пояса в бою; погашенная из-за глотка впустую - касание называет полные полосы ([wastedWhy]). */
 @Composable private fun FlaskButton(view: FlaskView, live: Boolean, side: Dp, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
+    var why by remember { mutableStateOf<String?>(null) }
     Box(
         Modifier.size(side).clip(CircleShape).background(Color(0xE60A0D12))
             .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
-            .clickable(enabled = live && view.usable, onClick = onTap),
+            .clickable(enabled = live && (view.usable || view.wasted)) { if (view.usable) onTap() else why = view.wastedWhy },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -211,7 +213,18 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
         FlaskBottle(view.kind, 0f, true, Modifier.size(14.dp, 22.dp))
         Text("${view.charges}", color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp))
         if (view.locked > 0.0) SealedSlot(view.locked, CircleShape)
+        why?.let { TipCallout(Tip("", it, Muted)) { why = null } }
     }
+}
+
+/** Почему глоток фляги сейчас впустую: её полные полосы по именам - слова подсказки у погашенной плитки. */
+internal val FlaskView.wastedWhy: String get() = full.joinToString(" · ") { ui(it.fullKey) }
+
+/** Ключ слов «полоса полна» у полосы героя. */
+private val HeroBar.fullKey: String get() = when (this) {
+    HeroBar.LIFE -> "expedition.flask_full.life"
+    HeroBar.MANA -> "expedition.flask_full.mana"
+    HeroBar.SHIELD -> "expedition.flask_full.shield"
 }
 
 /** Слот, запертый «Запечатыванием» Стража Врат: тёмная печать Разлома и сколько ещё секунд. */

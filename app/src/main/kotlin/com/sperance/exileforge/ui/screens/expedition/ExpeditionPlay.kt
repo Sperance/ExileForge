@@ -51,6 +51,7 @@ import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.LifeFlowSheet
+import com.sperance.exileforge.ui.screens.expedition.arena.wastedWhy
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -366,11 +367,13 @@ private val VaalName = Color(0xFFFF8A78)
         flasks.forEach { view ->
             if (view == null) return@forEach
             val tint = flaskTint(view.kind)
+            var why by remember { mutableStateOf<String?>(null) }
             FlaskGain(view.charges, tint) {
                 Box(
                     Modifier.size(cell).clip(shape).background(Color(0xE60A0D12))
                         .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, shape)
-                        .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
+                        .clickable(enabled = view.usable || view.wasted) { if (view.usable) onDrink(view.slot) else why = view.wastedWhy }
+                        .semantics { contentDescription = ui("expedition.drink") },
                     contentAlignment = Alignment.Center,
                 ) {
                     Canvas(Modifier.fillMaxSize()) {
@@ -379,6 +382,7 @@ private val VaalName = Color(0xFFFF8A78)
                         if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(2.5.dp.toPx()))
                     }
                     Text("${view.charges}", color = GoldBright, fontSize = if (cell > 34.dp) 12.sp else 9.sp, fontWeight = FontWeight.Bold)
+                    why?.let { TipCallout(Tip("", it, Muted)) { why = null } }
                 }
             }
         }

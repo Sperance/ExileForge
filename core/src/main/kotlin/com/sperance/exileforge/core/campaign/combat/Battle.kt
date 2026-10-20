@@ -1,6 +1,9 @@
 package com.sperance.exileforge.core.campaign.combat
 
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.BodyModel
+import com.sperance.exileforge.core.campaign.HeroBar
+import com.sperance.exileforge.core.campaign.HeroBars
 import com.sperance.exileforge.core.campaign.HeroCharges
 import com.sperance.exileforge.core.campaign.HeroModel
 import com.sperance.exileforge.core.campaign.HitTrace
@@ -554,6 +557,11 @@ class Battle(
     /** Здоровье героя, что держат ауры сверх его максимума в бою. */
     fun lifeReserved(): Double = kit.reserve(ReservePool.LIFE, heroFighter.body).held
     internal fun manaCap(fighter: Fighter): Double = if (fighter === heroFighter) manaCap() else fighter.body.maxMana
+
+    /** Полосы героя, что меряют, впустую ли глоток фляги [flask] сейчас ([com.sperance.exileforge.core.campaign.Draught.waste]); пусто - глоток пьётся. */
+    internal fun waste(flask: BeltFlask): List<HeroBar> = heroFighter.let { hero ->
+        flask.sheet.draught(hero.body, hero.life, manaCap()).waste(HeroBars(hero.life, hero.body.maxLife, hero.mana, manaCap(), hero.shield, hero.body.maxShield))
+    }
 
     /** Uses the skill of active slot [slot] at the next slice, if it is ready and the mana is there — its condition aside. */
     fun useSkill(slot: Int) {

@@ -71,6 +71,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * What came when the stash was full: each piece taken in once a place frees, or sold.
  *
+ * Панель [FoldPanel], свёрнутая при каждом входе: в строке «Переполнение N/M»; раскрытая - пояснение с «Забрать всё» и вещи.
  * Запертая вещь ждёт в переполнении: её не продают ни руками, ни сервер.
  */
 @Composable fun StashOverflow(game: GameUi, vm: HeroViewModel) {
@@ -79,13 +80,11 @@ import com.sperance.exileforge.ui.theme.*
     if (hero.overflow.isEmpty()) return
     val full = hero.items.size >= rules.capacity(hero.info.stashSlots)
     val inspect = rememberInspect()
-    ForgePanel(accent = Ember) {
+    FoldPanel(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Engraved(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember)
-            Spacer(Modifier.weight(1f))
+            MutedText(ui("stash.overflow_hint"), Modifier.weight(1f))
             ForgeButton(onClick = { vm.claimOverflow() }, state = ButtonState.of(!full && !game.busy), kind = ButtonKind.Text) { Text(ui("stash.claim_all")) }
         }
-        MutedText(ui("stash.overflow_hint"))
         hero.overflow.forEach { item ->
             game.view(item)?.let { piece ->
                 ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {

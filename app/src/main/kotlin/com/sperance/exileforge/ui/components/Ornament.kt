@@ -25,11 +25,17 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.fillMaxWidth().depthPanel(RoundedCornerShape(18.dp), accent.takeIf { it != Gold }).padding(16.dp),
+        modifier.forgePanelSurface(accent).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )
 }
+
+/** Подложка панели «Мягкого» стиля во всю ширину - общая для [ForgePanel] и [FoldPanel]. */
+internal fun Modifier.forgePanelSurface(accent: Color): Modifier = fillMaxWidth().depthPanel(PanelShape, accent.takeIf { it != Gold })
+
+/** Скругление панели «Мягкого» стиля. */
+internal val PanelShape = RoundedCornerShape(18.dp)
 
 /**
  * The band of rarity colour down the left edge of an item.

@@ -62,8 +62,11 @@ import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkMiss
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.FoldBody
+import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberNow
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -143,7 +146,7 @@ internal fun WorkLedger(
     var open by rememberSaveable { mutableStateOf(!folded) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val toggle = if (folded) {
-            Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClickLabel = ui("crafts.totals_title")) { open = !open }
+            Modifier.clip(RoundedCornerShape(8.dp)).foldToggle(open, ui("crafts.totals_title")) { open = !open }
         } else {
             Modifier
         }
@@ -168,36 +171,37 @@ internal fun WorkLedger(
             }
             if (sums.made > 0) LedgerTile(ui("crafts.totals_made"), cell) { TileFigure(AnnotatedString(compactNumber(sums.made.toDouble())), Parchment) }
             level?.let { LedgerTile(ui("crafts.totals_profession"), cell) { TileFigure(AnnotatedString(ui("crafts.level", it)), Rune) } }
-            if (folded) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+            if (folded) FoldChevron(open)
         }
-        if (!open) return@Column
-        if (sums.missed.isNotEmpty()) {
-            Text(
-                sums.missed.entries.joinToString(" · ") { (miss, cycles) -> ui("crafts.missed", ui("crafts.miss.${miss.name}"), compactNumber(cycles.toDouble())) },
-                color = LifeRed,
-                style = MaterialTheme.typography.labelSmall,
-            )
-        }
-        if (sums.isEmpty) {
-            Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
-        } else {
-            Column {
-                sums.gatheredSorted.forEach { (code, amount) ->
-                    LedgerRow(game, code, amount, sums.scale, gathered = true) { inspect(Inspect.Stack(code)) }
-                }
-                sums.spentSorted.forEach { (code, amount) ->
-                    LedgerRow(game, code, amount, sums.scale, gathered = false) { inspect(Inspect.Stack(code)) }
+        FoldBody(open, Arrangement.spacedBy(8.dp)) {
+            if (sums.missed.isNotEmpty()) {
+                Text(
+                    sums.missed.entries.joinToString(" · ") { (miss, cycles) -> ui("crafts.missed", ui("crafts.miss.${miss.name}"), compactNumber(cycles.toDouble())) },
+                    color = LifeRed,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            if (sums.isEmpty) {
+                Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
+            } else {
+                Column {
+                    sums.gatheredSorted.forEach { (code, amount) ->
+                        LedgerRow(game, code, amount, sums.scale, gathered = true) { inspect(Inspect.Stack(code)) }
+                    }
+                    sums.spentSorted.forEach { (code, amount) ->
+                        LedgerRow(game, code, amount, sums.scale, gathered = false) { inspect(Inspect.Stack(code)) }
+                    }
                 }
             }
-        }
-        if (made.isNotEmpty()) {
-            SectionRule(ui("crafts.made_title", made.size))
-            MadeList(game, made) { inspect(Inspect.Copy(it)) }
-            onShow?.let { show ->
-                ForgeButton(onClick = show, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                    Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(ui("crafts.show_in_stash"))
+            if (made.isNotEmpty()) {
+                SectionRule(ui("crafts.made_title", made.size))
+                MadeList(game, made) { inspect(Inspect.Copy(it)) }
+                onShow?.let { show ->
+                    ForgeButton(onClick = show, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
+                        Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(ui("crafts.show_in_stash"))
+                    }
                 }
             }
         }

@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.model.feedback.IssueView
 
 /**
  * Поиск по отчётам - один у вкладок «Мои» и «Известные» и у списка модерации. Запрос [query] находит отчёт по тексту отчёта,
- * тексту переписки его Issue ([IssueView.notes]), номеру Issue («#212» или «212») и по логину автора (у
+ * тексту переписки его Issue ([IssueView.notes]), номеру Issue (с «#» или без) и по логину автора (у
  * модерации); регистр не важен, пустой запрос находит любой отчёт.
  */
 class ReportSearch(query: String) {

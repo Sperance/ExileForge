@@ -78,7 +78,7 @@ import kotlin.math.sin
     val wash = fight.heroAilments.map { it.ailment }.maxByOrNull(::washAmount)
     val holder: (String) -> String? = { id -> game.hero?.item(id)?.template?.let(::equipmentTitle) }
     val timed = timedShelf(fight.heroHeld, fight.heroAilments, fight.heroEffects, fight.heroCharges, fight.heroPowers, holder)
-    val shelf = remember(timed) { timed.filter { it.onShelf } }
+    val shelf = timed.filter { it.onShelf }
     val lasting = lastingShelf(fight, mods, holder)
     val openEffects = { effectsOpen = true }
     Column(
@@ -151,7 +151,7 @@ import kotlin.math.sin
         ) {
             FlowTile(fight.heroFlow, Modifier.size(30.dp))
             when {
-                timed.isEmpty() -> MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
+                timed.isEmpty() -> if (lasting.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
                 shelf.isEmpty() -> MutedText(ui("fight.effects_count", timed.size), style = MaterialTheme.typography.labelSmall)
                 else -> EffectShelf(shelf, 30.dp, openEffects, Modifier.weight(1f))
             }

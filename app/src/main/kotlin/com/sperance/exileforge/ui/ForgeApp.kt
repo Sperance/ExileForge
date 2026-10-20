@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui
 
-import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.outlined.Settings
@@ -21,7 +20,6 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.app.AppPhase
 import com.sperance.exileforge.core.app.Building
-import com.sperance.exileforge.core.app.Buzz
 import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.KeepScreen
@@ -29,9 +27,11 @@ import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.core.update.UpdateModel
 import com.sperance.exileforge.data.settings.DraftStore
+import com.sperance.exileforge.platform.Haptics
 import com.sperance.exileforge.platform.StallWatchdog
 import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.HeaderCollapse
@@ -101,17 +101,15 @@ import org.koin.compose.viewmodel.koinViewModel
         view.keepScreenOn = lit
         onDispose { view.keepScreenOn = false }
     }
-    LaunchedEffect(shell, view) {
-        shell.buzzes.collect { kind ->
-            view.performHapticFeedback(if (kind == Buzz.DANGER) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.VIRTUAL_KEY)
-        }
-    }
+    val haptics = remember(context) { Haptics(context.applicationContext) }
+    LaunchedEffect(shell, haptics) { shell.buzzes.collect(haptics::play) }
     val settingsModel = koinViewModel<SettingsViewModel>()
     CompositionLocalProvider(
         LocalUpdates provides updates,
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
+        com.sperance.exileforge.ui.components.LocalBuzzes provides koinInject<Buzzes>(),
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
         com.sperance.exileforge.ui.components.DecorClockHost { ForgeScreens() }

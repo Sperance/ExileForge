@@ -52,10 +52,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
@@ -69,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
@@ -380,7 +379,7 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
     val progress = remember { Animatable(0f) }
     val holding = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
+    val buzzes = LocalBuzzes.current
     val held by rememberUpdatedState(onHeld)
     val refused by rememberUpdatedState(onDisabledClick)
     val millis by rememberUpdatedState(hold.millis)
@@ -431,7 +430,7 @@ private fun holdBar(progress: Animatable<Float, AnimationVector1D>, bar: Color, 
                     val filling = scope.launch {
                         val left = ((1f - progress.value) * millis).toInt().coerceAtLeast(1)
                         progress.animateTo(1f, tween(left, easing = LinearEasing))
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        buzzes?.buzz(Buzz.BUTTON)
                         fire()
                     }
                     waitForUpOrCancellation()?.consume()

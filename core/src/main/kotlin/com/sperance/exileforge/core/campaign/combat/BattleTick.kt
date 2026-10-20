@@ -54,7 +54,7 @@ internal fun Battle.step(dt: Double) {
             autoDrunk = true
             if (hero.body.flasksAuto) {
                 kit.flasks.forEachIndexed { i, flask ->
-                    if (flask != null && draughtOf(i) == null && waste(flask).isEmpty()) {
+                    if (flask != null && draughtOf(i) == null && waste(i, flask).isEmpty()) {
                         flaskOpened[i] = true
                         drink(i, flask, free = true)
                     }

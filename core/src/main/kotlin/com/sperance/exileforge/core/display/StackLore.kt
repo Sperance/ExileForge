@@ -166,6 +166,8 @@ private class SourceIndex(private val index: ContentIndex) {
     /** Each table's stacks, read once: a zone's table is shared by many monsters and chests. */
     private val tables = HashMap<String, Map<String, Double?>>()
 
+    private val zoneLevels: List<Int> = index.campaign.zones.map { it.level }
+
     /** Печати Атласа - любая награда захода по карте-предмету; осколки - продажа вещей этих редкостей торговцу. */
     fun build(): Map<String, List<ItemSource>> {
         monsters()
@@ -210,11 +212,10 @@ private class SourceIndex(private val index: ContentIndex) {
      * падает не выше него. Какая именно - по весам, шанса у строки нет.
      */
     private fun drops() {
-        val levels = index.campaign.zones.map { it.level }
         val books = index.skills.rules.books
         val runes = index.skills.rules.progress.runeDrops
         val dropped = { code: String, open: (Int) -> Boolean, rare: Double, boss: Double ->
-            levels.filter(open).takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }?.let { range ->
+            span(open)?.let { range ->
                 if (rare > 0) add(code, ItemSource(SourceKind.MONSTERS, range))
                 if (boss > 0) add(code, ItemSource(SourceKind.BOSSES, range))
             }
@@ -222,6 +223,9 @@ private class SourceIndex(private val index: ContentIndex) {
         index.skills.skills.forEach { skill -> dropped(skill.book, { skill.unlock <= it + books.reach }, books.rare, books.boss) }
         index.skills.runes.forEach { rune -> dropped(rune.code, { rune.dropLevel <= it }, runes.rare, runes.boss) }
     }
+
+    /** Уровни зон, что подходят [open], от низшего до высшего; ни одной - null. */
+    private fun span(open: (Int) -> Boolean): IntRange? = zoneLevels.filter(open).takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }
 
     private fun chests() = index.campaign.zones.forEach { zone ->
         stacks(zone.chestLoot).forEach { (code, chance) -> add(code, ItemSource(SourceKind.CHESTS, zone.level..zone.level, chance)) }
@@ -232,11 +236,10 @@ private class SourceIndex(private val index: ContentIndex) {
      * на верхнем уровне тира; открытый - отдаёт стопки таблицы своего тира, стопки `items` наверняка и руны не выше верхнего уровня тира.
      */
     private fun lootChests() {
-        val levels = index.campaign.zones.map { it.level }
         index.campaign.lootChests.forEach { chest ->
             chest.tiers.forEach { tier ->
                 val code = chest.tierCode(tier)
-                levels.filter { it >= chest.minLevel && LootChest.tierOf(it) == tier }.takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }?.let { range ->
+                span { it >= chest.minLevel && LootChest.tierOf(it) == tier }?.let { range ->
                     if (chest.dropChance > 0) add(code, ItemSource(SourceKind.MONSTERS, range, chest.dropChance * PERCENT))
                     if (chest.bossChance + chest.finaleChance > 0) add(code, ItemSource(SourceKind.BOSSES, range, (chest.bossChance + chest.finaleChance) * PERCENT))
                 }

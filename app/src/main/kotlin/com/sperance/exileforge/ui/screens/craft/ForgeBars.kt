@@ -231,7 +231,7 @@ private fun Pair<String, Boolean>.climbing(batch: QualityBatch, count: Int): Pai
     val index = game.index ?: return
     val hero = game.hero ?: return
     val instance = item.item
-    val refusals = benchRefusals(index, hero, item)
+    val refusals = benchVerdict(hero, item).refusals
     val line = game.bench.firstOrNull { it.code == chosen && it.code !in refusals }
     ForgeBar(recipe, instance.corrupted) {
         when {

@@ -83,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
     val search = remember(query) { ReportSearch(query) }
-    val found = feedback.reports.filter { search.matches(it.report.text, it.report.issue, it.login) }
+    val found = feedback.reports.filter { search.matches(it.report.text, it.report.issue, author = it.login) }
     OutlinedTextField(
         query,
         { query = it.take(SEARCH) },

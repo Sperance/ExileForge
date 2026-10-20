@@ -174,10 +174,10 @@ data class FlaskView(
     /** Сколько ещё секунд флакон заперт «Запечатыванием» Стража Врат; 0 - свободен. */
     val locked: Double = 0.0,
     /** Полные полосы, из-за которых глоток сейчас впустую ([com.sperance.exileforge.core.campaign.Draught.waste]); пусто - глоток не впустую. */
-    val full: List<HeroBar> = emptyList(),
+    val fullBars: List<HeroBar> = emptyList(),
 ) {
     /** Глоток сейчас впустую: плитка гаснет, а касание называет полные полосы. */
-    val wasted: Boolean get() = full.isNotEmpty()
+    val wasted: Boolean get() = fullBars.isNotEmpty()
 
     val usable: Boolean get() = charges >= perUse && active <= 0f && locked <= 0.0 && !wasted
 }

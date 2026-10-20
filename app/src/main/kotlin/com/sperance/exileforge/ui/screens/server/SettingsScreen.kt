@@ -147,6 +147,7 @@ internal enum class SettingsPage(val title: String) {
     val sessionModel: SessionViewModel = koinViewModel()
     val settingsModel = koinViewModel<SettingsViewModel>()
     val set by settingsModel.settings.collectAsStateWithLifecycle()
+    val speeds by settingsModel.speeds.collectAsStateWithLifecycle()
     fun change(edit: GameSettings.() -> GameSettings) = settingsModel.change(edit)
     RowGroup(ui("settings.general")) {
         val shell: ShellViewModel = koinViewModel()
@@ -163,7 +164,7 @@ internal enum class SettingsPage(val title: String) {
         ChoiceRow(
             Icons.Outlined.FastForward,
             ui("settings.speed"),
-            settingsModel.speeds,
+            speeds,
             set.fightSpeed,
             { ui("settings.speed.option", it) },
             note = ui("settings.speed_note"),

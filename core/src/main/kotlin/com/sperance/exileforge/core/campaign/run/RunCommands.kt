@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
-import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.roll.Crystal
@@ -270,8 +269,9 @@ internal fun ExpeditionRun.closeCrystal() {
 internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     val flask = kit.flasks.getOrNull(slot)?.sheet ?: return
     if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero::get)) return
-    val draught = flask.draught(hero, life, manaCap())
-    if (draught.wasted(bars())) return
+    val bars = bars()
+    val draught = draughts.of(slot, flask, hero, bars.life, bars.maxMana)
+    if (draught.wasted(bars)) return
     charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero::get)).coerceAtLeast(0.0) }
     flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
     rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate, draught.toMana, draught.toShield, draught.lifeOnly) }

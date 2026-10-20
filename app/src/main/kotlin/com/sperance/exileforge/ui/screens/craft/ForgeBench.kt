@@ -23,7 +23,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
-import com.sperance.exileforge.core.i18n.refusalText
+import com.sperance.exileforge.core.forge.BenchVerdict
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.view
@@ -33,7 +33,6 @@ import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.roll.Bench
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
@@ -49,16 +48,16 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
  * Only the recipes the hero has found are offered; the rest of the bench stays hidden.
- * Рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]); строка
- * верстака, которую снять нельзя, погашена с причиной [Bench.uncraftBlockedBy].
+ * Рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, и строка верстака, которую снять нельзя, погашены с
+ * причиной правил ([BenchVerdict]).
  */
 @Composable internal fun BenchLedger(game: GameUi, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
     val recipes = game.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
-    val refusals = benchRefusals(index, hero, item)
+    val verdict = benchVerdict(hero, item)
+    val refusals = verdict.refusals
     val crafted = item.lines.firstOrNull { it.marks.crafted }
     val scouring = index.rules.bench.uncraftOrb
-    val bench = remember(index) { Bench(index) }
-    val held = remember(bench, item.item) { bench.uncraftBlockedBy(item.item, item.template)?.let { refusalText(it) } }
+    val held = verdict.uncraft
     Column {
         crafted?.let {
             LedgerRow(
@@ -89,15 +88,9 @@ import org.koin.compose.viewmodel.koinViewModel
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
 }
 
-/** Почему каждый найденный рецепт не встанет на [item]: отказ [Bench.blockedBy] словами игрока; рецепта, что встанет, нет в карте. */
-@Composable internal fun benchRefusals(index: ContentIndex, hero: HeroView, item: ItemView): Map<String, String> {
-    val bench = remember(index) { Bench(index) }
-    return remember(bench, item.item, hero.info.recipes) {
-        index.bench.filter { it.code in hero.info.recipes }.mapNotNull { recipe ->
-            bench.blockedBy(item.item, item.template, recipe, hero.info.recipes)?.let { recipe.code to refusalText(it) }
-        }.toMap()
-    }
-}
+/** Приговор верстака над [item] при рецептах героя [hero] ([BenchVerdict]): считается заново лишь при смене вещи или рецептов. */
+@Composable internal fun benchVerdict(hero: HeroView, item: ItemView): BenchVerdict =
+    remember(item.index, item.item, item.template, hero.info.recipes) { BenchVerdict.of(item, hero.info.recipes) }
 
 /**
  * One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. Описание раскрывается

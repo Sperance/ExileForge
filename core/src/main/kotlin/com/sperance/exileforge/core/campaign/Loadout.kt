@@ -302,39 +302,42 @@ data class Draught(
      */
     val boons: Boolean get() = lines.isNotEmpty() || conditional.isNotEmpty() || invulnerable > 0
 
-    /** Восполняет ли глоток сам полосу [bar]: сразу или за время. */
-    fun refills(bar: HeroBar): Boolean = when (bar) {
-        HeroBar.LIFE -> life > 0 || lifeRate > 0
-        HeroBar.MANA -> mana > 0 || manaRate > 0
-        HeroBar.SHIELD -> shield > 0
-    }
-
     /**
      * Полосы, из-за которых глоток впустую при полосах [bars]: он не даёт ничего сверх восполнения ([boons]), а всё, что он
      * восполняет, уже полно. Пусто - глоток не впустую (и глоток, что не восполняет ничего, - тоже).
      */
     fun waste(bars: HeroBars): List<HeroBar> {
         if (boons) return emptyList()
-        val refilled = HeroBar.entries.filter(::refills)
-        return refilled.takeIf { it.all(bars::full) }.orEmpty()
+        val refilled = HeroBar.entries.filter { it.refilledBy(this) }
+        return refilled.takeIf { it.all { bar -> bar.full(bars) } }.orEmpty()
     }
 
     /** Глоток впустую ([waste]) - как в PoE, его не пьют ни касанием, ни сами. */
     fun wasted(bars: HeroBars): Boolean = waste(bars).isNotEmpty()
 }
 
-/** Полоса героя, что восполняет глоток фляги. */
-enum class HeroBar { LIFE, MANA, SHIELD }
+/**
+ * Полоса героя, что восполняет глоток фляги: [now] и [max] - её запас и предел в полосах героя, [refill] - восполняет ли её глоток сам,
+ * сразу или за время.
+ */
+enum class HeroBar(private val now: (HeroBars) -> Double, private val max: (HeroBars) -> Double, private val refill: (Draught) -> Boolean) {
+    LIFE(HeroBars::life, HeroBars::maxLife, { it.life > 0 || it.lifeRate > 0 }),
+    MANA(HeroBars::mana, HeroBars::maxMana, { it.mana > 0 || it.manaRate > 0 }),
+    SHIELD(HeroBars::shield, HeroBars::maxShield, { it.shield > 0 }),
+    ;
+
+    /** Ключ словаря слов «полоса полна» - подсказка у фляги, чей глоток впустую. */
+    val fullKey: String get() = "expedition.flask_full.${name.lowercase()}"
+
+    /** Полна ли полоса в полосах героя [bars]. */
+    fun full(bars: HeroBars): Boolean = now(bars) >= max(bars)
+
+    /** Восполняет ли глоток [draught] эту полосу сам. */
+    fun refilledBy(draught: Draught): Boolean = refill(draught)
+}
 
 /** Полосы героя в миг глотка: сколько в каждой и её предел (у маны - свободное от аур). */
-data class HeroBars(val life: Double, val maxLife: Double, val mana: Double, val maxMana: Double, val shield: Double, val maxShield: Double) {
-    /** Полна ли полоса [bar]. */
-    fun full(bar: HeroBar): Boolean = when (bar) {
-        HeroBar.LIFE -> life >= maxLife
-        HeroBar.MANA -> mana >= maxMana
-        HeroBar.SHIELD -> shield >= maxShield
-    }
-}
+data class HeroBars(val life: Double, val maxLife: Double, val mana: Double, val maxMana: Double, val shield: Double, val maxShield: Double)
 
 /**
  * A draught of this flask by [hero] at [life], mana up to [manaCap]: the recovery grows at low life by
@@ -345,7 +348,7 @@ data class HeroBars(val life: Double, val maxLife: Double, val mana: Double, val
  */
 fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
     val duration = duration(hero::get)
-    val low = life < hero.maxLife * hero.rules.lowLife
+    val low = hero.lowAt(life)
     val recover = recovery(hero::get) * if (low) 1 + own(FlaskStat.LOW_LIFE_RECOVERY.code) / 100 else 1.0
     val lifeAmount = own(FlaskStat.LIFE.code) * recover
     val manaAmount = own(FlaskStat.MANA.code) * recover
@@ -364,6 +367,28 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
         toMana = own(FlaskStat.LIFE_TO_MANA.code) / 100,
         toShield = own(FlaskStat.LIFE_TO_SHIELD.code) / 100,
     )
+}
+
+/** Здоровье [life] - низкое для тела [this] (`combat.lowLife` правил): от него глоток растит восстановление. */
+private fun Combatant.lowAt(life: Double): Boolean = life < maxLife * rules.lowLife
+
+/**
+ * Глотки фляг пояса по местам, запомненные для снимков кадра и проверок «впустую»: глоток ([FlaskSheet.draught]) зависит от листа
+ * фляги, тела героя, порога низкого здоровья и свободной маны, а не от каждого очка здоровья, - строится заново лишь при их смене и
+ * равен свежему.
+ */
+class Draughts {
+    private val held = HashMap<Int, Held>()
+
+    /** Глоток фляги [sheet] места [slot] телом [hero] при здоровье [life] и свободной мане [manaCap]. */
+    fun of(slot: Int, sheet: FlaskSheet, hero: Combatant, life: Double, manaCap: Double): Draught {
+        val low = hero.lowAt(life)
+        held[slot]?.takeIf { it.sheet === sheet && it.hero === hero && it.low == low && it.manaCap == manaCap }?.let { return it.draught }
+        return sheet.draught(hero, life, manaCap).also { held[slot] = Held(sheet, hero, low, manaCap, it) }
+    }
+
+    /** Глоток [draught] и то, из чего он построен. */
+    private class Held(val sheet: FlaskSheet, val hero: Combatant, val low: Boolean, val manaCap: Double, val draught: Draught)
 }
 
 /**

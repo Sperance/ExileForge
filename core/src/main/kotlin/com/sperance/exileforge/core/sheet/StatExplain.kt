@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.campaign.FlowMeasure
 import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.campaign.ReadingPart
@@ -114,28 +113,17 @@ class StatExplainer(private val game: GameUi) {
         apart: List<Pair<WorldPart, WorldKind>> = emptyList(),
     ): StatExplanation {
         val stat = breakdown.stat
-        val measure = FightReading.measure(stat)
-        val gains = measure?.takeIf { breakdown.set == null }?.let { FlowGains(it, breakdown) }
+        val format = formatOf(breakdown)
         val cards = mutableListOf<ShareCard>()
-        if (breakdown.base != 0.0) {
-            cards += ShareCard(
-                ShareKind.BASE,
-                baseRows(breakdown, gains),
-                gains?.text(breakdown.base) ?: fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false),
-            )
-        }
+        if (breakdown.base != 0.0) cards += ShareCard(ShareKind.BASE, baseRows(format), format.base(breakdown.base))
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
-            val rows = merged(shares).map { (share, sole) -> row(stat, share, breakdown.percent, sole, gains) }
-            cards += ShareCard(kind, rows, gains?.let { flow -> flow.text(shares.sumOf(flow::of)) } ?: summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
+            val rows = merged(shares).map { (share, sole) -> row(share, sole, format) }
+            cards += ShareCard(kind, rows, format.shares(shares), cardTitle(kind, shares.first().source))
         }
         val factors = shiftFactors(breakdown)
         breakdown.shifts.groupBy(::shiftKind).toSortedMap().forEach { (kind, shifts) ->
-            val rows = shifts.map { shift -> shiftRow(stat, shift, holders, breakdown.percent, measure).let { row -> factors[shift]?.let { row.copy(value = factorChange(it)) } ?: row } }
-            val sum = when {
-                measure != null -> measure.text(stat, shifts.sumOf { it.delta })
-                factors.isEmpty() -> signed(stat, shifts.sumOf { it.delta }, breakdown.percent)
-                else -> factorChange(shifts.fold(1.0) { acc, it -> acc * (factors[it] ?: 1.0) })
-            }
+            val rows = shifts.map { shift -> shiftRow(shift, holders, format).let { row -> factors[shift]?.let { row.copy(value = factorChange(it)) } ?: row } }
+            val sum = format.shifts(shifts, factors)
             val at = cards.indexOfFirst { it.kind == kind }
             if (at >= 0) cards[at] = cards[at].let { it.copy(rows = it.rows + rows, summary = "${it.summary} · $sum") } else cards += ShareCard(kind, rows, sum, cardTitle(kind, shifts.first().source))
         }
@@ -151,7 +139,7 @@ class StatExplainer(private val game: GameUi) {
         }
         return StatExplanation(
             stat,
-            measure?.text(stat, breakdown.total) ?: fmt(stat, breakdown.total, Op.ADD, breakdown.percent, sign = false),
+            format.total(breakdown.total),
             cards,
             weights(breakdown),
             formula(breakdown),
@@ -205,33 +193,21 @@ class StatExplainer(private val game: GameUi) {
     private fun cardTitle(kind: ShareKind, source: StatSource?): String? = if (kind == ShareKind.FATE) sourceTitle(source) else null
 
     /**
-     * Строка сдвига: шаг дара - его правилом, чтение боя - характеристикой, откуда прибавка (касание открывает её). У строки-потока
-     * ([measure]) сдвиг - вкладом в её мере.
+     * Строка сдвига: шаг дара - его правилом, чтение боя - характеристикой, откуда прибавка (касание открывает её); число - в
+     * печати [format] разбора.
      */
-    private fun shiftRow(stat: String, shift: Shift, holders: (String) -> List<StatSource>, percent: Boolean, measure: FlowMeasure?): ShareRow {
-        val value = measure?.text(stat, shift.delta) ?: signed(stat, shift.delta, percent)
+    private fun shiftRow(shift: Shift, holders: (String) -> List<StatSource>, format: PlainFormat): ShareRow {
+        val stat = format.b.stat
+        val value = format.shift(shift.delta)
         val better = judge(stat, shift.delta)
         return when (shift.source.kind) {
-            SourceKind.FIGHT -> ReadingPart.of(shift.source.ref)?.let { part -> partRow(stat, part, shift.delta, value, better, measure) }
+            SourceKind.FIGHT -> ReadingPart.of(shift.source.ref)?.let { part -> format.part(part, shift.delta, value, better) }
                 ?: ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = RowLink.Stat(shift.source.ref), better = better)
 
             SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source), better = better)
 
             else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) }, link = soleHolder(shift.source, holders), better = better)
         }
-    }
-
-    /**
-     * Часть чтения боя: своё имя, у множителя - он сам под именем («×0.50»), касание - характеристика, что её задаёт. У строки-потока
-     * ([measure]) число части - рядом с её вкладом [delta]: множитель «×0.50 ≈ −2.0/с», доля максимума «0.7% максимума в секунду ≈ +4.2/с».
-     */
-    private fun partRow(stat: String, part: ReadingPart, delta: Double, value: String, better: Boolean?, measure: FlowMeasure?): ShareRow {
-        val times = factorOf(stat, part)
-        val note = ui("stat.fight.note")
-        val link = part.stat?.let(RowLink::Stat)
-        if (measure == null) return ShareRow(ui("stat.flow.${part.name}"), value, times?.let { "×${factor(it)} · $note" } ?: note, link = link, better = better)
-        val figure = times?.let { "×${factor(it)}" } ?: part.stat?.takeIf { part.ofMax }?.let { share -> ui(measure.shareKey, shareNumber(share, hero?.combat?.stats?.get(share) ?: 0.0) + "%") }
-        return ShareRow(ui("stat.flow.${part.name}"), figure?.let { measure.gives(stat, it, delta) } ?: value, note, link = link, better = better)
     }
 
     /** Множитель части [part] чтения боя цифры [stat] на листе героя; прибавка - null. */
@@ -270,9 +246,11 @@ class StatExplainer(private val game: GameUi) {
     /** Сила уникалки с одним носителем среди надетого ведёт к карточке этой вещи; с несколькими или без носителя - никуда. */
     private fun soleHolder(source: StatSource, holders: (String) -> List<StatSource>): RowLink? = if (source.kind == SourceKind.POWER) holders(source.ref).filter { it.kind == SourceKind.ITEM }.singleOrNull()?.let(::itemLink) else null
 
-    /** Строка источника [share]; у строки-потока ([gains]) - его число и вклад в итог в её мере. */
-    private fun row(stat: String, share: Share, percent: Boolean, sole: Boolean, gains: FlowGains?): ShareRow {
-        val value = fmt(stat, share.value, share.op, percent).let { figure -> gains?.row(share, figure) ?: figure }
+    /** Строка источника [share]; значение - в печати [format] разбора ([PlainFormat.share]). */
+    private fun row(share: Share, sole: Boolean, format: PlainFormat): ShareRow {
+        val stat = format.b.stat
+        val percent = format.b.percent
+        val value = format.share(share, fmt(stat, share.value, share.op, percent))
         val better = judge(stat, share.value, share.op)
         val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source), if (sole) itemLink(share.source) else null, better)
         val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
@@ -371,17 +349,18 @@ class StatExplainer(private val game: GameUi) {
      * Строки базы [b]: класс героя на первом уровне и прирост за уровни после него - «Класс «Мародёр» +20», «Уровень 24 +23»
      * (`HeroClass.baseOn`). Без героя или если база не сходится с классом - одной строкой.
      */
-    private fun baseRows(b: StatBreakdown, gains: FlowGains?): List<ShareRow> {
+    private fun baseRows(format: PlainFormat): List<ShareRow> {
+        val b = format.b
         val stat = b.stat
-        val whole = listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), gains?.text(b.base) ?: fmt(stat, b.base, Op.ADD, b.percent, sign = false), better = judge(stat, b.base)))
+        val whole = listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), format.base(b.base), better = judge(stat, b.base)))
         val owner = hero ?: return whole
         val heroClass = index?.heroClass(owner.heroClass) ?: return whole
         val start = heroClass.base[stat] ?: 0.0
         val grown = (heroClass.perLevel[stat] ?: 0.0) * (owner.level - 1).coerceAtLeast(0)
         if (grown == 0.0 || abs(start + grown - b.base) >= 0.05) return whole
         return listOfNotNull(
-            ShareRow(ui("stat.src.class", classTitle(owner.heroClass)), gains?.text(start) ?: fmt(stat, start, Op.ADD, b.percent), better = judge(stat, start)).takeIf { start != 0.0 },
-            ShareRow(ui("stat.src.level", owner.level), gains?.text(grown) ?: fmt(stat, grown, Op.ADD, b.percent), better = judge(stat, grown)),
+            ShareRow(ui("stat.src.class", classTitle(owner.heroClass)), format.basePart(start), better = judge(stat, start)).takeIf { start != 0.0 },
+            ShareRow(ui("stat.src.level", owner.level), format.basePart(grown), better = judge(stat, grown)),
         )
     }
 
@@ -463,30 +442,99 @@ class StatExplainer(private val game: GameUi) {
     }
 
     /**
-     * Вклады источников строки-потока [b] в её итог в мере [measure], без замены значения: плоская часть - как есть, увеличение - его доля
-     * плоской суммы, «больше» - доля прироста за все «больше» по логарифму своего множителя. С частями чтения боя (сдвигами) сумма вкладов
-     * сходится с итогом.
+     * Печать чисел разбора [b], выбранная раз на разбор: без меры - операцией характеристики ([PlainFormat]); строка-поток - в своей
+     * мере ([FlowMeasure.of]): с заменой значения - только сдвиги и итог ([MeasuredFormat]), без неё - и база с источниками вкладом в
+     * итог ([GainsFormat]).
      */
-    private class FlowGains(private val measure: FlowMeasure, private val b: StatBreakdown) {
+    private fun formatOf(b: StatBreakdown): PlainFormat {
+        val measure = FlowMeasure.of(b.stat) ?: return PlainFormat(b)
+        return if (b.set == null) GainsFormat(b, measure) else MeasuredFormat(b, measure)
+    }
+
+    /** Числа разбора [b] операцией характеристики: «+20», «+10%», «×1.10». */
+    private open inner class PlainFormat(val b: StatBreakdown) {
+        /** База без знака - сводка карточки и её строка. */
+        open fun base(value: Double): String = fmt(b.stat, value, Op.ADD, b.percent, sign = false)
+
+        /** Доля базы со знаком: класс на первом уровне, прирост за уровни. */
+        open fun basePart(value: Double): String = fmt(b.stat, value, Op.ADD, b.percent)
+
+        /** Значение строки источника [share] с числом [figure] его операции. */
+        open fun share(share: Share, figure: String): String = figure
+
+        /** Сводка карточки источников [shares]: сумма по операциям. */
+        open fun shares(shares: List<Share>): String = summary(b.stat, shares, b.percent)
+
+        /** Значение строки сдвига [delta]. */
+        open fun shift(delta: Double): String = signed(b.stat, delta, b.percent)
+
+        /** Сводка карточки сдвигов [shifts]: их сумма, у множителя - произведение их множителей [factors]. */
+        open fun shifts(shifts: List<Shift>, factors: Map<Shift, Double>): String = if (factors.isEmpty()) {
+            signed(b.stat, shifts.sumOf { it.delta }, b.percent)
+        } else {
+            factorChange(shifts.fold(1.0) { acc, it -> acc * (factors[it] ?: 1.0) })
+        }
+
+        /** Итог разбора без знака. */
+        open fun total(value: Double): String = fmt(b.stat, value, Op.ADD, b.percent, sign = false)
+
+        /**
+         * Строка части [part] чтения боя со значением [value]: своё имя, у множителя - он сам под именем («×0.50»), касание -
+         * характеристика, что её задаёт.
+         */
+        open fun part(part: ReadingPart, delta: Double, value: String, better: Boolean?): ShareRow {
+            val note = ui("stat.fight.note")
+            val times = factorOf(b.stat, part)
+            return ShareRow(ui("stat.flow.${part.name}"), value, times?.let { "×${factor(it)} · $note" } ?: note, link = part.stat?.let(RowLink::Stat), better = better)
+        }
+    }
+
+    /**
+     * Строка-поток [b] с заменой значения: сдвиги и итог - в мере [measure], источники - операцией. Число части чтения боя - рядом с
+     * её вкладом: множитель «×0.50 ≈ −2.0/с», доля максимума «0.7% максимума в секунду ≈ +4.2/с».
+     */
+    private open inner class MeasuredFormat(b: StatBreakdown, protected val measure: FlowMeasure) : PlainFormat(b) {
+        override fun shift(delta: Double): String = measure.text(b.stat, delta)
+
+        override fun shifts(shifts: List<Shift>, factors: Map<Shift, Double>): String = measure.text(b.stat, shifts.sumOf { it.delta })
+
+        override fun total(value: Double): String = measure.text(b.stat, value)
+
+        override fun part(part: ReadingPart, delta: Double, value: String, better: Boolean?): ShareRow {
+            val figure = factorOf(b.stat, part)?.let { "×${factor(it)}" }
+                ?: part.stat?.takeIf { part.ofMax }?.let { share -> ui(measure.shareKey, shareNumber(share, hero?.combat?.stats?.get(share) ?: 0.0) + "%") }
+            return ShareRow(ui("stat.flow.${part.name}"), figure?.let { measure.gives(b.stat, it, delta) } ?: value, ui("stat.fight.note"), link = part.stat?.let(RowLink::Stat), better = better)
+        }
+    }
+
+    /**
+     * Строка-поток [b] без замены значения: и база, и источники - вкладом в итог в мере [measure]. Плоская часть - как есть, увеличение -
+     * его доля плоской суммы, «больше» - доля прироста за все «больше» по логарифму своего множителя. С частями чтения боя (сдвигами)
+     * сумма вкладов сходится с итогом.
+     */
+    private inner class GainsFormat(b: StatBreakdown, measure: FlowMeasure) : MeasuredFormat(b, measure) {
         private val logMore = ln(b.moreFactor)
         private val gain = b.flatSum * (1 + b.increasedSum / 100) * (b.moreFactor - 1)
 
         /** Вклад источника [share] в итог. */
-        fun of(share: Share): Double = when {
+        private fun of(share: Share): Double = when {
             share.op == Op.ADD || b.percent && share.op == Op.INCREASED -> share.value
             share.op == Op.INCREASED -> b.flatSum * share.value / 100
             share.op == Op.MORE && logMore != 0.0 -> gain * ln(1 + share.value / 100) / logMore
             else -> 0.0
         }
 
-        /** Значение строки источника [share] с числом [figure] его операции: плоская - вкладом, увеличение и «больше» - «число ≈ вклад». */
-        fun row(share: Share, figure: String): String = when (share.op) {
-            Op.ADD -> text(of(share))
+        override fun base(value: Double): String = measure.text(b.stat, value)
+
+        override fun basePart(value: Double): String = measure.text(b.stat, value)
+
+        /** Плоская - вкладом, увеличение и «больше» - «число ≈ вклад». */
+        override fun share(share: Share, figure: String): String = when (share.op) {
+            Op.ADD -> measure.text(b.stat, of(share))
             Op.INCREASED -> measure.gives(b.stat, ui("stat.flow.increased", figure), of(share))
             else -> measure.gives(b.stat, figure, of(share))
         }
 
-        /** Вклад [value] в мере строки: «+0.1/с». */
-        fun text(value: Double): String = measure.text(b.stat, value)
+        override fun shares(shares: List<Share>): String = measure.text(b.stat, shares.sumOf(::of))
     }
 }

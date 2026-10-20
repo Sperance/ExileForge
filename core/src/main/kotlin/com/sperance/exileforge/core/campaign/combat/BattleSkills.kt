@@ -486,7 +486,7 @@ internal fun Battle.useFlasks() {
         val auto = flask.sheet.own(FlaskStat.AUTO_LOW_LIFE.code).let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
-        if (waste(flask).isNotEmpty()) return@forEachIndexed
+        if (waste(i, flask).isNotEmpty()) return@forEachIndexed
         flaskOpened[i] = true
         drink(i, flask)
     }

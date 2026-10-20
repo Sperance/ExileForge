@@ -166,7 +166,17 @@ private class SourceIndex(private val index: ContentIndex) {
     /** Each table's stacks, read once: a zone's table is shared by many monsters and chests. */
     private val tables = HashMap<String, Map<String, Double?>>()
 
-    private val zoneLevels: List<Int> = index.campaign.zones.map { it.level }
+    /**
+     * Уровни районов, где бьются монстры: зоны кампании и заходы по их картам - свой уровень карты от зоны до потолка своих уровней
+     * ([com.sperance.exileforge.rules.content.MapRule.ownLevelCap]), выше порога тиров - район каждого тира.
+     */
+    private val areaLevels: List<Int> = index.campaign.maps.let { maps ->
+        index.campaign.zones.flatMap { zone ->
+            val own = maps.ownLevelCap?.takeIf { maps.hasOwnMapLevel(zone.level) }?.let { zone.level..it } ?: zone.level..zone.level
+            val tiers = maps.tiers?.takeIf { zone.level >= it.fromLevel }?.let { rule -> (1..rule.max).map { rule.areaLevel(zone.level, it) } }.orEmpty()
+            own + tiers
+        }.distinct()
+    }
 
     /** Печати Атласа - любая награда захода по карте-предмету; осколки - продажа вещей этих редкостей торговцу. */
     fun build(): Map<String, List<ItemSource>> {
@@ -224,15 +234,15 @@ private class SourceIndex(private val index: ContentIndex) {
         index.skills.runes.forEach { rune -> dropped(rune.code, { rune.dropLevel <= it }, runes.rare, runes.boss) }
     }
 
-    /** Уровни зон, что подходят [open], от низшего до высшего; ни одной - null. */
-    private fun span(open: (Int) -> Boolean): IntRange? = zoneLevels.filter(open).takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }
+    /** Уровни районов ([areaLevels]), что подходят [open], от низшего до высшего; ни одной - null. */
+    private fun span(open: (Int) -> Boolean): IntRange? = areaLevels.filter(open).takeIf { it.isNotEmpty() }?.let { it.min()..it.max() }
 
     private fun chests() = index.campaign.zones.forEach { zone ->
         stacks(zone.chestLoot).forEach { (code, chance) -> add(code, ItemSource(SourceKind.CHESTS, zone.level..zone.level, chance)) }
     }
 
     /**
-     * Сундуки-добыча ([LootChest]): тир сундука падает с монстров и боссов зон своего тира (не ниже `minLevel`) и из награды испытания
+     * Сундуки-добыча ([LootChest]): тир сундука падает с монстров и боссов районов своего тира ([areaLevels]) (не ниже `minLevel`) и из награды испытания
      * на верхнем уровне тира; открытый - отдаёт стопки таблицы своего тира, стопки `items` наверняка и руны не выше верхнего уровня тира.
      */
     private fun lootChests() {

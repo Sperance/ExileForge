@@ -43,7 +43,7 @@ private const val HERO_CARD = -1
  * strike — is laid open, its numbers held against the hero's.
  *
  * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
- * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра. Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
+ * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра; [top] - полоса режима над врагами (Честь Разлома). Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
  * раз при падении здоровья через свою черту, вибрация - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
  * бой. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
  * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление.
@@ -63,6 +63,7 @@ private const val HERO_CARD = -1
     mapEffects: Map<String, Double> = emptyMap(),
     origins: EffectOrigins = EffectOrigins.NONE,
     pulse: FightPulse? = null,
+    top: (@Composable () -> Unit)? = null,
 ) {
     val breath = decorTime()
     val frame = remember(clock, pulse, breath) { FightFrame(clock, pulse, breath) }
@@ -102,6 +103,7 @@ private const val HERO_CARD = -1
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                top?.invoke()
                 val boss = fight.boss
                 if (boss != null) {
                     BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }, onIntroFrame) { inspect = it }

@@ -135,7 +135,7 @@ class ModesBal(private val index: ContentIndex) {
 
     /**
      * Забег Разлома недели [week] героем [hero]: схема недели и правила забега - сервера ([RiftPlan], [RiftEngine]), бой узла -
-     * арена клиента ([RiftArena]) на высшей скорости. Игрок-модель: при здоровье ниже [REST_BELOW] - отдых, иначе сокровище, бой,
+     * арена клиента ([RiftArena]) на высшей скорости. Игрок-модель: при Чести ниже [REST_BELOW] предела - отдых, иначе сокровище, бой,
      * элита, кузня; алтарь и чемпион - если иного пути нет; дар - первый вариант, отдых - лечение, контракт - отказ.
      *
      * Время боя меряет сервер: заявка - сразу после честного минимума.
@@ -146,7 +146,7 @@ class ModesBal(private val index: ContentIndex) {
         val gear = gear(hero)
         val context = RunContext(hero.heroClass.code, hero.level)
         val fate = com.sperance.exileforge.core.campaign.combat.FateRun()
-        var run = RiftRun("sim-$week", week, hero.level, RiftHero(RiftStyles.of(gear)), 0L, content = index.hash)
+        var run = engine.begin(RiftRun("sim-$week", week, hero.level, RiftHero(RiftStyles.of(gear)), 0L, content = index.hash))
         var fights = 0
         var fatal: RiftNodeKind? = null
         val wardens = ArrayList<Pair<Boolean, Double>>()
@@ -163,7 +163,7 @@ class ModesBal(private val index: ContentIndex) {
                     arena.send(RunCommand.Begin)
                     var frames = 0
                     while (end == null && frames++ < LIMIT) arena.update(DT)
-                    val result = end ?: RiftAct.Fight(false, 0.0)
+                    val result = end ?: RiftAct.Fight(false, 1.0)
                     if (node.kind == RiftNodeKind.GUARDIAN) wardens += result.won to arena.hud.value.seconds
                     if (result.won) fights++ else fatal = node.kind
                     engine.act(run, result, run.fightAt + HOUR_MS)
@@ -177,10 +177,10 @@ class ModesBal(private val index: ContentIndex) {
         return Rift(run.guardians, rules.acts, fights, run.fallen, fatal, wardens)
     }
 
-    /** Следующий узел модели игрока: отдых при низком здоровье, иначе по [PATH]. */
+    /** Следующий узел модели игрока: отдых при низкой Чести, иначе по [PATH]. */
     private fun step(engine: RiftEngine, run: RiftRun): Int {
         val next = engine.next(run).mapNotNull(engine.plan::node)
-        val rest = next.firstOrNull { it.kind == RiftNodeKind.REST }.takeIf { run.life < REST_BELOW }
+        val rest = next.firstOrNull { it.kind == RiftNodeKind.REST }.takeIf { run.honor < engine.maxHonor(run) * REST_BELOW }
         return (rest ?: next.minWith(compareBy({ PATH.indexOf(it.kind) }, { it.id }))).id
     }
 
@@ -246,7 +246,7 @@ class ModesBal(private val index: ContentIndex) {
         /** Потолок кадров на испытание. */
         const val LIMIT = 200_000
 
-        /** Модель игрока Разлома: доля здоровья, ниже которой он идёт на отдых. */
+        /** Модель игрока Разлома: доля Чести от предела, ниже которой он идёт на отдых. */
         const val REST_BELOW = .5
 
         /** Порядок узлов, что выбирает модель игрока Разлома. */

@@ -118,6 +118,7 @@ class ExpeditionViewModel(
     fun riftAct(act: com.sperance.exileforge.rules.rift.RiftAct) = rift.act(act)
     fun riftCommand(command: RunCommand) = rift.send(command)
     fun dismissRiftResult() = rift.dismissResult()
+    fun dismissRiftToll() = rift.dismissToll()
 
     fun leaveRiftRefused() = rift.leaveRefused()
 }

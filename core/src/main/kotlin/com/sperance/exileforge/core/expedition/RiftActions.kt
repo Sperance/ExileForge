@@ -19,12 +19,16 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
+import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
 import com.sperance.exileforge.rules.rift.RiftEngine
+import com.sperance.exileforge.rules.rift.RiftOffer
 import com.sperance.exileforge.rules.rift.RiftResult
+import com.sperance.exileforge.rules.rift.RiftRun
 import com.sperance.exileforge.rules.rift.RiftStage
+import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,11 +40,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import kotlin.math.roundToInt
 
 /**
  * Разлом на экране: доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
  * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
- * боя узла («Журнал боя»).
+ * боя узла («Журнал боя»); [toll] - итог последнего выигранного боя для шапки; [coffers] - что лежало в открытых сундуках Владыки
+ * по номеру сундука (только пока забег стоит у сундуков).
  */
 data class RiftState(
     val open: Boolean = false,
@@ -49,7 +55,21 @@ data class RiftState(
     val result: RiftResult? = null,
     val delivery: RiftDelivery? = null,
     val lastFight: FightReport? = null,
+    val toll: RiftToll? = null,
+    val coffers: Map<Int, Reward> = emptyMap(),
 )
+
+/** Итог выигранного боя узла для шапки забега: Честь до [before] и после [after], взятый ключ [key]. */
+data class RiftToll(val before: Double, val after: Double, val key: RiftMetal?) {
+    /** Сколько Чести снял бой, в целых, как её показывает шапка. */
+    val lost: Int get() = (before.roundToInt() - after.roundToInt()).coerceAtLeast(0)
+
+    companion object {
+        /** Итог боя по забегу до [before] и после [after]: взятый ключ - металл, которого стало больше. */
+        fun of(before: RiftRun, after: RiftRun): RiftToll =
+            RiftToll(before.honor, after.honor, after.keys.entries.firstOrNull { (metal, count) -> count > (before.keys[metal] ?: 0) }?.key)
+    }
+}
 
 /** Итог боя Разлома в пути: уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
 sealed interface RiftDelivery {
@@ -106,11 +126,20 @@ class RiftActions(
         }
     }
 
-    /** Шаг забега [act] по нажатию игрока: ответ - новая доска, а у конца - итог и сундук. */
+    /** Шаг забега [act] по нажатию игрока: ответ - новая доска, у сундука Владыки - его содержимое, а у конца - итог и сундук. */
     fun act(act: RiftAct) {
         val run = mutable.value.board?.progress?.run ?: return
-        commands.task(writing = true, touches = setOf(Reads.HERO)) { land(api.trials.riftAct(heroes.heroId, run.id, act)) }
+        commands.task(writing = true, touches = setOf(Reads.HERO)) {
+            val report = api.trials.riftAct(heroes.heroId, run.id, act)
+            val opened = (act as? RiftAct.Open)?.coffer
+            val coffer = report.coffer
+            if (opened != null && coffer != null) mutable.update { it.copy(coffers = it.coffers + (opened to coffer)) }
+            land(report)
+        }
     }
+
+    /** Итог боя в шапке прочитан. */
+    fun dismissToll() = mutable.update { it.copy(toll = null) }
 
     /**
      * Итог боя: не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
@@ -130,7 +159,8 @@ class RiftActions(
                 mutable.update { it.copy(delivery = RiftDelivery.Sending(attempt)) }
                 try {
                     val report = api.trials.riftAct(heroId, run.id, end, key)
-                    mutable.update { it.copy(delivery = null) }
+                    val after = report.board.progress.run?.takeIf { it.id == run.id && end.won }
+                    mutable.update { it.copy(delivery = null, toll = after?.let { next -> RiftToll.of(run, next) }) }
                     land(report)
                     return@launch
                 } catch (e: CancellationException) {
@@ -188,7 +218,8 @@ class RiftActions(
             current != null && mutable.value.delivery != null -> current
             else -> arena(board)
         }
-        mutable.update { it.copy(board = board, arena = arena) }
+        val coffers = run?.offer is RiftOffer.Coffers
+        mutable.update { it.copy(board = board, arena = arena, coffers = if (coffers) it.coffers else emptyMap()) }
     }
 
     private var sending: Job? = null

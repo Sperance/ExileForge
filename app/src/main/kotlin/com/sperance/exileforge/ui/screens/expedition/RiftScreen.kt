@@ -23,12 +23,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
@@ -53,12 +55,16 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftState
+import com.sperance.exileforge.core.expedition.RiftToll
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.RiftLaw
+import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftMutator
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
+import com.sperance.exileforge.rules.content.RiftReward
+import com.sperance.exileforge.rules.content.RiftRule
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
@@ -68,6 +74,7 @@ import com.sperance.exileforge.rules.rift.RiftOffer
 import com.sperance.exileforge.rules.rift.RiftRest
 import com.sperance.exileforge.rules.rift.RiftRun
 import com.sperance.exileforge.rules.rift.RiftStage
+import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
@@ -76,6 +83,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.roundToInt
 
 /** Палитра Разлома (RULES.md клиента, «Стражи Разлома»): ядовито-зелёный на почти чёрном. */
 internal object RiftColors {
@@ -96,6 +104,18 @@ internal object RiftColors {
     val LifeLow = Color(0xFFB3263B)
     val LifeHigh = Color(0xFFFF4D62)
 
+    /** Честь забега - бирюза: полоса, её глубина у начала и тлеющий край потери боя. */
+    val Honor = Color(0xFF6FE3F2)
+    val HonorDeep = Color(0xFF0E3A44)
+    val HonorWell = Color(0xFF0B1A1D)
+    val HonorWell2 = Color(0xFF071012)
+    val HonorRim = Color(0xFF2A5560)
+    val Ember = Color(0xFFFFB4A0)
+
+    /** Металлы ключей и сундуков Владыки; золото - Предначертания. */
+    val Bronze = Color(0xFFD0925A)
+    val Silver = Color(0xFFC9D6DE)
+
     /** Выделенный вариант узла - золото Предначертания: рамка и знак выбора. */
     val Pick = FateInk.Gold
     val OnPick = FateInk.OnGold
@@ -106,6 +126,13 @@ internal fun RiftRarity.color(): Color = when (this) {
     RiftRarity.COMMON -> RiftColors.Soft
     RiftRarity.RARE -> RiftColors.Hot
     RiftRarity.LEGENDARY -> RiftColors.Chaos
+}
+
+/** Цвет металла ключа и сундука. */
+internal fun RiftMetal.color(): Color = when (this) {
+    RiftMetal.BRONZE -> RiftColors.Bronze
+    RiftMetal.SILVER -> RiftColors.Silver
+    RiftMetal.GOLD -> RiftColors.Pick
 }
 
 /** Цвет вида узла на схеме. */
@@ -142,7 +169,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(model, rules, board, engine, run, idle = !game.busy)
+            if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(game, model, rules, board, engine, run, state, idle = !game.busy)
         }
         state.result?.let { RiftResultSheet(game, model, it) }
     }
@@ -411,15 +438,15 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 /** Что открыто поверх карты забега: дары, проклятия или меню забега. */
 private enum class RunSheet { BOONS, CURSES }
 
-/** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу. */
-@Composable private fun RiftRunView(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean) {
+/** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу; [state] - итог последнего боя и открытые сундуки. */
+@Composable private fun RiftRunView(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, state: RiftState, idle: Boolean) {
     var looking by remember { mutableStateOf<RiftNode?>(null) }
     var sheet by remember { mutableStateOf<RunSheet?>(null) }
     BackHandler { model.closeRift() }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
-        RiftAscent(rules, engine, run, idle, top = 120.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it }
-        RiftHud(model, rules, board, engine, run, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
+        RiftAscent(rules, engine, run, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it }
+        RiftHud(model, rules, board, engine, run, state.toll, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
             enter = androidx.compose.animation.slideInVertically { it },
@@ -428,7 +455,7 @@ private enum class RunSheet { BOONS, CURSES }
         ) {
             Column(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp).heightIn(max = 440.dp),
-            ) { offer?.let { OfferPlate(rules, run, it, idle, model::riftAct) } }
+            ) { offer?.let { OfferPlate(game, rules, engine, run, it, state.coffers, idle, model::riftAct) } }
         }
     }
     looking?.let { node ->
@@ -457,17 +484,24 @@ private enum class RunSheet { BOONS, CURSES }
     }
 }
 
-/** HUD забега: счёт, Эхо и жизнь; чипы даров и проклятий открывают шторки, обзор - сколько рядов видно; ☰ - меню забега. */
-@Composable private fun RiftHud(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
+/**
+ * HUD забега: счёт, Эхо и ключи захода, под ними свиток Чести; итог последнего боя ([toll]) - «−N Чести» и взятый ключ под свитком,
+ * сам гаснет. Чипы даров и проклятий открывают шторки, обзор - сколько рядов видно; ☰ - меню забега.
+ */
+@Composable private fun RiftHud(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, toll: RiftToll?, idle: Boolean, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
     Column(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
             .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RiftChip(ui("rift.score", engine.score(run)), RiftColors.Hot)
             RiftChip(ui("rift.echo", run.echo), RiftColors.Rift)
-            LifeBar(run.life.toFloat(), Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
+            KeyCounts(run.keys)
         }
+        HonorScroll(run.honor, engine.maxHonor(run), 0.0, Modifier.fillMaxWidth())
+        toll?.let { TollLine(it, model::dismissRiftToll) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             RiftChip(ui("rift.boons", run.boons.size, rules.nodes.slots), RiftColors.Soft) { onSheet(RunSheet.BOONS) }
             RiftChip(ui("rift.curses_n", run.curses.size), RiftColors.Warn) { onSheet(RunSheet.CURSES) }
@@ -491,13 +525,89 @@ private enum class RunSheet { BOONS, CURSES }
     )
 }
 
-/** Жизнь героя в забеге: багровая полоса с процентом. */
-@Composable private fun LifeBar(life: Float, modifier: Modifier) {
+/**
+ * Свиток Чести: бирюзовая полоса [honor] из [max] с подписью; [loss] - сколько снимет идущий бой: эта доля полосы заштрихована, у её
+ * края тлеет огонёк (декор стоит при выключенном `LocalMotion`), справа - «−N за бой».
+ *
+ * Тление читается в рисовании: свиток перерисовывается без перекомпоновки.
+ */
+@Composable internal fun HonorScroll(honor: Double, max: Double, loss: Double, modifier: Modifier = Modifier) {
+    val ember = motionPhase(EMBER_MS)
+    val top = max.coerceAtLeast(1.0)
+    val now = honor.coerceIn(0.0, top)
+    val after = (now - loss).coerceAtLeast(0.0)
+    val toll = now.roundToInt() - after.roundToInt()
     val shape = RoundedCornerShape(4.dp)
-    Box(modifier.height(14.dp).background(Color(0xFF1A0B0F), shape).border(1.dp, Color(0xFF3A1820), shape)) {
-        Box(Modifier.fillMaxHeight().fillMaxWidth(life.coerceIn(0f, 1f)).background(Brush.horizontalGradient(listOf(RiftColors.LifeLow, RiftColors.LifeHigh)), shape))
-        Text(ui("rift.life", (life * 100).toInt()), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+    Box(
+        modifier.height(22.dp).background(Brush.verticalGradient(listOf(RiftColors.HonorWell, RiftColors.HonorWell2)), shape).border(1.dp, RiftColors.HonorRim, shape)
+            .clip(shape).drawBehind {
+                val keep = (after / top).toFloat() * size.width
+                val was = (now / top).toFloat() * size.width
+                drawRect(Brush.horizontalGradient(listOf(RiftColors.HonorDeep, RiftColors.Honor), 0f, size.width), size = size.copy(width = keep))
+                if (was > keep) {
+                    clipRect(left = keep, right = was) {
+                        val step = 6.dp.toPx()
+                        var x = keep - size.height
+                        while (x < was) {
+                            drawLine(RiftColors.Warn.copy(alpha = .55f), Offset(x, size.height), Offset(x + size.height, 0f), 1.5.dp.toPx())
+                            x += step
+                        }
+                    }
+                    val glow = .55f + .45f * (1 - kotlin.math.cos(ember.value * 2 * Math.PI).toFloat()) / 2
+                    drawLine(RiftColors.Ember.copy(alpha = glow), Offset(keep, 0f), Offset(keep, size.height), 2.dp.toPx())
+                }
+            }.semantics { contentDescription = ui("rift.honor", now.roundToInt(), top.roundToInt()) },
+    ) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(ui("rift.honor", now.roundToInt(), top.roundToInt()), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (toll > 0) Text(ui("rift.honor_fight", toll), color = RiftColors.Ember, style = MaterialTheme.typography.labelSmall)
+        }
     }
+}
+
+/** Такт тления края потери на свитке Чести. */
+private const val EMBER_MS = 1_600
+
+/** Сколько держится итог боя под свитком Чести. */
+private const val TOLL_MS = 3_000L
+
+/** Итог боя под свитком: «−N Чести» тревогой и взятый ключ его металлом; гаснет сам через [TOLL_MS]. */
+@Composable private fun TollLine(toll: RiftToll, onDone: () -> Unit) {
+    LaunchedEffect(toll) {
+        kotlinx.coroutines.delay(TOLL_MS)
+        onDone()
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (toll.lost > 0) RiftChip(ui("rift.honor_toll", toll.lost), RiftColors.Ember)
+        toll.key?.let { RiftChip(ui("rift.key", ui("rift.metal.${it.name}")), it.color()) }
+    }
+}
+
+/** Ключи захода героя: три счётчика - знак металла и число; читалке - металл и число словами. */
+@Composable internal fun KeyCounts(keys: Map<RiftMetal, Int>, burned: Boolean = false) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        RiftMetal.entries.forEach { metal ->
+            val count = keys[metal] ?: 0
+            val name = ui("rift.metal.${metal.name}")
+            Row(
+                Modifier.semantics(mergeDescendants = true) { contentDescription = ui("rift.keys_count", name, count) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                KeyMark(metal, Modifier.size(10.dp).alpha(if (count > 0) 1f else .35f))
+                Text(
+                    "$count",
+                    color = if (count > 0) metal.color() else RiftColors.Dim,
+                    style = relicName(12).copy(textDecoration = if (burned) androidx.compose.ui.text.style.TextDecoration.LineThrough else null),
+                )
+            }
+        }
+    }
+}
+
+/** Знак ключа: кружок металла с тёмной каймой. */
+@Composable internal fun KeyMark(metal: RiftMetal, modifier: Modifier = Modifier) {
+    Box(modifier.background(metal.color(), CircleShape).border(1.dp, RiftColors.Ground, CircleShape))
 }
 
 /** Краски меню забега Разлома. */
@@ -597,7 +707,8 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
 }
 
 /**
- * Лист узла: знак и имя вида, его суть, страж акта; за обзором - проклятие, черты Вождя и условие Чемпиона (скрыто до боя). В забеге
+ * Лист узла: знак и имя вида, его суть, страж акта; за обзором - награды ([RiftEngine.rewards], ключ - с металлом), проклятие, черты
+ * Вождя и условие Чемпиона (скрыто до боя). В забеге
  * ([onGo]) - «Идти» касанием, к стражу - удержанием; недоступный узел гасит кнопку, касание говорит причину. На схеме недели кнопки нет.
  */
 @Composable private fun NodeSheet(rules: RiftRules, engine: RiftEngine, run: RiftRun?, node: RiftNode, idle: Boolean, onDismiss: () -> Unit, onGo: (() -> Unit)? = null) {
@@ -605,6 +716,7 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
     val facts = buildList {
         if (node.kind == RiftNodeKind.GUARDIAN) rules.guardians.monsters.getOrNull(node.act)?.let { add(loc("monster.${it.value}.name") + ": " + loc("rift.guardian.${it.value}.description")) }
         if (seen) {
+            engine.rewards(node).takeIf { it.isNotEmpty() }?.let { rewards -> add(ui("rift.node_rewards", rewards.joinToString(" · ") { rewardName(node, it) })) }
             node.curse?.let { add(ui("rift.node_curse", loc("rift.curse.$it.name") + " - " + loc("rift.curse.$it.description"))) }
             if (node.traits.isNotEmpty()) add(ui("rift.node_traits", node.traits.joinToString(", ") { loc("trait.$it.name") }))
             if (node.trial != null) add(ui("rift.node_trial"))
@@ -622,6 +734,10 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
         }
     }
 }
+
+/** Имя награды узла [reward]; ключ - с металлом узла. */
+private fun rewardName(node: RiftNode, reward: RiftReward): String =
+    node.key?.takeIf { reward == RiftReward.KEY }?.let { ui("rift.key", ui("rift.metal.${it.name}")) } ?: ui("rift.reward.${reward.name}")
 
 /** «Идти» листа узла: касанием, с [hold] - удержанием; с причиной [why] (ключ словаря) погашена, касание её говорит. */
 @Composable private fun NodeGo(why: String?, idle: Boolean, hold: Boolean, onGo: () -> Unit) {
@@ -644,12 +760,14 @@ private const val SPARKS = 14
 
 /**
  * Вариант предложения узла, который выделяет касание: [Take] - дар, пара алтаря или товар Кузни по номеру в предложении,
- * [Merge] - слияние в Кузне, [Rest] - выбор Отдыха, [Law] - закон контракта Владыки.
+ * [Merge] - слияние в Кузне, [Chalice] - Чаша Чести Кузни, [Rest] - выбор Отдыха, [Law] - закон контракта Владыки.
  */
 private sealed interface OfferOption {
     data class Take(val index: Int) : OfferOption
 
     data object Merge : OfferOption
+
+    data object Chalice : OfferOption
 
     data class Rest(val choice: RiftRest) : OfferOption
 
@@ -726,6 +844,9 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
             if (option == OfferOption.Merge) {
                 val merge = pick.targets.takeIf { it.size == 2 }?.let { RiftAct.Merge(it[0], it[1]) }
                 OfferFooter(pick.label(merge, ui("rift.merge_take", rules.nodes.merge), ui("rift.forge_pick"), ui("rift.merge_pick_pair")), CommitTone.MEND, merge, leave)
+            } else if (option == OfferOption.Chalice) {
+                val chalice = RiftAct.Chalice.takeIf { offer.chalice }
+                OfferFooter(pick.label(chalice, ui("rift.chalice_buy", rules.honor.chalicePrice), ui("rift.forge_pick")), CommitTone.BUY, chalice, leave)
             } else {
                 val price = (option as? OfferOption.Take)?.let { rules.price(offer.shop[it.index]) } ?: 0
                 OfferFooter(pick.label(take, ui("rift.forge_buy", price), ui("rift.forge_pick")), CommitTone.BUY, take, leave)
@@ -743,14 +864,26 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
             val act = (option as? OfferOption.Law)?.let { RiftAct.Contract(it.law) }
             OfferFooter(pick.label(act, ui("rift.contract_take"), ui("rift.contract_hint")), CommitTone.PACT, act, OfferLeave(ui("rift.contract_refuse"), RiftAct.Contract(null)))
         }
+
+        is RiftOffer.Coffers -> OfferFooter(ui("rift.coffers_done"), CommitTone.MEND, RiftAct.Leave)
     }
 }
 
 /**
- * Предложение узла: дары, пары алтаря, Отдых, Кузня, контракт Владыки. Касание варианта выделяет его ([OfferPick]), выбор совершает
- * удержание кнопки подвала, закреплённого под листаемым списком.
+ * Предложение узла: дары, пары алтаря, Отдых, Кузня, контракт Владыки, сундуки Владыки. Касание варианта выделяет его ([OfferPick]),
+ * выбор совершает удержание кнопки подвала, закреплённого под листаемым списком; сундук открывает своя кнопка ([CofferCards]),
+ * [coffers] - что лежало в открытых.
  */
-@Composable private fun OfferPlate(rules: RiftRules, run: RiftRun, offer: RiftOffer, idle: Boolean, onAct: (RiftAct) -> Unit) {
+@Composable private fun OfferPlate(
+    game: GameUi,
+    rules: RiftRules,
+    engine: RiftEngine,
+    run: RiftRun,
+    offer: RiftOffer,
+    coffers: Map<Int, Reward>,
+    idle: Boolean,
+    onAct: (RiftAct) -> Unit,
+) {
     val pick = remember(run.at, offer) { OfferPick() }
     RiftPlate(RiftColors.Hot) {
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -770,9 +903,11 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
                     }
                 }
 
-                RiftOffer.Rest -> RestCards(rules, run, pick, idle)
+                RiftOffer.Rest -> RestCards(rules, engine, run, pick, idle)
 
-                is RiftOffer.Forge -> ForgeCards(rules, run, offer, pick, idle)
+                is RiftOffer.Forge -> ForgeCards(rules, engine, run, offer, pick, idle)
+
+                is RiftOffer.Coffers -> CofferCards(game, rules, run, offer, coffers, idle, onAct)
 
                 RiftOffer.Contract -> {
                     PlateTitle(
@@ -828,8 +963,8 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
     PickCard(pick, OfferOption.Take(index), enabled, replace, content)
 }
 
-/** Отдых: лечение; усиление дара и снятие проклятия - с целью у выделенного варианта. */
-@Composable private fun RestCards(rules: RiftRules, run: RiftRun, pick: OfferPick, idle: Boolean) {
+/** Отдых: Честь и фляги - со сколько Чести вернёт; усиление дара и снятие проклятия - с целью у выделенного варианта. */
+@Composable private fun RestCards(rules: RiftRules, engine: RiftEngine, run: RiftRun, pick: OfferPick, idle: Boolean) {
     RiftRest.entries.forEach { choice ->
         val (hint, targets) = when (choice) {
             RiftRest.HEAL -> "" to emptyList<PickTarget>()
@@ -846,12 +981,16 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
         }
         PickCard(pick, OfferOption.Rest(choice), idle && possible, more) {
             Text(ui("rift.rest.${choice.name}"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
+            if (choice == RiftRest.HEAL) {
+                val back = rules.honor.rest * (1 + engine.rule(run, RiftRule.REST_HEAL) / 100).coerceAtLeast(0.0)
+                Text(ui("rift.rest_honor", back.roundToInt()), color = RiftColors.Honor, style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
 
-/** Кузня: витрина за Эхо и слияние двух даров одной редкости; открыта, пока герой не уйдёт. */
-@Composable private fun ForgeCards(rules: RiftRules, run: RiftRun, offer: RiftOffer.Forge, pick: OfferPick, idle: Boolean) {
+/** Кузня: витрина за Эхо, Чаша Чести (раз на Кузню) и слияние двух даров одной редкости; открыта, пока герой не уйдёт. */
+@Composable private fun ForgeCards(rules: RiftRules, engine: RiftEngine, run: RiftRun, offer: RiftOffer.Forge, pick: OfferPick, idle: Boolean) {
     offer.shop.forEachIndexed { i, code ->
         val price = rules.price(code)
         val affordable = run.echo >= price
@@ -864,6 +1003,21 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
             )
         }
     }
+    val price = rules.honor.chalicePrice
+    val affordable = run.echo >= price
+    PickCard(pick, OfferOption.Chalice, idle && offer.chalice && affordable && run.honor < engine.maxHonor(run)) {
+        Text(ui("rift.chalice_title"), color = RiftColors.Honor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        Text(ui("rift.chalice_hint", rules.honor.chalice.roundToInt()), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall)
+        Text(
+            when {
+                !offer.chalice -> ui("rift.chalice_sold")
+                affordable -> ui("rift.forge_price", price)
+                else -> ui("rift.forge_price_short", price)
+            },
+            color = if (offer.chalice && affordable) RiftColors.Rift else RiftColors.Warn,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
     val rarityOf = { i: Int -> rules.boonsByCode[run.boons[i].code]?.rarity }
     val mergeable = run.boons.groupBy { rules.boonsByCode[it.code]?.rarity }.any { (rarity, held) -> rarity?.next != null && held.size >= 2 }
     val pair: @Composable ColumnScope.() -> Unit = {
@@ -873,6 +1027,58 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
     PickCard(pick, OfferOption.Merge, idle && mergeable && run.echo >= rules.nodes.merge, pair) {
         Text(ui("rift.merge_title"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         Text(ui("rift.forge_merge", rules.nodes.merge), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/**
+ * Сундуки Владыки: ряд крупных карточек по металлу - число ключей, что внутри, и кнопка «Открыть ключом»; без ключа карточка закрыта
+ * («Нет ключа»), золотой открывается удержанием. Под рядом - что лежало в открытых ([coffers]) и что неоткрытые пропадут.
+ */
+@Composable private fun CofferCards(game: GameUi, rules: RiftRules, run: RiftRun, offer: RiftOffer.Coffers, coffers: Map<Int, Reward>, idle: Boolean, onAct: (RiftAct) -> Unit) {
+    PlateTitle(ui("rift.coffers_title"), RiftColors.Hot, listOf(ui("rift.coffers_hint"), ui("rift.coffers_note")))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        rules.keys.coffers.forEachIndexed { i, coffer ->
+            CofferCard(coffer.metal, run.keys[coffer.metal] ?: 0, i in offer.opened, idle, Modifier.weight(1f)) { onAct(RiftAct.Open(i)) }
+        }
+    }
+    offer.opened.forEach { i ->
+        val metal = rules.keys.coffers.getOrNull(i)?.metal ?: return@forEach
+        coffers[i]?.let { reward ->
+            Text(ui("rift.metal.${metal.name}"), color = metal.color(), style = MaterialTheme.typography.labelLarge)
+            RewardLines(game, reward)
+        }
+    }
+    Text(ui("rift.coffers_note"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+}
+
+/** Карточка сундука металла [metal]: рамка цвета металла, [keys] ключей, суть; открыт - подпись вместо кнопки. */
+@Composable private fun CofferCard(metal: RiftMetal, keys: Int, opened: Boolean, idle: Boolean, modifier: Modifier, onOpen: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    val tint = metal.color()
+    Column(
+        modifier.background(RiftColors.Panel, shape).border(if (opened) 1.dp else 1.5.dp, tint.copy(alpha = if (opened || keys > 0) .9f else .35f), shape).padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            KeyMark(metal, Modifier.size(12.dp))
+            Text("×$keys", color = tint, style = relicName(12))
+        }
+        Text(ui("rift.metal.${metal.name}"), color = tint, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
+        Text(ui("rift.coffer.${metal.name}"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, minLines = 3)
+        when {
+            opened -> Text(ui("rift.coffer_opened"), color = RiftColors.Soft, style = MaterialTheme.typography.labelMedium)
+
+            keys < 1 -> Text(ui("rift.coffer_no_key"), color = RiftColors.Dim, style = MaterialTheme.typography.labelMedium)
+
+            else -> ForgeButton(
+                onClick = onOpen,
+                modifier = Modifier.fillMaxWidth(),
+                state = ButtonState.of(idle),
+                accent = tint,
+                hold = if (metal == RiftMetal.GOLD) Hold(tone = HoldTone.Fate) else null,
+            ) { Text(ui("rift.coffer_open"), maxLines = 2, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium) }
+        }
     }
 }
 
@@ -983,11 +1189,14 @@ private fun heldTargets(rules: RiftRules, run: RiftRun, enabled: (Int) -> Boolea
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, pulse = arena.pulse)
+            ArenaOverlay(
+                game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, pulse = arena.pulse,
+                top = { HonorScroll(hud.honor, hud.maxHonor, hud.loss, Modifier.fillMaxWidth()) },
+            )
         }
         val shape = RoundedCornerShape(10.dp)
         Column(
-            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp).widthIn(max = 190.dp)
+            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 74.dp, end = 8.dp).widthIn(max = 190.dp)
                 .background(RiftColors.Panel.copy(alpha = .92f), shape).border(1.dp, RiftColors.LineHi, shape).padding(horizontal = 10.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -1052,30 +1261,52 @@ private fun heldTargets(rules: RiftRules, run: RiftRun, enabled: (Int) -> Boolea
     }
 }
 
-/** Итог забега: счёт, место, гибель или полная победа, сундук. */
+/**
+ * Итог забега: проигрыш - «Честь иссякла» с пустым свитком и сгоревшими ключами, иначе - «Забег окончен» с причиной; счёт по долям -
+ * очки узлов и стражей, остаток Чести с его очками и счёт недели; место, сундук.
+ */
 @Composable private fun RiftResultSheet(game: GameUi, model: ExpeditionViewModel, result: com.sperance.exileforge.rules.rift.RiftResult) {
     ForgeSheet(onDismissRequest = model::dismissRiftResult, containerColor = RiftColors.Panel) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("rift.result_title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleLarge)
+            Text(ui(if (result.fallen) "rift.result_honor_out" else "rift.result_title"), color = if (result.fallen) RiftColors.Warn else RiftColors.Rift, style = MaterialTheme.typography.titleLarge)
             Text(
                 ui(
                     if (result.fallen) {
-                        "rift.result_fallen"
+                        "rift.result_title"
                     } else if (result.cleared) {
                         "rift.result_cleared"
                     } else {
                         "rift.result_left"
                     },
                 ),
-                color = if (result.fallen) LifeRed else RiftColors.Soft,
+                color = if (result.fallen) RiftColors.Muted else RiftColors.Soft,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Text(ui("rift.result_score", result.score), color = RiftColors.Hot, style = MaterialTheme.typography.titleMedium)
+            if (result.fallen) {
+                HonorScroll(0.0, game.index?.campaign?.trials?.rift?.honor?.max ?: 1.0, 0.0, Modifier.fillMaxWidth())
+                if (result.burned.values.any { it > 0 }) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(ui("rift.result_burned"), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall)
+                        KeyCounts(result.burned, burned = true)
+                    }
+                }
+            }
+            ResultLine(ui("rift.result_nodes"), number((result.score - result.honorScore).toDouble()), RiftColors.Text)
+            ResultLine(ui("rift.result_honor", result.honor), "+" + number(result.honorScore.toDouble()), RiftColors.Honor)
+            ResultLine(ui("rift.result_week"), number(result.score.toDouble()), RiftColors.Hot)
             if (result.place > 0) Text(ui("rift.result_place", result.place), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
             RewardLines(game, result.reward)
             FightLogButton()
             ForgeButton(onClick = model::dismissRiftResult, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.back_board")) }
         }
+    }
+}
+
+/** Строка счёта итога: подпись слева, число справа цветом [tint]. */
+@Composable private fun ResultLine(label: String, value: String, tint: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = RiftColors.Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(value, color = tint, style = relicName(15).copy(fontFeatureSettings = "tnum"))
     }
 }
 

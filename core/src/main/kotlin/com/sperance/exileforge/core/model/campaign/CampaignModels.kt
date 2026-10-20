@@ -151,8 +151,13 @@ import kotlinx.serialization.Serializable
 /** A trial entered: the trial itself and the hero's context frozen on entry, the monsters stood up by it. */
 @Serializable data class TrialStart(val run: TrialRun, val context: RunContext)
 
-/** Ответ на действие в Разломе: доска после него, итог конца забега и что из сундука не влезло. */
-@Serializable data class RiftReport(val board: com.sperance.exileforge.rules.rift.RiftBoard, val result: com.sperance.exileforge.rules.rift.RiftResult? = null, val received: Received = Received())
+/** Ответ на действие в Разломе: доска после него, итог конца забега, что лежало в открытом сундуке Владыки [coffer] и что из сундуков не влезло. */
+@Serializable data class RiftReport(
+    val board: com.sperance.exileforge.rules.rift.RiftBoard,
+    val result: com.sperance.exileforge.rules.rift.RiftResult? = null,
+    val received: Received = Received(),
+    val coffer: com.sperance.exileforge.rules.run.Reward? = null,
+)
 
 /** What one accepted event of a trial brought; [atlas] - ключи очков Атласа, впервые заработанные событием: рубеж башни, первая зачистка раша. */
 @Serializable data class TrialReward(val n: Int, val kind: TrialEventKind, val reward: RewardView = RewardView(), val atlas: List<String> = emptyList())

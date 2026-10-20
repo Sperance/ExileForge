@@ -61,7 +61,8 @@ import kotlin.random.Random
 
 /**
  * Бой узла Разлома, как его рисует экран: карточки арены, смена поля из скольких, уровень врагов, секунды боя, вскрытое
- * условие Чемпиона и выполнено ли оно пока; [phase] - идёт, пал, окончен победой.
+ * условие Чемпиона и выполнено ли оно пока; [phase] - идёт, пал, окончен победой. Честь забега до боя [honor] из [maxHonor] и
+ * сколько её снимет бой по потерянному пока здоровью [loss] ([RiftEngine.honorLoss]).
  */
 data class RiftFightHud(
     val phase: TrialPhase,
@@ -74,12 +75,15 @@ data class RiftFightHud(
     val seconds: Double,
     val trial: RiftTrial? = null,
     val met: Boolean = false,
+    val honor: Double = 0.0,
+    val maxHonor: Double = 0.0,
+    val loss: Double = 0.0,
 )
 
 /**
  * Бой узла Разлома: все враги узла [fight] - один бой, на поле не больше `fight.maxFoes`,
  * павших сменяет подкрепление ([Muster.Reinforcements], очередь [RiftFight.queue]); герой - со
- * своим снаряжением, дарами и проклятиями забега [run] и мутаторами недели, здоровье и заряды фляг - из забега. Стражи - со
+ * своим снаряжением, дарами и проклятиями забега [run] и мутаторами недели, с полным здоровьем и зарядами фляг из забега. Стражи - со
  * своими механиками ([RiftCombat]). Конец боя - [RiftAct.Fight] в [onEnd]: его шлёт на сервер владелец арены.
  */
 class RiftArena(
@@ -136,7 +140,7 @@ class RiftArena(
     private var holds = 0
     private var speed = speed
     private var elapsed = 0.0
-    private var hurt = false
+    private var taken = 0.0
     private var drunk = 0
     private var lowest = 1.0
     private var switches = 0
@@ -224,7 +228,7 @@ class RiftArena(
 
     private fun line(line: TraitLine) = StatLine(line.stat, line.op, line.value)
 
-    /** Здоровье и фляги из забега; «Сухость» и мутаторы меняют заряды фляг в бою. */
+    /** Здоровье полное, фляги из забега; «Сухость» и мутаторы меняют заряды фляг в бою. */
     private fun startPools(): HeroPools {
         val dry = touch.rules[RiftRule.FLASK_CHARGES] ?: 0.0
         val charges = kit.flasks.mapIndexed { i, flask ->
@@ -232,7 +236,7 @@ class RiftArena(
             (run.flasks.getOrNull(i) ?: max).coerceAtMost(max - dry).coerceIn(0.0, max)
         }
         val mana = kit.reserve(ReservePool.MANA, hero).free
-        return HeroPools(hero.maxLife * run.life.coerceIn(0.0, 1.0), mana, charges, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
+        return HeroPools(hero.maxLife, mana, charges, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
     }
 
     /** Враг узла: страж - босс без своих строк, Вождь - редкий со свойствами сверх своих, прочие - по редкости. */
@@ -301,13 +305,13 @@ class RiftArena(
         val before = fight.time
         fight.advance(dt * speed)
         elapsed += fight.time - before
-        if (fight.heroLife < hero.maxLife - LIFE_EPSILON) hurt = true
         lowest = minOf(lowest, fight.heroLife / hero.maxLife)
         val outcome = fight.outcome ?: return
         if (fight.time < fight.duration + index.campaign.expedition.aftermath) return
         drunk += fight.trial.flasks
         switches += fight.trial.focusChanges
         lowest = minOf(lowest, fight.trial.lowestLife)
+        taken = fight.trial.lost
         pools = fight.pools()
         report = fight.report(monsters)
         if (outcome == Outcome.WIN) fateRun.victory()
@@ -328,8 +332,7 @@ class RiftArena(
         if (phase != TrialPhase.FIGHT) return
         phase = if (won) TrialPhase.DONE else TrialPhase.DEAD
         battle = null
-        val life = if (won) (pools.life / hero.maxLife).coerceIn(0.0, 1.0) else 0.0
-        onEnd(RiftAct.Fight(won, life, pools.charges, hurt, won && met()))
+        onEnd(RiftAct.Fight(won, taken, pools.charges, won && met()))
     }
 
     /** Условие Чемпиона вскрывается, когда бой начался. */
@@ -353,15 +356,13 @@ class RiftArena(
             null
         }
         val trial = node.trial?.takeIf { started || phase != TrialPhase.FIGHT }
-        return RiftFightHud(phase, runHud, fightHud, node.kind, round, rounds, this.fight.level, elapsed, trial, trial != null && met())
+        val loss = engine.honorLoss(run, fight?.trial?.lost ?: taken)
+        return RiftFightHud(phase, runHud, fightHud, node.kind, round, rounds, this.fight.level, elapsed, trial, trial != null && met(), run.honor, engine.maxHonor(run), loss)
     }
 
     private companion object {
         private val FIGHT_STREAM = "rift".hashCode().toLong()
         private val RETINUE_STREAM = "riftRetinue".hashCode().toLong()
-
-        /** Потеря здоровья меньше этого - не потеря (округления регенерации). */
-        const val LIFE_EPSILON = 0.5
     }
 }
 

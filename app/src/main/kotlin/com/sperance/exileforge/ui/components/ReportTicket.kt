@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,7 +40,7 @@ import com.sperance.exileforge.ui.theme.*
  * Карточка отчёта - тикет, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
  * логин, герой ссылкой на его карточку и место); текст до трёх строк; путь отчёта шкалой из трёх шагов ([StepPath]); переписка цитатами;
  * ответ автора; [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
- * места, ссылки на GitHub у игрока нет. Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
+ * места (ссылка на Issue - [IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
  * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
  * (у модерации сворачивает тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
  */
@@ -180,6 +181,17 @@ internal fun reportThread(issue: IssueView?, reason: String): List<Pair<NoteAuth
     ) {
         Text(ui("feedback.who.${who.name.lowercase()}"), color = tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
         Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * «Issue #N ↗» - Issue отчёта на GitHub во внешнем браузере; пока у Issue нет адреса, погашена. Подвал тикета модерации, а у игрока -
+ * только тестировщику и модерации.
+ */
+@Composable internal fun IssueLink(issue: IssueView, size: ButtonSize = ButtonSize.Auto) {
+    val uri = LocalUriHandler.current
+    ForgeButton(state = ButtonState.of(issue.url.startsWith("http")), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary, size = size, accent = Gold) {
+        Text(ui("feedback.admin.issue_link", issue.number), maxLines = 1, softWrap = false)
     }
 }
 

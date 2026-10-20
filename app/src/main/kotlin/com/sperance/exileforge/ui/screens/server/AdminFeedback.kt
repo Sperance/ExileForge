@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -232,7 +231,6 @@ private fun AdminReport.matches(query: String): Boolean {
     var deleting by remember(report.id) { mutableStateOf(false) }
     var steering by remember(report.id) { mutableStateOf(false) }
     var word by remember(report.id) { mutableStateOf(report.reason) }
-    val uri = LocalUriHandler.current
     ReportTicket(
         report.kind,
         report.text,
@@ -285,9 +283,7 @@ private fun AdminReport.matches(query: String): Boolean {
 
                 issue != null -> {
                     if (issue.state.open) ForgeButton(state = ButtonState.of(!account.busy), onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
-                    ForgeButton(state = ButtonState.of(issue.url.startsWith("http")), onClick = { uri.openUri(issue.url) }, kind = ButtonKind.Secondary, accent = Gold) {
-                        Text(ui("feedback.admin.issue_link", issue.number), maxLines = 1, softWrap = false)
-                    }
+                    IssueLink(issue)
                 }
             }
             if (entry.deletable) {

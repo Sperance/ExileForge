@@ -123,7 +123,7 @@ class EquippedModifiersTest {
         fun hero(on: List<Roll>): ReferenceHero = wear(template, def, on).let { copy -> heroes.getOrPut(copy) { ReferenceHero(index, heroClass, listOf(copy), level) } }
         val wearing = hero(rolls)
         if (PROBE_ID !in wearing.active) return listOf("$label: эталон её не носит")
-        val extra = sources(def)
+        val extra = sources(def) + gates(def, wearing.plain)
         val before = hero(rolls.filter { it.code != def.code }).sheet(extra)
         val after = wearing.sheet(extra)
         val moved = (visible(before) + visible(after)).filterTo(HashSet()) { abs((after.values[it] ?: 0.0) - (before.values[it] ?: 0.0)) > SummaryProbe.MOVED }
@@ -166,6 +166,19 @@ class EquippedModifiersTest {
     private fun sources(def: ModifierDef): List<StatOperation> = def.effects.flatMap { effect ->
         listOfNotNull(effect.perStat) + index.powers.byStat[effect.stat]?.sheet.orEmpty().filter { it.under == null }.flatMap { listOfNotNull(it.from) + it.also }
     }.distinct().map { StatOperation(it, Op.ADD, SummaryProbe.PROBE) }
+
+    /**
+     * Условия правил «пока источник ниже порога» у сил строки [def]: каждый источник правила сводится к нулю, а главный - к
+     * порогу без единицы, считая от итога [plain] эталона с вещью; так правило действует у эталона, что держит источник выше.
+     */
+    private fun gates(def: ModifierDef, plain: Map<String, Double>): List<StatOperation> {
+        val targets = def.effects.flatMap { effect -> index.powers.byStat[effect.stat]?.sheet.orEmpty() }.flatMap { rule ->
+            val from = rule.from ?: return@flatMap emptyList()
+            val under = rule.under ?: return@flatMap emptyList()
+            rule.also.map { it to 0.0 } + (from to under - 1)
+        }.toMap()
+        return targets.map { (stat, target) -> StatOperation(stat, Op.ADD, target - (plain[stat] ?: 0.0)) }
+    }
 
     /** Строку [def] вида [scope] усиливает усилитель своей вещи: строка героя без условия, что усиление берёт ([Amplify.amplifiable]). */
     private fun amplified(scope: LineScope, def: ModifierDef): Boolean = scope.covers(def) && def.effects.any { effect ->

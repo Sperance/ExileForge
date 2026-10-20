@@ -42,6 +42,21 @@ fun essenceGuarantees(index: ContentIndex, code: String): List<EssenceGuarantee>
     }
 }
 
+/**
+ * Работа, что сгущает эссенцию [code] в следующую ступень (работа [Job.Condense] профессии, ступени - правило `condense` эссенций):
+ * профессия и уровень ступени из контента; null - эссенция не сгущается (высшая ступень, особая).
+ */
+fun essenceCondense(index: ContentIndex, code: String): ItemUse? {
+    val recipes = JobRecipes(index)
+    return index.professions.professions.firstNotNullOfOrNull { profession ->
+        profession.jobs.filterIsInstance<Job.Condense>().firstNotNullOfOrNull { job ->
+            recipes.options(job, "").map { it.job }.firstOrNull { variant -> variant.inputs.any { it.item == code } }?.let { variant ->
+                ItemUse(profession.code, variant.code, variant.level, variant.inputs.first { it.item == code }.amount)
+            }
+        }
+    }
+}
+
 /** How far up its ladder an essence forces its line: the rules' share, the top for a special one. */
 private fun essenceShare(index: ContentIndex, essence: Essence): Double {
     val tiers = index.essences.tiers.size

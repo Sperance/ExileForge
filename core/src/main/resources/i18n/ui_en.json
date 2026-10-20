@@ -239,6 +239,7 @@
   "bag.bound_tip": "A trial item is bound to its hero: it can be neither listed on the auction nor deposited in the guild stash.",
   "bag.book_skill": "Skill: {0}",
   "bag.essence_guarantee": "Guaranteed modifier",
+  "bag.essence_condense": "Stronger — by condensing: {0}, from level {1}",
   "bag.sources": "Where to find",
   "bag.sources_more": "…and {0} more",
   "essence.slot.weapon": "Attack weapon",

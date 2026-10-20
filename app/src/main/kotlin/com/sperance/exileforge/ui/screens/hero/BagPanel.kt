@@ -25,11 +25,13 @@ import com.sperance.exileforge.core.display.RuneText
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
+import com.sperance.exileforge.core.display.essenceCondense
 import com.sperance.exileforge.core.display.essenceGuarantees
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemUseIndex
+import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
@@ -283,12 +285,14 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 
 /**
  * What the content says of a stack under its description: an essence's guaranteed line by kind of item, where it is found and where it goes - работы профессий; закрытые по уровню героя [levels] - серым с нужным уровнем.
+ * Под гарантией эссенции, что сгущается, - откуда взять сильнее: профессия и уровень ступени сгущения ([essenceCondense]).
  *
  * Обратный указатель всего контента строится раз на контент вне главного потока; до этого карточка не показывает ничего. Источников - первые
  * [MAX_SOURCES] с шансом и его единицей, остальные - строкой «ещё N»: касание раскрывает их на месте карточки.
  */
 @Composable private fun StackLore(index: ContentIndex, code: String, levels: Map<String, Int>) {
     val guarantees = remember(index, code) { essenceGuarantees(index, code) }
+    val condense = remember(index, code) { essenceCondense(index, code) }
     val sourceIndex by produceState<Map<String, List<ItemSource>>>(emptyMap(), index) {
         value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
     }
@@ -307,6 +311,7 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
                     Text(guarantee.line, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
                 }
             }
+            condense?.let { MutedText(ui("bag.essence_condense", professionTitle(it.profession), it.level), style = MaterialTheme.typography.labelSmall) }
         }
     }
     if (sources.isNotEmpty()) {

@@ -12,8 +12,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -25,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -200,20 +197,21 @@ private const val SEED_TICK_MS = 1000L
     val open = settings.settings.collectAsStateWithLifecycle().value.testerMechanicsOpen
     ForgePanel {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(role = Role.Button) { settings.change { copy(testerMechanicsOpen = !testerMechanicsOpen) } },
+            Modifier.fillMaxWidth().heightIn(min = 44.dp).foldToggle(open) { settings.change { copy(testerMechanicsOpen = !testerMechanicsOpen) } },
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(Modifier.weight(1f)) { Engraved(ui("tester.mechanics_count", forced.size)) }
-            Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+            FoldChevron(open)
         }
-        if (!open) return@ForgePanel
-        MutedText(ui("tester.mechanics_hint"), style = MaterialTheme.typography.bodySmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            val all = forced.size == MapMechanic.entries.size
-            ForgeChip(ui("tester.mechanics_all"), all, { vm.forceAll(!all) })
-            MapMechanic.entries.forEach { mechanic ->
-                ForgeChip(ui("tester.mechanic.${mechanic.name}"), mechanic in forced, { vm.toggleForced(mechanic) })
+        FoldBody(open, Arrangement.spacedBy(10.dp)) {
+            MutedText(ui("tester.mechanics_hint"), style = MaterialTheme.typography.bodySmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                val all = forced.size == MapMechanic.entries.size
+                ForgeChip(ui("tester.mechanics_all"), all, { vm.forceAll(!all) })
+                MapMechanic.entries.forEach { mechanic ->
+                    ForgeChip(ui("tester.mechanic.${mechanic.name}"), mechanic in forced, { vm.toggleForced(mechanic) })
+                }
             }
         }
     }

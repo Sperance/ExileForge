@@ -51,7 +51,7 @@ import com.sperance.exileforge.ui.theme.Quiet
 
 /**
  * Сворачиваемая панель: [ForgePanel], свёрнутая в строку-кнопку не ниже [FoldMetrics.head] - заголовок [title] цветом [titleColor],
- * сводка [summary] (чипы [SummaryChip]) и шеврон цветом [accent]. Касание строки раскрывает и сворачивает [content] с анимацией;
+ * сводка [summary] (чипы [TagChip]) и шеврон цветом [accent]. Касание строки раскрывает и сворачивает [content] с анимацией;
  * пока панель свёрнута, содержимое не компонуется.
  *
  * Раскрытие живёт, пока экран открыт (переживает поворот и прокрутку списка), и не запоминается между входами: новый вход -
@@ -84,10 +84,10 @@ import com.sperance.exileforge.ui.theme.Quiet
 }
 
 /**
- * Чип сводки свёрнутой панели: без [accent] - серый (число, счёт), с ним - заливка цветом акцента и тёмные или светлые слова по
- * её яркости (то, что ждёт действия). Не кнопка: касание уходит строке панели.
+ * Метка-чип: сводка свёрнутой панели, пометка «Сейчас» варианта выбора. Без [accent] - серая (число, счёт), с ним - заливка цветом
+ * акцента и тёмные или светлые слова по её яркости (то, что ждёт действия). Не кнопка: касание уходит строке вокруг.
  */
-@Composable fun SummaryChip(text: String, accent: Color? = null) {
+@Composable fun TagChip(text: String, accent: Color? = null) {
     val look = if (accent == null) {
         Modifier.background(Color.White.copy(alpha = .06f), ChipShape).border(1.dp, Color.White.copy(alpha = .06f), ChipShape)
     } else {
@@ -125,7 +125,7 @@ fun Modifier.foldToggle(open: Boolean, label: String? = null, onToggle: () -> Un
     }
 }
 
-/** Размеры свёртки: строка свёрнутой панели [head] (зона касания с запасом над 44 dp), высота чипа сводки [chip]. */
+/** Размеры свёртки: строка свёрнутой панели [head] (зона касания с запасом над 44 dp), высота метки-чипа [chip]. */
 private object FoldMetrics {
     val head = 52.dp
     val chip = 24.dp

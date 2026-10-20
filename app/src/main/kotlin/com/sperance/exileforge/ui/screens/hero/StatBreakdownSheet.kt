@@ -9,8 +9,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -58,9 +55,12 @@ import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.numbered
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
+import com.sperance.exileforge.ui.components.FoldBody
+import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -390,24 +390,25 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
 @Composable private fun DetailFold(detail: List<String>, folded: Boolean, onToggle: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
-            Modifier.clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onToggle).padding(vertical = 4.dp, horizontal = 2.dp),
+            Modifier.clip(RoundedCornerShape(6.dp)).foldToggle(!folded, onToggle = onToggle).padding(vertical = 4.dp, horizontal = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(if (folded) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess, null, tint = ModBlue, modifier = Modifier.size(18.dp))
+            FoldChevron(!folded, ModBlue)
             Text(ui("stat.fold.more"), color = ModBlue, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
-        if (folded) return@Column
-        val shape = RoundedCornerShape(12.dp)
-        Column(
-            Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FoldTitle(ui("stat.fold.what"))
-            detail.forEach { paragraph ->
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("•", color = Muted, style = MaterialTheme.typography.bodySmall)
-                    Text(paragraph, color = Parchment, style = MaterialTheme.typography.bodySmall)
+        FoldBody(!folded) {
+            val shape = RoundedCornerShape(12.dp)
+            Column(
+                Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FoldTitle(ui("stat.fold.what"))
+                detail.forEach { paragraph ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("•", color = Muted, style = MaterialTheme.typography.bodySmall)
+                        Text(paragraph, color = Parchment, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }

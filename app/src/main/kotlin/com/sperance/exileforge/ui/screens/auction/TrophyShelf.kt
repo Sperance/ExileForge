@@ -19,7 +19,7 @@ import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.FateInk
 import com.sperance.exileforge.ui.components.FoldPanel
 import com.sperance.exileforge.ui.components.RowButton
-import com.sperance.exileforge.ui.components.SummaryChip
+import com.sperance.exileforge.ui.components.TagChip
 import com.sperance.exileforge.ui.theme.LossText
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
@@ -39,8 +39,8 @@ import com.sperance.exileforge.ui.theme.Parchment
         accent = FateInk.Gold,
         titleColor = FateInk.GoldLight,
         summary = {
-            SummaryChip(ui(pluralKey("fate.trophies_bosses", shelf.rows.size), shelf.rows.size))
-            if (shelf.tradable > 0) SummaryChip(ui("fate.trophies_tradable", shelf.tradable), FateInk.Gold)
+            TagChip(ui(pluralKey("fate.trophies_bosses", shelf.rows.size), shelf.rows.size))
+            if (shelf.tradable > 0) TagChip(ui("fate.trophies_tradable", shelf.tradable), FateInk.Gold)
         },
     ) {
         Text(ui("fate.trophies_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)

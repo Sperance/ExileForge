@@ -17,6 +17,7 @@ import com.sperance.exileforge.rules.roll.AtlasSeals
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
+import com.sperance.exileforge.rules.roll.QualityClimb
 
 /** Верстак берёт модификатор только с волшебной редкости, как правила: у обычной нет мест аффиксов, у закреплённой они закрыты. */
 private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
@@ -65,6 +66,9 @@ sealed interface ForgeTarget {
 
     /** Что поднимет сфера качества со знамением [omen] и сколько качества другого вида сбросится; null - прогноза нет. */
     fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = null
+
+    /** Путь сферы качества со знамением [omen] до потолка вида - то же правило, что пачка сервера; null - сфера качества не ляжет. */
+    fun qualityClimb(index: ContentIndex, omen: Omen?): QualityClimb? = null
 
     /** Уникалки, что может дать сфера удачи, - тот же список правил, что тянет сервер. */
     fun chanceUniques(index: ContentIndex): List<String> = emptyList()
@@ -117,6 +121,8 @@ sealed interface ForgeTarget {
         }
 
         override fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = QualityForecast.of(index, view.item, view.template, omen)
+
+        override fun qualityClimb(index: ContentIndex, omen: Omen?): QualityClimb? = OrbApplier(index).qualityClimb(view.item, view.template, omen)
 
         override fun chanceUniques(index: ContentIndex): List<String> = OrbApplier(index).chanceUniques(view.item, view.template).map { it.value.code }
 

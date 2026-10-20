@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
+import com.sperance.exileforge.core.forge.QualityBatch
 import com.sperance.exileforge.core.forge.Smithy
 import com.sperance.exileforge.core.forge.SmithyModel
 import com.sperance.exileforge.core.forge.forgeTarget
@@ -94,6 +95,9 @@ internal const val UNCRAFT = "-"
         if (index == null || gear == null || hero == null) emptyMap() else essenceRefusals(index, hero, gear)
     }
     val quality = remember(target, index, smithy.omen) { index?.let { target?.quality(it, Omen.of(smithy.omen)) } }
+    val batch = remember(target, index, smithy.omen, hero?.bag, hero?.money) {
+        if (index == null || hero == null || target == null) null else QualityBatch.of(index, target, Omen.of(smithy.omen), hero::count, hero.money)
+    }
     val chanceUniques = remember(target, index) { index?.let { target?.chanceUniques(it) }.orEmpty() }
     val sections = target?.sections ?: listOf(ForgeSection.ORBS)
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
@@ -154,12 +158,13 @@ internal const val UNCRAFT = "-"
                     hidden,
                     enabled,
                     quality?.lost ?: 0,
+                    batch,
                     onSelect = { code ->
                         vm.selectOrb(code)
                         engraving = code == Orb.ENGRAVERS_ORB.name
                     },
                     onPickLine = { engraving = true },
-                ) { vm.applyOrb(target, it) }
+                ) { code, count -> vm.applyOrb(target, code, count = count) }
 
                 ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, recipe, sealChosen, seals.isEmpty(), enabled) { code -> vm.applySeal(it.id, code) } }
 

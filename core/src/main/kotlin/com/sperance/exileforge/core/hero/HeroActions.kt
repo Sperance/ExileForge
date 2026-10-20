@@ -99,12 +99,12 @@ class HeroActions(
 
     /**
      * Одна сфера на один предмет: применима ли и что перебрасывает - дело правил; фраза возвращается. [omen] тратится с ней;
-     * [line] - строка, что гравирует Сфера гравёра.
+     * [line] - строка, что гравирует Сфера гравёра; [count] - пачка сферы качества одним запросом.
      *
      * Бережливый кузнец (Предначертание): сфера может остаться в сумке.
      */
-    fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}, line: Int? = null) = forgeCommand { id ->
-        val outcome = api.hero.applyOrb(id, itemId, orb, omen, line)
+    fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}, line: Int? = null, count: Int = 1) = forgeCommand { id ->
+        val outcome = api.hero.applyOrb(id, itemId, orb, omen, line, count)
         heroes.forgeLine(outcome.message)
         if (outcome.kept) notices.toast(ui("fate.orb_kept", itemTitle(orb)), NoticeKind.CRAFT)
         heroes.selectEquipment(outcome.created?.id ?: outcome.item.id)

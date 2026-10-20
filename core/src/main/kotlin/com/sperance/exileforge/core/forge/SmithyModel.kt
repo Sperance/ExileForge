@@ -75,11 +75,14 @@ class SmithyModel(
     fun selectOmen(code: String) = mutable.update { it.copy(omen = code, omenTarget = game.value.holding.selectedEquipment) }
     fun selectEssence(code: String) = mutable.update { it.copy(essence = code) }
 
-    /** Сфера тратится вместе с предзнаменованием: следующее применение начинается без него. [line] - строка Сферы гравёра. */
-    fun applyOrb(target: ForgeTarget, orb: String, line: Int? = null) = applyOrb(target.id, orb, line)
+    /**
+     * Сфера тратится вместе с предзнаменованием: следующее применение начинается без него. [line] - строка Сферы гравёра, [count] -
+     * пачка сферы качества ([QualityBatch]).
+     */
+    fun applyOrb(target: ForgeTarget, orb: String, line: Int? = null, count: Int = 1) = applyOrb(target.id, orb, line, count)
 
     /** Сфера на вещь [itemId] (и с панели администратора, где цель - любая вещь героя). */
-    fun applyOrb(itemId: String, orb: String, line: Int? = null) = hero.applyOrb(itemId, orb, smithy.value.omen, ::omenSpent, line)
+    fun applyOrb(itemId: String, orb: String, line: Int? = null, count: Int = 1) = hero.applyOrb(itemId, orb, smithy.value.omen, ::omenSpent, line, count)
 
     /** Печать Атласа на карту [itemId]: знамение тратится вместе с ней. */
     fun applySeal(itemId: String, seal: String) = hero.applySeal(itemId, seal, smithy.value.omen, ::omenSpent)

@@ -203,12 +203,13 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /**
      * Spends one orb of the bag on one item; [orb] is the orb's item code, with an [omen] spent along with it when given.
-     * [line] - номер строки в `item.rolls`, что гравирует Сфера гравёра; прочим сферам - null.
+     * [line] - номер строки в `item.rolls`, что гравирует Сфера гравёра; прочим сферам - null. [count] - пачка сферы качества: сервер
+     * применяет её столько раз, но не выше потолка качества; прочие сферы - только по одной.
      */
-    suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null, line: Int? = null): CurrencyApplyResponse {
+    suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null, line: Int? = null, count: Int = 1): CurrencyApplyResponse {
         requireItemId(itemId)
         require(orb.isNotBlank()) { ui("api.choose_orb") }
-        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }, "line" to line?.toString()))
+        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }, "line" to line?.toString(), "count" to count.takeIf { it > 1 }?.toString()))
     }
 
     /** Печать Атласа [seal] на карту [itemId] со знамением [omen], если печать его берёт; ответ - как у сферы. */

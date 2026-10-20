@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.additiveTitle
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
@@ -61,6 +62,7 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.crafts.WorkView
@@ -212,9 +214,10 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
  * с разбором по источникам ([JobFields]), добавки работы с их эффектом, у нехватки - где материал добывается,
  * и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион, инструмент или нехватка на цикл.
  *
- * Работа с выбором запускается одним из вариантов; недоступный виден с замком. Кузнец открывается в последнем режиме этого героя на
- * устройстве, иначе «Случайно»; случайная ковка примесей не берёт - её строки на два тира ниже. Осквернение выбирает вещь тайника, что
- * пропустят правила.
+ * Имя работы и блок под выбором ([JobBody]) держат высоту самого высокого варианта ([TallestOf]): смена варианта не двигает верх
+ * листа, что встаёт по низу. Работа с выбором запускается одним из вариантов; недоступный виден с замком. Кузнец открывается в
+ * последнем режиме этого героя на устройстве, иначе «Случайно»; случайная ковка примесей не берёт - её строки на два тира ниже.
+ * Осквернение выбирает вещь тайника, что пропустят правила.
  */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -228,19 +231,17 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     }
     LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
-    val random = job.choice == SmithChoice.RANDOM.name
-    val chosenAdditives = if (random) emptyList() else additives
+    val variants = work.options.ifEmpty { listOf(work) }
     val targets = remember(work.code, game.hero?.items, game.index) { itemTargets(game, work.job) }
     var target by remember(work.code) { mutableStateOf("") }
     val item = target.takeIf { id -> targets.any { it.id == id } }.orEmpty()
-    val block = JobBlock.of(game, profession, work, choices, job, chosenAdditives, targets, item)
     val inspect = rememberInspect()
     var help by remember { mutableStateOf<String?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                    TallestOf(variants, job) { Text(jobTitle(it.code), color = GoldBright, style = MaterialTheme.typography.titleLarge) }
                     Text(ui("crafts.sheet_from", professionTitle(profession.code), job.level), color = Rune, style = MaterialTheme.typography.labelMedium)
                 }
                 CraftsGlossaryButton(crafts?.rules)
@@ -270,43 +271,83 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     ItemRow(view, selected = view.id == item, price = game.sellPrice(view.item), onLongClick = { inspect(Inspect.Copy(view.item)) }) { target = view.id }
                 }
             }
-            RecipeFormula(game, profession, job, chosenAdditives) { it?.let(inspect) }
-            ResultLine(game, job) { it?.let(inspect) }
-            crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code) { help = it } }
-            val offered = crafts?.additives(job).orEmpty()
-            if (offered.isNotEmpty() && !random && crafts != null && crafts.maxAdditives > 0) {
-                Engraved(ui("crafts.additives", crafts.maxAdditives))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    offered.forEach { (code, effect) ->
-                        val on = code in additives
-                        ForgeChip(
-                            ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
-                            on,
-                            { additives = if (on) additives - code else additives + code },
-                            state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),
-                        )
-                    }
+            TallestOf(variants, job) { variant ->
+                val chosen = if (variant.choice == SmithChoice.RANDOM.name) emptyList() else additives
+                JobBody(
+                    game, crafts, profession, work, choices, variant, chosen, targets, item, current,
+                    onInspect = inspect,
+                    onHelp = { help = it },
+                    onAdditives = { additives = it },
+                    onStop = {
+                        onDismiss()
+                        vm.stop()
+                    },
+                ) {
+                    onDismiss()
+                    if (smith) SmithChoice.of(variant.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
+                    vm.start(variant.code, if (variant.job.targetsItem) item else variant.choice, chosen)
                 }
-            }
-            shortNote(game, job, chosenAdditives)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
-            Spacer(Modifier.height(4.dp))
-            when {
-                current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = {
-                    onDismiss()
-                    vm.stop()
-                }, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
-
-                block != null -> ForgeButton(state = ButtonState.of(false), onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
-
-                else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = {
-                    onDismiss()
-                    if (smith) SmithChoice.of(job.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
-                    vm.start(job.code, if (job.job.targetsItem) item else job.choice, chosenAdditives)
-                }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
         }
     }
     help?.let { key -> crafts?.rules?.let { CraftsGlossaryEntry(it, key) { help = null } } }
+}
+
+/**
+ * Что меняет вариант [job] работы [work]: формула, что получится, поля работы, добавки работы ([additives] - уже без них у случайной
+ * ковки; [onAdditives] - выбор примесей), короткая заметка и внизу кнопка или причина, почему работу не начать. Идёт в
+ * [TallestOf] по всем вариантам: высота блока - по самому высокому, верх листа при смене варианта не двигается.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun JobBody(
+    game: GameUi,
+    crafts: CraftsState?,
+    profession: ProfessionView,
+    work: JobView,
+    choices: List<JobView>,
+    job: JobView,
+    additives: List<String>,
+    targets: List<ItemView>,
+    item: String,
+    current: Boolean,
+    onInspect: (Inspect) -> Unit,
+    onHelp: (String) -> Unit,
+    onAdditives: (List<String>) -> Unit,
+    onStop: () -> Unit,
+    onStart: () -> Unit,
+) {
+    val random = job.choice == SmithChoice.RANDOM.name
+    val block = JobBlock.of(game, profession, work, choices, job, additives, targets, item)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        RecipeFormula(game, profession, job, additives) { it?.let(onInspect) }
+        ResultLine(game, job) { it?.let(onInspect) }
+        crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code, onHelp) }
+        val offered = crafts?.additives(job).orEmpty()
+        if (offered.isNotEmpty() && !random && crafts != null && crafts.maxAdditives > 0) {
+            Engraved(ui("crafts.additives", crafts.maxAdditives))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                offered.forEach { (code, effect) ->
+                    val on = code in additives
+                    ForgeChip(
+                        ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
+                        on,
+                        { onAdditives(if (on) additives - code else additives + code) },
+                        state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),
+                    )
+                }
+            }
+        }
+        shortNote(game, job, additives)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
+        Spacer(Modifier.height(4.dp))
+        when {
+            current -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onStop, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide, kind = ButtonKind.Secondary) { Text(ui("crafts.stop")) }
+
+            block != null -> ForgeButton(state = ButtonState.of(false), onClick = {}, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(block.text, textAlign = TextAlign.Center) }
+
+            else -> ForgeButton(state = ButtonState.of(!game.busy), onClick = onStart, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
+        }
+    }
 }
 
 /**

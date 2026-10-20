@@ -45,11 +45,9 @@ import com.sperance.exileforge.ui.components.ForgeMenu
 import com.sperance.exileforge.ui.components.GuildRoleMark
 import com.sperance.exileforge.ui.components.MightLine
 import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.Presence
 import com.sperance.exileforge.ui.components.PresenceDot
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.ring
-import com.sperance.exileforge.ui.components.seenAgoText
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
@@ -221,8 +219,8 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
 }
 
 /**
- * Строка состава - две плотные строки (~60dp): портрет ([MemberPortrait]); знак роли, имя и титул курсивом; ниже «был N назад»
- * у не в сети и дар ([FateMark]); справа вклад за неделю крупно и «Σ всего». Своя строка подсвечена чертой `Gold` слева и
+ * Строка состава - две плотные строки (~60dp): портрет ([MemberPortrait]) с точкой присутствия; знак роли, имя и титул курсивом;
+ * ниже мощь ([MightLine]) и дар ([FateMark]), без «был N назад»; справа вклад за неделю крупно и «Σ всего». Своя строка подсвечена чертой `Gold` слева и
  * несёт полосу вклада за сутки из потолка ([DayContribution]).
  *
  * Мощь - одно число для сравнения, не прогноз боя; не посчитана сервером - «⚜ …».
@@ -252,10 +250,8 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
                         Text("· " + titleName(it), color = Muted, fontSize = 11.sp, fontStyle = FontStyle.Italic, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     }
                 }
-                val seen = seenTail(member, isMe)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     MightLine(member.might)
-                    seen?.let { Text(it, color = Presence.of(member.online, member.lastSeenAt).color, fontSize = 11.sp, maxLines = 1) }
                     member.fate?.let { FateMark(it, Modifier.weight(1f, fill = false)) }
                 }
                 if (isMe && member.dayLimit > 0) DayContribution(member)
@@ -300,9 +296,6 @@ private val LevelShape = RoundedCornerShape(6.dp)
         Text(ui("guild.day_limit", number(done.toDouble()), number(member.dayLimit.toDouble())), color = Vital, fontSize = 10.sp, maxLines = 1)
     }
 }
-
-/** «был N назад» - у не в сети, кроме себя; в сети - точка на портрете. */
-private fun seenTail(member: GuildMember, isMe: Boolean): String? = if (isMe || member.online) null else seenAgoText(false, member.lastSeenAt)
 
 /** Итог состава: «В сети X из N · Неделя: Σ». */
 @Composable internal fun RosterFooter(members: List<GuildMember>) {

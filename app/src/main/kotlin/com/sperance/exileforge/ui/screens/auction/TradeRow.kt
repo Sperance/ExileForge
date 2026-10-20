@@ -25,7 +25,6 @@ import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LineFold

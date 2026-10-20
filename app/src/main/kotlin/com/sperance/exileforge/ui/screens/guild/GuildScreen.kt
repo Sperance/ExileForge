@@ -313,7 +313,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 @Composable private fun NameLine(card: GuildCard) {
     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Text(card.name, color = GoldBright, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        if (card.tag.isNotBlank()) Text(ui("guild.tag", card.tag), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        if (card.tag.isNotBlank()) Text(ui("guild.tag_value", card.tag), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
 

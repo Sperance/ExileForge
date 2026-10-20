@@ -147,26 +147,47 @@ class UiStringsTest {
         assertEquals("узла", plural("tree.node", 3, Lang.RU))
     }
 
+    /** Вызов словаря в исходниках: файл, ключ и то, что аргументов у вызова нет (`ui("key")`). */
+    private data class SourceCall(val file: String, val key: String, val bare: Boolean)
+
     /**
-     * Обе формы: `ui("key", ...)` и `ui(lang, "key", ...)`. Ключ с шаблоном (`"enum.slot.$slot"`) чтением не проверить - `$` его исключает,
-     * перечисления его кодов обходит тест ниже.
+     * Все вызовы `ui("key", ...)`, `ui(lang, "key", ...)` и `uiOr(...)` в исходниках клиента. Ключ с шаблоном (`"enum.slot.$slot"`)
+     * чтением не проверить - `$` его исключает, перечисления его кодов обходит тест ниже.
      */
-    @Test
-    fun every_key_the_sources_ask_for_exists() {
+    private fun sourceCalls(): List<SourceCall> {
         val sources = listOf(File("src/main/kotlin"), File("../app/src/main/kotlin"))
             .filter { it.isDirectory }
         assertTrue(sources.isNotEmpty(), "исходники не найдены - тест ничего не проверил")
 
-        val call = Regex("\\bui(?:Or)?\\((?:[A-Za-z][A-Za-z0-9_.]*\\s*,\\s*)?\"([^\"\\\\$]+)\"")
-        val known = UiStrings.keys(Lang.RU)
-        val missing = sources.asSequence()
+        val call = Regex("\\bui(Or)?\\((?:[A-Za-z][A-Za-z0-9_.]*\\s*,\\s*)?\"([^\"\\\\$]+)\"\\s*(\\))?")
+        return sources.asSequence()
             .flatMap { it.walkTopDown() }
             .filter { it.isFile && it.extension == "kt" }
-            .flatMap { file -> call.findAll(file.readText()).map { file.name to it.groupValues[1] } }
-            .filterNot { (_, key) -> key in known }
+            .flatMap { file ->
+                call.findAll(file.readText()).map {
+                    SourceCall(file.name, it.groupValues[2], it.groupValues[1].isEmpty() && it.groupValues[3].isNotEmpty())
+                }
+            }
             .toList()
+    }
+
+    @Test
+    fun every_key_the_sources_ask_for_exists() {
+        val known = UiStrings.keys(Lang.RU)
+        val missing = sourceCalls().filterNot { it.key in known }.map { it.file to it.key }
 
         assertTrue(missing.isEmpty(), "нет в словаре: ${missing.take(10)}")
+    }
+
+    /** Вызов `ui("key")` без аргументов не берёт строку с дырой `{N}`: игрок увидел бы саму дыру вместо значения. */
+    @Test
+    fun a_template_is_never_asked_for_without_arguments() {
+        val hole = Regex("\\{\\d+}")
+        val unfilled = sourceCalls()
+            .filter { it.bare && hole.containsMatchIn(ui(Lang.RU, it.key)) }
+            .map { it.file to it.key }
+
+        assertTrue(unfilled.isEmpty(), "шаблон без аргументов: ${unfilled.take(10)}")
     }
 
     /**
@@ -223,7 +244,6 @@ class UiStringsTest {
             com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
-            WeaponType.entries.forEach { add("enum.weapon.${it.name}") }
             SkillNodeType.entries.forEach { add("enum.node.${it.name}") }
             Ailment.entries.forEach {
                 add("enum.ailment.${it.name}")
@@ -314,7 +334,7 @@ class UiStringsTest {
     }
 
     /**
-     * Узел дерева, дар и рычаг дара, что называет окно разбора, названы в каждом словаре сервера: кода на их месте
+     * Узел дерева, дар и рычаг дара, что называет окно разбора, и вид оружия названы в каждом словаре сервера: кода на их месте
      * клиент не пишет, дыра была бы заглушкой - её ловит этот тест, а не игрок.
      */
     @Test
@@ -324,6 +344,7 @@ class UiStringsTest {
         assertTrue(server.isNotEmpty(), "server locale files not found")
         val keys = index.tree.byCode.keys.map(LocaleKey::skillNodeName) +
             index.fates.all.map { LocaleKey.fateName(it.code) } +
+            WeaponType.entries.map { LocaleKey.enumLabel("EnumEquipmentWeapon", it.name) } +
             com.sperance.exileforge.rules.content.FateLever.entries.map { LocaleKey.fateLever(it.name) }
         val holes = server.flatMap { (lang, table) -> keys.filterNot(table::containsKey).map { "$lang: $it" } }
         assertEquals(emptyList(), holes, "names missing from the server dictionaries")

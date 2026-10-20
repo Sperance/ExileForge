@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.FeedbackModel
+import com.sperance.exileforge.core.feedback.ReportSearch
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -54,7 +55,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
+ * Отчёты для модерации: поиск [ReportSearch] - как у игрока, плюс логин автора, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
  * выбором, ниже - порядок сегментами без подписи ([Order]: новые, рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
  * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
  * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
@@ -81,7 +82,8 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
-    val found = feedback.reports.filter { it.matches(query) }
+    val search = remember(query) { ReportSearch(query) }
+    val found = feedback.reports.filter { search.matches(it.report.text, it.report.issue, it.login) }
     OutlinedTextField(
         query,
         { query = it.take(SEARCH) },
@@ -154,14 +156,6 @@ private enum class Order(val key: String, val comparator: Comparator<AdminReport
 
 /** Где был автор, когда писал: место и раздел отчёта. */
 private val FullReport.where: String get() = place.ifBlank { screen }
-
-/** Отчёт под поиском [query]: текст, «#номер» Issue или логин автора; пусто - любой. */
-private fun AdminReport.matches(query: String): Boolean {
-    val words = query.trim()
-    if (words.isEmpty()) return true
-    val number = words.removePrefix("#")
-    return report.text.contains(words, ignoreCase = true) || report.issue?.number?.toString() == number || login?.contains(words, ignoreCase = true) == true
-}
 
 /** Чип фильтра: подпись, счёт (null - без счёта), выбран ли. */
 @Composable private fun CountChip(title: String, count: Int?, chosen: Boolean, onClick: () -> Unit) {

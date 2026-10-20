@@ -45,6 +45,7 @@ import com.sperance.exileforge.core.display.feedbackKindTitle
 import com.sperance.exileforge.core.display.feedbackStatusTitle
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackModel
+import com.sperance.exileforge.core.feedback.ReportSearch
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueState
@@ -151,8 +152,8 @@ data class ReportsView(val tab: ReportsTab, val focus: String? = null)
 
 /**
  * Отчёты (без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
- * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
- * по тексту и номеру). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
+ * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −»); поиск
+ * значком в шапке - общий у обеих вкладок ([ReportSearch]). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
  * перечитываются потягиванием вниз и нажатием на уже открытую вкладку.
  *
  * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём
@@ -182,14 +183,12 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
                 Box(Modifier.weight(1f)) {
                     PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
                 }
-                if (tab == ReportsTab.KNOWN) {
-                    ForgeIconButton(Icons.Outlined.Search, ui("feedback.search_open"), onClick = {
-                        searching = !searching
-                        if (!searching) query = ""
-                    }, kind = if (searching) ButtonKind.Secondary else ButtonKind.Text)
-                }
+                ForgeIconButton(Icons.Outlined.Search, ui("feedback.search_open"), onClick = {
+                    searching = !searching
+                    if (!searching) query = ""
+                }, kind = if (searching) ButtonKind.Secondary else ButtonKind.Text)
             }
-            if (tab == ReportsTab.KNOWN && searching) {
+            if (searching) {
                 OutlinedTextField(
                     query,
                     { query = it.take(SEARCH_MAX) },
@@ -210,36 +209,34 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
 }
 
 /**
- * Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. Свой отчёт
+ * Список открытой вкладки [tab] по поиску [query] ([ReportSearch]): свои отчёты ([fresh] - с новыми ответами) или известные проблемы. Свой отчёт
  * [focus] подсвечен, и «Мои» прокручены к нему, как только он пришёл.
  */
 @Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel, onDelete: (String) -> Unit) {
     val list = rememberLazyListState()
-    val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
+    val search = remember(query) { ReportSearch(query) }
+    val mine = feedback.mine.filter { search.matches(it.text, it.issue) }.sortedBy { ReportFate.of(it.status, it.issue).closed }
     val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { tab == ReportsTab.MINE && it >= 0 }
     LaunchedEffect(focusAt) { focusAt?.let { list.animateScrollToItem(it) } }
     LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
         when (tab) {
             ReportsTab.MINE -> {
-                if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
+                if (mine.isEmpty()) item { MutedText(ui(if (feedback.mine.isEmpty()) "feedback.none_mine" else "feedback.none_found")) }
                 items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
             }
 
             ReportsTab.KNOWN -> {
-                val known = knownList(feedback.known, query)
-                if (known.isEmpty()) item { MutedText(ui("feedback.none_known")) }
+                val known = knownList(feedback.known, search)
+                if (known.isEmpty()) item { MutedText(ui(if (feedback.known.isEmpty()) "feedback.none_known" else "feedback.none_found")) }
                 items(known, key = { it.id }) { KnownCard(it, enabled) { v -> model.vote(it.id, v) } }
             }
         }
     }
 }
 
-/** Известные проблемы по поиску [query] (текст или «#номер»): по рейтингу, затем по номеру. */
-private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> {
-    val words = query.trim().removePrefix("#")
-    return all.filter { words.isEmpty() || it.text.contains(words, ignoreCase = true) || it.issue?.number?.toString() == words }
-        .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
-}
+/** Известные проблемы под поиском [search]: по рейтингу, затем по номеру. */
+private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownReport> = all.filter { search.matches(it.text, it.issue) }
+    .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 
 /** Ответить в Issue можно, пока он открыт. */
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
@@ -284,5 +281,5 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
     ForgeChip("$sign$count", chosen, onClick, state = ButtonState.of(enabled), accent = tint, contentDescription = name)
 }
 
-/** Длина поиска известных проблем. */
+/** Длина поиска по отчётам. */
 private const val SEARCH_MAX = 60

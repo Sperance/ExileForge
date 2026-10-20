@@ -50,18 +50,27 @@ enum class ChipMode {
     /** Фильтр: каждый включается сам по себе (флажок). */
     Filter,
 
-    /** Выбор одного из ряда (переключатель): «Все», порог, фракция, вкладка тайника. */
+    /**
+     * Выбор одного из ряда (переключатель): «Все», порог, фракция, вкладка тайника. Выбранный - без галочки: заливка и окантовка
+     * [ChoiceRim] вдвое толще, так что ширина чипа от выбора не зависит и ряд не перекладывается.
+     */
     Choice,
 }
 
+/** Окантовка выбранного чипа выбора: выбор виден толщиной, а не только цветом. */
+private val ChoiceRim = 2.dp
+
 private val ChipOff = SurfaceLook(Seam, SolidColor(Panel), Quiet)
 private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBright)
+private val ChoiceOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBright, rimWidth = ChoiceRim)
+private val ChoiceOff = SurfaceLook(Muted, null, Muted, hatched = true, rimWidth = ChoiceRim)
 
 /**
  * Чип фильтра или выбора игры: подпись [label] в скруглённом прямоугольнике 32 dp, зона касания - не меньше 44 dp. Оси - как у
  * [ForgeButton]: [state] (погашенный - штриховка), [accent] - цвет места из темы (сторона голоса, фракция, редкость): окантовка
  * и слова акцентом, у выбранного - и фон его тоном. [mode] - фильтр (флажок) или выбор одного (переключатель). Выбранный
- * ([selected]) - галочка слева; [leading] - свой знак вместо неё (замок, герб, крестик снятия фильтра), 15 dp, цвет - чипа.
+ * ([selected]) фильтр - галочка слева, выбор - толстая окантовка без галочки ([ChipMode.Choice]); [leading] - свой знак (замок,
+ * герб, крестик снятия фильтра) на месте галочки, 15 dp, цвет - чипа.
  * [count] - число справа в таблетке, для чтения с экрана - в описании состояния; [contentDescription] - своё имя вместо подписи
  * («Нравится, 3» вместо «+3»).
  */
@@ -80,7 +89,7 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
     val source = remember { MutableInteractionSource() }
     val pressed = source.collectIsPressedAsState()
     val enabled = state == ButtonState.Enabled
-    val look = remember(enabled, selected, accent) { chipLook(enabled, selected, accent) }
+    val look = remember(enabled, selected, accent, mode) { chipLook(enabled, selected, accent, mode) }
     val pick = when (mode) {
         ChipMode.Filter -> Modifier.toggleable(selected, source, indication = null, enabled = enabled, role = Role.Checkbox) { onClick() }
         ChipMode.Choice -> Modifier.selectable(selected, source, indication = null, enabled = enabled, role = Role.RadioButton, onClick = onClick)
@@ -103,7 +112,7 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
         CompositionLocalProvider(LocalContentColor provides look.ink) {
             when {
                 leading != null -> Box(Modifier.size(15.dp), contentAlignment = Alignment.Center) { leading() }
-                selected -> Icon(Icons.Outlined.Check, null, Modifier.size(15.dp))
+                selected && mode == ChipMode.Filter -> Icon(Icons.Outlined.Check, null, Modifier.size(15.dp))
             }
         }
         Text(label, color = look.ink, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -111,12 +120,18 @@ private val ChipOn = SurfaceLook(Gold, SolidColor(ButtonInk.ChipOnFill), GoldBri
     }
 }
 
-/** Окраска чипа: погашенный - штриховка; с акцентом - окантовка и слова его цветом, выбранный - и фон его тоном. */
-private fun chipLook(enabled: Boolean, selected: Boolean, accent: Color?): SurfaceLook = when {
-    !enabled -> OffLook
-    accent == null -> if (selected) ChipOn else ChipOff
-    selected -> SurfaceLook(accent, SolidColor(accent.onPanel(.2f)), accent)
-    else -> SurfaceLook(accent.copy(alpha = .45f), SolidColor(Panel), accent)
+/**
+ * Окраска чипа: погашенный - штриховка; с акцентом - окантовка и слова его цветом, выбранный - и фон его тоном. Выбранный чип
+ * выбора [ChipMode.Choice] - с окантовкой [ChoiceRim], и погашенный тоже: галочки у него нет, выбор виден рамкой.
+ */
+private fun chipLook(enabled: Boolean, selected: Boolean, accent: Color?, mode: ChipMode): SurfaceLook {
+    val choice = selected && mode == ChipMode.Choice
+    return when {
+        !enabled -> if (choice) ChoiceOff else OffLook
+        !selected -> accent?.let { SurfaceLook(it.copy(alpha = .45f), SolidColor(Panel), it) } ?: ChipOff
+        accent == null -> if (choice) ChoiceOn else ChipOn
+        else -> SurfaceLook(accent, SolidColor(accent.onPanel(.2f)), accent, rimWidth = if (choice) ChoiceRim else 1.dp)
+    }
 }
 
 /** Число чипа: таблетка, у выбранного - зелёная или цвета акцента; читает его описание состояния чипа. */

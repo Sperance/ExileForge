@@ -41,9 +41,10 @@ import com.sperance.exileforge.ui.theme.Parchment
 /**
  * Цена в золоте у места оплаты: монета, цена и
  * «/ есть» мелко и приглушённо - числа короткие (12.5k). Не хватает - цена красная. Решает счёт [GoldBill]; кнопка оплаты
- * пишет недостачу [payLabel], подтверждение - строки [goldLedger]. Цена без кошелька (продажа, награда) - [GoldPrice].
+ * пишет недостачу [payLabel], подтверждение - строки [goldLedger]. Цена без кошелька (продажа, награда) - [GoldPrice]. [purse] false - без
+ * «/ есть»: строки списка, когда кошелёк уже напечатан на экране (цепочка торговца), цена всё так же красная при нехватке.
  */
-@Composable fun GoldCost(bill: GoldBill, modifier: Modifier = Modifier) {
+@Composable fun GoldCost(bill: GoldBill, modifier: Modifier = Modifier, purse: Boolean = true) {
     val shape = RoundedCornerShape(50)
     Row(
         modifier.background(Abyss, shape).border(1.dp, Bronze, shape).padding(horizontal = 8.dp, vertical = 3.dp)
@@ -55,7 +56,7 @@ import com.sperance.exileforge.ui.theme.Parchment
         Text(
             buildAnnotatedString {
                 withStyle(SpanStyle(color = if (bill.affordable) GoldBright else LifeRed, fontWeight = FontWeight.SemiBold)) { append(compactNumber(bill.price.toDouble())) }
-                withStyle(SpanStyle(color = Muted)) { append(" / " + compactNumber(bill.have.toDouble())) }
+                if (purse) withStyle(SpanStyle(color = Muted)) { append(" / " + compactNumber(bill.have.toDouble())) }
             },
             fontFamily = FontFamily.Monospace,
             fontSize = 12.sp,

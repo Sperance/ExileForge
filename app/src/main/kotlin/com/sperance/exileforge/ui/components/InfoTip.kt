@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -51,6 +53,15 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     ) {
         content()
         if (open && tip != null) TipCallout(tip()) { open = false }
+    }
+}
+
+/** Значок ⓘ: касание раскрывает пояснение [body] окном у значка; [label] - имя значка для чтения с экрана. */
+@Composable fun InfoHint(label: String, tint: Color, body: @Composable ColumnScope.() -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        ForgeIconButton(Icons.Outlined.Info, label, onClick = { open = true }, size = ButtonSize.Small)
+        if (open) TipCallout(tint, onClose = { open = false }, body = body)
     }
 }
 

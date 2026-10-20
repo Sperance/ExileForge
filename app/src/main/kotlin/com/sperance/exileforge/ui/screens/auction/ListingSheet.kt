@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.level
@@ -20,6 +21,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
@@ -28,8 +30,11 @@ import com.sperance.exileforge.ui.theme.*
  * by the orb grid ([OrbGrid]) and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
  * stack, and then the sheet also asks how many of them — how many there are is said, not enforced.
  *
- * Медиана недавних сделок - только при достаточном их числе, касание берёт её. Плата за место - правилом `AuctionFees`, та же, что спишет
- * сервер, не возвращается; не хватает - кнопка гаснет с недостачей. Аукцион ещё закрыт - кнопка неактивна, рядом сказано, когда откроется.
+ * Заголовка нет: лист начинают значок [icon] и имя [name], имя выбранной сферы - в подписи поля цены, под сеткой его нет. Медиана
+ * недавних сделок - только при достаточном их числе, касание берёт её. Плата за место - правилом `AuctionFees`, та же, что спишет сервер;
+ * что она не возвращается и что товар лежит в лоте - в ⓘ у платы. Не хватает золота - кнопка гаснет с недостачей; все места лотов
+ * заняты - гаснет «Места заняты» (мест ещё не знаем - лист их спрашивает). Аукцион ещё закрыт - кнопка неактивна, рядом сказано, когда
+ * откроется.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,9 +43,12 @@ fun ListingSheet(
     name: String,
     owned: Long? = null,
     onDismiss: () -> Unit,
+    icon: (@Composable () -> Unit)? = null,
     hint: (suspend () -> PriceHint?)? = null,
     onList: (orb: String, price: Long, amount: Long) -> Unit,
 ) {
+    val model = koinViewModel<MarketViewModel>()
+    val market by model.market.collectAsStateWithLifecycle()
     var orb by remember { mutableStateOf(game.currencies.firstOrNull()?.code?.value.orEmpty()) }
     var price by remember { mutableStateOf("1") }
     var amount by remember { mutableStateOf("1") }
@@ -51,17 +59,22 @@ fun ListingSheet(
     val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
     val bill = game.goldBill(fee).takeIf { fee > 0 }
     val closed = auctionClosed(game)
+    val full = market.slots?.full == true
+    LaunchedEffect(closed == null) { if (closed == null && market.slots == null) model.glanceLots() }
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
         footer = {
-            ForgeButton(state = ButtonState.of(closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0), onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
-                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
+            val ready = closed == null && !full && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0
+            ForgeButton(state = ButtonState.of(ready), onClick = { onList(orb, cost, count) }, modifier = Modifier.weight(1f)) {
+                Text(if (full) ui("auction.slots_full") else bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
             }
         },
     ) {
-        Engraved(ui("sell.list"))
-        Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            icon?.invoke()
+            Text(name, color = Parchment, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        }
         if (owned != null) {
             OutlinedTextField(
                 amount,
@@ -75,12 +88,12 @@ fun ListingSheet(
         if (game.currencies.isEmpty()) {
             Text(ui("orb.none"), color = Muted)
         } else {
-            OrbGrid(ui("orb.orb"), game.currencies, orb, { orb = it }, enabled = !game.busy)
+            OrbGrid(null, game.currencies, orb, { orb = it }, enabled = !game.busy, named = false)
         }
         OutlinedTextField(
             price,
             { value -> price = value.filter(Char::isDigit).take(game.inputs.number) },
-            label = { Text(ui("sell.price")) },
+            label = { Text(if (orb.isBlank()) ui("sell.price") else ui("sell.price_in", itemTitle(orb))) },
             singleLine = true,
             keyboardOptions = digits,
             modifier = Modifier.fillMaxWidth(),
@@ -97,9 +110,9 @@ fun ListingSheet(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                 GoldCost(it)
+                InfoHint(ui("sell.listing_fee"), Rune) { Text(ui("sell.note"), color = Parchment, style = MaterialTheme.typography.bodySmall) }
             }
         }
-        MutedText(ui("sell.note"))
         closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
     }
 }

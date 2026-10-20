@@ -4,10 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -15,7 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
@@ -39,7 +39,6 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
@@ -56,7 +55,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * An offer is a copy like any in the stash: its view over the content draws it, and the
  * rules say whether this hero could wear it.
  *
- * Under the header, the orb shelf: lesser orbs for gold, each one of a kind
+ * Beside the wares, the orb shelf: lesser orbs for gold, each one of a kind
  * dearer than the last until the shelf renews with the wares.
  *
  * It has a building of the City of its own, apart from the auction's tabs.
@@ -76,12 +75,12 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * «Шапка и вкладки» (variant A): the gold, the time to the next shelf and the loot filter in one strip; the notes behind
- * the header's (i); the wares and the orbs as two halves of one switch, so the first item is in sight at once.
- * Под шапкой только кошелёк: время до нового товара - первой строкой списка, фильтр добычи - автопродажа тайника.
+ * Своей шапки нет: золото героя и время до нового товара - справа в цепочке «Город › Торговец» ([MerchantTrail]), кошелёк больше
+ * нигде не печатается - в строках только цена ([GoldCost] без «/ есть», красная при нехватке). Товар и сферы - две доли одного
+ * переключателя, ⓘ с правилами торговца - в конце его ряда.
  *
  * Копия без шаблона в контенте не показывается. Товар - под общим фильтром предметов. Таймер на нуле - витрина и полка сфер перечитываются,
- * карточка ушедшего товара закрывается. Шапка и полоса кошелька уходят при прокрутке, вкладки остаются; трофеи боссов - над товаром.
+ * карточка ушедшего товара закрывается. Трофеи боссов - над товаром.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,23 +111,18 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     LaunchedEffect(stock?.offers) {
         if (chosen != null && stock?.offers.orEmpty().none { it.id == chosen?.id }) chosen = null
     }
-    CollapsibleHeader {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
-                Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact)
-            }
-            money?.let { MerchantPurse(it) }
-        }
-    }
+    MerchantTrail(money, stock?.refreshAt)
+    val about: @Composable RowScope.() -> Unit = { ForgeIconButton(Icons.Outlined.Info, ui("merchant.notes"), onClick = { notes = true }, size = ButtonSize.Compact) }
     if (orbs.isNotEmpty()) {
         PillTabs(
             listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)),
             if (orbsShelf) 1 else 0,
             { orbsShelf = it == 1 },
             segmented = true,
+            trailing = about,
         )
+    } else {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, content = about)
     }
     PullToRefreshBox(isRefreshing = Reads.HERO in activity.loading, onRefresh = heroModel::load, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
@@ -148,13 +142,12 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
                     }
                 }
             } else {
-                stock?.refreshAt?.takeIf { it > 0 }?.let { at -> item(key = "renews") { RenewalRow(at) } }
                 if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
                 if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
                 items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
-                    ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it) } ?: GoldPrice(offer.price) }
+                    ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
                 }
             }
         }
@@ -177,39 +170,30 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     }
 }
 
-/** Кошелёк под шапкой: таймер товара ушёл шапкой списка, фильтр добычи - автопродажей тайника. */
-@Composable private fun MerchantPurse(money: Long) {
-    val shape = RoundedCornerShape(12.dp)
-    Row(Modifier.fillMaxWidth().depthPanel(shape).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        GoldPrice(money)
-    }
+/**
+ * Данные цепочки торговца: «8 450 золота · ↻ 2:14» - золото героя [money] и часы с минутами до нового товара [refreshAt] по часам
+ * сервера, тикает живыми часами экрана; касание - когда товар обновится.
+ */
+@Composable private fun MerchantTrail(money: Long?, refreshAt: Long?) {
+    val now by rememberNow(TRAIL_TICK_MS)
+    val left = refreshAt?.takeIf { it > 0 }?.let { countdown(((it - now - ServerClock.offset) / 1_000).coerceAtLeast(0)) }
+    val data = listOfNotNull(money?.let { ui("merchant.gold_amount", number(it.toDouble())) }, left?.let { ui("merchant.trail_renews", it) }).joinToString(" · ")
+    if (data.isNotEmpty()) TrailData(data, left?.let { Tip(ui("merchant.renews", it)) })
 }
 
-/** «Новый товар через 2:14:03»: первая строка списка товаров, тикает раз в секунду по часам устройства. */
-@Composable private fun RenewalRow(at: Long) {
-    val now by produceState(ServerClock.now(), at) {
-        while (true) {
-            value = ServerClock.now()
-            delay(1_000)
-        }
-    }
-    Row(
-        Modifier.fillMaxWidth().depthInset(RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(14.dp))
-        Text(ui("merchant.renews", countdown(((at - now) / 1_000).coerceAtLeast(0))), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
+/** Такт часов цепочки торговца. */
+private const val TRAIL_TICK_MS = 1_000L
 
 /** Насколько позже нуля таймера витрина перечитывается: окно полки сервера уже сменилось. */
 private const val RENEW_SLACK_MS = 1_500L
 
-/** Секунды как `h:mm:ss`. */
-private fun countdown(seconds: Long): String = "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60)
+/** Секунды как `h:mm`, минуты - с округлением вверх: последняя минута не показывает «0:00». */
+private fun countdown(seconds: Long): String {
+    val minutes = (seconds + 59) / 60
+    return "%d:%02d".format(minutes / 60, minutes % 60)
+}
 
-/** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the header's (i). */
+/** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the (i) at the end of the tabs. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MerchantNotes(onDismiss: () -> Unit) {
@@ -224,10 +208,9 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
 }
 
 /**
- * One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the next price over the button.
- * В правом углу строки - чип «цена / есть» ([GoldCost]) и под ним малая «Купить»; не хватает - цена красная, кнопка погашена.
- *
- * Запас окна - сколько ещё на полке, угольным, когда пусто; нехватка золота - недостачей счёта.
+ * One orb on the shelf: its glass and name (a tap on them opens the orb), under them one line «в сумке 14 · ещё 5» (полка пуста -
+ * «раскуплено» угольным), and the next price over the button. В правом углу строки - цена без кошелька ([GoldCost]) и под ней малая
+ * «Купить»; не хватает - цена красная, кнопка погашена.
  */
 @Composable private fun OrbRow(orb: MerchantOrb, bill: GoldBill?, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -239,15 +222,32 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
             OrbGlyph(Orb.of(orb.code), Modifier.size(32.dp))
             Column(Modifier.weight(1f)) {
                 Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
-                have?.let { MutedText(ui("merchant.orb_have", it)) }
-                orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
-                bill?.takeUnless { it.affordable || orb.soldOut }?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+                OrbStock(have, orb)
             }
         }
-        RowActions(value = { bill?.let { GoldCost(it) } ?: GoldPrice(orb.price) }) {
+        RowActions(value = { bill?.let { GoldCost(it, purse = false) } ?: GoldPrice(orb.price) }) {
             RowButton(ui("auction.buy"), onClick = onBuy, state = ButtonState.of(enabled))
         }
     }
+}
+
+/** Запас сферы одной строкой: «в сумке 14 · ещё 5», полка пуста - «раскуплено» угольным; не знаем ни того, ни другого - строки нет. */
+@Composable private fun OrbStock(have: Long?, orb: MerchantOrb) {
+    val left = orb.left
+    if (have == null && left == null) return
+    Text(
+        buildAnnotatedString {
+            have?.let { append(ui("merchant.orb_have", it)) }
+            if (have != null && left != null) append(" · ")
+            when {
+                left == null -> Unit
+                orb.soldOut -> withStyle(SpanStyle(color = Ember)) { append(ui("merchant.sold_out")) }
+                else -> append(ui("merchant.orb_left", left))
+            }
+        },
+        color = Muted,
+        style = MaterialTheme.typography.labelSmall,
+    )
 }
 
 /**
@@ -257,7 +257,8 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
  *
  * Общая для любого товара за золото: лавка Города и странствующий торговец карты.
  *
- * Цена против кошелька одним чипом; не хватает - кнопка пишет недостачу и гаснет.
+ * Цена против кошелька - одним чипом рядом с кнопкой удержания «Купить» (у карточки плашки цены нет); не хватает - кнопка пишет
+ * недостачу и гаснет.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -266,17 +267,18 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item)) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item)) }
             }
             OrnateDivider()
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 val bill = game.goldBill(price)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MutedText(ui("merchant.gold"), Modifier.weight(1f))
-                    bill?.let { GoldCost(it) } ?: GoldPrice(price)
-                }
-                ForgeButton(onClick = onBuy, modifier = Modifier.fillMaxWidth(), state = ButtonState.of(!game.busy && bill?.affordable == true), hold = Hold()) {
-                    Text(bill?.payLabel(ui("merchant.buy_for", number(price.toDouble()))) ?: ui("merchant.buy_for", number(price.toDouble())))
+                bill?.let { GoldCost(it) } ?: GoldPrice(price)
+                ForgeButton(onClick = onBuy, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy && bill?.affordable == true), hold = Hold()) {
+                    Text(bill?.payLabel(ui("auction.buy")) ?: ui("auction.buy"))
                 }
             }
         }

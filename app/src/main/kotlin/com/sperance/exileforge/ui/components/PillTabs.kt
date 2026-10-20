@@ -12,16 +12,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
+
+/** Число у подписи вкладки («Мои лоты 3/5»): приглушённое, [alert] - красное (мест нет). */
+data class TabBadge(val text: String, val alert: Boolean = false)
 
 /**
  * Вкладки экрана таблетками («Мягкий»): открытая - на приподнятом фоне светлым текстом, зелёный остаётся главной
  * кнопке. [segmented] кладёт их долями одной капсулы-дорожки - два вида одной полки; [trailing] замыкает ряд («?» экрана).
- * [onReselect] - нажатие на уже открытую вкладку (перечитать её); null - открытая вкладка не нажимается.
+ * [onReselect] - нажатие на уже открытую вкладку (перечитать её); null - открытая вкладка не нажимается. [badges] - числа у подписей
+ * по индексу вкладки ([TabBadge]); нет числа - null.
  */
 @Composable fun PillTabs(
     labels: List<String>,
@@ -32,6 +39,7 @@ import com.sperance.exileforge.ui.theme.*
     segmented: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
     onReselect: (() -> Unit)? = null,
+    badges: List<TabBadge?> = emptyList(),
 ) {
     val pill = RoundedCornerShape(50)
     val track = if (segmented) {
@@ -49,8 +57,12 @@ import com.sperance.exileforge.ui.theme.*
                     segmented -> Modifier
                     else -> Modifier.depthRaised(pill, elevation = 2.dp)
                 }
+                val badge = badges.getOrNull(index)
                 Text(
-                    label,
+                    buildAnnotatedString {
+                        append(label)
+                        badge?.let { withStyle(SpanStyle(color = if (it.alert) LifeRed else Muted, fontWeight = FontWeight.Normal)) { append(" " + it.text) } }
+                    },
                     color = if (on && !segmented) {
                         Ink
                     } else if (on) {

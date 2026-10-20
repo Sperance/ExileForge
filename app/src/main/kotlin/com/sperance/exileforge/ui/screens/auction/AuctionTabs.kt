@@ -109,13 +109,15 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-/**
- * How long an own lot still stands: days and hours, hours and minutes on its last day; null when it names no end. Истёкший и вернувшийся -
- * куда вернулся товар («Вернулся в тайник», «В почте»).
- */
-internal fun lotExpiry(lot: AuctionLot): String? {
+/** Куда ушёл истёкший свой лот: «Вернулся в тайник», «В почте», «Возвращается»; null - лот ещё на витрине. */
+internal fun lotReturn(lot: AuctionLot): String? {
     lot.returned?.takeIf { lot.expiredBack }?.let { return ui("auction.returned.${it.name}") }
-    if (lot.returning) return ui("auction.returning")
+    return ui("auction.returning").takeIf { lot.returning }
+}
+
+/** Сколько ещё стоит свой лот: дни и часы, в последний день - часы и минуты; null - срока нет или лот ушёл с витрины ([lotReturn]). */
+internal fun lotLeft(lot: AuctionLot): String? {
+    if (lotReturn(lot) != null) return null
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
     return if (minutes >= MINUTES_A_DAY) {
         ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
@@ -160,8 +162,10 @@ internal fun stackFacts(game: GameUi, lot: AuctionLot): List<String> = listOf(if
  * The copy travels inside the lot, rolls and all, and its template is in the content every hero
  * reads once: looking at a lot costs no request at all.
  *
- * Сравнение с надетым: лот несёт копию целиком - итог «если надеть» и требования, как у торговца. Цена - в сферах; продавец открывает
- * карточку игрока.
+ * Сравнение с надетым: лот несёт копию целиком - итог «если надеть» и требования, как у торговца. Цена в сферах - ярлыком над товаром
+ * (плашки золотой цены у карточки нет), у стопки рядом с её значком и именем. Ниже - факты лота: количество стопки, продавец ([seller]:
+ * только на витрине, касание открывает карточку игрока), когда выставлен и сколько ещё стоит ([left]); [note] - строка места (кто
+ * купил, недостача, куда вернулся). Под фактами - [extra] и главная кнопка [action].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,20 +176,32 @@ internal fun LotSheet(
     enabled: Boolean,
     note: String?,
     onDismiss: () -> Unit,
+    seller: Boolean = false,
+    left: String? = null,
     extra: (@Composable () -> Unit)? = null,
     onAction: () -> Unit = {},
 ) {
     val copy = lot.equipment
     val view = copy?.let { game.view(it) }
+    val inspect = rememberInspect()
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (view == null) {
+                        LotIcon(game, lot, Modifier.size(28.dp))
+                        Text(lot.title, color = lotColor(lot), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    }
+                    LotPrice(lot) { inspect(Inspect.Stack(lot.priceOrb)) }
+                }
+            }
             if (copy != null && view != null) {
                 item {
                     ItemCard(
                         view,
                         enabled = false,
                         detailed = true,
-                        actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}",
+                        priced = false,
                         totals = wearTotals(game, copy, rememberWearChoice(game, copy)),
                         unmet = game.unmetNeeds(copy.template),
                         seals = game.itemSeals(copy),
@@ -194,15 +210,19 @@ internal fun LotSheet(
             }
             item {
                 ForgePanel {
-                    Engraved(ui("auction.lot"))
-                    if (view == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
                     if (lot.kind == LotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), Glyph.ITEM)
-                    PropertyRow(ui("card.price"), orbPrice(lot), Glyph.CURRENCY)
-                    Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
+                    if (seller) Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
+                    left?.let { PropertyRow(ui("auction.expires_in"), it, Glyph.STATE) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
-                    extra?.invoke()
-                    action?.let { ForgeButton(state = ButtonState.of(enabled), onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(it) } }
+                }
+            }
+            if (extra != null || action != null) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        extra?.invoke()
+                        action?.let { ForgeButton(state = ButtonState.of(enabled), onClick = onAction, modifier = Modifier.fillMaxWidth()) { Text(it) } }
+                    }
                 }
             }
         }
@@ -227,8 +247,5 @@ internal fun listedAt(stamp: String): String? {
         null
     }
 }
-
-/** A lot's price, in the orb it was set in; an orb the rules do not know keeps its tail as a name. */
-internal fun orbPrice(lot: AuctionLot): String = ui("confirm.amount", lot.price, orbTitle(lot))
 
 internal fun orbTitle(lot: AuctionLot): String = if (Orb.of(lot.priceOrb) != null) itemTitle(lot.priceOrb) else ui("auction.orb_id", lot.priceOrb.takeLast(6))

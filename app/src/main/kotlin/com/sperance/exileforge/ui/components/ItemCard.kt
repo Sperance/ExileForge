@@ -139,7 +139,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * искры или звёзды, завитки по углам и номер экземпляра. [totals] - итог героя «сейчас → станет» под строками,
  * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
- * Цена торговца копии заменяет голую цену шаблона. Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
+ * Цена торговца копии заменяет голую цену шаблона; [priced] false - плашки цены нет (место само печатает цену сделки). Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить.
  * Строки - в порядке [ItemView.lineGroups]: врождённые над чертой, у полной - особые источники и [seals] (`GameUi.itemSeals`: захват
@@ -155,6 +155,7 @@ fun ItemCard(
     detailed: Boolean = false,
     actionLabel: String = ui("common.open"),
     price: Long? = null,
+    priced: Boolean = true,
     action: Boolean = !detailed,
     locked: Boolean = item.item.locked,
     waiting: Boolean = false,
@@ -167,6 +168,7 @@ fun ItemCard(
     val legend = look.legend != null
     val shape = RoundedCornerShape(22.dp)
     val rolled = item.orderedLines
+    val chipPrice = (price ?: item.template.price?.toLong()).takeIf { priced }
     var opened by remember { mutableStateOf<ItemLine?>(null) }
     Column(
         Modifier.fillMaxWidth().relicGround(look, shape, selected, sky = detailed)
@@ -176,9 +178,9 @@ fun ItemCard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (detailed) {
-            MedallionHead(item, look, price, locked, waiting, selected)
+            MedallionHead(item, look, chipPrice, locked, waiting, selected)
         } else {
-            ShortHead(item, look, price, locked, waiting, selected)
+            ShortHead(item, look, chipPrice, locked, waiting, selected)
         }
         if (detailed) {
             RelicLines(item, look, seals) { opened = it }
@@ -244,7 +246,7 @@ fun ItemCard(
 
 /**
  * Плашки шапки одной линией: уровень (кроме [noLevel] - уровень уже напечатан у гнезда), качество и цена [price]
- * (цена торговца копии, иначе шаблона); [serial] - номер экземпляра легенды последней плашкой.
+ * (null - без плашки цены); [serial] - номер экземпляра легенды последней плашкой.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -258,7 +260,7 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
             RelicChip { Text(item.mapLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
         }
         QualityBadge(item)
-        (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
+        price?.let { RelicChip { GoldPrice(it) } }
         if (serial && item.item.serial > 0) SerialChip(item.item.serial, look)
     }
 }

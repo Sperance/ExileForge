@@ -13,12 +13,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -26,6 +29,10 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,12 +45,16 @@ import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.itemDescription
+import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.rules.content.RiftLaw
+import com.sperance.exileforge.rules.content.RiftMutator
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
 import com.sperance.exileforge.rules.content.RiftRules
@@ -131,76 +142,222 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     }
 }
 
+/** Краски цепочки «назад» внутри Разлома. */
+private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.Muted, here = RiftColors.Text, data = RiftColors.Soft)
+
 /**
- * Входное меню «Врата»: портал, неделя и уровень Разлома (закреплённый первым забегом недели), стражи силуэтами, мутаторы, счёт, вход и схема недели в тумане.
- *
- * Причина у неактивной кнопки: уровень входа (`unlocks`), ключ сверх бесплатных.
+ * Входное меню «Врата» - уровень цепочки «← Испытания › Разлом недели»: срок недели, уровень Разлома (закреплённый первым забегом
+ * недели) и бесплатные забеги - данными цепочки ([GateTrail]). Портал и рядом лучший счёт недели, жила мутаторов и стражей
+ * ([GateVein]), вход ([GateEnter]) и «Схема недели» - следующий уровень цепочки ([WeekScheme]). Вход и схема закреплены внизу,
+ * над ними листается жила.
  */
 @Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine) {
     val hero = game.hero ?: return
-    val idle = !game.busy
     var preview by remember { mutableStateOf(false) }
-    BackHandler { if (preview) preview = false else model.closeRift() }
-    Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.fillMaxWidth()) {
-            Text(ui("rift.title").uppercase(), color = RiftColors.Rift, style = relicName(19), modifier = Modifier.align(Alignment.Center))
-            ForgeButton(onClick = model::closeRift, modifier = Modifier.align(Alignment.CenterEnd), kind = ButtonKind.Text, accent = RiftColors.Muted) { Text(ui("rift.close")) }
-        }
-        val open = game.unlocked(Feature.RIFT)
-        val riftLevel = board.progress.level.takeIf { it > 0 } ?: hero.level
-        val left = ((board.endsAt - System.currentTimeMillis()) / 1000.0).coerceAtLeast(0.0)
-        Text(
-            listOf(ui("rift.ends", clock(left)), ui("rift.level", riftLevel)).joinToString(" · "),
-            color = RiftColors.Muted,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-        )
-        RiftPortal(Modifier.size(250.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            rules.guardians.monsters.forEachIndexed { act, code -> GuardianSeal(loc("monster.${code.value}.name"), act) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            board.plan.mutators.mapNotNull(rules.mutatorsByCode::get).forEach { mutator ->
-                val tint = if (mutator.good) RiftColors.Rift else RiftColors.Warn
-                val shape = RoundedCornerShape(10.dp)
-                Column(Modifier.weight(1f).background(RiftColors.Panel, shape).border(1.dp, tint.copy(alpha = .35f), shape).padding(horizontal = 10.dp, vertical = 7.dp)) {
-                    Text(ui(if (mutator.good) "rift.mutator_good" else "rift.mutator_evil").uppercase(), color = tint, style = relicName(10))
-                    Text(loc("rift.mutator.${mutator.code}.name"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
-                    Text(loc("rift.mutator.${mutator.code}.description"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+    BackTrailHost(ui("trials.title"), Modifier.statusBarsPadding(), RiftTrail) {
+        TrailLevel(ui("rift.title"), onBack = model::closeRift) {
+            if (preview) {
+                TrailLevel(ui("rift.preview"), onBack = { preview = false }) { WeekScheme(rules, engine) }
+            } else {
+                GateTrail(rules, board, hero.level)
+                Column(Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 16.dp)) {
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        GateHead(board.progress.best)
+                        GateVein(rules, board.plan.mutators.mapNotNull(rules.mutatorsByCode::get))
+                    }
+                    Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GateEnter(game, rules, board, hero.bag[RiftRules.KEY] ?: 0L, model::startRift)
+                        ForgeButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, accent = RiftColors.Soft) { Text(ui("rift.preview")) }
+                    }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(ui("rift.free", board.free, rules.free), color = RiftColors.Text, style = MaterialTheme.typography.bodySmall)
-            if (board.progress.best > 0) Text(ui("rift.best", board.progress.best), color = RiftColors.Hot, style = MaterialTheme.typography.bodySmall)
-        }
-        val keys = hero.bag[RiftRules.KEY] ?: 0L
-        val reason = when {
-            !open -> ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(game.index?.rules))
-            board.free <= 0 && keys < 1 -> ui("rift.start_locked")
-            else -> null
-        }
-        ForgeButton(onClick = model::startRift, state = ButtonState.of(idle && reason == null), modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
-            Text((if (board.free > 0) ui("rift.start") else ui("rift.start_key", itemTitle(RiftRules.KEY))).uppercase(), style = relicName(15))
-        }
-        reason?.let { Text(it, color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall) }
-        ForgeButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("rift.preview")) }
     }
-    if (preview) {
-        var looking by remember { mutableStateOf<RiftNode?>(null) }
-        Box(Modifier.fillMaxSize().background(RiftColors.Ground)) {
-            RiftAscent(rules, engine, null, idle = false, top = 80.dp, bottom = 40.dp) { looking = it }
-            Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(ui("rift.preview").uppercase(), color = RiftColors.Rift, style = relicName(16), modifier = Modifier.weight(1f))
-                ForgeButton(onClick = { preview = false }, kind = ButtonKind.Text, accent = RiftColors.Muted) { Text(ui("rift.close")) }
+}
+
+/**
+ * Данные цепочки Врат столбиком: срок недели над уровнем Разлома и бесплатными забегами; касание - те же числа с подписями и правила
+ * Разлома. Срок - по часам сервера, тикает живыми часами экрана.
+ */
+@Composable private fun GateTrail(rules: RiftRules, board: RiftBoard, heroLevel: Int) {
+    val left = weekLeft(board.endsAt)
+    val level = board.progress.level.takeIf { it > 0 } ?: heroLevel
+    TrailData(
+        ui("rift.trail", left, level, board.free, rules.free),
+        Tip(
+            ui("rift.title"),
+            ui("rift.hint", rules.acts, rules.layout.rows, rules.free),
+            RiftColors.Soft,
+            listOf(ui("rift.ends") to left, ui("rift.level") to "$level", ui("rift.free") to ui("rift.free_of", board.free, rules.free)),
+            RiftColors.Soft,
+        ),
+    )
+}
+
+/** Сколько осталось до конца недели [endsAt] (мс эпохи сервера): «3 д 14 ч», в последние сутки - «14 ч 05 мин». */
+@Composable private fun weekLeft(endsAt: Long): String {
+    val now by rememberNow(WEEK_TICK_MS)
+    return timeLeft(endsAt - now - ServerClock.offset)
+}
+
+/** Такт часов срока недели. */
+private const val WEEK_TICK_MS = 15_000L
+
+/** Портал 128 dp и рядом крупно лучший счёт недели; забегов ещё не было - прочерк. */
+@Composable private fun GateHead(best: Long) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        RiftPortal(Modifier.offset(x = (-8).dp).size(128.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(ui("rift.best"), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
+            Text(if (best > 0) number(best.toDouble()) else "—", color = RiftColors.Hot, style = relicName(26).copy(fontFeatureSettings = "tnum"))
+        }
+    }
+}
+
+/**
+ * Жила Врат сверху вниз, как путь на схеме: мутаторы недели - узел ▲ (полезный) или ▼ (вредный) знаком и цветом, имя и описание, - затем
+ * стражи по актам. Ярлыков «полезный/вредный» нет - их говорит узел.
+ */
+@Composable private fun GateVein(rules: RiftRules, mutators: List<RiftMutator>) {
+    val guardians = rules.guardians.monsters
+    val last = mutators.size + guardians.size - 1
+    Column {
+        mutators.forEachIndexed { i, mutator ->
+            VeinStep(first = i == 0, last = i == last, node = { MutatorNode(mutator.good) }) { MutatorText(mutator, Modifier.padding(top = 2.dp, bottom = 14.dp)) }
+        }
+        guardians.forEachIndexed { act, code ->
+            val k = mutators.size + act
+            VeinStep(first = k == 0, last = k == last, node = { GuardianNode(act) }) {
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(loc("monster.${code.value}.name"), color = RiftColors.Text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    Text(ui("rift.act", act + 1), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
-        looking?.let { node -> NodeSheet(rules, engine, null, node, idle = false, onDismiss = { looking = null }) {} }
     }
+}
+
+/**
+ * Шаг жилы: столбец [VEIN_SIDE] с чертой жилы и узлом [node] наверху, справа - [content]. У первого шага черта начинается под узлом,
+ * у последнего - кончается на нём.
+ */
+@Composable private fun VeinStep(first: Boolean, last: Boolean, node: @Composable () -> Unit, content: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            Modifier.width(VEIN_SIDE).fillMaxHeight().drawBehind {
+                val x = size.width / 2
+                val from = if (first) VEIN_START.toPx() else 0f
+                val to = if (last) VEIN_END.toPx() else size.height
+                drawLine(RiftColors.LineHi, Offset(x, from), Offset(x, to), 2.dp.toPx())
+            },
+            contentAlignment = Alignment.TopCenter,
+        ) { node() }
+        Box(Modifier.weight(1f)) { content() }
+    }
+}
+
+/** Ширина столбца жилы. */
+private val VEIN_SIDE = 28.dp
+
+/** Где начинается черта у первого шага жилы. */
+private val VEIN_START = 12.dp
+
+/** Где кончается черта у последнего шага жилы. */
+private val VEIN_END = 14.dp
+
+/** Узел мутатора на жиле: кружок 24 dp с [MutatorSign] в рамке и свечении его цвета. */
+@Composable private fun MutatorNode(good: Boolean) {
+    val tint = mutatorTint(good)
+    Box(
+        Modifier.size(24.dp).glow(tint.copy(alpha = .33f), radius = 4.dp, shape = CircleShape).background(RiftColors.Ground, CircleShape).border(1.5.dp, tint, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { MutatorSign(good) }
+}
+
+/** Знак мутатора: ▲ полезный, ▼ вредный - знаком и цветом; читалке - словом. */
+@Composable private fun MutatorSign(good: Boolean) {
+    val word = ui(if (good) "rift.mutator_good" else "rift.mutator_evil")
+    Text(if (good) "▲" else "▼", color = mutatorTint(good), style = MaterialTheme.typography.labelSmall, modifier = Modifier.semantics { contentDescription = word })
+}
+
+/** Цвет мутатора: полезный - Разлом, вредный - тревога. */
+private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else RiftColors.Warn
+
+/** Имя мутатора его цветом и описание под ним - одни строки для жилы Врат и меню забега. */
+@Composable private fun MutatorText(mutator: RiftMutator, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(loc("rift.mutator.${mutator.code}.name"), color = if (mutator.good) RiftColors.Soft else RiftColors.Warn, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        Text(loc("rift.mutator.${mutator.code}.description"), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * Узел стража акта [act] на жиле: знак стража в кольце тревоги дышит (5,5 с, со сдвигом по акту).
+ *
+ * Дыхание - прозрачностью слоя знака в рисовании, без перекомпоновки.
+ */
+@Composable private fun GuardianNode(act: Int) {
+    val phase = motionPhase(5_500)
+    Box(
+        Modifier.size(28.dp).background(Brush.radialGradient(listOf(Color(0xFF2A0D08), RiftColors.Ground)), CircleShape).border(1.dp, RiftColors.Warn.copy(alpha = .6f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            RiftNodeKind.GUARDIAN.glyph(),
+            null,
+            tint = RiftColors.Warn,
+            modifier = Modifier.size(16.dp).graphicsLayer {
+                val breath = (1 - kotlin.math.cos((phase.value + act * .15f) * 2 * Math.PI).toFloat()) / 2
+                alpha = .6f + .4f * breath
+            },
+        )
+    }
+}
+
+/**
+ * Вход в Разлом с числом в подписи: «Войти · бесплатно 2/3», после бесплатных - «Войти за ключ · есть 4» ([keys] - ключи в сумке).
+ * Закрытый уровнем Разлом или ни бесплатных, ни ключа - кнопка погашена, касание говорит причину (у ключа - и откуда он берётся,
+ * описанием предмета).
+ */
+@Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, onEnter: () -> Unit) {
+    val free = board.free > 0
+    val why = when {
+        !game.unlocked(Feature.RIFT) -> listOf(ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(game.index?.rules)))
+        !free && keys < 1 -> listOf(ui("rift.start_locked"), itemDescription(RiftRules.KEY, game.index)).filter(String::isNotBlank)
+        else -> null
+    }
+    var explain by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+        ForgeButton(
+            onClick = onEnter,
+            modifier = Modifier.fillMaxWidth(),
+            size = ButtonSize.Wide,
+            state = ButtonState.of(!game.busy && why == null),
+            accent = RiftColors.Rift,
+            onDisabledClick = why?.let { { explain = true } },
+        ) {
+            Text(ui(if (free) "rift.start" else "rift.start_key").uppercase(), style = relicName(15), maxLines = 1)
+            Text(
+                " · " + if (free) ui("rift.start_free", board.free, rules.free) else ui("rift.start_keys", keys),
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                modifier = Modifier.alpha(.8f),
+            )
+        }
+        if (explain && why != null) {
+            TipCallout(RiftColors.Warn, onClose = { explain = false }) {
+                Text(why.first(), color = RiftColors.Text, style = MaterialTheme.typography.bodySmall)
+                why.drop(1).forEach { Text(it, color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall) }
+            }
+        }
+    }
+}
+
+/** Схема недели в тумане - уровень цепочки над Вратами: касание узла - его лист, без кнопки. */
+@Composable private fun WeekScheme(rules: RiftRules, engine: RiftEngine) {
+    var looking by remember { mutableStateOf<RiftNode?>(null) }
+    RiftAscent(rules, engine, null, idle = false, top = 24.dp, bottom = 40.dp) { looking = it }
+    looking?.let { node -> NodeSheet(rules, engine, null, node, idle = false, onDismiss = { looking = null }) }
 }
 
 /**
@@ -248,33 +405,6 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     }
 }
 
-/**
- * Страж недели силуэтом: знак в кольце тревоги дышит (5,5 с), под ним имя заглавными.
- *
- * Дыхание - прозрачностью слоя знака в рисовании, без перекомпоновки.
- */
-@Composable private fun GuardianSeal(name: String, act: Int) {
-    val phase = motionPhase(5_500)
-    Column(Modifier.width(100.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(
-            Modifier.size(52.dp).glow(RiftColors.Warn.copy(alpha = .25f), radius = 8.dp, shape = CircleShape)
-                .background(Brush.radialGradient(listOf(Color(0xFF2A0D08), RiftColors.Ground)), CircleShape).border(1.dp, RiftColors.Warn.copy(alpha = .55f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                RiftNodeKind.GUARDIAN.glyph(),
-                null,
-                tint = RiftColors.Warn,
-                modifier = Modifier.size(28.dp).graphicsLayer {
-                    val breath = (1 - kotlin.math.cos((phase.value + act * .15f) * 2 * Math.PI).toFloat()) / 2
-                    alpha = .6f + .4f * breath
-                },
-            )
-        }
-        Text(name.uppercase(), color = RiftColors.Muted, style = relicName(9), textAlign = TextAlign.Center, maxLines = 2)
-    }
-}
-
 /** Что открыто поверх карты забега: дары, проклятия или меню забега. */
 private enum class RunSheet { BOONS, CURSES }
 
@@ -305,14 +435,14 @@ private enum class RunSheet { BOONS, CURSES }
         }
     }
     when (sheet) {
-        RunSheet.BOONS -> ForgeSheet(onDismissRequest = { sheet = null }) {
+        RunSheet.BOONS -> ForgeSheet(onDismissRequest = { sheet = null }, containerColor = RiftColors.Panel) {
             Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(ui("rift.boons", run.boons.size, rules.nodes.slots), color = RiftColors.Soft, style = MaterialTheme.typography.titleMedium)
                 run.boons.forEach { held -> BoonLine(rules, held.code, held.grade) }
             }
         }
 
-        RunSheet.CURSES -> ForgeSheet(onDismissRequest = { sheet = null }) {
+        RunSheet.CURSES -> ForgeSheet(onDismissRequest = { sheet = null }, containerColor = RiftColors.Panel) {
             Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(ui("rift.curses"), color = RiftColors.Warn, style = MaterialTheme.typography.titleMedium)
                 if (run.curses.isEmpty()) Text(ui("rift.no_curses"), color = RiftColors.Dim, style = MaterialTheme.typography.bodySmall)
@@ -328,8 +458,7 @@ private enum class RunSheet { BOONS, CURSES }
 @Composable private fun RiftHud(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
     Column(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
-            .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(7.dp),
+            .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             RiftChip(ui("rift.score", engine.score(run)), RiftColors.Hot)
@@ -346,7 +475,7 @@ private enum class RunSheet { BOONS, CURSES }
     }
 }
 
-/** Чип HUD: подпись в капсуле Разлома; с [onClick] - нажимается. */
+/** Чип HUD: подпись в капсуле Разлома; с [onClick] - нажимается всей зоной касания 44 dp, рисуется только капсула. */
 @Composable private fun RiftChip(text: String, tint: Color, onClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(12.dp)
     Text(
@@ -354,8 +483,8 @@ private enum class RunSheet { BOONS, CURSES }
         color = tint,
         style = relicName(12),
         maxLines = 1,
-        modifier = Modifier.background(RiftColors.Panel.copy(alpha = .85f), shape).border(1.dp, RiftColors.LineHi, shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(horizontal = 9.dp, vertical = 3.dp),
+        modifier = Modifier.then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick).touchZone() else Modifier)
+            .background(RiftColors.Panel.copy(alpha = .85f), shape).border(1.dp, RiftColors.LineHi, shape).padding(horizontal = 9.dp, vertical = 3.dp),
     )
 }
 
@@ -368,34 +497,52 @@ private enum class RunSheet { BOONS, CURSES }
     }
 }
 
+/** Краски меню забега Разлома. */
+private val RiftMenuPalette = MenuPalette(
+    sheet = RiftColors.Panel,
+    title = RiftColors.Soft,
+    accent = RiftColors.Rift,
+    onAccent = RiftColors.Ground,
+    well = RiftColors.Ground2,
+    text = RiftColors.Text,
+    muted = RiftColors.Muted,
+    danger = RiftColors.LifeHigh,
+    line = RiftColors.Line,
+)
+
 /**
- * Меню забега Разлома (общее [RunMenu]): настройки, жук; свой блок - конец недели и мутаторы; свои пункты - завершить
- * забег (с вопросом) и закрыть Разлом.
+ * Меню забега Разлома (общее [RunMenu]) в палитре Разлома: срок недели у заголовка, мутаторы недели теми же строками, что на Вратах;
+ * свои пункты - покинуть Разлом (удержанием в листе) и закрыть Разлом, у каждого под именем - что будет с забегом.
  */
 @Composable private fun RiftMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean) {
     var ending by remember { mutableStateOf(false) }
     RunMenu(
         items = listOf(
-            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), danger = true, enabled = idle) { ending = true },
-            RunMenuItem(Icons.Outlined.Close, ui("rift.close")) { model.closeRift() },
+            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), ui("rift.end_confirm"), danger = true, enabled = idle) { ending = true },
+            RunMenuItem(Icons.Outlined.Close, ui("rift.close"), ui("rift.close_note")) { model.closeRift() },
         ),
         hold = {},
         extra = {
-            val left = ((board.endsAt - System.currentTimeMillis()) / 1000.0).coerceAtLeast(0.0)
-            Text(ui("rift.ends", clock(left)), color = RiftColors.Muted, style = MaterialTheme.typography.labelMedium)
-            Text(ui("rift.mutators"), color = RiftColors.Muted, style = MaterialTheme.typography.labelMedium)
-            board.plan.mutators.mapNotNull(rules.mutatorsByCode::get).forEach { mutator ->
-                Text(
-                    "${ui(if (mutator.good) "rift.mutator_good" else "rift.mutator_evil")}: ${loc("rift.mutator.${mutator.code}.name")} - ${loc("rift.mutator.${mutator.code}.description")}",
-                    color = if (mutator.good) RiftColors.Soft else RiftColors.Warn,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                board.plan.mutators.mapNotNull(rules.mutatorsByCode::get).forEach { mutator ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MutatorSign(mutator.good)
+                        MutatorText(mutator)
+                    }
+                }
             }
         },
+        badge = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Outlined.HourglassEmpty, ui("rift.ends"), tint = RiftColors.Muted, modifier = Modifier.size(12.dp))
+                Text(weekLeft(board.endsAt), color = RiftColors.Muted, style = MaterialTheme.typography.labelMedium)
+            }
+        },
+        palette = RiftMenuPalette,
         trigger = { onClick -> RiftChip("☰", RiftColors.Muted, onClick) },
     )
     if (ending) {
-        ConfirmSheet(ui("rift.end"), ui("rift.end"), onDismiss = { ending = false }, note = ui("rift.end_confirm"), danger = true) {
+        ConfirmSheet(ui("rift.end"), ui("rift.end_hold"), onDismiss = { ending = false }, danger = true) {
             ending = false
             model.riftAct(RiftAct.End)
         }
@@ -443,11 +590,13 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
     }
 }
 
-/** Узел: вид и его суть, проклятие, свойства Вождя, условие Чемпиона (скрыто до боя), страж акта; недоступный - с причиной. */
-@Composable private fun NodeSheet(rules: RiftRules, engine: RiftEngine, run: RiftRun?, node: RiftNode, idle: Boolean, onDismiss: () -> Unit, onGo: () -> Unit) {
+/**
+ * Лист узла: знак и имя вида, его суть, страж акта; за обзором - проклятие, черты Вождя и условие Чемпиона (скрыто до боя). В забеге
+ * ([onGo]) - «Идти» касанием, к стражу - удержанием; недоступный узел гасит кнопку, касание говорит причину. На схеме недели кнопки нет.
+ */
+@Composable private fun NodeSheet(rules: RiftRules, engine: RiftEngine, run: RiftRun?, node: RiftNode, idle: Boolean, onDismiss: () -> Unit, onGo: (() -> Unit)? = null) {
     val seen = engine.seen(run, node)
-    val lines = buildList {
-        add(loc("rift.node.${node.kind.name}.description"))
+    val facts = buildList {
         if (node.kind == RiftNodeKind.GUARDIAN) rules.guardians.monsters.getOrNull(node.act)?.let { add(loc("monster.${it.value}.name") + ": " + loc("rift.guardian.${it.value}.description")) }
         if (seen) {
             node.curse?.let { add(ui("rift.node_curse", loc("rift.curse.$it.name") + " - " + loc("rift.curse.$it.description"))) }
@@ -455,15 +604,33 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
             if (node.trial != null) add(ui("rift.node_trial"))
         }
     }
-    val why = engine.blocked(run, node)
-    ConfirmSheet(
-        loc("rift.node.${node.kind.name}.name"),
-        ui("rift.node_go"),
-        onDismiss = onDismiss,
-        note = lines.joinToString("\n"),
-        blocked = why != null || !idle,
-        warning = why?.let { ui(it) },
-    ) { onGo() }
+    ForgeSheet(onDismissRequest = onDismiss, containerColor = RiftColors.Panel) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 18.dp, end = 18.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                NodeSeal(node.kind, Modifier.size(34.dp))
+                Text(loc("rift.node.${node.kind.name}.name"), color = node.kind.color(), style = MaterialTheme.typography.titleLarge)
+            }
+            Text(loc("rift.node.${node.kind.name}.description"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
+            facts.forEach { Text(it, color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall) }
+            onGo?.let { NodeGo(engine.blocked(run, node), idle, hold = node.kind == RiftNodeKind.GUARDIAN, it) }
+        }
+    }
+}
+
+/** «Идти» листа узла: касанием, с [hold] - удержанием; с причиной [why] (ключ словаря) погашена, касание её говорит. */
+@Composable private fun NodeGo(why: String?, idle: Boolean, hold: Boolean, onGo: () -> Unit) {
+    var explain by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+        ForgeButton(
+            onClick = onGo,
+            modifier = Modifier.fillMaxWidth(),
+            state = ButtonState.of(idle && why == null),
+            accent = RiftColors.Rift,
+            hold = if (hold) Hold() else null,
+            onDisabledClick = why?.let { { explain = true } },
+        ) { Text(ui("rift.node_go")) }
+        if (explain && why != null) TipCallout(Tip("", ui(why), RiftColors.Warn)) { explain = false }
+    }
 }
 
 private const val RUNES = 24
@@ -484,8 +651,7 @@ private const val SPARKS = 14
             }
 
             is RiftOffer.Altar -> {
-                Text(ui("rift.altar_title"), color = RiftColors.Chaos, style = MaterialTheme.typography.titleSmall)
-                Text(ui("rift.altar_hint", rules.score.altarCurse.toInt()), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+                PlateTitle(ui("rift.altar_title"), RiftColors.Chaos, listOf(ui("rift.altar_hint", rules.score.altarCurse.toInt()), ui("rift.altar_pair")))
                 offer.pacts.forEachIndexed { i, pact ->
                     Choice(idle, { if (full) replacing = { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
                         BoonLine(rules, pact.boon)
@@ -500,9 +666,7 @@ private const val SPARKS = 14
             is RiftOffer.Forge -> ForgeChoices(rules, engine, run, offer, idle, full, { replacing = it }, onAct)
 
             RiftOffer.Contract -> {
-                Text(ui("rift.contract_title"), color = RiftColors.Warn, style = MaterialTheme.typography.titleSmall)
-                Text(ui("rift.contract_sign"), color = RiftColors.Text, style = MaterialTheme.typography.bodySmall)
-                Text(ui("rift.contract_hint"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+                PlateTitle(ui("rift.contract_title"), RiftColors.Warn, listOf(ui("rift.contract_sign"), ui("rift.contract_hint")))
                 rules.guardians.lord.laws.forEach { law -> LawChoice(law, idle && run.boons.isNotEmpty()) { onAct(RiftAct.Contract(law)) } }
                 if (run.boons.isEmpty()) Text(ui("rift.contract_no_boons"), color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
                 ForgeButton(onClick = { onAct(RiftAct.Contract(null)) }, state = ButtonState.of(idle), modifier = Modifier.fillMaxWidth()) { Text(ui("rift.contract_decline", rules.score.contract)) }
@@ -510,7 +674,7 @@ private const val SPARKS = 14
         }
     }
     replacing?.let { make ->
-        SlotPicker(rules, run, ui("rift.replace_hint"), onDismiss = { replacing = null }) { slot ->
+        SlotPicker(rules, run, { Text(ui("rift.replace_hint"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall) }, onDismiss = { replacing = null }) { slot ->
             replacing = null
             onAct(make(slot))
         }
@@ -527,7 +691,6 @@ private const val SPARKS = 14
 /** Отдых: лечение, усиление дара (выбор дара) или снятие проклятия (выбор проклятия). */
 @Composable private fun RestChoices(rules: RiftRules, run: RiftRun, idle: Boolean, onAct: (RiftAct) -> Unit) {
     var target by remember { mutableStateOf<RiftRest?>(null) }
-    Text(ui("rift.rest_title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleSmall)
     RiftRest.entries.forEach { choice ->
         val possible = when (choice) {
             RiftRest.HEAL -> true
@@ -539,12 +702,12 @@ private const val SPARKS = 14
         }
     }
     when (target) {
-        RiftRest.UPGRADE -> SlotPicker(rules, run, ui("rift.rest_pick_boon"), onDismiss = { target = null }, enabled = { run.boons[it].grade < rules.nodes.maxGrade }) {
+        RiftRest.UPGRADE -> SlotPicker(rules, run, { Text(ui("rift.rest_pick_boon"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall) }, onDismiss = { target = null }, enabled = { run.boons[it].grade < rules.nodes.maxGrade }) {
             target = null
             onAct(RiftAct.Rest(RiftRest.UPGRADE, it))
         }
 
-        RiftRest.CLEANSE -> ForgeSheet(onDismissRequest = { target = null }) {
+        RiftRest.CLEANSE -> ForgeSheet(onDismissRequest = { target = null }, containerColor = RiftColors.Ground2) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(ui("rift.rest_pick_curse"), color = RiftColors.Text, style = MaterialTheme.typography.titleSmall)
                 run.curses.forEachIndexed { i, curse ->
@@ -572,7 +735,6 @@ private const val SPARKS = 14
     onAct: (RiftAct) -> Unit,
 ) {
     var merging by remember { mutableStateOf(false) }
-    Text(ui("rift.forge_title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleSmall)
     offer.shop.forEachIndexed { i, code ->
         val price = rules.boonsByCode[code]?.rarity?.let(rules.nodes.prices::get) ?: 0
         Choice(idle && run.echo >= price, { if (full) onReplace { slot -> RiftAct.Take(i, slot) } else onAct(RiftAct.Take(i)) }) {
@@ -591,7 +753,7 @@ private const val SPARKS = 14
         SlotPicker(
             rules,
             run,
-            ui("rift.merge_pick"),
+            { PlateTitle(ui("rift.merge_title"), RiftColors.Text, listOf(ui("rift.merge_pick"))) },
             onDismiss = { merging = false },
             enabled = { i -> rarityOf(i)?.next != null && (first == null || (i != first && rarityOf(i) == rarityOf(first!!))) },
         ) { i ->
@@ -606,12 +768,28 @@ private const val SPARKS = 14
     }
 }
 
-/** Выбор ячейки дара. */
-@Composable private fun SlotPicker(rules: RiftRules, run: RiftRun, title: String, onDismiss: () -> Unit, enabled: (Int) -> Boolean = { true }, onPick: (Int) -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss) {
+/** Выбор ячейки дара под заголовком [title]. */
+@Composable private fun SlotPicker(rules: RiftRules, run: RiftRun, title: @Composable () -> Unit, onDismiss: () -> Unit, enabled: (Int) -> Boolean = { true }, onPick: (Int) -> Unit) {
+    ForgeSheet(onDismissRequest = onDismiss, containerColor = RiftColors.Ground2) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, color = RiftColors.Text, style = MaterialTheme.typography.titleSmall)
+            title()
             run.boons.forEachIndexed { i, held -> Choice(enabled(i), { onPick(i) }) { BoonLine(rules, held.code, held.grade) } }
+        }
+    }
+}
+
+/**
+ * Заголовок плашки или листа предложения с ⓘ: правило предложения [lines] - в окне по касанию (первая строка - главное, прочие
+ * приглушённо), не сноской на плашке.
+ */
+@Composable private fun PlateTitle(title: String, tint: Color, lines: List<String>, style: TextStyle = MaterialTheme.typography.titleSmall) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = tint, style = style, modifier = Modifier.weight(1f, fill = false))
+        InfoMark(title, accent = tint, tint = RiftColors.Muted) {
+            Text(title, color = tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            lines.forEachIndexed { i, line ->
+                Text(line, color = if (i == 0) RiftColors.Text else RiftColors.Muted, style = if (i == 0) MaterialTheme.typography.bodySmall else MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
@@ -659,8 +837,12 @@ private const val SPARKS = 14
             Text(ui("rift.wave", hud.wave, hud.waves), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall)
             Text(clock(hud.seconds), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
             hud.trial?.let { trial ->
-                Text(ui("rift.champion", loc("rift.trial.${trial.name}.name")), color = RiftColors.Hot, style = MaterialTheme.typography.labelSmall)
-                Text(loc("rift.trial.${trial.name}.description"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+                PlateTitle(
+                    ui("rift.champion", loc("rift.trial.${trial.name}.name")),
+                    RiftColors.Hot,
+                    listOf(loc("rift.trial.${trial.name}.description")),
+                    MaterialTheme.typography.labelSmall,
+                )
                 Text(ui(if (hud.met) "rift.champion_met" else "rift.champion_failed"), color = if (hud.met) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
             }
         }
@@ -714,7 +896,7 @@ private const val SPARKS = 14
 
 /** Итог забега: счёт, место, гибель или полная победа, сундук. */
 @Composable private fun RiftResultSheet(game: GameUi, model: ExpeditionViewModel, result: com.sperance.exileforge.rules.rift.RiftResult) {
-    ForgeSheet(onDismissRequest = model::dismissRiftResult) {
+    ForgeSheet(onDismissRequest = model::dismissRiftResult, containerColor = RiftColors.Panel) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("rift.result_title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleLarge)
             Text(

@@ -37,7 +37,6 @@ fun slotTitle(slot: Slot, lang: Lang = uiLanguage): String = ui(lang, "enum.slot
 fun slotTitle(slot: String, lang: Lang = uiLanguage): String = ui(lang, "enum.slot.$slot")
 fun rarityTitle(rarity: Rarity, lang: Lang = uiLanguage): String = ui(lang, "enum.rarity.${rarity.name}")
 fun rarityTitle(value: String, lang: Lang = uiLanguage): String = ui(lang, "enum.rarity.$value")
-fun weaponTitle(value: WeaponType, lang: Lang = uiLanguage): String = ui(lang, "enum.weapon.${value.name}")
 fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lang, "enum.node.${type.name}")
 
 /**
@@ -45,6 +44,9 @@ fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lan
  * профессия, работа - нет строки в словаре на устройстве - заглушка «…» и дыра словаря ([loc], `LocaleHoles`), не код.
  */
 fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else loc(LocaleKey.equipmentName(code))
+
+/** Вид оружия - подпись сервера `enum.EnumEquipmentWeapon.<код>`: своего словаря видов у клиента нет. */
+fun weaponTitle(value: WeaponType): String = loc(LocaleKey.enumLabel("EnumEquipmentWeapon", value.name))
 
 /** The name of a stacking item — an orb, a material, a book, an essence. */
 fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code") { loc(LocaleKey.itemName(code)) })

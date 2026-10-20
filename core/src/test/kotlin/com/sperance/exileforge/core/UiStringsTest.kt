@@ -244,7 +244,6 @@ class UiStringsTest {
             com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
-            WeaponType.entries.forEach { add("enum.weapon.${it.name}") }
             SkillNodeType.entries.forEach { add("enum.node.${it.name}") }
             Ailment.entries.forEach {
                 add("enum.ailment.${it.name}")
@@ -333,7 +332,7 @@ class UiStringsTest {
     }
 
     /**
-     * Узел дерева, дар и рычаг дара, что называет окно разбора, названы в каждом словаре сервера: кода на их месте
+     * Узел дерева, дар и рычаг дара, что называет окно разбора, и вид оружия названы в каждом словаре сервера: кода на их месте
      * клиент не пишет, дыра была бы заглушкой - её ловит этот тест, а не игрок.
      */
     @Test
@@ -343,6 +342,7 @@ class UiStringsTest {
         assertTrue(server.isNotEmpty(), "server locale files not found")
         val keys = index.tree.byCode.keys.map(LocaleKey::skillNodeName) +
             index.fates.all.map { LocaleKey.fateName(it.code) } +
+            WeaponType.entries.map { LocaleKey.enumLabel("EnumEquipmentWeapon", it.name) } +
             com.sperance.exileforge.rules.content.FateLever.entries.map { LocaleKey.fateLever(it.name) }
         val holes = server.flatMap { (lang, table) -> keys.filterNot(table::containsKey).map { "$lang: $it" } }
         assertEquals(emptyList(), holes, "names missing from the server dictionaries")

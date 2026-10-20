@@ -95,7 +95,7 @@ import kotlin.math.roundToInt
         when {
             summary -> Unit
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
-            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && (hud.fountain != null || hud.feature != null) -> model.runCommand(RunCommand.StepOff)
+            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && (hud.fountain != null || hud.feature != null || hud.exitOffered) -> model.runCommand(RunCommand.StepOff)
             hud.phase == RunPhase.MAP -> if (!zone) leaving = true
             else -> model.runCommand(RunCommand.Leave)
         }
@@ -146,6 +146,7 @@ import kotlin.math.roundToInt
                         StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
                     }
                     hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
+                    if (hud.exitOffered) ExitOffer(run, hud, onTake = { model.runCommand(RunCommand.TakeExit) }) { model.runCommand(RunCommand.StepOff) }
                     if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                     val action = hud.action
                     if (action != null) {
@@ -409,6 +410,32 @@ internal const val FOUNTAIN_TAP = .9
             }
         }
     }
+}
+
+/**
+ * Уход у открытого выхода ([RunHud.exitOffered]) - лист с удержанием: завершить карту, из зоны Ваал - вернуться на карту; строка
+ * «Останется» - только когда на карте что-то осталось. Отказ ([onLeave]) - герой отходит, лист встаёт снова лишь после шага прочь
+ * из радиуса выхода. Заход стоит, пока лист открыт.
+ */
+@Composable private fun ExitOffer(run: ExpeditionRun, hud: RunHud, onTake: () -> Unit, onLeave: () -> Unit) {
+    HoldsRun(run)
+    val left = listOf(
+        "map.chests_left" to hud.chestsLeft,
+        "expedition.features_left" to hud.featuresLeft,
+        "map.crystals_left" to hud.crystalsLeft,
+        "map.cracks_left" to hud.cracksLeft,
+    ).filter { (_, count) -> count > 0 }.joinToString(" · ") { (key, count) -> ui(key, count) }
+    val vaal = hud.vaal
+    ConfirmSheet(
+        title = if (vaal) ui("vaal.exit_q") else ui("expedition.exit_q"),
+        confirm = if (vaal) ui("vaal.exit") else ui("expedition.exit"),
+        subtitle = mapTitle(hud.mapCode),
+        ledger = if (left.isEmpty()) emptyList() else listOf(LedgerLine(ui("expedition.exit_left"), left)),
+        note = if (vaal) ui("vaal.exit_note") else ui("expedition.exit_note"),
+        holdMillis = Hold.CONFIRM_MS,
+        onDismiss = onLeave,
+        onConfirm = onTake,
+    )
 }
 
 /** Панель не выше доли экрана: длинное тело прокручивается, а [footer] с кнопками всегда на виду. */

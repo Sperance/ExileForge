@@ -206,6 +206,9 @@ class ExpeditionRun(
     /** Объект карты, чей лист открыт: забег ждёт ответа игрока, как у фонтана. */
     internal var offer: FeatureSpot? = null
 
+    /** Уход у открытого выхода предложен: забег ждёт ответа игрока, как у фонтана. */
+    internal var exitOffered = false
+
     /** Сбор узла ремесла: какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
     internal var channel: Channel? = null
 
@@ -425,7 +428,7 @@ class ExpeditionRun(
         wake.poke()
     }
 
-    /** Предложенный фонтан, лист объекта карты и сбор узла держат шаг, пока игрок не ответит. */
+    /** Предложенный фонтан, предложенный уход, лист объекта карты и сбор узла держат шаг, пока игрок не ответит. */
     override fun update(dt: Double) {
         val poked = wake.took()
         var commanded = false
@@ -441,7 +444,7 @@ class ExpeditionRun(
             when (phase) {
                 RunPhase.MAP -> {
                     channel?.let { gather(it, dt) }
-                    if (fountain == null && offer == null && channel == null) walk(dt)
+                    if (fountain == null && offer == null && channel == null && !exitOffered) walk(dt)
                 }
 
                 RunPhase.FIGHT -> play(dt)
@@ -458,7 +461,7 @@ class ExpeditionRun(
     /** Что меняется скачком вне боя: снимок с этим выходит сразу, а не со следующим тактом ([HudCadence]). */
     private fun leaps(): Long = HudCadence.key(
         phase.ordinal.toLong(), if (world.sealed) 1 else 0, if (bossDown) 1 else 0, guardianBack ?: -1, (fountain?.id ?: -1).toLong(), (offer?.id ?: -1).toLong(),
-        kills.toLong(), mine.size.toLong(), world.alive.toLong(), (crystal?.id ?: -1).toLong(), if (channel == null) 0 else 1,
+        kills.toLong(), mine.size.toLong(), world.alive.toLong(), (crystal?.id ?: -1).toLong(), if (channel == null) 0 else 1, if (exitOffered) 1 else 0,
     )
 
     /**

@@ -116,10 +116,7 @@ private const val CARD_TOP = .48f
             WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
-            WorldBar(
-                Modifier,
-                onHero = { world?.let { scope.launch { camera.glide(vm.heroPoint(it), camera.scale, if (launch != null) CARD_DOWN else .5f) } } },
-            )
+            WorldBar(Modifier)
             Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StoryButton(game, quests.board, questModel)
                 ZoomButtons(camera, Modifier) { factor -> scope.launch { camera.zoomBy(factor) } }
@@ -129,8 +126,8 @@ private const val CARD_TOP = .48f
     }
 }
 
-/** Шапка карты: заголовок и кнопка камеры к зоне героя при том же приближении. */
-@Composable private fun WorldBar(modifier: Modifier, onHero: () -> Unit) {
+/** Шапка карты: заголовок на вуали, что гаснет к карте. */
+@Composable private fun WorldBar(modifier: Modifier) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
             .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
@@ -138,7 +135,6 @@ private const val CARD_TOP = .48f
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        ForgeIconButton(ForgeGlyphs.Target, ui("expedition.to_hero"), onClick = onHero, kind = ButtonKind.Secondary, size = ButtonSize.Compact, shape = IconButtonShape.Circle)
     }
 }
 

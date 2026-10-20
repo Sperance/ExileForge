@@ -73,6 +73,8 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         bag = bagShown,
         fountainsLeft = world.fountains.count { !it.used },
         fountain = fountain?.let { FountainView(it.id, it.heal, it.flasks) },
+        exitOffered = exitOffered,
+        featuresLeft = world.untouched,
         gate = gate, vaal = vaal,
         heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
         heroReserved = (battle?.manaReserved() ?: kit.reserve(ReservePool.MANA, hero).held).roundToInt(),

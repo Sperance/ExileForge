@@ -390,6 +390,10 @@ data class RunHud(
     val fountainsLeft: Int = 0,
     /** The fountain offered: the map waits for the player's word — drink, or step away and leave it standing. */
     val fountain: FountainView? = null,
+    /** Уход у открытого выхода предложен: карта ждёт слова игрока - завершить карту (из зоны Ваал - вернуться на неё) или отойти. */
+    val exitOffered: Boolean = false,
+    /** Объекты карты, которых герой ещё не тронул ([ExpeditionWorld.untouched]). */
+    val featuresLeft: Int = 0,
     /** The Vaal zone behind the portal the hero stands at. */
     val gate: VaalZone? = null,
     /** This run is a Vaal zone: no way out but its guardian or a death, and a death is not the map's end. */

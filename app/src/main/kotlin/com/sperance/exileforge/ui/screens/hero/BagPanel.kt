@@ -171,7 +171,8 @@ internal fun compactCount(amount: Long): String = when {
  * A stack of the bag, opened: its name, how many there are, what it does, and where it goes next.
  *
  * The forge is offered for an orb that is applied to items — Regret is spent on the tree and the
- * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack.
+ * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack but one bound to the hero
+ * (`ContentIndex.bound`): у такой стопки кнопки аукциона нет.
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  *
  * [onRead] - книга умения класса читается сразу, [onEssence] - эссенция в кузню, [onOpenChest] - сундук-добыча открывается на месте,
@@ -196,11 +197,12 @@ internal fun compactCount(amount: Long): String = when {
     val essence = game.index?.essence(code) != null
     val seal = game.index?.seal(code) != null
     val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
+    val bound = game.index?.bound(code) == true
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
         RowActions(Modifier.fillMaxWidth()) {
             val idle = ButtonState.of(!game.busy)
-            RowButton(ui("hero.action_auction"), onClick = { onAuction(code) }, kind = ButtonKind.Secondary, state = idle)
+            if (!bound) RowButton(ui("hero.action_auction"), onClick = { onAuction(code) }, kind = ButtonKind.Secondary, state = idle)
             if (forgeable) RowButton(ui("bag.to_forge"), onClick = { onForge(code) }, state = idle)
             if (essence) RowButton(ui("bag.to_forge"), onClick = { onEssence(code) }, state = idle)
             if (seal) RowButton(ui("bag.to_forge"), onClick = { onSeal(code) }, state = idle)

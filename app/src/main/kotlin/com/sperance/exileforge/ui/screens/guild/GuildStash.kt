@@ -333,7 +333,8 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 }
 
 /**
- * What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием.
+ * What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием. Стопки, привязанные к герою
+ * (`ContentIndex.bound`), в список не попадают.
  *
  * Касание - карточка, положить в хранилище - её кнопка удержанием. Выбранная стопка - сверху над списком с полем «сколько», её
  * «Положить» удержанием - в подвале листа.
@@ -342,7 +343,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = game.hero ?: return
     val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked }
-    val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
+    val stacks = hero.bag.filter { (code, amount) -> amount > 0 && game.index?.bound(code) != true }.keys.sortedBy { itemTitle(it) }
     var stack by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf("1") }
     val inspect = rememberInspect()

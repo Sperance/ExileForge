@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.filter.itemShelf
+import com.sperance.exileforge.core.filter.modChoices
 import com.sperance.exileforge.core.filter.railGroups
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
@@ -97,7 +98,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
             if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
             if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
-            if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
+            if (offers.isNotEmpty()) item(key = "filter") { ItemSearchBar(filterState, ui("merchant.search"), game.lang, onFilter = { filtering = true }) }
             if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
             items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
                 ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
@@ -109,6 +110,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             filterState,
             railGroups(wares).map { it.first },
             wares.map { it.rarity }.distinct().sortedByDescending { it.ordinal },
+            modChoices(wares, game.lang),
             game.lang,
             game.heroLevel,
             count = { shelf(it).size },

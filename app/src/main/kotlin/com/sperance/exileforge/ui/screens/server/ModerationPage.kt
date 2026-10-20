@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
@@ -14,8 +13,6 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,7 +22,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,7 +59,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Журнал», карточки героев с кромкой статуса; тап открывает досье. Бан и удаление - нижними шторками, удаление - удержанием.
  * Что смотрящему нельзя (админ, модератор для модератора), сервер не пропустит, а карточка показывает замком.
  *
- * Порядок и отбор по дару - за кнопкой с числом активных, у корзины их нет. Над списком - что отобрано и сколько найдено.
+ * Сверху строка поиска ([SearchBar]): порядок и отбор по дару - за кнопкой фильтра с числом сужений, заданные - чипами под
+ * полем (у корзины и журнала фильтра нет), справа - «+» тестировщика у администратора. Над списком - сколько найдено.
  */
 @Composable internal fun ModerationPage(account: AccountUi) {
     val vm = koinViewModel<ModerationViewModel>().model
@@ -75,26 +72,24 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     var creating by remember { mutableStateOf(false) }
     var filtering by remember { mutableStateOf(false) }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
-            state.query,
-            vm::search,
-            placeholder = { Text(ui("moderation.search")) },
-            leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { vm.load(0) }),
-            modifier = Modifier.weight(1f),
-        )
-        if (state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL) {
-            FilterButton(state.filters.active, enabled = !account.busy) { filtering = true }
-        }
-        if (account.isAdmin) {
-            ForgeButton(onClick = { creating = true }, state = ButtonState.of(!account.busy), contentPadding = PaddingValues(horizontal = 12.dp)) {
-                Icon(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), modifier = Modifier.size(20.dp))
-            }
-        }
-    }
+    val filtered = state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL
+    SearchBar(
+        state.query,
+        vm::search,
+        ui("moderation.search"),
+        onSearch = { vm.load(0) },
+        filter = SearchFilter(
+            state.filters.narrowings(account.index).chips(vm::filter),
+            onOpen = { filtering = true },
+            onReset = { vm.filter(ModerationFilters.DEFAULT) },
+            enabled = !account.busy,
+        ).takeIf { filtered },
+        action = if (account.isAdmin) {
+            { ForgeIconButton(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), onClick = { creating = true }, kind = ButtonKind.Primary, size = ButtonSize.Compact, state = ButtonState.of(!account.busy)) }
+        } else {
+            null
+        },
+    )
     if (creating || state.createdTester != null) {
         AccountSheet(account, state.createdTester, onCreate = vm::createAccount) {
             creating = false
@@ -121,8 +116,7 @@ import org.koin.compose.viewmodel.koinViewModel
             vm.filter(it)
         }
     }
-    val chosen = if (state.tab == ModerationTab.TRASH) emptyList() else filterLabels(account, state.filters)
-    MutedText((chosen + ui("moderation.total", page.total)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
+    MutedText(ui("moderation.total", page.total), style = MaterialTheme.typography.labelSmall)
     if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
     page.rows.forEach { row ->
         if (state.tab == ModerationTab.TRASH) {
@@ -133,28 +127,6 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     val pages = if (page.size > 0) ((page.total + page.size - 1) / page.size).toInt() else 1
     Pager(page.page, pages, account.busy, vm::load)
-}
-
-/** Кнопка фильтров у поиска: значок отбора, на нём - число активных фильтров [active] (без него - отбор обычный). */
-@Composable private fun FilterButton(active: Int, enabled: Boolean, onClick: () -> Unit) {
-    ForgeIconButton(
-        Icons.Outlined.Tune,
-        ui("moderation.filters"),
-        onClick = onClick,
-        kind = if (active > 0) ButtonKind.Secondary else ButtonKind.Text,
-        state = ButtonState.of(enabled),
-        badge = active,
-    )
-}
-
-/** Подписи активных фильтров над списком: порядок, если не обычный, и дар, если выбран. */
-private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<String> = buildList {
-    if (filters.sort != ModerationFilters.DEFAULT.sort) add(ui("moderation.sort.${filters.sort.name}"))
-    when (val fate = filters.fate) {
-        ModerationFate.All -> Unit
-        ModerationFate.Fateless -> add(ui("moderation.fate.none"))
-        is ModerationFate.Chosen -> add("✦ " + (account.index?.fates?.all?.firstOrNull { it.code == fate.code }?.let(FateCard::of)?.title ?: fate.code))
-    }
 }
 
 /**
@@ -188,14 +160,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
             segmented = true,
         )
         SheetLabel(ui("moderation.fate.title"))
-        OutlinedTextField(
-            query,
-            { query = it },
-            placeholder = { Text(ui("moderation.filters.fate_search")) },
-            leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        SearchBar(query, { query = it.take(account.inputs.search) }, ui("moderation.filters.fate_search"))
         FateGrid(options) { (title, fate) ->
             FateOption(title, mark = fate is ModerationFate.Chosen, selected = draft.fate == fate) { draft = draft.copy(fate = fate) }
         }

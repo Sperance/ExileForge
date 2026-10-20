@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.filter.isWorn
 import com.sperance.exileforge.core.filter.itemShelf
+import com.sperance.exileforge.core.filter.modChoices
 import com.sperance.exileforge.core.filter.railGroups
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.i18n.ui
@@ -19,16 +20,16 @@ import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.components.ItemFilterBar
 import com.sperance.exileforge.ui.components.ItemFilterSheet
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.ItemSearchBar
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * Выбор цели кузницы: вещи тайника и снаряжения (надетые тоже - сфере всё равно). Общий фильтр предметов
- * ([ItemShelf.FORGE], [filterState] - общий с полкой у наковальни): строка над списком и шторка «Аккордеон», выбор запоминается.
+ * ([ItemShelf.FORGE], [filterState] - общий с полкой у наковальни): строка поиска над списком и шторка «Аккордеон», выбор запоминается.
  * Касание строки ставит вещь в кузницу и закрывает выбор, касание вещи, что уже в кузнице, - только закрывает; удержание открывает полную
  * карточку вещи ([ForgeCards]) с теми же действиями.
  */
@@ -48,7 +49,7 @@ internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilt
     val shown = remember(stash, filterState.filter, game.hero) { shelf(filterState.filter) }
     LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Engraved(ui("forge.pick_item")) }
-        item { ItemFilterBar(filterState, shown.size, onOpen = { filtering = true }) }
+        item { ItemSearchBar(filterState, ui("forge.search"), game.lang, onFilter = { filtering = true }) }
         if (shown.isEmpty()) item { Text(ui(if (stash.isEmpty()) "forge.stash_empty" else "filter.empty"), color = Muted) }
         items(shown, key = { it.id }) { piece ->
             ItemRow(
@@ -66,6 +67,7 @@ internal fun TargetPicker(game: GameUi, cards: ForgeCards, filterState: ItemFilt
     if (filtering) {
         val groups = remember(stash) { railGroups(stash).map { it.first } }
         val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-        ItemFilterSheet(filterState, groups, rarities, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
+        val mods = remember(stash, game.lang) { modChoices(stash, game.lang) }
+        ItemFilterSheet(filterState, groups, rarities, mods, game.lang, game.heroLevel, count = { shelf(it).size }) { filtering = false }
     }
 }

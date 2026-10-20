@@ -3,10 +3,14 @@ package com.sperance.exileforge.core.filter
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemSearch
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.statPercent
+import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.gearVerdict
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -157,29 +161,50 @@ enum class ItemSort {
     }
 }
 
-/** Что умеет сузить фильтр списка: каждая грань - строка шторки или переключатель; уровень - вилка в шапке шторки. */
-enum class FilterFacet { TYPE, RARITY, LEVEL, QUALITY, MINE, CRAFTED, WEARABLE, HIDE_WORN, SORT }
+/**
+ * Что умеет сузить фильтр списка: каждая грань - строка шторки или переключатель; уровень - вилка в шапке шторки, порядок - кнопка
+ * строки поиска.
+ */
+enum class FilterFacet { TYPE, RARITY, LEVEL, QUALITY, MOD, MINE, CRAFTED, WEARABLE, BETTER, HIDE_WORN, SORT }
 
 /**
  * Список предметов приложения с фильтром: какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
- * начинается ([defaults]). Выбор фильтра запоминается на список, на устройстве ([ItemFilters]). Новый список - запись здесь.
+ * начинается ([defaults]). [rail] - «Тип» выбирает рейка рядом со списком: в шторке и в ряду сужений его нет, сброс его не трогает.
+ * Выбор фильтра запоминается на список, на устройстве ([ItemFilters]). Новый список - запись здесь.
  */
-enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, val defaults: ItemFilter, val sections: List<ItemSection> = emptyList()) {
-    /** Тайник героя: тип - и рейка, цена - торговца за копию; надетое скрыто, пока игрок его не покажет. */
-    STASH(FilterFacet.entries.toSet(), ItemSort.entries, ItemFilter(hideWorn = true)),
+enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, val defaults: ItemFilter, val sections: List<ItemSection> = emptyList(), val rail: Boolean = false) {
+    /** Тайник героя: тип - рейка, цена - торговца за копию; надетое скрыто, пока игрок его не покажет. */
+    STASH(FilterFacet.entries.toSet(), ItemSort.entries, ItemFilter(hideWorn = true), rail = true),
 
-    /** Выбор вещи в кузнице: сферам всё равно, надета ли вещь, поэтому надетое видно. */
-    FORGE(FilterFacet.entries.toSet() - FilterFacet.WEARABLE, ItemSort.entries, ItemFilter(sort = ItemSort.RARITY), ItemSection.entries),
+    /** Выбор вещи в кузнице: сферам всё равно, надета ли вещь и лучше ли она надетого, поэтому надетое видно. */
+    FORGE(FilterFacet.entries.toSet() - FilterFacet.WEARABLE - FilterFacet.BETTER, ItemSort.entries, ItemFilter(sort = ItemSort.RARITY), ItemSection.entries),
 
     /** Товар торговца: его вещи не сделаны героем и не надеты; цена - торговца. */
-    MERCHANT(setOf(FilterFacet.TYPE, FilterFacet.RARITY, FilterFacet.LEVEL, FilterFacet.QUALITY, FilterFacet.WEARABLE, FilterFacet.SORT), ItemSort.entries, ItemFilter()),
+    MERCHANT(
+        setOf(FilterFacet.TYPE, FilterFacet.RARITY, FilterFacet.LEVEL, FilterFacet.QUALITY, FilterFacet.MOD, FilterFacet.WEARABLE, FilterFacet.BETTER, FilterFacet.SORT),
+        ItemSort.entries,
+        ItemFilter(),
+    ),
+}
+
+/**
+ * Что фильтр предметов спрашивает о герое на экране: [heroName] - для «сделано мной», [unmet] - чего шаблону не хватает до
+ * «могу надеть», [better] - улучшит ли вещь героя на своём месте («лучше надетого», [GearVerdict.better][com.sperance.exileforge.core.character.GearVerdict.better]).
+ */
+interface ItemJudge {
+    val heroName: String
+
+    fun unmet(code: String): List<String>
+
+    fun better(piece: ItemView): Boolean
 }
 
 /**
  * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), вилка уровня предмета ([level]), качество,
- * «сделано мной» (поле `maker` копии - имя героя), «сделано ремеслом» (метка происхождения копии `origin` с сервера), «могу надеть»,
- * «скрыть надетое», порядок и поиск. Поиск - только экрана и не
- * запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]).
+ * характеристика строки ([mod], null - любая: «по моду»), «сделано мной» (поле `maker` копии - имя героя), «сделано ремеслом» (метка
+ * происхождения копии `origin` с сервера), «могу надеть», «лучше надетого» ([better]), «скрыть надетое», порядок и поиск. Поиск -
+ * только строки поиска экрана и не запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]), у новых граней -
+ * значения по умолчанию, так что сохранённый раньше фильтр читается.
  */
 @Serializable
 data class ItemFilter(
@@ -187,41 +212,80 @@ data class ItemFilter(
     val rarities: Set<Rarity> = emptySet(),
     val level: LevelRange = LevelRange(),
     val quality: QualityFilter = QualityFilter.ANY,
+    val mod: String? = null,
     val mine: Boolean = false,
     val crafted: Boolean = false,
     val wearable: Boolean = false,
+    val better: Boolean = false,
     val hideWorn: Boolean = false,
     val sort: ItemSort = ItemSort.NEWEST,
     @Transient val query: String = "",
 ) {
     fun toggle(rarity: Rarity) = copy(rarities = if (rarity in rarities) rarities - rarity else rarities + rarity)
 
-    /** Сколько настроек отличается от обычных списка [shelf]: число на значке фильтра. */
-    fun tweaks(shelf: ItemShelf): Int {
+    /**
+     * Включённые сужения списка [shelf] чипами под строкой поиска, каждое - с фильтром без него: грани, что отличаются от
+     * обычных списка; редкость - чипом на каждую. Порядок и поиск сужениями не считаются, тип рейки ([ItemShelf.rail]) - тоже.
+     * Их число - на кнопке фильтра.
+     */
+    fun narrowings(shelf: ItemShelf, lang: Lang): List<Narrowing<ItemFilter>> {
         val base = shelf.defaults
-        return listOf(type != base.type, rarities != base.rarities, level != base.level, quality != base.quality, mine != base.mine, crafted != base.crafted, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
-            .count { it }
+        return buildList {
+            fun put(facet: FilterFacet, changed: Boolean, title: () -> String?, without: () -> ItemFilter) {
+                if (facet in shelf.facets && changed) title()?.let { add(Narrowing(it, without())) }
+            }
+            put(FilterFacet.TYPE, !shelf.rail && type != base.type, { type?.let { typeTitle(it, lang) } }, { copy(type = base.type) })
+            rarities.sortedByDescending { it.ordinal }.forEach { rarity -> put(FilterFacet.RARITY, rarity !in base.rarities, { rarityTitle(rarity, lang) }, { toggle(rarity) }) }
+            put(FilterFacet.LEVEL, level != base.level, level::title, { copy(level = base.level) })
+            put(FilterFacet.QUALITY, quality != base.quality, { ui("filter.quality_chip", ui("filter.quality.${quality.name}")) }, { copy(quality = base.quality) })
+            put(FilterFacet.MOD, mod != base.mod, { mod?.let { ui("filter.mod_chip", modTitle(it, lang)) } }, { copy(mod = base.mod) })
+            put(FilterFacet.MINE, mine != base.mine, { ui("filter.mine") }, { copy(mine = base.mine) })
+            put(FilterFacet.CRAFTED, crafted != base.crafted, { ui("filter.crafted") }, { copy(crafted = base.crafted) })
+            put(FilterFacet.WEARABLE, wearable != base.wearable, { ui("filter.wearable") }, { copy(wearable = base.wearable) })
+            put(FilterFacet.BETTER, better != base.better, { ui("filter.better") }, { copy(better = base.better) })
+            put(FilterFacet.HIDE_WORN, hideWorn != base.hideWorn, { ui(if (hideWorn) "filter.hide_worn" else "filter.show_worn") }, { copy(hideWorn = base.hideWorn) })
+        }
     }
 
+    /** Все сужения списка [shelf] сняты: обычный фильтр списка с прежними порядком, поиском и типом рейки ([ItemShelf.rail]). */
+    fun cleared(shelf: ItemShelf): ItemFilter = shelf.defaults.copy(type = if (shelf.rail) type else shelf.defaults.type, sort = sort, query = query)
+
     /**
-     * Проходит ли [piece]: [heroName] - имя героя для «сделано мной», [unmet] - чего шаблону не хватает до «могу надеть».
-     * Грани, которых нет у списка [shelf], не сужают его. «Скрыть надетое» - правило снаряжения: инструмент виден всегда.
+     * Проходит ли [piece]: о герое спрашивает [judge]. Грани, которых нет у списка [shelf], не сужают его. «Скрыть надетое» -
+     * правило снаряжения: инструмент виден всегда. «Лучше надетого» меряет вещь, только когда грань включена.
      */
-    fun admits(piece: ItemView, shelf: ItemShelf, heroName: String, unmet: (String) -> List<String>): Boolean {
+    fun admits(piece: ItemView, shelf: ItemShelf, judge: ItemJudge): Boolean {
         fun on(facet: FilterFacet) = facet in shelf.facets
         return (!on(FilterFacet.TYPE) || type?.admits(piece) != false) &&
             (!on(FilterFacet.RARITY) || rarities.isEmpty() || piece.rarity in rarities) &&
             (!on(FilterFacet.LEVEL) || level.admits(piece.level)) &&
             (!on(FilterFacet.QUALITY) || quality.admits(piece)) &&
-            (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == heroName) &&
+            (!on(FilterFacet.MOD) || mod == null || mod in piece.modStats) &&
+            (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == judge.heroName) &&
             (!on(FilterFacet.CRAFTED) || !crafted || piece.item.origin != null) &&
-            (!on(FilterFacet.WEARABLE) || !wearable || unmet(piece.code).isEmpty()) &&
+            (!on(FilterFacet.WEARABLE) || !wearable || judge.unmet(piece.code).isEmpty()) &&
             (!on(FilterFacet.HIDE_WORN) || !hideWorn || !piece.isWorn || piece.slot.isTool) &&
-            ItemSearch.matches(piece, query)
+            ItemSearch.matches(piece, query) &&
+            (!on(FilterFacet.BETTER) || !better || judge.better(piece))
     }
 
     /** Список [pieces] под фильтром и в его порядке; [price] - цена вещи в этом списке. */
-    fun apply(pieces: List<ItemView>, shelf: ItemShelf, heroName: String, unmet: (String) -> List<String>, price: (ItemView) -> Long?): List<ItemView> = (if (FilterFacet.SORT in shelf.facets) sort else shelf.defaults.sort).order(pieces.filter { admits(it, shelf, heroName, unmet) }, price)
+    fun apply(pieces: List<ItemView>, shelf: ItemShelf, judge: ItemJudge, price: (ItemView) -> Long?): List<ItemView> = (if (FilterFacet.SORT in shelf.facets) sort else shelf.defaults.sort).order(pieces.filter { admits(it, shelf, judge) }, price)
+}
+
+/** Характеристики строк копии - по чему её находит «по моду»: каждое действие каждой строки. */
+val ItemView.modStats: Set<String> get() = item.rolls.flatMapTo(HashSet()) { roll -> index.modifier(roll.code)?.effects.orEmpty().map { it.stat } }
+
+/** Характеристики «по моду», что есть у вещей списка [pieces], по имени ([modTitle]): из них выбирают в шторке. */
+fun modChoices(pieces: List<ItemView>, lang: Lang): List<String> = pieces.flatMapTo(HashSet()) { it.modStats }.sortedBy { modTitle(it, lang) }
+
+/** Имя характеристики «по моду»: процентная - с «%», чтобы «Здоровье» и «Здоровье, %» различались. */
+fun modTitle(stat: String, lang: Lang): String = statTitle(stat, lang).let { if (statPercent(stat)) ui("filter.mod_percent", it) else it }
+
+/** Имя варианта «Типа»: раздел - своим словом, группа мест - как в рейке. */
+fun typeTitle(type: ItemType, lang: Lang): String = when (type) {
+    is ItemType.Group -> type.group.title(lang)
+    is ItemType.Section -> ui("filter.section.${type.section.name}")
 }
 
 /** Запомненные фильтры списков на устройстве: у списка без записи - его обычный. */
@@ -244,5 +308,17 @@ fun railGroups(pieces: List<ItemView>): List<Pair<SlotGroup, Int>> {
     return Slot.entries.map(SlotGroup::of).distinct().sortedBy { it.isTool }.mapNotNull { group -> counts[group]?.let { group to it } }
 }
 
-/** Список [pieces] под фильтром [filter] списка [shelf] у героя на экране: «сделано мной» - по его имени, «могу надеть» - по его листу. */
-fun GameUi.itemShelf(pieces: List<ItemView>, shelf: ItemShelf, filter: ItemFilter, price: (ItemView) -> Long?): List<ItemView> = filter.apply(pieces, shelf, hero?.info?.name.orEmpty(), { unmetFor(it) }, price)
+/**
+ * Список [pieces] под фильтром [filter] списка [shelf] у героя на экране: «сделано мной» - по его имени, «могу надеть» - по его
+ * листу, «лучше надетого» - по вердикту вещи ([gearVerdict]) на её лучшем месте.
+ */
+fun GameUi.itemShelf(pieces: List<ItemView>, shelf: ItemShelf, filter: ItemFilter, price: (ItemView) -> Long?): List<ItemView> = filter.apply(pieces, shelf, judge, price)
+
+/** Герой на экране глазами фильтра предметов. */
+private val GameUi.judge: ItemJudge get() = object : ItemJudge {
+    override val heroName: String = hero?.info?.name.orEmpty()
+
+    override fun unmet(code: String): List<String> = unmetFor(code)
+
+    override fun better(piece: ItemView): Boolean = gearVerdict(piece.item)?.better == true
+}

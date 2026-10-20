@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -152,8 +151,8 @@ data class ReportsView(val tab: ReportsTab, val focus: String? = null)
 
 /**
  * Отчёты (без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
- * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −»); поиск
- * значком в шапке - общий у обеих вкладок ([ReportSearch]). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
+ * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −»); строка
+ * поиска под вкладками ([SearchBar]) - общая у обеих вкладок ([ReportSearch]). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
  * перечитываются потягиванием вниз и нажатием на уже открытую вкладку.
  *
  * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём
@@ -171,7 +170,6 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
     var tab by rememberSaveable { mutableStateOf(start.tab) }
     var deleting by remember { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
-    var searching by rememberSaveable { mutableStateOf(false) }
     val fresh = feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.map { it.id }.toSet()
     val shownFresh = remember(tab, feedback.mine) { fresh }
     LaunchedEffect(tab, feedback.mine) { if (tab == ReportsTab.MINE) model.markSeen(feedback.mine) }
@@ -179,25 +177,8 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.weight(1f)) {
-                    PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
-                }
-                ForgeIconButton(Icons.Outlined.Search, ui("feedback.search_open"), onClick = {
-                    searching = !searching
-                    if (!searching) query = ""
-                }, kind = if (searching) ButtonKind.Secondary else ButtonKind.Text)
-            }
-            if (searching) {
-                OutlinedTextField(
-                    query,
-                    { query = it.take(SEARCH_MAX) },
-                    placeholder = { Text(ui("feedback.search")) },
-                    leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+            PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
+            SearchBar(query, { query = it.take(SEARCH_MAX) }, ui("feedback.search"))
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
                 CompositionLocalProvider(LocalIssueLinks provides issueLinks) {
                     ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, model) { deleting = it }

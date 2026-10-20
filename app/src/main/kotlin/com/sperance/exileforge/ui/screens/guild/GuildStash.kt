@@ -1,27 +1,19 @@
 package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -44,7 +36,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.guild.StashField
 import com.sperance.exileforge.core.guild.StashFilter
 import com.sperance.exileforge.core.guild.StashKind
 import com.sperance.exileforge.core.i18n.ui
@@ -80,14 +71,16 @@ import com.sperance.exileforge.ui.components.LevelRangeHeader
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PropertyRow
 import com.sperance.exileforge.ui.components.RarityTiles
+import com.sperance.exileforge.ui.components.SearchBar
+import com.sperance.exileforge.ui.components.SearchFilter
 import com.sperance.exileforge.ui.components.SheetBody
 import com.sperance.exileforge.ui.components.Spinner
+import com.sperance.exileforge.ui.components.chips
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
-import com.sperance.exileforge.ui.screens.auction.ActiveFilter
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
 import com.sperance.exileforge.ui.screens.auction.TradeRow
 import com.sperance.exileforge.ui.screens.auction.templateSlots
@@ -193,32 +186,15 @@ import com.sperance.exileforge.ui.theme.rarityColor
     }
 }
 
-/** Поиск по имени и кнопка отбора, под ними - заданные поля чипами с крестиком, как у витрины аукциона. */
+/** Строка поиска хранилища ([SearchBar]): имя, кнопка отбора и заданные поля чипами под ней ([StashFilter.narrowings]). */
 @Composable private fun StashSearch(game: GameUi, filter: StashFilter, onFilter: (StashFilter) -> Unit) {
     var sheet by remember { mutableStateOf(false) }
-    val active = filter.active()
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            filter.title,
-            { onFilter(filter.copy(title = it.take(game.inputs.search))) },
-            placeholder = { Text(ui("auction.name")) },
-            leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            singleLine = true,
-            modifier = Modifier.weight(1f),
-        )
-        ForgeButton(onClick = { sheet = true }, contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
-            Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
-            if (active.isNotEmpty()) {
-                Spacer(Modifier.width(6.dp))
-                Text(active.size.toString())
-            }
-        }
-    }
-    if (active.isNotEmpty()) {
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            active.forEach { field -> ActiveFilter(fieldLabel(game, filter, field)) { onFilter(filter.without(field)) } }
-        }
-    }
+    SearchBar(
+        filter.title,
+        { onFilter(filter.copy(title = it.take(game.inputs.search))) },
+        ui("guild.stash_search"),
+        filter = SearchFilter(filter.narrowings(game.lang).chips(onFilter), onOpen = { sheet = true }, onReset = { onFilter(filter.cleared()) }),
+    )
     if (sheet) {
         StashFilterSheet(game, filter, onDismiss = { sheet = false }) {
             sheet = false
@@ -232,15 +208,6 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
     ui("guild.stash_roles", GuildRole.entries.mapNotNull { role -> takes[role]?.let { ui("guild.stash_role", GuildText.role(role), if (it < 0) ui("guild.stash_role_free") else it.toString()) } }.joinToString(" · "))
 }
 
-private fun kindTitle(kind: StashKind): String = ui("guild.stash_kind.${kind.name}")
-
-private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): String = when (field) {
-    StashField.KIND -> filter.kind?.let(::kindTitle).orEmpty()
-    StashField.SLOT -> slotTitle(filter.slot, game.lang)
-    StashField.RARITY -> rarityTitle(filter.rarity, game.lang)
-    StashField.LEVEL -> filter.level.title().orEmpty()
-}
-
 /**
  * Отбор хранилища в общем листе-«Аккордеоне», поля витрины аукциона без цены и продавца; вилка уровня - в шапке листа, как у
  * фильтра предметов ([LevelRangeHeader]); ничего не применяется до «Показать».
@@ -251,8 +218,8 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     var draft by remember { mutableStateOf(filter) }
     val any = ui("filter.any")
     val groups = listOf(
-        AccordionGroup("kind", ui("auction.what_sold"), draft.kind?.let(::kindTitle) ?: any) {
-            ChoiceChips(listOf(null) + StashKind.entries, { it == draft.kind }, { it?.let(::kindTitle) ?: any }) { draft = draft.copy(kind = it) }
+        AccordionGroup("kind", ui("auction.what_sold"), draft.kind?.title ?: any) {
+            ChoiceChips(listOf(null) + StashKind.entries, { it == draft.kind }, { it?.title ?: any }) { draft = draft.copy(kind = it) }
         },
         AccordionGroup("slot", ui("filter.type"), draft.slot.takeIf { it.isNotBlank() }?.let { slotTitle(it, game.lang) } ?: any) {
             ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
@@ -262,9 +229,6 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         },
     )
     FilterAccordionSheet(
-        query = draft.title,
-        onQuery = { draft = draft.copy(title = it.take(game.inputs.search)) },
-        queryHint = ui("auction.name"),
         groups = groups,
         switches = emptyList(),
         show = ui("filter.show_all"),

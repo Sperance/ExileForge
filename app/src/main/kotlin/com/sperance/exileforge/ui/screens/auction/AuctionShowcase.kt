@@ -2,24 +2,15 @@ package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -165,56 +156,39 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The showcase's head: the name to search for, the button to every other filter, and the filters
- * already set as chips.
+ * Шапка витрины - строка поиска ([SearchBar]): имя, кнопка ко всем прочим фильтрам и заданные фильтры чипами под ней
+ * ([AuctionFilter.narrowings], «Мои лоты» - своим чипом).
  *
- * Nothing here asks the server on its own: the search key of the keyboard, «Показать» in the sheet
- * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
- * and its cross drops that filter and asks again — the quickest way back from "nothing found".
- *
- * Фильтры - одна строка чипов, что прокручивается вбок.
+ * Сам по себе здесь ничего не спрашивает сервер: спрашивают клавиша поиска клавиатуры, очистка поля, «Показать» в шторке и
+ * снятие чипа - чип есть фильтр, что понимает сервер, и его крестик снимает его и спрашивает снова: самый короткий путь назад от
+ * «ничего не найдено».
  */
 @Composable internal fun ShowcaseHeader(game: GameUi, market: Market, vm: MarketViewModel) {
     var sheet by remember { mutableStateOf(false) }
     val f = market.filter
-    val count = f.active().size + if (market.showOwnLots) 1 else 0
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                f.title,
-                { vm.filter(f.copy(title = it.take(game.inputs.search))) },
-                placeholder = { Text(ui("auction.name")) },
-                leadingIcon = { Icon(Icons.Outlined.Search, null) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { vm.loadShowcase() }),
-            )
-            ForgeButton(onClick = { sheet = true }, state = ButtonState.of(!game.busy), contentPadding = PaddingValues(horizontal = 12.dp), kind = ButtonKind.Secondary) {
-                Icon(Icons.Outlined.FilterList, ui("auction.filters"), modifier = Modifier.size(18.dp))
-                if (count > 0) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(count.toString())
-                }
-            }
-        }
-        if (count > 0) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                f.active().forEach { field ->
-                    ActiveFilter(chipLabel(game, field, f.value(field), f.sellerName)) {
-                        vm.filter(f.without(field))
-                        vm.loadShowcase()
-                    }
-                }
-                if (market.showOwnLots) {
-                    ActiveFilter(ui("auction.show_mine")) {
-                        vm.showOwnLots(false)
-                        vm.loadShowcase()
-                    }
-                }
-            }
-        }
+    val narrow = { next: AuctionFilter ->
+        vm.filter(next)
+        vm.loadShowcase()
     }
+    val own = SearchChip(ui("auction.show_mine")) {
+        vm.showOwnLots(false)
+        vm.loadShowcase()
+    }.takeIf { market.showOwnLots }
+    SearchBar(
+        f.title,
+        { vm.filter(f.copy(title = it.take(game.inputs.search))) },
+        ui("auction.search"),
+        onSearch = vm::loadShowcase,
+        filter = SearchFilter(
+            f.narrowings(game.lang).chips(narrow) + listOfNotNull(own),
+            onOpen = { sheet = true },
+            onReset = {
+                vm.showOwnLots(false)
+                narrow(f.cleared())
+            },
+            enabled = !game.busy,
+        ),
+    )
     if (sheet) {
         AuctionFilterSheet(game, market, onDismiss = { sheet = false }) { filter, mine ->
             sheet = false
@@ -225,29 +199,13 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** A filter that is set, named by its value, with a cross that drops it. */
-@Composable internal fun ActiveFilter(label: String, onClear: () -> Unit) {
-    ForgeChip(label, selected = true, onClick = onClear, leading = { Icon(Icons.Outlined.Close, ui("auction.remove_filter")) })
-}
-
-internal fun chipLabel(game: GameUi, field: FilterField, value: String, sellerName: String = ""): String = when (field) {
-    FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, game.lang) } ?: value
-    FilterField.SLOT -> slotTitle(value, game.lang)
-    FilterField.RARITY -> rarityTitle(value, game.lang)
-    FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
-    FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
-    FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
-    FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
-    FilterField.SELLER -> sellerName.takeIf { it.isNotBlank() }?.let { ui("auction.chip_seller_name", it) } ?: ui("auction.chip_seller", value.takeLast(6))
-}
-
 /** The slots a template may have: the second ring and the belt's other flasks are places of the worn, never of a lot. */
 internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 }
 
 /**
- * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet: the name to search on top, each filter a
- * row with its value that opens on a tap, own lots as a switch. Nothing reaches the showcase until «Показать», so trying a
- * combination costs no request, and «Сбросить» clears all but the typed name.
+ * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet: each filter a row with its value that opens
+ * on a tap, own lots as a switch; the name is typed in the search bar above the showcase. Nothing reaches the showcase until
+ * «Показать», so trying a combination costs no request, and «Сбросить» clears all but the typed name.
  *
  * Сервер ищет по одной редкости: плитка выбирает её, повторное нажатие снимает. Валюта цены - код предмета. Продавец - по id героя. Свои
  * лоты не показываются, если продавец не сравнивает цены. Раскрытие свойств легенд - настройка устройства: действует сразу, «Сбросить» её
@@ -263,8 +221,8 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     val levels = listOfNotNull(draft.minItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_from", it) }, draft.maxItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_to", it) })
     val groups = listOf(
-        AccordionGroup("kind", ui("auction.what_sold"), draft.kind.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.KIND, it) } ?: any) {
-            ChoiceChips(listOf("") + LotKind.entries.map { it.name }, { it == draft.kind }, { if (it.isBlank()) any else chipLabel(game, FilterField.KIND, it) }) { draft = draft.copy(kind = it) }
+        AccordionGroup("kind", ui("auction.what_sold"), draft.kind.takeIf { it.isNotBlank() }?.let { draft.fieldTitle(FilterField.KIND, game.lang) } ?: any) {
+            ChoiceChips(listOf<LotKind?>(null) + LotKind.entries, { (it?.name ?: "") == draft.kind }, { it?.let { kind -> lotKindTitle(kind, game.lang) } ?: any }) { draft = draft.copy(kind = it?.name.orEmpty()) }
         },
         AccordionGroup("slot", ui("filter.type"), draft.slot.takeIf { it.isNotBlank() }?.let { slotTitle(it, game.lang) } ?: any) {
             ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
@@ -305,7 +263,7 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
                 )
             }
         },
-        AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.SELLER, it, draft.sellerName) } ?: any) {
+        AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { draft.fieldTitle(FilterField.SELLER, game.lang) } ?: any) {
             OutlinedTextField(
                 draft.sellerId,
                 { draft = draft.copy(sellerId = it.trim().take(game.inputs.code), sellerName = "") },
@@ -316,9 +274,6 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         },
     )
     FilterAccordionSheet(
-        query = draft.title,
-        onQuery = { draft = draft.copy(title = it.take(game.inputs.search)) },
-        queryHint = ui("auction.name"),
         groups = groups,
         switches = listOf(
             FilterSwitch(ui("auction.show_mine"), mine) { mine = it },

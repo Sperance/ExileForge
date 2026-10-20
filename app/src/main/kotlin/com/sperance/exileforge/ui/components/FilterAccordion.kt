@@ -49,18 +49,16 @@ class AccordionGroup(val key: String, val title: String, val value: String, val 
 class FilterSwitch(val title: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
 
 /**
- * Шторка фильтров «Аккордеон» - одна на все списки приложения: под именем - [header] (вилка уровня, [LevelRangeHeader]), поиск
- * плотным полем, каждая группа - строка с текущим выбором, что раскрывается по нажатию (открыта одна), ниже переключатели, внизу
- * «Сбросить» и «Показать N» ([show]). Что выбрано - решает список: шторка лишь рисует [groups] и [switches].
+ * Шторка фильтров «Аккордеон» - одна на все списки приложения: под именем - [header] (вилка уровня, [LevelRangeHeader]), каждая
+ * группа - строка с текущим выбором, что раскрывается по нажатию (открыта одна), ниже переключатели, внизу «Сбросить» и
+ * «Показать N» ([show]). Поиска в шторке нет - он в строке поиска экрана ([SearchBar]). Что выбрано - решает список: шторка лишь
+ * рисует [groups] и [switches].
  *
  * Контролы шторки плотные: видимая высота фишек 28dp, строк и полей 40dp, зона касания - не ниже [FilterTouch].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterAccordionSheet(
-    query: String,
-    onQuery: (String) -> Unit,
-    queryHint: String,
     groups: List<AccordionGroup>,
     switches: List<FilterSwitch>,
     show: String,
@@ -81,7 +79,6 @@ fun FilterAccordionSheet(
     ) {
         Text(ui("filter.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
         header?.invoke()
-        CompactSearchField(query, onQuery, queryHint, Modifier.fillMaxWidth(), onSearch = onShow, onClear = { onQuery("") }.takeIf { query.isNotEmpty() })
         Column(Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp))) {
             groups.forEachIndexed { at, group ->
                 if (at > 0) HorizontalDivider(color = PanelRaised)

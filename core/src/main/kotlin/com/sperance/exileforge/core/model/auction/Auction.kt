@@ -1,6 +1,10 @@
 package com.sperance.exileforge.core.model.auction
 
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapItemTitle
+import com.sperance.exileforge.core.display.rarityTitle
+import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.filter.Narrowing
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
@@ -155,9 +159,33 @@ import kotlinx.serialization.Serializable
         FilterField.SELLER -> copy(sellerId = "", sellerName = "")
     }
 
+    /**
+     * Заданное поле [field] словами для чипа: вид, место, редкость, «Ур. от 27», валюта и предел цены, продавец - по имени, а без
+     * имени - по концу номера.
+     */
+    fun fieldTitle(field: FilterField, lang: Lang): String {
+        val value = value(field)
+        return when (field) {
+            FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, lang) } ?: value
+            FilterField.SLOT -> slotTitle(value, lang)
+            FilterField.RARITY -> rarityTitle(value, lang)
+            FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
+            FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
+            FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
+            FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
+            FilterField.SELLER -> sellerName.takeIf { it.isNotBlank() }?.let { ui("auction.chip_seller_name", it) } ?: ui("auction.chip_seller", value.takeLast(SELLER_TAIL))
+        }
+    }
+
+    /** Заданные поля сужениями под строкой поиска, каждое - с фильтром без него. */
+    fun narrowings(lang: Lang): List<Narrowing<AuctionFilter>> = active().map { Narrowing(fieldTitle(it, lang), without(it)) }
+
     /** Every filter off, the name kept. */
     fun cleared(): AuctionFilter = AuctionFilter(title = title, lang = lang)
 }
+
+/** Сколько последних знаков номера продавца называет его чип, пока имени нет. */
+private const val SELLER_TAIL = 6
 
 /** A filter of the showcase that is not the name: each one a chip when set. */
 enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRICE, SELLER }

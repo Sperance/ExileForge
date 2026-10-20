@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.admin
 
+import com.sperance.exileforge.core.filter.Narrowing
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
@@ -20,6 +21,7 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.rules.content.ContentIndex
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,11 +31,22 @@ import kotlinx.coroutines.flow.update
 enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
 
 /**
- * Порядок и отбор списка модерации: [sort] - порядок, [fate] - дар;
- * [active] - сколько из них не обычные, число на значке кнопки фильтров. Новый отбор - поле здесь и строка в [active].
+ * Порядок и отбор списка модерации: [sort] - порядок, [fate] - дар. Новый отбор - поле здесь и строка в [narrowings].
  */
 data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY, val fate: ModerationFate = ModerationFate.All) {
-    val active: Int get() = listOf(sort != DEFAULT.sort, fate != DEFAULT.fate).count { it }
+    /**
+     * Не обычные порядок и дар сужениями под строкой поиска, каждое - с отбором без него; их число - на кнопке фильтров. Дар
+     * называется по контенту [index], без контента - кодом.
+     */
+    fun narrowings(index: ContentIndex?): List<Narrowing<ModerationFilters>> = buildList {
+        if (sort != DEFAULT.sort) add(Narrowing(ui("moderation.sort.${sort.name}"), copy(sort = DEFAULT.sort)))
+        val fateTitle = when (val chosen = fate) {
+            ModerationFate.All -> null
+            ModerationFate.Fateless -> ui("moderation.fate.none")
+            is ModerationFate.Chosen -> "✦ " + (index?.fates?.all?.firstOrNull { it.code == chosen.code }?.let(FateCard::of)?.title ?: chosen.code)
+        }
+        fateTitle?.let { add(Narrowing(it, copy(fate = DEFAULT.fate))) }
+    }
 
     companion object {
         val DEFAULT = ModerationFilters()

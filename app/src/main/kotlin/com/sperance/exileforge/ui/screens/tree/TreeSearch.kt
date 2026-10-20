@@ -13,11 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -107,32 +105,15 @@ import kotlin.math.sin
  * The search and the tag filter, in a sheet of their own.
  *
  * Both only light nodes up on the map, so they are set once and then read off the tree rather than
- * kept on screen beside it. [found] is the search's match count, null while the query is too short.
+ * kept on screen beside it. The search is the shared search bar ([SearchBar]); [found] is its match count, null while the query
+ * is too short.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 internal fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, tag: String?, onTag: (String?) -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Engraved(ui("tree.search_filters"))
-        OutlinedTextField(
-            query,
-            { onQuery(it.take(DefaultInputs.search)) },
-            placeholder = { Text(ui("tree.search_hint")) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            textStyle = MaterialTheme.typography.bodySmall,
-            leadingIcon = { Icon(Icons.Outlined.Search, null) },
-            trailingIcon = {
-                found?.let {
-                    Text(
-                        ui("tree.search_found", it),
-                        color = Vital,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(end = 10.dp),
-                    )
-                }
-            },
-        )
+        SearchBar(query, { onQuery(it.take(DefaultInputs.search)) }, ui("tree.search_hint"), found = found)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             TREE_TAGS.forEach { code ->
                 ForgeChip(ui("tree.tag.$code"), tag == code, { onTag(if (tag == code) null else code) }, mode = ChipMode.Choice)

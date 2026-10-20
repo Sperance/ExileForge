@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Bronze
@@ -31,13 +32,23 @@ import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Vital
 
 /**
  * Плотное поле поиска (40dp): лупа, ввод одной строкой и подсказка [placeholder], пока
  * пусто; басальт в нити `Bronze`. Для списков, где поиск не должен занимать полэкрана. [onSearch] - поиск с клавиатуры (поиск у
- * сервера); null - список сужается на месте по [onValue]. [onClear] - крестик очистки справа; null - крестика нет.
+ * сервера); null - список сужается на месте по [onValue]. [found] - сколько нашлось, мелко справа; null - не пишется. [onClear] -
+ * крестик очистки справа; null - крестика нет.
  */
-@Composable fun CompactSearchField(value: String, onValue: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, onSearch: (() -> Unit)? = null, onClear: (() -> Unit)? = null) {
+@Composable fun CompactSearchField(
+    value: String,
+    onValue: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    onSearch: (() -> Unit)? = null,
+    found: Int? = null,
+    onClear: (() -> Unit)? = null,
+) {
     val shape = RoundedCornerShape(10.dp)
     val style = MaterialTheme.typography.bodyMedium
     BasicTextField(
@@ -57,9 +68,10 @@ import com.sperance.exileforge.ui.theme.Parchment
             ) {
                 Icon(Icons.Outlined.Search, null, tint = Muted, modifier = Modifier.size(18.dp))
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    if (value.isEmpty()) Text(placeholder, color = Muted, style = style, maxLines = 1)
+                    if (value.isEmpty()) Text(placeholder, color = Muted, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     field()
                 }
+                found?.let { Text(it.toString(), color = Vital, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                 onClear?.let { ForgeIconButton(Icons.Outlined.Close, ui("common.clear"), onClick = it, kind = ButtonKind.Text, size = ButtonSize.Compact) }
             }
         },

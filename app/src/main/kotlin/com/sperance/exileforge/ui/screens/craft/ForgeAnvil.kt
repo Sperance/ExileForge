@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.filter.ItemSection
 import com.sperance.exileforge.core.filter.ItemType
+import com.sperance.exileforge.core.filter.typeTitle
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -38,7 +39,6 @@ import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.rememberInspect
-import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*

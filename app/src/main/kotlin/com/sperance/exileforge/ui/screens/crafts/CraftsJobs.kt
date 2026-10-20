@@ -338,9 +338,9 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         RecipeFormula(game, profession, job, additives) { it?.let(onInspect) }
         ResultLine(game, job) { it?.let(onInspect) }
         crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code, actions.onHelp) }
-        val offered = crafts?.additives(job).orEmpty()
-        if (offered.isNotEmpty() && !random && crafts != null && crafts.maxAdditives > 0) {
-            Engraved(ui("crafts.additives", crafts.maxAdditives))
+        val offered = crafts?.crafting?.additives(job.job).orEmpty()
+        if (offered.isNotEmpty() && !random && crafts != null && crafts.crafting.maxAdditives > 0) {
+            Engraved(ui("crafts.additives", crafts.crafting.maxAdditives))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 offered.forEach { (code, effect) ->
                     val on = code in additives
@@ -348,7 +348,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
                         ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
                         on,
                         { actions.onAdditives(if (on) additives - code else additives + code) },
-                        state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.maxAdditives)),
+                        state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.crafting.maxAdditives)),
                     )
                 }
             }

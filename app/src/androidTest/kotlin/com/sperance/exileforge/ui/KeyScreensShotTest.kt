@@ -370,7 +370,7 @@ class KeyScreensShotTest {
         val held = ProfessionView(profession.code, level = 14, experience = 600.0, next = 1000.0, jobs = listOf(view))
         val work = WorkView(profession.code, job.code, settledAt = now - 12_000, cycleMillis = 30_000, startedAt = now - 65 * 60_000, totals = WorkTally(cycles = 130, nothing = 2, items = mapOf(job.output to 118), experience = 12_345.0, levels = 1))
         val vm: CraftsViewModel = GlobalContext.get().get()
-        WorkPlaque(game(40), vm, Crafts(CraftsState(now = now, professions = listOf(held), work = work), readAt = now), 0L)
+        WorkPlaque(game(40), vm, Crafts(CraftsState(now = now, professions = listOf(held), work = work, crafting = index.professions.crafting), readAt = now), 0L)
     }
 
     /** Состояние слота умения на снимке панели боя. */

@@ -93,7 +93,7 @@ class ServerIntegrationTest {
             val ring = index.templates.values.first { it.slot == Slot.RING && !it.unique && !it.demanding }
             val rare = api.hero.grantEquipment(heroId, ring.code, Rarity.RARE)
             assertEquals(Rarity.RARE, rare.rarity)
-            val floor = index.limits(Rarity.RARE, Slot.RING).floor
+            val floor = index.rarityLimits(Rarity.RARE, Slot.RING).floor
             assertTrue(rare.rolls.count { index.modifier(it.code)?.affix == true } >= floor, "a rare below its floor: ${rare.rolls}")
             assertEquals(Slot.RING, api.hero.equip(heroId, rare.id).slot)
             assertNotNull(delivered, "a POST with the hero brought no snapshot")

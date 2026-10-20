@@ -83,8 +83,8 @@ import com.sperance.exileforge.ui.theme.*
  * Сфера качества, что сбросит качество другого вида ([lost]), сперва спрашивает подтверждение. Сфера, что идёт только со знамением, ждёт его. Сбор
  * золотом - по уровню предмета копии, одна функция правил. Сфера гравёра тратится в листе выбора строки ([EngraveSheet]).
  *
- * Сфера качества идёт пачкой [batch] ([BatchRow]): число по умолчанию - наибольшее, кнопка удержания применяет их одним запросом и несёт
- * цену всей пачки в золотой плашке ([ButtonGold]); [onApply] получает сферу и число.
+ * Сфера, что правила дают пачкой ([batch], [QualityBatch.of]), идёт ей ([BatchRow]): число по умолчанию - наибольшее, кнопка удержания применяет их одним запросом и несёт
+ * цену всей пачки ([QualityBatch.cost]) в золотой плашке ([ButtonGold]), остаток сумки и качество после - [QualityBatch.summary]; [onApply] получает сферу и число.
  */
 @Composable internal fun OrbBar(
     game: GameUi,
@@ -102,7 +102,7 @@ import com.sperance.exileforge.ui.theme.*
 ) {
     val chosen = choices.firstOrNull { it.code == smithy.orb }
     var confirming by remember(target.id, chosen, smithy.omen) { mutableStateOf(false) }
-    val pack = batch?.takeIf { chosen?.code == Orb.QUALITY_ORB.name && it.max > 0 }
+    val pack = batch?.takeIf { it.orb.name == chosen?.code && it.max > 0 }
     var picked by remember(target.id, smithy.omen, pack?.max) { mutableIntStateOf(pack?.max ?: 1) }
     val count = pack?.let { picked.coerceIn(1, it.max) } ?: 1
     ForgeBar(recipe, target.corrupted) {
@@ -111,10 +111,10 @@ import com.sperance.exileforge.ui.theme.*
         val code = chosen?.code
         val waiting = chosen?.needsOmen == true && smithy.omen.isBlank()
         val resets = code == Orb.QUALITY_ORB.name && lost > 0
-        val fee = code?.let(Orb::of)?.let { orb -> game.index?.let { index -> game.goldBill(index.rules.craftFee.orb(orb, target.itemLevel) * count) } }
+        val fee = pack?.let { game.goldBill(it.cost(count)) } ?: code?.let(Orb::of)?.let { orb -> game.index?.let { index -> game.goldBill(index.rules.craftFee.orb(orb, target.itemLevel)) } }
         pack?.let { BatchRow(game, it, count) { n -> picked = n } }
-        val left = code?.let { stock(it, game.bagAmount(it) ?: 0L, count.toLong()) }
-        BarFacts(pack?.let { left?.climbing(it, count) } ?: left, fee.takeIf { pack == null })
+        val left = pack?.let { it.summary(count) to false } ?: code?.let { stock(it, game.bagAmount(it) ?: 0L, 1L) }
+        BarFacts(left, fee.takeIf { pack == null })
         val ready = code != null && enabled && !target.corrupted && fee.covered
         if (code == Orb.ENGRAVERS_ORB.name) {
             ForgeButton(onPickLine, Modifier.fillMaxWidth(), state = ButtonState.of(ready)) { Text(fee.paying(ui("forge.engrave_pick"))) }
@@ -191,9 +191,6 @@ private fun batchReason(game: GameUi, batch: QualityBatch, count: Int): String =
 
 /** «5 сфер» в винительном - сколько сфер применит пачка. */
 private fun orbsApplied(count: Int): String = ui(pluralKey("forge.batch.apply", count), count)
-
-/** Остаток сумки после пачки с качеством до и после неё: «в сумке 25 → 18 · качество 7% → 14%»; нехватка - как есть. */
-private fun Pair<String, Boolean>.climbing(batch: QualityBatch, count: Int): Pair<String, Boolean> = if (second) this else "$first · ${ui("forge.batch_quality", batch.climb.from, batch.climb.after(count))}" to false
 
 /**
  * Полоса печати Атласа над навигацией: рецепт, сколько в сумке и удерживаемая кнопка; печать, что ляжет только со знамением, ждёт его -

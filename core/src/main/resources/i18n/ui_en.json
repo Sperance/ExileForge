@@ -4403,6 +4403,7 @@
   "fight.hint.taunt_first": "The taunter first",
   "fight.hint.taunt_first_note": "{0} becomes the target once {1} falls",
   "fight.hint.totem": "The totem is invulnerable, it fades in {0} s",
+  "fight.hint.focus_tip": "👆 Tap a foe to strike it first",
   "fight.strike_first": "Strike first",
   "fight.surrender": "Surrender",
   "fight.surrender_q": "Surrender this fight?",

@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.theme.Parchment
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
@@ -131,6 +134,26 @@ private const val HINT_MS = 3_000L
         }
     }
 }
+
+/**
+ * Подсказка первого боя с несколькими врагами: «Коснитесь врага, чтобы бить его первым» над ареной, крестик [onClose] закрывает её
+ * навсегда (`GameSettings.focusTipSeen`); первое касание врага - тоже.
+ */
+@Composable internal fun FocusTip(onClose: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 48.dp).background(TipFill, shape).border(1.dp, TipEdge, shape).padding(start = 12.dp, end = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(ui("fight.hint.focus_tip"), color = TipInk, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClose)
+    }
+}
+
+private val TipFill = Color(0xFF132019)
+private val TipEdge = Color(0xFF2B5A3E)
+private val TipInk = Color(0xFFCFEAD9)
 
 /** Облик подсказки: знак, цвета отметки, строка и пояснение. */
 private data class HintFace(val glyph: String, val tint: FocusMark, val title: String, val note: String?)

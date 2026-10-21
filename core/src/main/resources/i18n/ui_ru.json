@@ -4403,6 +4403,7 @@
   "fight.hint.taunt_first": "Сначала — провокатор",
   "fight.hint.taunt_first_note": "{0} станет целью, когда падёт {1}",
   "fight.hint.totem": "Тотем неуязвим, исчезнет через {0} с",
+  "fight.hint.focus_tip": "👆 Коснитесь врага, чтобы бить его первым",
   "fight.strike_first": "Бить первым",
   "fight.surrender": "Сдаться",
   "fight.surrender_q": "Сдаться в этом бою?",

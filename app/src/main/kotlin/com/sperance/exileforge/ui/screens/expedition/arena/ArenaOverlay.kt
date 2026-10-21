@@ -27,7 +27,9 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** The key a card's bounds are kept under: the hero's, and each foe's by its place in the pack. */
 private const val HERO_CARD = -1
@@ -87,8 +89,11 @@ private const val HERO_CARD = -1
     var info by remember { mutableStateOf<SkillView?>(null) }
     var inspect by remember { mutableStateOf<Int?>(null) }
     var hint by remember { mutableStateOf<FocusHint?>(null) }
+    val prefs = koinViewModel<SettingsViewModel>()
+    val firstTip = !settings.focusTipSeen && fight.started && fight.outcome == null && fight.foes.count { it.alive && it.onField } >= 2
 
     fun focusOn(index: Int) {
+        if (!settings.focusTipSeen) prefs.change { copy(focusTipSeen = true) }
         val foe = fight.foes.firstOrNull { it.index == index }
         if (foe != null && foe.alive && !foe.reachable && fight.focus != index) {
             val taunter = fight.foes.firstOrNull { it.alive && it.taunt }?.index
@@ -141,6 +146,7 @@ private const val HERO_CARD = -1
                         }
                     }
                 }
+                if (firstTip) FocusTip({ prefs.change { copy(focusTipSeen = true) } })
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     val shown = fight.field.firstOrNull { it.index == chosen }
                     if (fight.scouting && shown != null) {

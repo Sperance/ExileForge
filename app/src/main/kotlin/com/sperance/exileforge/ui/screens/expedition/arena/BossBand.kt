@@ -170,8 +170,10 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
  */
 @Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, modifier: Modifier) {
     val shape = RoundedCornerShape(10.dp)
+    val shielded = foe.alive && foe.invulnerableLeft > 0
     Column(
-        modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(FrameDeep, FrameInk))).border(1.dp, Color(0xFF7A5C26), shape)
+        modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(FrameDeep, FrameInk)))
+            .border(if (shielded) 1.5.dp else 1.dp, if (shielded) FrameGoldBright else Color(0xFF7A5C26), shape)
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
@@ -788,12 +790,27 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         boss.cast?.takeIf { foe.alive && it.state == CastState.CASTING }?.let { cast -> Telegraph(cast.progress, frame) }
-        focusMark(foe, fight, taunt = false)?.let { FocusBadge(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)) }
+        val shielded = foe.alive && foe.invulnerableLeft > 0
+        if (shielded) NoDamageBadge(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+        focusMark(foe, fight, taunt = false)?.let { FocusBadge(it, Modifier.align(Alignment.BottomCenter).padding(bottom = if (shielded) 26.dp else 6.dp)) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
         if (foe.alive) EffectRibbon(shelves, { effectsOpen = true }, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
     }
     if (effectsOpen) EffectsSheet(ui("fight.shelf.foe", name), shelves.timed, shelves.lasting, null) { effectsOpen = false }
+}
+
+/** Плашка «без урона» на портрете неуязвимого босса: удары по нему сейчас ничего не снимают. */
+@Composable private fun NoDamageBadge(modifier: Modifier) {
+    val shape = RoundedCornerShape(5.dp)
+    Text(
+        ui("expedition.invulnerable"),
+        color = FrameGoldBright,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        modifier = modifier.background(Color(0xE6140C04), shape).border(1.dp, Color(0xFF7A5C26), shape).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /** Цвет ауры фазы: тёплое золото, затем кровь, затем фиолетовая тьма. */

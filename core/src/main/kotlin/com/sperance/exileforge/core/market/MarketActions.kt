@@ -259,7 +259,7 @@ class MarketActions(
         if (writing) {
             commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated { reread(block) } }
         } else {
-            commands.read(key, restart, silent = glance, tag = heroes.heroId, maxAgeMs = maxAgeMs) { gated(block, glance) }
+            commands.read(key, restart, silent = glance, tag = heroes.heroId, maxAgeMs = maxAgeMs) { gated(glance, block) }
         }
     }
 
@@ -291,7 +291,7 @@ class MarketActions(
         null
     }
 
-    private suspend fun gated(block: suspend () -> Unit, glance: Boolean = false) {
+    private suspend fun gated(glance: Boolean = false, block: suspend () -> Unit) {
         check(heroes.heroId.isNotBlank()) { ui("auction.choose_character") }
         try {
             block()

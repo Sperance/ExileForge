@@ -5,9 +5,10 @@ import com.sperance.exileforge.rules.content.EngineRules
 /**
  * What opens with the hero's level: not everything at once, a new place every few levels. The client alone keeps
  * the gate; a tester with free progress passes it. [tab] or [building] is the way into the feature that the gate closes. Уровни - в
- * правилах `unlocks`, не в коде: раздела там нет - он открыт с первого уровня.
+ * правилах `unlocks`, не в коде: раздела там нет - он открыт с первого уровня. [lockScreen] - вход в раздел открывается и закрытым:
+ * вместо тоста его экран показывает замок (`FeatureGate` приложения).
  */
-enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null) {
+enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null, val lockScreen: Boolean = false) {
     GRIMOIRE("nav.skills", tab = TAB_SKILLS),
 
     /** Ремёсла: плитка «Развития», до уровня открытия - с замком. */
@@ -22,7 +23,7 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     TRIALS("trials.title", tab = TAB_TRIALS),
 
     /** Гильдия: вкладка панели [TAB_GUILD]; до уровня открытия на вкладке замок, касание открывает экран замка. */
-    GUILD("guild.title", tab = TAB_GUILD),
+    GUILD("guild.title", tab = TAB_GUILD, lockScreen = true),
 
     /** Разлом недели: своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */
     RIFT("rift.title"),

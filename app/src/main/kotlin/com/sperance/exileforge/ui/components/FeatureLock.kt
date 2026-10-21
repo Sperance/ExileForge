@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Abyss
@@ -39,10 +40,18 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.PanelRaised
 
 /**
+ * Вход в раздел со своим экраном замка ([Feature.lockScreen]): герой дорос - [content], нет - замок ([FeatureLock]) и ни одного запроса
+ * раздела.
+ */
+@Composable fun FeatureGate(game: GameUi, feature: Feature, content: @Composable () -> Unit) {
+    if (game.unlocked(feature)) content() else FeatureLock(game, feature)
+}
+
+/**
  * Экран раздела [feature], до которого герой не дорос (касание закрытой вкладки панели): замок, «Откроется с N уровня», что это за
  * раздел, полоса уровня героя до уровня открытия и «Ур. 12 · до открытия 4 уровня».
  */
-@Composable fun FeatureLock(game: GameUi, feature: Feature) {
+@Composable private fun FeatureLock(game: GameUi, feature: Feature) {
     val needed = feature.level(game.index?.rules)
     val level = game.heroLevel.coerceAtMost(needed)
     Column(

@@ -45,7 +45,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_GUILD
-import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -63,7 +62,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Вкладка «Гильдия» - корень своей вкладки панели: до уровня открытия гильдий - экран замка ([FeatureLock]), иначе экран гильдии
+ * Вкладка «Гильдия» - корень своей вкладки панели: до уровня открытия гильдий - экран замка ([FeatureGate]), иначе экран гильдии
  * под цепочкой «назад» вкладки («← Гильдия [TAG] › Состав»). Вкладка нажата снова - открытый раздел закрывается.
  */
 @Composable fun GuildTabScreen() {
@@ -71,11 +70,9 @@ import org.koin.compose.viewmodel.koinViewModel
     val game by vm.game.collectAsStateWithLifecycle()
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     OnReselect(TAB_GUILD) { vm.tab(null) }
-    if (!game.unlocked(Feature.GUILD)) {
-        FeatureLock(game, Feature.GUILD)
-        return
+    FeatureGate(game, Feature.GUILD) {
+        BackTrailHost(guilds.mine?.guild?.let { GuildText.title(ui("nav.guild"), it.tag) } ?: ui("nav.guild")) { GuildScreen() }
     }
-    BackTrailHost(guilds.mine?.guild?.let { GuildText.title(ui("nav.guild"), it.tag) } ?: ui("nav.guild")) { GuildScreen() }
 }
 
 /**

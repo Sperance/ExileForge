@@ -29,7 +29,7 @@ internal fun Battle.rage() {
     foeFighters.forEach { foe ->
         if (!foe.alive || (raged[foe.index] ?: 0) >= enrage) return@forEach
         raged[foe.index] = enrage
-        buff(foe, RAGE, lines, FOREVER)
+        buff(foe, RAGE, lines, FOREVER, origin = EffectOrigin.Rage)
     }
 }
 
@@ -43,7 +43,7 @@ internal fun Battle.calm() {
 }
 
 /** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
-internal const val RAGE = "GUARDIAN_RAGE"
+private const val RAGE = "GUARDIAN_RAGE"
 
 /**
  * A monster's skills, the first ready one it has a reason to use: a heal when hurt, a buff or a curse not already on.

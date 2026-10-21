@@ -69,7 +69,7 @@ internal fun Battle.summon(boss: Fighter, count: Int, still: Boolean = false): L
         risen += index
         enterField(index)
         bannerFor(foeFighters[index])
-        foes[index].ward.takeIf { it.isNotEmpty() }?.let { lines -> buff(boss, wardSource(index), lines, FOREVER) }
+        foes[index].ward.takeIf { it.isNotEmpty() }?.let { lines -> buff(boss, wardSource(index), lines, FOREVER, origin = foes[index].origin?.code?.let(EffectOrigin::Ward)) }
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
     return risen
@@ -98,8 +98,5 @@ internal fun Battle.freeMinionSlot(index: Int) {
     if (boss.effects.removeAll { it.source == wardSource(index) }) remake(boss)
 }
 
-/** Источник строк свиты [index] на её боссе ([Foe.ward]). */
-internal fun wardSource(index: Int) = "$WARD_SOURCE$index"
-
-/** Префикс источника строк свиты на боссе. */
-internal const val WARD_SOURCE = "ward#"
+/** Источник строк свиты [index] на её боссе ([Foe.ward]): по нему они снимаются, когда она падает. */
+private fun wardSource(index: Int) = "ward#$index"

@@ -133,6 +133,8 @@ data class TimedEffect(
     val stacks: Int = 1,
     /** Слой баффа, если эффект - бафф вида ([BuffStack]): вечный или временный, с силой; иначе null. */
     val buff: BuffStack? = null,
+    /** Чей эффект, когда его источник - не умение (тотем, ярость, свита на боссе): даётся при создании; null - имя по коду источника. */
+    val origin: EffectOrigin? = null,
 ) {
     /** Строки на бойце при условиях героя [active]: постоянные и условные, чьё условие держится. */
     fun holding(active: Set<Condition>): List<StatLine> = if (conditional.isEmpty()) lines else lines + conditional.filter { !it.condition.target && it.condition in active }.map { it.line }

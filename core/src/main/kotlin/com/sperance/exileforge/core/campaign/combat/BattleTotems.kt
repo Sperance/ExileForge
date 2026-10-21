@@ -19,6 +19,9 @@ data class FoeTotem(val totem: BossTotem, val curse: MonsterSkill? = null)
 class StandingTotem internal constructor(val serial: Int, val totem: FoeTotem, val owner: Int, val slot: Int, val raised: Double, val until: Double) {
     internal var nextBurst: Double = raised + totem.totem.interval
     val source: String get() = "$TOTEM_SOURCE$serial"
+
+    /** Чьи его строки и проклятие на бойцах: этот тотем. */
+    val origin: EffectOrigin get() = EffectOrigin.Totem(totem.totem.code)
 }
 
 /** Кто занял слот вокруг босса: приспешник свиты или тотем. */
@@ -63,12 +66,12 @@ private fun Battle.bless(standing: StandingTotem) {
     val left = standing.until - time
     val lines = totem.lines.map { StatLine(it.stat, it.op, it.value) }
     when (totem.kind) {
-        TotemKind.POWER -> buff(foeFighters[standing.owner], standing.source, lines, left)
+        TotemKind.POWER -> buff(foeFighters[standing.owner], standing.source, lines, left, origin = standing.origin)
 
-        TotemKind.RETINUE -> retinueOf(standing.owner).forEach { buff(it, standing.source, lines, left) }
+        TotemKind.RETINUE -> retinueOf(standing.owner).forEach { buff(it, standing.source, lines, left, origin = standing.origin) }
 
         TotemKind.CURSE -> standing.totem.curse?.curse?.takeIf { !heroFighter.body.immuneCurse }?.let { curse ->
-            lay(heroFighter, TimedEffect(EffectKind.CURSE, standing.source, curse.stats.lines(1), standing.until, left))
+            lay(heroFighter, TimedEffect(EffectKind.CURSE, standing.source, curse.stats.lines(1), standing.until, left, origin = standing.origin))
         }
 
         TotemKind.ELEMENT -> Unit
@@ -79,7 +82,7 @@ private fun Battle.bless(standing: StandingTotem) {
 internal fun Battle.bannerFor(minion: Fighter) {
     val owner = foes[minion.index].summonOf ?: return
     standingTotems.filter { it.owner == owner && it.totem.totem.kind == TotemKind.RETINUE }.forEach { standing ->
-        buff(minion, standing.source, standing.totem.totem.lines.map { StatLine(it.stat, it.op, it.value) }, standing.until - time)
+        buff(minion, standing.source, standing.totem.totem.lines.map { StatLine(it.stat, it.op, it.value) }, standing.until - time, origin = standing.origin)
     }
 }
 

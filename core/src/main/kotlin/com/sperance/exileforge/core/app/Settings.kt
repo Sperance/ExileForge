@@ -16,6 +16,8 @@ data class GameSettings(
     val damageNumbers: DamageNumbers = DamageNumbers.ALL,
     /** The hero's life share, in per cent, under which a running fight pauses by itself; 0 never. */
     val autoPause: Int = 0,
+    /** Ускорение шага героя по карте после гибели босса (`expedition.bossSlainSpeed`); выключено - шаг обычный, метка «×N» серая. */
+    val swiftAfterBoss: Boolean = true,
     val textSize: TextSize = TextSize.M,
     /** Pulses, glows and marching roads; off for a weak phone or a low battery. */
     val animations: Boolean = true,

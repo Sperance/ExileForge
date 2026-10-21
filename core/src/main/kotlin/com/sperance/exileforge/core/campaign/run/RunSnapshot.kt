@@ -83,7 +83,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome, vaaling(it)) },
         crystalsLeft = world.standingCrystals.size,
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
-        bossDown = bossDown, swift = swift, stride = stride(), guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
+        bossDown = bossDown, swift = swift, hastened = hastened, stride = stride(), guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
         summon = summonView(),
         questTally = questTallyShown, fateWon = fateRun.won,
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,

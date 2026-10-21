@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Animation
+import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Whatshot
@@ -172,6 +173,7 @@ data class RunMenuItem(
     val model = koinViewModel<SettingsViewModel>()
     val set by model.settings.collectAsStateWithLifecycle()
     SwitchRow(Icons.Outlined.Animation, ui("settings.animations"), null, set.animations) { on -> model.change { copy(animations = on) } }
+    SwitchRow(Icons.Outlined.DirectionsRun, ui("settings.swift"), null, set.swiftAfterBoss) { on -> model.change { copy(swiftAfterBoss = on) } }
     ChoiceRow(Icons.Outlined.Whatshot, ui("settings.damage"), DamageNumbers.entries, set.damageNumbers, { ui("settings.damage.${it.name}") }) {
         model.change { copy(damageNumbers = it) }
     }

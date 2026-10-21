@@ -443,10 +443,12 @@ data class RunHud(
     val guardianRest: Int? = null,
     /** Призыв поверженного стража; null - звать некого: страж на посту или это зона Ваал. */
     val summon: SummonView? = null,
-    /** Босс карты убит в этом заходе: герой идёт быстрее - след и значок над ним. */
+    /** Босс карты убит в этом заходе: «×N» в метке стража; шаг ускорен, только если [hastened]. */
     val swift: Boolean = false,
     /** Множитель шага героя под холодом ([ExpeditionRun.stride]); 1 - холода нет, подписи под жетоном нет. */
     val stride: Double = 1.0,
+    /** Шаг героя ускорен сейчас: босс пал и ускорение включено настройкой - след за героем и живая «×N». */
+    val hastened: Boolean = false,
     /** Счёт боевых заданий за этот заход: счётчик летописи - сколько прибавит. */
     val questTally: Map<String, Long> = emptyMap(),
     /** Выигранных в заходе боёв Разгона ([com.sperance.exileforge.core.campaign.combat.FateRun.won]); без рычага - 0. */

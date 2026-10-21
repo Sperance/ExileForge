@@ -32,8 +32,6 @@ data class Market(
     val myBids: List<AuctionLot> = emptyList(),
     /** Под каким фильтром прочитана страница вкладки - витрина или торги; нет записи - страницу читать при входе на вкладку. */
     val readUnder: Map<MarketTab, AuctionFilter> = emptyMap(),
-    /** Строка «Моих лотов», что ждёт действия и подсвечена входом с плитки Города ([MarketChores.first]); null - подсветки нет. */
-    val spotlight: String? = null,
 ) {
     /**
      * Свои лоты: что ещё продаются, чей срок вышел и что ещё возвращаются ([AuctionLot.returning]), и ниже - истёкшие, чей товар уже
@@ -42,12 +40,31 @@ data class Market(
     val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning || it.expiredBack }.sortedBy { it.expiredBack }
 }
 
-/** Единственный источник правды о рынке. */
+/**
+ * Единственный источник правды о рынке. [focus] - разовое событие экрану: вход с плитки Города просит «Мои лоты» показать строку дела
+ * ([MarketChores.first]); экран забирает его ([focused]) и держит подсветку сам, пока строка ждёт действия.
+ */
 class MarketRepository {
     private val mutable = MutableStateFlow(Market())
     val state: StateFlow<Market> = mutable
 
+    private val asked = MutableStateFlow<String?>(null)
+    val focus: StateFlow<String?> = asked
+
     fun update(transform: (Market) -> Market) = mutable.update(transform)
 
-    fun clear() = update { Market() }
+    /** Попросить экран показать строку лота [lotId]. */
+    fun focus(lotId: String) {
+        asked.value = lotId
+    }
+
+    /** Экран показал строку [lotId]: событие снято, если за это время не пришло новое. */
+    fun focused(lotId: String) {
+        asked.compareAndSet(lotId, null)
+    }
+
+    fun clear() {
+        update { Market() }
+        asked.value = null
+    }
 }

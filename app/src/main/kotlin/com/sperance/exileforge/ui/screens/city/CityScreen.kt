@@ -31,7 +31,6 @@ import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.AuctionScreen
-import com.sperance.exileforge.ui.screens.auction.LOT_TICK_MS
 import com.sperance.exileforge.ui.screens.auction.MarketViewModel
 import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
@@ -105,9 +104,7 @@ private val Building.titleKey: String
         }
     }
     LaunchedEffect(game.heroId, game.sessionEpoch, auction) { if (game.heroId.isNotBlank() && auction) market.glanceLots() }
-    val now = rememberServerNow(LOT_TICK_MS)
-    val rules = game.index?.rules?.auction
-    val chores = remember(trade, game.heroId, rules, now) { MarketChores.of(trade, game.heroId, rules, now) }
+    val chores by market.chores.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
     OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

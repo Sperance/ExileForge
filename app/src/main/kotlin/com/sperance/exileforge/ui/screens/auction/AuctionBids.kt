@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
@@ -39,7 +40,6 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketDue
-import com.sperance.exileforge.core.market.due
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.GoldBill
@@ -50,7 +50,6 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AuctionRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.trade.BidEntry
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -67,6 +66,7 @@ import com.sperance.exileforge.ui.theme.*
     val rules = game.index?.rules?.auction
     val page = market.auctions
     val now = rememberServerNow(LOT_TICK_MS)
+    val chores by vm.chores.collectAsStateWithLifecycle()
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { ShowcaseHeader(game, market, vm) } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (page.items.isEmpty() && market.showcaseFailed) {
@@ -81,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
         } else if (page.items.isEmpty()) {
             item { InfoCard(ui("tree.nothing_found"), ui("auction.bids_empty")) }
         }
-        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = rules?.let { lot.due(game.heroId, it, now) }) { openLot = lot.id } }
+        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id } }
         if (page.next != null) {
             item {
                 ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = vm::moreAuctions, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
@@ -398,12 +398,12 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
 }
 
 /**
- * Лента ставок без имён, новые сверху: сумма, «вы» у своих (у лидирующей своей - зелёным), «лидирует» у верхней и давность к «сейчас»
- * [now]; над ней пунктиром - своя сумма [pending], пока ставка не сделана. Видны [FEED_SHOWN] верхних, остальные свёрнуты «Ещё N».
+ * Лента ставок без имён, новые сверху ([feedLines] ядра): сумма, «вы» у своих (у лидирующей своей - зелёным), «лидирует» - у той, что
+ * лидирует сейчас, и давность к «сейчас» [now]; над ней пунктиром - своя сумма [pending], пока ставка не сделана. Видны [FEED_SHOWN] верхних, остальные свёрнуты «Ещё N».
  * Ставок нет - что своя будет первой и наименьшая.
  */
 @Composable private fun BidFeed(lot: AuctionLot, now: Long, pending: Long?) {
-    val feed = lot.feed
+    val feed = lot.feedLines
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(ui("auction.feed"), color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         if (lot.bidCount > 0) MutedText(ui("auction.feed_meta", lot.bidCount))
@@ -413,7 +413,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
         MutedText(if (lot.bidCount > 0) ui("auction.bids_count", lot.bidCount) else ui("auction.feed_empty", "${number((lot.bidding?.minPrice ?: 0L).toDouble())} ${orbTitle(lot)}"))
         return
     }
-    feed.take(FEED_SHOWN).forEachIndexed { at, entry -> FeedRow(lot, entry, top = at == 0, now) }
+    feed.take(FEED_SHOWN).forEach { FeedRow(lot, it, now) }
     val rest = feed.drop(FEED_SHOWN)
     if (rest.isEmpty()) return
     var open by remember(lot.id) { mutableStateOf(false) }
@@ -422,16 +422,17 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
         Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
         FoldChevron(open)
     }
-    Column { FoldBody(open) { rest.forEach { FeedRow(lot, it, top = false, now) } } }
+    Column { FoldBody(open) { rest.forEach { FeedRow(lot, it, now) } } }
 }
 
-/** Строка ленты: сумма со знаком сферы, «вы» у своей, «лидирует» у верхней [top] и давность. */
-@Composable private fun FeedRow(lot: AuctionLot, entry: BidEntry, top: Boolean, now: Long) {
+/** Строка ленты [feed]: сумма со знаком сферы, «вы» у своей, «лидирует» у лидирующей и давность. */
+@Composable private fun FeedRow(lot: AuctionLot, feed: FeedLine, now: Long) {
+    val leading = feed.leading
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OrbAmount(lot.priceOrb, entry.orbs, tint = if (top) GoldBright else Quiet)
-        if (entry.own) Text(ui("auction.feed_you"), color = if (top) Vital else Muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Text(if (top) ui("auction.feed_leads") else "", color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-        Text(agoText(now - entry.at), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        OrbAmount(lot.priceOrb, feed.line.orbs, tint = if (leading) GoldBright else Quiet)
+        if (feed.line.own) Text(ui("auction.feed_you"), color = if (leading) Vital else Muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        Text(if (leading) ui("auction.feed_leads") else "", color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+        Text(agoText(now - feed.line.at), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
 

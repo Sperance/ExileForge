@@ -48,6 +48,7 @@ import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.hero.TreeModel
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketActions
+import com.sperance.exileforge.core.market.MarketChoresModel
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.HttpLink
@@ -207,6 +208,7 @@ val appModule = module {
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
     single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }
+    single { MarketChoresModel(get(), get(), get(named(APP_SCOPE))) }
     factoryOf(::CharactersModel)
     factoryOf(::TreeModel)
     viewModelOf(::ShellViewModel)

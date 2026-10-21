@@ -8,10 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
-import com.sperance.exileforge.core.market.MarketChores
 import com.sperance.exileforge.core.market.MarketTab
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.ui.components.*
@@ -52,7 +50,8 @@ fun AuctionScreen() {
             return@Column
         }
         val tab = market.tab
-        MarketTabs(game, market, enabled = !busy) { model.tab(it) }
+        val chores by model.chores.collectAsStateWithLifecycle()
+        MarketTabs(market, due = chores.total > 0, enabled = !busy) { model.tab(it) }
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
@@ -74,14 +73,8 @@ private fun tabTitle(tab: MarketTab): String = when (tab) {
     MarketTab.HISTORY -> ui("auction.history")
 }
 
-/**
- * Вкладки рынка; у «Моих лотов» - места ([slotsBadge]) и жёлтая точка, пока там есть дело ([MarketChores]) к «сейчас» часов сервера:
- * часы читает только этот ряд.
- */
-@Composable private fun MarketTabs(game: GameUi, market: Market, enabled: Boolean, onSelect: (MarketTab) -> Unit) {
-    val now = rememberServerNow(LOT_TICK_MS)
-    val rules = game.index?.rules?.auction
-    val due = remember(market, game.heroId, rules, now) { MarketChores.of(market, game.heroId, rules, now).total > 0 }
+/** Вкладки рынка; у «Моих лотов» - места ([slotsBadge]) и жёлтая точка, пока там есть дело рынка ([due]). */
+@Composable private fun MarketTabs(market: Market, due: Boolean, enabled: Boolean, onSelect: (MarketTab) -> Unit) {
     val badges = MarketTab.entries.map { if (it == MarketTab.LOTS) slotsBadge(market, due) else null }
     PillTabs(MarketTab.entries.map(::tabTitle), market.tab.ordinal, { onSelect(MarketTab.entries[it]) }, enabled = enabled, badges = badges)
 }

@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.AuctionFilter
-import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.model.auction.LotTerms
@@ -48,20 +47,20 @@ class AuctionClient internal constructor(private val http: Transport) {
         return http.post("$AUCTION/sell/$what", extra + heroQuery(heroId, "priceOrb" to priceOrb, "price" to price.toString()))
     }
 
-    /** Payment, delivery and closing the lot are one server transaction. Repeated only under its key. */
-    suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
+    /** Покупка - одна транзакция сервера (оплата, товар, закрытие лота); отвечает своим рынком с лотом. Повтор - только под своим ключом. */
+    suspend fun buy(heroId: String, lotId: String): AuctionMine = lot("buy", heroId, lotId)
 
     /** Снятие отвечает своим рынком; у торгов со ставкой сервер возвращает залог лидеру письмом. */
     suspend fun cancel(heroId: String, lotId: String): AuctionMine = lot("cancel", heroId, lotId)
 
-    /** Ставка [amount] сфер в торгах: ответ - лот глазами героя; ставка от выкупа - выкуп. Повтор - только под своим ключом. */
-    suspend fun bid(heroId: String, lotId: String, amount: Long): AuctionLot {
+    /** Ставка [amount] сфер в торгах: ответ - свой рынок с лотом глазами героя; ставка от выкупа - выкуп. Повтор - только под своим ключом. */
+    suspend fun bid(heroId: String, lotId: String, amount: Long): AuctionMine {
         requireId(lotId)
         return http.post("$AUCTION/bid", heroQuery(heroId, "lotId" to lotId, "amount" to amount.toString()))
     }
 
-    /** Выкуп торгов за цену выкупа в любой момент. Повтор - только под своим ключом. */
-    suspend fun buyout(heroId: String, lotId: String): AuctionLot = lot("buyout", heroId, lotId)
+    /** Выкуп торгов за цену выкупа в любой момент: отвечает своим рынком с лотом. Повтор - только под своим ключом. */
+    suspend fun buyout(heroId: String, lotId: String): AuctionMine = lot("buyout", heroId, lotId)
 
     /** Продажа своих торгов лучшей ставке досрочно: отвечает своим рынком. */
     suspend fun accept(heroId: String, lotId: String): AuctionMine = lot("accept", heroId, lotId)

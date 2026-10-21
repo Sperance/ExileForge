@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
@@ -44,8 +45,9 @@ import com.sperance.exileforge.core.market.DealEntry
 import com.sperance.exileforge.core.market.DealLedger
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketChores
-import com.sperance.exileforge.core.market.ownAuctions
-import com.sperance.exileforge.core.market.ownFixed
+import com.sperance.exileforge.core.market.MyLotKind
+import com.sperance.exileforge.core.market.MyLotSection
+import com.sperance.exileforge.core.market.myLotSections
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.content.AuctionRules
@@ -74,22 +76,28 @@ import com.sperance.exileforge.ui.theme.*
  * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
  * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
  *
- * Дела рынка ([MarketChores] к «сейчас» часов сервера): строка, что ждёт действия, несёт жёлтую точку у своей пометки, заголовок раздела -
- * «● ждут: N»; вход с плитки Города ([Market.spotlight]) листает к первой такой строке и обводит её, пока открыта вкладка.
+ * Разделы - [myLotSections] ядра. Дела рынка - поток ядра ([MarketViewModel.chores]): строка, что ждёт действия, несёт жёлтую точку у
+ * своей пометки, заголовок раздела - «● ждут: N». Вход с плитки Города - разовая просьба ([MarketViewModel.focus]): вкладка листает к
+ * строке и обводит её, пока вкладка открыта и строка ещё ждёт действия.
  */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var openBid by remember { mutableStateOf<String?>(null) }
     val rules = game.index?.rules?.auction
     val now = rememberServerNow(LOT_TICK_MS)
-    val auctions = market.ownAuctions
-    val lots = market.ownFixed
-    val chores = remember(market, game.heroId, rules, now) { MarketChores.of(market, game.heroId, rules, now) }
-    val rows = remember(market, chores, game.lang) { myLotsRows(market, auctions, lots, chores) }
+    val chores by vm.chores.collectAsStateWithLifecycle()
+    val focus by vm.focus.collectAsStateWithLifecycle()
+    val sections = remember(market) { market.myLotSections }
+    val rows = remember(market, sections, chores) { myLotsRows(market, sections, chores) }
     val list = rememberLazyListState()
-    LaunchedEffect(market.spotlight) {
-        val index = rows.indexOfFirst { it.key == market.spotlight }
-        if (index >= 0) list.animateScrollToItem(index)
+    var spotlight by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(focus, rows) {
+        val asked = focus ?: return@LaunchedEffect
+        val index = rows.indexOfFirst { it.key == asked }
+        if (index < 0) return@LaunchedEffect
+        spotlight = asked
+        vm.focused(asked)
+        list.animateScrollToItem(index)
     }
     LazyColumn(Modifier.weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         items(rows, key = { it.key }) { row ->
@@ -101,13 +109,13 @@ import com.sperance.exileforge.ui.theme.*
 
                 MyLotsRow.Empty -> InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
 
-                is MyLotsRow.Section -> SectionTitle(row.title, row.count, row.due)
+                is MyLotsRow.Section -> SectionTitle(sectionTitle(row.kind), row.count, row.due)
 
-                is MyLotsRow.Lot -> Box(Modifier.spotlit(row.key == market.spotlight)) {
+                is MyLotsRow.Lot -> Box(Modifier.spotlit(row.key == spotlight && chores[row.key] != null)) {
                     val lot = row.lot
                     when (row.kind) {
-                        MyLotKind.AUCTION -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id }
-                        MyLotKind.BID -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openBid = lot.id }
+                        MyLotKind.AUCTIONS -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id }
+                        MyLotKind.BIDS -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openBid = lot.id }
                         MyLotKind.FIXED -> LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { openLot = lot.id }
                     }
                 }
@@ -115,7 +123,7 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, now, vm) { openBid = null } }
-    auctions.firstOrNull { it.id == openLot }?.let { lot ->
+    sections.lotsOf(MyLotKind.AUCTIONS).firstOrNull { it.id == openLot }?.let { lot ->
         OwnBidSheet(game, lot, now, onDismiss = { openLot = null }, onWithdraw = {
             openLot = null
             vm.cancel(lot.id)
@@ -124,7 +132,7 @@ import com.sperance.exileforge.ui.theme.*
             vm.accept(lot.id)
         }
     }
-    lots.firstOrNull { it.id == openLot }?.let { lot ->
+    sections.lotsOf(MyLotKind.FIXED).firstOrNull { it.id == openLot }?.let { lot ->
         LotSheet(
             game,
             lot,
@@ -150,8 +158,15 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Раздел «Моих лотов», к которому относится строка лота: свои торги, свои ставки, лоты за цену. */
-private enum class MyLotKind { AUCTION, BID, FIXED }
+/** Лоты раздела [kind]; раздела нет - пусто. */
+private fun List<MyLotSection>.lotsOf(kind: MyLotKind): List<AuctionLot> = firstOrNull { it.kind == kind }?.lots.orEmpty()
+
+/** Имя раздела «Моих лотов» в словаре. */
+private fun sectionTitle(kind: MyLotKind): String = when (kind) {
+    MyLotKind.AUCTIONS -> ui("auction.my_auctions")
+    MyLotKind.BIDS -> ui("auction.my_bids")
+    MyLotKind.FIXED -> ui("auction.my_fixed")
+}
 
 /** Строка списка «Моих лотов»; [key] - ключ ленивого списка, у строки лота - id лота (по нему же подсветка входа с плитки). */
 private sealed interface MyLotsRow {
@@ -167,9 +182,9 @@ private sealed interface MyLotsRow {
         override val key: String get() = "empty"
     }
 
-    /** Заголовок раздела: имя, сколько строк и сколько из них ждут действия ([due]). */
-    data class Section(val title: String, val count: Int, val due: Int) : MyLotsRow {
-        override val key: String get() = "section-$title"
+    /** Заголовок раздела [kind]: сколько строк и сколько из них ждут действия ([due]). */
+    data class Section(val kind: MyLotKind, val count: Int, val due: Int) : MyLotsRow {
+        override val key: String get() = "section-${kind.name}"
     }
 
     /** Лот раздела [kind]. */
@@ -179,23 +194,19 @@ private sealed interface MyLotsRow {
 }
 
 /**
- * Строки «Моих лотов» по порядку: места, пусто, свои торги [auctions], свои ставки, лоты за цену [lots]; у заголовков - число дел
- * [chores] раздела. Заголовок лотов за цену - только когда выше есть другие разделы.
+ * Строки «Моих лотов» по порядку: места, пусто, разделы [sections] с лотами; у заголовков - число дел [chores] раздела. Заголовок лотов за
+ * цену - только когда выше есть другие разделы.
  */
-private fun myLotsRows(market: Market, auctions: List<AuctionLot>, lots: List<AuctionLot>, chores: MarketChores): List<MyLotsRow> = buildList {
+private fun myLotsRows(market: Market, sections: List<MyLotSection>, chores: MarketChores): List<MyLotsRow> = buildList {
     market.slots?.takeIf { it.bidLimit > 0 }?.let { add(MyLotsRow.Slots(it)) }
-    if (market.ownLots.isEmpty() && market.myBids.isEmpty()) add(MyLotsRow.Empty)
-    fun section(title: String, among: List<AuctionLot>, kind: MyLotKind, titled: Boolean = true) {
-        if (among.isEmpty()) return
-        if (titled) add(MyLotsRow.Section(title, among.size, chores.count(among)))
-        among.forEach { add(MyLotsRow.Lot(it, kind)) }
+    if (sections.isEmpty()) add(MyLotsRow.Empty)
+    sections.forEach { (kind, lots) ->
+        if (kind != MyLotKind.FIXED || sections.size > 1) add(MyLotsRow.Section(kind, lots.size, chores.count(lots)))
+        lots.forEach { add(MyLotsRow.Lot(it, kind)) }
     }
-    section(ui("auction.my_auctions"), auctions, MyLotKind.AUCTION)
-    section(ui("auction.my_bids"), market.myBids, MyLotKind.BID)
-    section(ui("auction.my_fixed"), lots, MyLotKind.FIXED, titled = auctions.isNotEmpty() || market.myBids.isNotEmpty())
 }
 
-/** Обводка строки, подсвеченной входом с плитки Города: жёлтая рамка по контуру плиты товара. */
+/** Обводка строки, к которой привёл вход с плитки Города: жёлтая рамка по контуру плиты товара. */
 private fun Modifier.spotlit(on: Boolean): Modifier = if (on) border(2.dp, Caution, RoundedCornerShape(16.dp)) else this
 
 /** Заголовок раздела своих лотов: имя, сколько в нём строк и справа - сколько ждут действия ([due], ноль не печатается). */
@@ -229,7 +240,7 @@ private fun Modifier.spotlit(on: Boolean): Modifier = if (on) border(2.dp, Cauti
                 ForgeButton(onClick = onWithdraw, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && lot.onSale), hold = Hold()) {
                     Text(ui("auction.withdraw"), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                if (lot.acceptable) {
+                if (lot.acceptableAt(now)) {
                     ForgeButton(onClick = onAccept, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy), hold = Hold()) {
                         Text(ui("auction.accept_do", number(bid.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

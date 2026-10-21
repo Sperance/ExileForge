@@ -24,6 +24,7 @@ import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.reward.RedemptionKind
@@ -95,13 +96,14 @@ class UiStringsTest {
     }
 
     /**
-     * Каждая характеристика героя с разделом сводки описана подробно (`stat.detail.<код>`) на всех языках, и каждая подстановка
-     * правил `{r:…}` в описании находит своё число в контенте: число механики не пишется руками и не теряется.
+     * Каждая характеристика героя с разделом сводки и каждая характеристика Атласа описаны подробно (`stat.detail.<код>`) на всех
+     * языках, и каждая подстановка правил `{r:…}` в описании находит своё число в контенте: число механики не пишется руками и не
+     * теряется.
      */
     @Test
     fun every_sheet_stat_has_a_detailed_description_with_numbers() {
         val index = TestContent.index
-        val shown = index.stats.stats.filter { index.stats.section(it.code) != null }
+        val shown = index.stats.stats.filter { index.stats.section(it.code) != null || it.group == StatGroup.ATLAS }
         assertTrue(shown.isNotEmpty(), "нет характеристик с разделом - тест ничего не проверил")
         languages.forEach { lang ->
             val table = UiStrings.table(lang)

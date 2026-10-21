@@ -54,6 +54,7 @@ import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.rules.content.InputLimits
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -141,11 +142,12 @@ data class ReportsView(val focus: String? = null)
  * Открытые выше закрытых. Список перечитывается потягиванием вниз.
  *
  * Открытый лист гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём открыло
- * лист) подсвечен, и лист прокручен к нему. [issueLinks] - тикеты несут «Issue #N ↗» ([IssueLink]): тестировщику и модерации.
+ * лист) подсвечен, и лист прокручен к нему. [issueLinks] - тикеты несут «Issue #N ↗» ([IssueLink]): тестировщику и модерации. Пределы
+ * поиска и ответа - правил ([inputs]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit) {
+fun ReportsSheet(start: ReportsView, issueLinks: Boolean, inputs: InputLimits, onDismiss: () -> Unit) {
     val model = koinViewModel<FeedbackViewModel>().model
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
@@ -157,10 +159,10 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            SearchBar(query, { query = it }, ui("feedback.search"), maxLength = SEARCH_MAX)
+            SearchBar(query, { query = it }, ui("feedback.search"), maxLength = inputs.search)
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
                 CompositionLocalProvider(LocalIssueLinks provides issueLinks) {
-                    ReportsList(feedback, query, shownFresh, start.focus, !activity.busy, model)
+                    ReportsList(feedback, query, shownFresh, start.focus, !activity.busy, inputs.report, model)
                 }
             }
         }
@@ -168,18 +170,20 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
 }
 
 /**
- * Свои отчёты по поиску [query] ([ReportSearch]), [fresh] - с новыми ответами. Отчёт [focus] подсвечен, и список прокручен к нему, как
- * только он пришёл.
+ * Свои отчёты по поиску [query] ([ReportSearch]; отбор и порядок считаются заново только со сменой отчётов или запроса), [fresh] - с
+ * новыми ответами, [limit] - предел ответа. Отчёт [focus] подсвечен, и список прокручен к нему, как только он пришёл.
  */
-@Composable private fun ReportsList(feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel) {
+@Composable private fun ReportsList(feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, limit: Int, model: FeedbackModel) {
     val list = rememberLazyListState()
-    val search = remember(query) { ReportSearch(query) }
-    val mine = feedback.mine.filter { search.matches(it.text, it.thread, it.issue) }.sortedBy { ReportFate.of(it.status, it.issue).closed }
-    val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { it >= 0 }
+    val mine = remember(feedback.mine, query) {
+        val search = ReportSearch(query)
+        feedback.mine.filter { search.matches(it.text, it.thread, it.issue) }.sortedBy { ReportFate.of(it.status, it.issue).closed }
+    }
+    val focusAt = remember(mine, focus) { mine.indexOfFirst { it.id == focus }.takeIf { it >= 0 } }
     LaunchedEffect(focusAt) { focusAt?.let { list.animateScrollToItem(it) } }
     LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
         if (mine.isEmpty()) item { MutedText(ui(if (feedback.mine.isEmpty()) "feedback.none_mine" else "feedback.none_found")) }
-        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { model.closeReport(own.id) } }
+        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, limit, onAnswer = { text -> model.answerReport(own.id, text) }) { model.closeReport(own.id) } }
     }
 }
 
@@ -189,7 +193,7 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
  * погашено, но на месте. Новый и обсуждаемый отчёт автор закрывает сам полосой удержания «Закрыть отчёт» ([OwnReport.closable],
  * [onClose]) - без возврата; закрытый автором вместо поля несёт плашку «писать нельзя».
  */
-@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onClose: () -> Unit) {
+@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, limit: Int, onAnswer: (String) -> Unit, onClose: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
     ReportTicket(
         own.kind,
@@ -203,13 +207,11 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
         focused = focused,
         topic = own.topic,
         below = {
-            if (own.answerable) AnswerField(enabled, onAnswer)
+            if (own.answerable) AnswerField(enabled, limit, onAnswer)
             if (own.closable) CloseBar(enabled, onClose)
             if (own.status == ReportStatus.WITHDRAWN) ClosedPlate()
         },
-    ) {
-        Score(own.likes, own.dislikes)
-    }
+    ) {}
 }
 
 /** Закрыть свой отчёт - полоса во всю ширину тикета, удержанием: закрытие без возврата, писать в отчёт больше нельзя. */
@@ -237,15 +239,7 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
     }
 }
 
-/** Голоса «+N / −M». */
-@Composable private fun Score(likes: Int, dislikes: Int) {
-    Text(ui("feedback.score", likes, dislikes), color = Muted, style = MaterialTheme.typography.labelSmall)
-}
-
 /** Вопрос перед удалением отчёта: удержание - [onDelete], отмена - [onDismiss]. */
 @Composable fun ReportDeleteConfirm(busy: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
     ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, busy = busy, onConfirm = onDelete)
 }
-
-/** Длина поиска по отчётам. */
-private const val SEARCH_MAX = 60

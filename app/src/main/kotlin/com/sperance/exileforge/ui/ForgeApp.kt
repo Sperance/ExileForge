@@ -51,6 +51,7 @@ import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.UpdateHintState
 import com.sperance.exileforge.ui.components.UpdateHost
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
@@ -215,7 +216,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
             if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues) { sheets.reports = null } }
+            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
             if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
             if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()

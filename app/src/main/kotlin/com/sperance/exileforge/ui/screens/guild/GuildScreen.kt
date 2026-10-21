@@ -122,8 +122,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
         modifier = Modifier.weight(1f),
     ) {
         val page = guilds.search
-        val reset = remember(guilds.searched, guilds.faction) { Any() }
-        PagedColumn(page.items.size, page.more, Reads.GUILD_SEARCH in game.loading, vm::moreSearch, Modifier.fillMaxSize(), reset = reset) {
+        PagedColumn(page.items.size, page.more, Reads.GUILD_SEARCH in game.loading, vm::moreSearch, guilds.searched, guilds.faction, modifier = Modifier.fillMaxSize()) {
             waiting?.let { item(key = "wait") { RejoinStrip(it) } }
             if (mine.invites.isNotEmpty()) item(key = "invites") { Invites(game, mine.invites, vm) }
             item(key = "tools") {

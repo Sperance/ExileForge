@@ -2,13 +2,13 @@ package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.feedback.AdminReport
+import com.sperance.exileforge.core.model.feedback.FeedbackMove
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.paging.followedBy
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
@@ -83,8 +83,8 @@ class FeedbackModel(
     fun loadQueue() = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
         check(sessions.state.value.isModerator) { ui("moderation.staff_only") }
         val asked = feedback.value.queue
-        val page = api.feedback.queue(asked.kind, asked.queue, asked.query, asked.sort, 0)
-        feedback { f -> if (f.queue.sameFilter(asked)) f.copy(queue = f.queue.copy(page = page)) else f }
+        val read = api.feedback.queue(asked.sight, asked.queue, asked.sort, 0)
+        feedback { f -> if (f.queue.sameFilter(asked)) f.copy(queue = f.queue.copy(page = read.page, counts = read.counts ?: f.queue.counts)) else f }
     }
 
     /**
@@ -94,14 +94,14 @@ class FeedbackModel(
     fun moreQueue() = commands.read(Reads.FEEDBACK_ADMIN) {
         val asked = feedback.value.queue
         if (!asked.page.more) return@read
-        val next = api.feedback.queue(asked.kind, asked.queue, asked.query, asked.sort, asked.page.page + 1)
+        val next = api.feedback.queue(asked.sight, asked.queue, asked.sort, asked.page.page + 1).page
         feedback { f ->
             val shown = f.queue
-            if (!shown.sameFilter(asked) || shown.page.page != asked.page.page) f else f.copy(queue = shown.copy(page = next.copy(items = shown.page.items.followedBy(next.items) { it.report.id })))
+            if (!shown.sameFilter(asked) || shown.page.page != asked.page.page) f else f.copy(queue = shown.copy(page = shown.page.followedBy(next) { it.report.id }))
         }
     }
 
-    fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
+    fun setReportStatus(id: String, status: ReportStatus, reason: String) = moderate(id, ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason, it) }
 
     /** Ответ автора к своему отчёту: с Issue уходит комментарием, до Issue копится в отчёте; отчёт возвращается с перепиской. */
     fun answerReport(id: String, text: String) = commands.task(writing = true) {
@@ -111,13 +111,13 @@ class FeedbackModel(
     }
 
     /** Модерация ведёт Issue отчёта из игры: ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
-    fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
+    fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = moderate(id, ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate, it) }
 
     /** Дополнение модерации к отчёту: сервер кладёт его разделом в тело Issue и отвечает отчётом как он теперь стоит. */
-    fun noteReport(id: String, text: String) = answer(ui("feedback.note.saved")) { api.feedback.note(id, text) }
+    fun noteReport(id: String, text: String) = moderate(id, ui("feedback.note.saved")) { api.feedback.note(id, text, it) }
 
     /** Отчёт в GitHub Issues: сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
-    fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
+    fun reportToIssue(id: String) = moderate(id, ui("feedback.issue_done")) { api.feedback.toIssue(id, it) }
 
     /** Автор закрывает свой отчёт («Закрыт автором»): без возврата, писать в него больше нельзя; отчёт встаёт на место закрытым. */
     fun closeReport(id: String) = commands.task(writing = true) {
@@ -127,19 +127,18 @@ class FeedbackModel(
     }
 
     /** Комментарий модерации автору: отчёт - в «Обсуждении», автору уходит письмо. */
-    fun commentReport(id: String, text: String) = answer(ui("feedback.comment_sent")) { api.feedback.comment(id, text) }
+    fun commentReport(id: String, text: String) = moderate(id, ui("feedback.comment_sent")) { api.feedback.comment(id, text, it) }
 
-    /** Удаление отчёта модерацией: уходит из очереди. */
-    fun deleteReport(id: String) = commands.task(writing = true) {
-        api.feedback.delete(id)
-        feedback { f -> f.copy(queue = f.queue.copy(page = f.queue.page.copy(items = f.queue.page.items.filterNot { it.report.id == id }))) }
-        notices.toast(ui("feedback.deleted"))
-    }
+    /** Удаление отчёта модерацией: уходит из очереди, счёт очередей - свежий. */
+    fun deleteReport(id: String) = moderate(id, ui("feedback.deleted")) { api.feedback.delete(id, it) }
 
-    /** Ответ модерации на действие: отчёт встаёт на место своей строки в очереди. */
-    private fun answer(done: String, call: suspend () -> AdminReport) = commands.task(writing = true) {
-        val answered = call()
-        feedback { f -> f.copy(queue = f.queue.with(answered)) }
+    /**
+     * Действие модерации [call] с отчётом [id] под видом и поиском очереди: ответ ложится в очередь ([ReportQueue.after]) - строка на месте
+     * или уходит, чипы - со свежим счётом; страница не перечитывается.
+     */
+    private fun moderate(id: String, done: String, call: suspend (QueueSight) -> FeedbackMove) = commands.task(writing = true) {
+        val move = call(feedback.value.queue.sight)
+        feedback { f -> f.copy(queue = f.queue.after(id, move)) }
         notices.toast(done)
     }
 

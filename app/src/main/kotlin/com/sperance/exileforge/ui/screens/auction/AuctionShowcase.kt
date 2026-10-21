@@ -77,7 +77,7 @@ import org.koin.compose.viewmodel.koinViewModel
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
     val showcase = market.showcase
-    PagedColumn(showcase.items.size, showcase.next != null, Reads.AUCTION in game.loading, onMore, Modifier.weight(1f), reset = market.filter, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    PagedColumn(showcase.items.size, showcase.next != null, Reads.AUCTION in game.loading, onMore, market.filter, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (market.showcase.items.isEmpty() && market.showcaseFailed) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

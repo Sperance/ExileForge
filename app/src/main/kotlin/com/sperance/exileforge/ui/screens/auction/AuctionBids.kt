@@ -58,7 +58,7 @@ import com.sperance.exileforge.ui.theme.*
     val page = market.auctions
     val now = rememberServerNow(LOT_TICK_MS)
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { ShowcaseHeader(game, market, vm) } }
-    PagedColumn(page.items.size, page.next != null, Reads.AUCTION in game.loading, vm::moreAuctions, Modifier.weight(1f), reset = market.filter, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    PagedColumn(page.items.size, page.next != null, Reads.AUCTION in game.loading, vm::moreAuctions, market.filter, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (page.items.isEmpty() && market.showcaseFailed) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

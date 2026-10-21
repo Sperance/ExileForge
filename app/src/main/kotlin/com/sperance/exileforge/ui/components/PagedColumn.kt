@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -29,16 +30,16 @@ import com.sperance.exileforge.ui.theme.Gold
  * дочитывается сам. Когда последняя видимая строка подходит к концу ближе [LOAD_AHEAD] строк, сервер говорит, что есть ещё ([more]), и
  * чтение не идёт ([loading]), просит следующую страницу ([onMore]) - один раз на [count] прочитанных строк: отказ не повторяется сам,
  * а только когда игрок снова долистает до края. Пока страница читается, внизу - кольцо; кнопок «Показать ещё» и страниц нет. Смена
- * поиска, отбора или порядка ([reset]) возвращает список к началу - модель читает его с первой страницы. Над строками - свои строки
- * места ([content]: поиск, чипы), они листаются вместе со списком.
+ * поиска, отбора или порядка ([resetKeys] - их значения) возвращает список к началу - модель читает его с первой страницы; первый показ
+ * список не двигает. Над строками - свои строки места ([content]: поиск, чипы), они листаются вместе со списком.
  */
 @Composable fun PagedColumn(
     count: Int,
     more: Boolean,
     loading: Boolean,
     onMore: () -> Unit,
+    vararg resetKeys: Any?,
     modifier: Modifier = Modifier,
-    reset: Any? = null,
     state: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(vertical = 10.dp),
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(8.dp),
@@ -49,9 +50,14 @@ import com.sperance.exileforge.ui.theme.Gold
         derivedStateOf { state.layoutInfo.let { info -> info.visibleItemsInfo.lastOrNull()?.let { it.index >= info.totalItemsCount - LOAD_AHEAD } == true } }
     }
     var asked by remember { mutableIntStateOf(NONE) }
-    LaunchedEffect(reset) {
-        asked = NONE
-        state.scrollToItem(0)
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(*resetKeys) {
+        if (!shown) {
+            shown = true
+        } else {
+            asked = NONE
+            state.scrollToItem(0)
+        }
     }
     LaunchedEffect(near, more, loading, count) {
         if (!near) asked = NONE

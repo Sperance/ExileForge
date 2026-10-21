@@ -338,13 +338,13 @@ class KeyScreensShotTest {
     }
 
     /**
-     * Модерация: строки в две линии (версия, падения, ошибки запросов, Issue, голоса) и раскрытые тикеты - новый и отправленный с
+     * Модерация: строки в две линии (версия, падения, ошибки запросов, Issue) и раскрытые тикеты - новый и отправленный с
      * ответом.
      */
     @Test fun moderation() {
         fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG, crashes: Int = 0, failures: Int = 0) = AdminReport(
             FullReport(
-                id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind, likes = 4, dislikes = 1,
+                id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind,
                 createdAt = "2026-10-17T10:00:00", issue = issue, clientVersion = "0.16.3", crashCount = crashes, failureCount = failures,
             ),
             login = "sperance",

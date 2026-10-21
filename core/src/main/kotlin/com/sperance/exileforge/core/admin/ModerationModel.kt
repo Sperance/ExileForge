@@ -6,13 +6,14 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
-import com.sperance.exileforge.core.network.ModerationPage
+import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionRequest
@@ -69,9 +70,8 @@ data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY,
 }
 
 /**
- * Окно модерации: раздел, поиск, прочитанные страницы строк ([page]: строки всех страниц подряд) или журнала ([journal], до страницы
- * [journalPage], [journalMore] - есть ли старше); открытое досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после
- * действия перечитать именно его.
+ * Окно модерации: раздел, поиск, прочитанные страницы строк ([page]) или журнала ([journal]) - строки всех страниц подряд; открытое
+ * досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
 data class ModerationState(
     val tab: ModerationTab = ModerationTab.ALL,
@@ -80,10 +80,8 @@ data class ModerationState(
     val searched: String = "",
     /** Порядок списка и отбор по Предначертанию. */
     val filters: ModerationFilters = ModerationFilters.DEFAULT,
-    val page: ModerationPage = ModerationPage(),
-    val journal: List<ModerationEntryView> = emptyList(),
-    val journalPage: Int = 0,
-    val journalMore: Boolean = false,
+    val page: Page<ModerationRow> = Page(),
+    val journal: Page<ModerationEntryView> = Page(),
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
     /** Только что созданный тестировщик: логин и пароль показываются один раз. */
@@ -149,22 +147,22 @@ class ModerationModel(
         val state = mutable.value
         if (!state.page.more) return@read
         val next = api.rows(state.searched, state.segment, state.page.page + 1, state.filters.sort, state.filters.fate)
-        mutable.update { if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next)) else it }
+        mutable.update { if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next) { row -> row.key }) else it }
     }
 
     /** Первая страница журнала модерации; новый вызов сменяет идущий. */
     fun journal() = commands.read(Reads.MODERATION, restart = true) {
         staff()
         val read = api.log(0)
-        mutable.update { it.copy(journal = read.entries, journalPage = 0, journalMore = read.more) }
+        mutable.update { it.copy(journal = read) }
     }
 
     /** Следующая страница журнала под прочитанными (листание до края): ложится, только пока прочитанные страницы те же. */
     fun moreJournal() = commands.read(Reads.MODERATION) {
-        val state = mutable.value
-        if (!state.journalMore) return@read
-        val read = api.log(state.journalPage + 1)
-        mutable.update { if (it.journalPage == state.journalPage) it.copy(journal = it.journal + read.entries, journalPage = state.journalPage + 1, journalMore = read.more) else it }
+        val shown = mutable.value.journal
+        if (!shown.more) return@read
+        val read = api.log(shown.page + 1)
+        mutable.update { if (it.journal.page == shown.page) it.copy(journal = Page(it.journal.items + read.items, read.page, read.total, read.more)) else it }
     }
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */

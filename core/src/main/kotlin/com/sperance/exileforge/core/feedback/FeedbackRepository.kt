@@ -3,13 +3,16 @@ package com.sperance.exileforge.core.feedback
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.FeedbackQueue
-import com.sperance.exileforge.core.model.feedback.FeedbackQueuePage
+import com.sperance.exileforge.core.model.feedback.FeedbackMove
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.QueueCounts
+import com.sperance.exileforge.core.model.feedback.QueueSight
+import com.sperance.exileforge.core.model.paging.Page
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -38,21 +41,33 @@ data class Feedback(
 }
 
 /**
- * Очередь модерации, как её показывает окно: отбор сервера - вид [kind], очередь [queue], поиск [query], порядок [sort] - и прочитанные
- * страницы [page] (строки всех страниц подряд, счёт очередей - последней прочитанной). Смена отбора читает её с первой страницы.
+ * Очередь модерации, как её показывает окно: отбор сервера - вид [kind], очередь [queue], поиск [query], порядок [sort] - прочитанные
+ * страницы [page] (строки всех страниц подряд) и счёт очередей [counts] - первой страницы или последнего действия модерации. Смена отбора
+ * читает её с первой страницы.
  */
 data class ReportQueue(
     val kind: FeedbackKind = FeedbackKind.BUG,
     val queue: FeedbackQueue = FeedbackQueue.NEW,
     val query: String = "",
     val sort: FeedbackSort = FeedbackSort.NEWEST,
-    val page: FeedbackQueuePage = FeedbackQueuePage(),
+    val page: Page<AdminReport> = Page(),
+    val counts: QueueCounts = QueueCounts(),
 ) {
+    /** Вид и поиск очереди для сервера: под ними он считает счёт очередей. */
+    val sight: QueueSight get() = QueueSight(kind, query)
+
     /** Тот же ли отбор у очереди [other]: ответ на прежний отбор в новую очередь не ложится. */
     fun sameFilter(other: ReportQueue): Boolean = kind == other.kind && queue == other.queue && query == other.query && sort == other.sort
 
-    /** Отчёт [report] встал на место своей строки: ответ на действие модерации. */
-    fun with(report: AdminReport): ReportQueue = copy(page = page.copy(items = page.items.map { if (it.report.id == report.report.id) report else it }))
+    /**
+     * Ответ [move] на действие модерации с отчётом [id]: свежий счёт очередей; отчёт, что остался в выбранной очереди, встаёт на место
+     * своей строки, удалённый или ушедший в другую очередь - уходит из списка. Страница не перечитывается.
+     */
+    fun after(id: String, move: FeedbackMove): ReportQueue {
+        val report = move.report?.takeIf { it.queue == queue }
+        val rows = if (report == null) page.without { it.report.id != id } else page.copy(items = page.items.map { if (it.report.id == id) report else it })
+        return copy(page = rows, counts = move.counts)
+    }
 }
 
 /** Единственный источник правды об отзывах и почте. */

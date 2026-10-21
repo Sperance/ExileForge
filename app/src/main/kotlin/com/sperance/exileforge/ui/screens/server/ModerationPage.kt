@@ -89,14 +89,15 @@ import org.koin.compose.viewmodel.koinViewModel
     val journal = state.tab == ModerationTab.JOURNAL
     val loading = Reads.MODERATION in account.activity.loading
     val page = state.page
-    val reset = remember(state.tab, state.searched, state.filters) { Any() }
     PagedColumn(
-        count = if (journal) state.journal.size else page.rows.size,
-        more = if (journal) state.journalMore else page.more,
+        count = if (journal) state.journal.items.size else page.items.size,
+        more = if (journal) state.journal.more else page.more,
         loading = loading,
         onMore = { if (journal) vm.moreJournal() else vm.more() },
+        state.tab,
+        state.searched,
+        state.filters,
         modifier = Modifier.fillMaxSize(),
-        reset = reset,
         contentPadding = SettingsPadding,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -111,12 +112,13 @@ import org.koin.compose.viewmodel.koinViewModel
             )
         }
         if (journal) {
-            if (state.journal.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.journal_empty")) }
-            items(state.journal.size) { JournalRow(state.journal[it]) }
+            val entries = state.journal.items
+            if (entries.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.journal_empty")) }
+            items(entries.size) { JournalRow(entries[it]) }
         } else {
-            item(key = "total") { MutedText(ui("moderation.total", page.total), style = MaterialTheme.typography.labelSmall) }
-            if (page.rows.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.none")) }
-            items(page.rows, key = { it.key }) { row ->
+            item(key = "total") { MutedText(ui("moderation.total", page.total ?: 0L), style = MaterialTheme.typography.labelSmall) }
+            if (page.items.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.none")) }
+            items(page.items, key = { it.key }) { row ->
                 if (state.tab == ModerationTab.TRASH) {
                     TrashCard(account, row) { row.sanction?.let(vm::lift) }
                 } else {

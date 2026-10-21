@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.feedback
 
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
@@ -71,8 +72,6 @@ import kotlinx.serialization.Serializable
     val text: String,
     val status: ReportStatus,
     val reason: String = "",
-    val likes: Int = 0,
-    val dislikes: Int = 0,
     val createdAt: String = "",
     /** Issue отчёта; null - ещё не отправлен. */
     val issue: IssueView? = null,
@@ -121,9 +120,6 @@ import kotlinx.serialization.Serializable
     val heroLevel: Int = 0,
     val status: ReportStatus = ReportStatus.CREATED,
     val kind: FeedbackKind = FeedbackKind.BUG,
-    /** Голоса «+» и «−» числом. */
-    val likes: Int = 0,
-    val dislikes: Int = 0,
     val reason: String = "",
     val createdAt: String = "",
     /** Issue отчёта; null - не выгружен. */
@@ -144,12 +140,11 @@ import kotlinx.serialization.Serializable
     val topic: ReportTopic = ReportTopic.ERROR,
     /** Переписка до Issue - комментарии модерации и ответы автора; с Issue она - в переписке [IssueView.notes]. */
     val answers: List<IssueNote> = emptyList(),
+    /** «Новый ответ»: в обсуждении последнее слово переписки - автора, модерации ждёт его ответ; решает сервер. */
+    val awaitsModeration: Boolean = false,
 ) {
     /** Переписка тикета модерации по порядку ([conversation]). */
     val thread: List<IssueNote> get() = conversation(reason, answers, issue)
-
-    /** «Новый ответ»: в обсуждении последнее слово переписки - автора, модерации ждёт его ответ (сервер `BugReport.AWAITS_MODERATION`). */
-    val awaitsModeration: Boolean get() = status == ReportStatus.DISCUSSION && answers.lastOrNull()?.author == NoteAuthor.AUTHOR
 }
 
 /**
@@ -163,7 +158,8 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
 
 /**
  * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести решением по машине состояний сервера,
- * [deletable] - может ли смотрящий его удалить, [discussable] - можно ли написать автору комментарий (отчёт - в «Обсуждении»).
+ * [deletable] - может ли смотрящий его удалить, [discussable] - можно ли написать автору комментарий (отчёт - в «Обсуждении»), [queue] -
+ * очередь модерации, где он стоит.
  */
 @Serializable data class AdminReport(
     val report: FullReport,
@@ -172,26 +168,33 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
     val moves: List<ReportStatus> = emptyList(),
     val deletable: Boolean = false,
     val discussable: Boolean = false,
+    val queue: FeedbackQueue = FeedbackQueue.NEW,
 )
 
 /** Очередь модерации - чип над списком отчётов (сервер `FeedbackQueue`): новые, в обсуждении, в работе, закрыто, отклонено. */
 @Serializable enum class FeedbackQueue { NEW, DISCUSSION, WORK, CLOSED, REJECTED }
 
-/** Порядок очереди модерации (сервер `FeedbackSort`): свежие первыми, по рейтингу голосов, по номеру Issue. */
-@Serializable enum class FeedbackSort { NEWEST, RATING, ISSUE }
+/** Порядок очереди модерации (сервер `FeedbackSort`): свежие первыми, по номеру Issue. */
+@Serializable enum class FeedbackSort { NEWEST, ISSUE }
 
-/**
- * Страница очереди модерации (`GET admin/feedback`): отчёты [items] страницы [page], всего в очереди [total], есть ли следующая [more];
- * [counts] - счёт каждой очереди и [replied] - сколько обсуждений ждут модерацию, под тем же видом и поиском.
- */
-@Serializable data class FeedbackQueuePage(
-    val items: List<AdminReport> = emptyList(),
-    val page: Int = 0,
-    val total: Long = 0,
-    val more: Boolean = false,
-    val counts: Map<FeedbackQueue, Long> = emptyMap(),
-    val replied: Long = 0,
-)
+/** Счёт очередей модерации под одним видом и поиском: отчётов в каждой очереди [queues] и обсуждений, что ждут модерацию, - [replied]. */
+@Serializable data class QueueCounts(val queues: Map<FeedbackQueue, Long> = emptyMap(), val replied: Long = 0)
+
+/** Страница очереди модерации (`GET admin/feedback`): отчёты [page] и счёт очередей [counts] - только у первой страницы. */
+@Serializable data class FeedbackQueuePage(val page: Page<AdminReport> = Page(), val counts: QueueCounts? = null)
+
+/** Вид [kind] (null - любой) и поиск [query], под которыми модерация смотрит очередь: по ним сервер считает счёт очередей. */
+data class QueueSight(val kind: FeedbackKind?, val query: String) {
+    /** Параметры запроса: `kind` и непустой `q`. */
+    val params: Map<String, String>
+        get() = buildMap {
+            kind?.let { put("kind", it.name) }
+            query.trim().takeIf { it.isNotEmpty() }?.let { put("q", it) }
+        }
+}
+
+/** Ответ на действие модерации с отчётом: отчёт [report], как он теперь стоит (null - удалён), и свежий счёт очередей [counts]. */
+@Serializable data class FeedbackMove(val report: AdminReport? = null, val counts: QueueCounts = QueueCounts())
 
 /** A letter's thing to take: a template and its rarity, rolled at the hero's level when taken. */
 @Serializable data class MailEquipment(val template: String, val rarity: Rarity? = null)

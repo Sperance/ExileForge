@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.model.guild
 
 import com.sperance.exileforge.core.model.fate.FateCard
-import com.sperance.exileforge.core.model.paging.followedBy
 import com.sperance.exileforge.rules.content.DepositBar
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
@@ -27,15 +26,6 @@ import kotlinx.serialization.Serializable
     val minLevel: Int = 1,
 ) {
     val full: Boolean get() = capacity in 1..members
-}
-
-/** A page of the guild list, paged by the server as the auction's showcase is (`rules.pageSize`). */
-@Serializable data class GuildPage(val items: List<GuildCard> = emptyList(), val page: Int = 0, val totalItems: Long = 0, val totalPages: Int = 0) {
-    /** Есть ли за прочитанными страницами ещё гильдии. */
-    val more: Boolean get() = page + 1 < totalPages
-
-    /** [next] - следующая страница под этой: гильдии подряд, гильдия со стыка страниц - одна. */
-    fun followedBy(next: GuildPage): GuildPage = next.copy(items = items.followedBy(next.items) { it.id })
 }
 
 /** A member as the guild sees them; [contribution] is all-time in this guild and decides [rank], [lastSeenAt] is epoch millis. */
@@ -154,6 +144,3 @@ import kotlinx.serialization.Serializable
 
 /** One line of the guild's journal: what happened ([kind]), to whom, and the figure it carries. */
 @Serializable data class GuildLogEntry(val at: Long = 0, val kind: String = "", val heroName: String = "", val value: String = "")
-
-/** Страница журнала гильдии: [entries] новыми сверху и [more] - есть ли старше; журнал дочитывается прокруткой. */
-@Serializable data class GuildLogPage(val entries: List<GuildLogEntry> = emptyList(), val more: Boolean = false)

@@ -18,15 +18,15 @@ import com.sperance.exileforge.ui.theme.*
  * The guild's journal, newest first, a page at a time.
  *
  * Ключи по содержимому: свежие строки сверху не сдвигают ключи прежних. Старшие страницы дочитываются листанием ([PagedColumn]), пока
- * сервер говорит, что старше есть (`logEnd`); кнопки «Ещё» нет, внизу во время чтения - кольцо.
+ * сервер говорит, что старше есть (`more`); кнопки «Ещё» нет, внизу во время чтения - кольцо.
  */
 @Composable internal fun LogTab(game: GameUi, vm: GuildViewModel) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) { vm.loadLog() }
-    val log = guilds.log
+    val log = guilds.log.items
     val keys = remember(log) { contentKeys(log) { "${it.at}|${it.kind}|${it.heroName}|${it.value}" } }
     val loading = Reads.GUILD_LOG in game.loading
-    PagedColumn(log.size, log.isNotEmpty() && !guilds.logEnd, loading, { vm.loadLog(more = true) }, Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    PagedColumn(log.size, guilds.log.more, loading, { vm.loadLog(more = true) }, modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (log.isEmpty() && !loading) item { InfoCard(ui("guild.log_empty"), ui("guild.log_empty_hint")) }
         items(log.size, key = { keys[it] }) { i ->
             val entry = log[i]

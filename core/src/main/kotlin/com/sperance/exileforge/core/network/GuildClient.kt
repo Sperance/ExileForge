@@ -3,13 +3,14 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildContribution
 import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.model.guild.GuildDeposited
-import com.sperance.exileforge.core.model.guild.GuildLogPage
+import com.sperance.exileforge.core.model.guild.GuildLogEntry
 import com.sperance.exileforge.core.model.guild.GuildMine
-import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.guild.GuildView
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildMode
 import kotlinx.serialization.json.encodeToJsonElement
@@ -40,7 +41,7 @@ class GuildClient internal constructor(private val http: Transport) {
     suspend fun mine(heroId: String): GuildMine = http.post("$GUILD/visit", heroQuery(heroId))
 
     /** The guilds by name or tag; a blank [faction] lists every faction's, a code only that faction's. */
-    suspend fun search(heroId: String, text: String, page: Int, faction: String = ""): GuildPage {
+    suspend fun search(heroId: String, text: String, page: Int, faction: String = ""): Page<GuildCard> {
         requirePage(page)
         return http.get(
             "$GUILD/search",
@@ -136,7 +137,7 @@ class GuildClient internal constructor(private val http: Transport) {
     }
 
     /** Страница [page] журнала гильдии, новые сверху, и есть ли старше. */
-    suspend fun log(heroId: String, page: Int): GuildLogPage {
+    suspend fun log(heroId: String, page: Int): Page<GuildLogEntry> {
         requirePage(page)
         return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString()))
     }

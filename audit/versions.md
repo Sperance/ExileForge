@@ -13,7 +13,7 @@
 - 97 - 0.16.11 - `HeroView.freeProgress` (замки прогресса - только тестировщику со свободным прогрессом) и `POST hero/tester/freeProgress?on=`, `RunReport|TrialReport.refusals` (только причины темпа), `run.plausibility.rushBossSeconds`, `TrialRun.nextBoss|wall`; Разлом: `RiftRun.honor|keys|burned` вместо `life`, `RiftAct.Fight.taken` вместо `life`/`hurt`, `RiftAct.Chalice|Open`, `RiftOffer.Coffers`, `RiftOffer.Forge.chalice`, `RiftNode.key`, `RiftResult.honor|honorScore|burned`, `RiftReport.coffer`, `rift.honor|keys`, `RiftScore.honor` вместо `flawless`, снят `RiftNodes.restHeal`.
 - 98 - 0.16.11 - `POST guild/stash/deposit?tab=` - пакетный вклад: тело - посылки `GuildDepositParcel` (копия `itemId` или стопка `code`+`amount`), ответ `GuildDeposited` (`stash`, `placed`, `refused` по `DepositBar`); правило `GuildDeposit`, событие журнала `STASH_IN_MANY`; торги рынка: `AuctionLot.mode|bidding|standing` (`LotMode`, `BidState`), `POST auctionlot/bid|buyout|accept`, `sell/*?mode=BID&minPrice=`, `search?mode=`, `AuctionMine.bids`, `AuctionSlots.bids|bidLimit`, `rules.auction.bidStep|bidStepMin|bidTailHours|bidsMax`, `slots` 100, письма `mail.auction_outbid|bid_returned|sold|won`, отказы `AU_018`-`AU_024`.
 - 99 - 0.17.0 - часть снимка `campaign` разделена на `campaign` и `run` (`RunState?`, null - заход закрыт), новый `POST hero/town` (`TownVisit`: доска заданий, ремёсла, гильдия, свой рынок одним ответом).
-- 100 - 0.17.1 - статусы отчёта `BugStatus.DISCUSSION`/`WITHDRAWN`, `POST admin/feedback/comment` (комментарий модерации, письмо `mail.feedback_comment`), `POST bugreport/close` (отказ `BUG_011`) вместо `POST bugreport/delete` (удаление - `POST admin/feedback/delete`), `OwnReport.closable` вместо `deletable`, `AdminReport.discussable`; `GET admin/feedback?kind&queue&q&sort&page` - `FeedbackQueuePage`, сняты `GET bugreport/known`, `POST bugreport/vote` (`KnownReport`, `Vote`, `BUG_003`); `GET admin/moderation/log` - `ModerationLogPage`; страница списков - `rules.pageSize` вместо `moderation.pageSize`, без параметра `size` у `guild/search`, `guild/log`, `auctionlot/search`.
+- 100 - 0.17.1 - статусы отчёта `BugStatus.DISCUSSION`/`WITHDRAWN`, `POST admin/feedback/comment` (комментарий модерации, письмо `mail.feedback_comment`), `POST bugreport/close` (отказ `BUG_011`) вместо `POST bugreport/delete` (удаление - `POST admin/feedback/delete`), `OwnReport.closable` вместо `deletable`, `AdminReport.discussable|queue`, `FullReport.awaitsModeration`; `GET admin/feedback?kind&queue&q&sort&page` - `FeedbackQueuePage` (`Page` + `QueueCounts` у первой страницы), действия модерации с отчётом отвечают `FeedbackMove` (отчёт и счёт очередей под `kind`/`q`); сняты голоса (`GET bugreport/known`, `POST bugreport/vote`, `KnownReport`, `Vote`, `BUG_003`, `likes`/`dislikes`, порядок `RATING`); одна страница `Page` (items, page, total?, more) у очереди отчётов, списков, корзины и журнала модерации, поиска и журнала гильдии; страница списков - `rules.pageSize` (до `PAGE_SIZE_MAX`) вместо `moderation.pageSize`, без параметра `size` у `guild/search`, `guild/log`, `auctionlot/search`; `rules.inputs.reason`.
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 
@@ -30,7 +30,6 @@
 
 ## Формы коллекций и миграции (`config/CollectionSchemas.kt`)
 
-- `task.looseJewels` 1 - 0.16.2 - самоцветы из невзятых гнёзд дерева - в тайник.
 - `task.itemLevelFloor` 1 - 0.16.2 - уровень предмета старых копий поднят до требования шаблона.
 - части `BugReport.traces` 1, `Hero`/`HeroRun.mapExperience` 1 - 0.16.2 - поля сняты, документы целы.
 - `HeroRun` 2 - 0.16.3 - снесены незаконченные заходы (запас сундуков).
@@ -40,3 +39,4 @@
 - `MailStamp`, `MailCounter` - 0.16.10 - сняты (`CollectionSchemas.RETIRED`): журнал и счётчик пределов почты не нужны, старт сносит их и их записи `Schema`.
 - часть `Hero.riftRun` 1 - 0.16.11 - сняты незаконченные забеги Разлома (`campaign.trials.rift.run`: Честь и ключи вместо здоровья), документы целы.
 - `HeroUnique` 1, `task.heroUniques` 1 - 0.17.0 - находки героев из карты `Hero.uniques` в коллекцию `HeroUnique` (документ на шаблон у героя), поле `uniques` снято, `uniquesFound` и номера копий целы.
+- часть `BugReport.votes` 1 - 0.17.1 - сняты поля голосов `likes`, `dislikes`, `rating`, документы целы.

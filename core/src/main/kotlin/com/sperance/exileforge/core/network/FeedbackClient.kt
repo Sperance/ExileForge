@@ -1,8 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.model.feedback.AdminReport
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.FeedbackMove
 import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackQueuePage
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
@@ -13,6 +12,7 @@ import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import kotlinx.serialization.json.encodeToJsonElement
@@ -31,41 +31,36 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Автор закрывает свой отчёт - новый или в обсуждении: «Закрыт автором», без возврата; ответ - отчёт как он теперь стоит. */
     suspend fun close(id: String): OwnReport = http.post("$REPORTS/close", mapOf("id" to id))
 
-    /** Удаление отчёта модерацией: ошибку и жалобу - да, апелляцию - никто. Свой отчёт автор не удаляет, а закрывает ([close]). */
-    suspend fun delete(id: String) {
-        http.request("POST", "$ADMIN/feedback/delete", mapOf("id" to id), authenticated = true)
-    }
-
-    /** Комментарий модерации автору к отчёту [id]: отчёт - в «Обсуждении», автору письмо; ответ - отчёт как он теперь стоит. */
-    suspend fun comment(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/comment", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+    /**
+     * Страница [page] очереди модерации [queue] под видом и поиском [sight] (текст, переписка, номер Issue, логин автора) в порядке [sort] -
+     * отбор и порядок сервера, размер страницы - его `rules.pageSize`; счёт очередей - только у первой страницы.
+     */
+    suspend fun queue(sight: QueueSight, queue: FeedbackQueue, sort: FeedbackSort, page: Int): FeedbackQueuePage =
+        http.get("$ADMIN/feedback", sight.params + mapOf("queue" to queue.name, "sort" to sort.name, "page" to page.coerceAtLeast(0).toString()))
 
     /**
-     * Страница [page] очереди модерации: вид [kind] (null - любой), очередь [queue], поиск [query] (текст, переписка, номер Issue, логин
-     * автора) и порядок [sort] - отбор и порядок сервера, размер страницы - его `rules.pageSize`.
+     * Действия модерации с отчётом [id]: ответ - отчёт, как он теперь стоит, с его очередью и свежий счёт очередей под видом и поиском
+     * [sight] модерации ([FeedbackMove]).
      */
-    suspend fun queue(kind: FeedbackKind?, queue: FeedbackQueue, query: String, sort: FeedbackSort, page: Int): FeedbackQueuePage = http.get(
-        "$ADMIN/feedback",
-        buildMap {
-            kind?.let { put("kind", it.name) }
-            put("queue", queue.name)
-            query.trim().takeIf { it.isNotEmpty() }?.let { put("q", it) }
-            put("sort", sort.name)
-            put("page", page.coerceAtLeast(0).toString())
-        },
-    )
+    suspend fun setStatus(id: String, status: ReportStatus, reason: String, sight: QueueSight): FeedbackMove =
+        http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
 
-    suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport = http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
+    /** Комментарий модерации автору: отчёт - в «Обсуждении», автору письмо. */
+    suspend fun comment(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/comment", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+
+    /** Удаление отчёта модерацией: ошибку и жалобу - да, апелляцию - никто; свой отчёт автор не удаляет, а закрывает ([close]). */
+    suspend fun delete(id: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/delete", sight.params + ("id" to id))
 
     /** Issue в GitHub: из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
-    suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
+    suspend fun toIssue(id: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/issue", sight.params + ("id" to id))
 
-    /** Дополнение модерации к отчёту [id]: раздел тела Issue, автору не видно, письма нет; пустой [text] стирает его. */
-    suspend fun note(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/note", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+    /** Дополнение модерации к отчёту: раздел тела Issue, автору не видно, письма нет; пустой [text] стирает его. */
+    suspend fun note(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/note", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
     /** Issue из игры: ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
-    suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
+    suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int, sight: QueueSight): FeedbackMove = http.post(
         "$ADMIN/feedback/issue/move",
-        mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
+        sight.params + mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
         WireJson.encodeToJsonElement(ReportAnswer(text)),
     )
 }

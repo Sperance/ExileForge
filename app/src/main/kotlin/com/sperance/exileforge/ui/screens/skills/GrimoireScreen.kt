@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
@@ -94,15 +95,16 @@ internal sealed interface Pick {
     val pages = remember(book, classCode) { book?.ofClass(classCode).orEmpty() }
     if (hero != null && body != null && index != null) {
         val loadout = remember(skills, index, classCode, hero.stats) { Loadout.of(skills, index, classCode, emptyList(), hero.stats) }
-        val reserved = loadout.reserve(ReservePool.MANA, body).percent
-        val lifeReserved = loadout.reserve(ReservePool.LIFE, body).percent
+        val mana = loadout.reserve(ReservePool.MANA, body)
+        val life = loadout.reserve(ReservePool.LIFE, body)
         TrailData(
             listOfNotNull(
                 ui("skills.data_level", level),
                 ui("skills.data_mana", number(body.maxMana)),
-                ui("skills.data_reserve", number(reserved)).takeIf { reserved > 0 },
-                ui("skills.data_life", number(lifeReserved)).takeIf { lifeReserved > 0 },
+                ui("skills.data_reserve", number(mana.percent)).takeIf { mana.percent > 0 },
+                ui("skills.data_life", number(life.percent)).takeIf { life.percent > 0 },
             ).joinToString(" · "),
+            remember(index, level, body, mana, life) { trailTip(index, level, body.maxMana, mana, life) },
         )
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -196,6 +198,32 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
         }
         HorizontalDivider(color = PanelRaised)
     }
+}
+
+/**
+ * Подсказка данных цепочки Гримуара: что значат знаки строки, уровень героя, открытые активные и пассивные ячейки из всех и уровень
+ * следующей ячейки каждого вида (правила `activeSlots`/`passiveSlots`), максимум маны, резерв маны аурами [mana] и здоровья [life] -
+ * долей и числом; нулевого резерва нет.
+ */
+private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: PoolReserve, life: PoolReserve): Tip {
+    val rules = index.skills.rules
+    fun next(slots: List<Int>): String? = slots.firstOrNull { it > level }?.let { ui("skills.opens_at", it) }
+    fun share(reserve: PoolReserve): String = ui("skills.data_tip.share", number(reserve.percent), number(kotlin.math.round(reserve.held)))
+    return Tip(
+        ui("skills.data_tip.title"),
+        ui("skills.data_tip.body"),
+        ManaBlue,
+        listOfNotNull(
+            ui("skills.data_tip.level") to "$level",
+            ui("skills.data_tip.actives") to ui("skills.data_tip.open", index.skillRules.activeSlots(level), rules.activeSlots.size),
+            ui("skills.data_tip.passives") to ui("skills.data_tip.open", index.skillRules.passiveSlots(level), rules.passiveSlots.size),
+            next(rules.activeSlots)?.let { ui("skills.data_tip.next_active") to it },
+            next(rules.passiveSlots)?.let { ui("skills.data_tip.next_passive") to it },
+            ui("skills.data_tip.mana") to number(maxMana),
+            (ui("skills.data_tip.reserve") to share(mana)).takeIf { mana.percent > 0 },
+            (ui("skills.data_tip.life") to share(life)).takeIf { life.percent > 0 },
+        ),
+    )
 }
 
 /**

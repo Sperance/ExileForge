@@ -78,6 +78,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ui("progress.tree_note"),
                 tree?.let { ui("tree.points", it.available, it.total) },
                 tree?.available ?: 0,
+                badgeTip = tree?.let { ui("progress.tree_badge_tip", it.available) },
             ) { shell.tab(TAB_TREE) },
             HubTile(
                 ui("nav.skills"),

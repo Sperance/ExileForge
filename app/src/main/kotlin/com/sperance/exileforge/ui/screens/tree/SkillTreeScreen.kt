@@ -50,6 +50,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
@@ -160,13 +161,14 @@ fun SkillTreePanel(
             onSelect(code)
             nodeOpen = true
         }
-        Text(
-            ui("tree.points", tree.available, tree.total),
-            color = Gold,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Abyss.copy(alpha = .85f), PILL)
-                .border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        Tipped({ pointsTip(index, tree, hero.info.bonusPoints) }, Modifier.align(Alignment.TopStart).padding(8.dp)) {
+            Text(
+                ui("tree.points", tree.available, tree.total),
+                color = Gold,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
         Column(
             Modifier.align(Alignment.TopEnd).padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -289,6 +291,27 @@ fun SkillTreePanel(
 }
 
 internal val PILL = RoundedCornerShape(16.dp)
+
+/**
+ * Подсказка очков древа: всего, потрачено и свободно ([tree]), сколько очков даёт уровень героя и каждый `bonusEvery`-й уровень
+ * (правила классов), очки из наград [bonus]; нулевых строк нет.
+ */
+internal fun pointsTip(index: ContentIndex, tree: TreeState, bonus: Int): Tip {
+    val classes = index.classes
+    return Tip(
+        ui("tree.points_tip.title"),
+        ui("tree.points_tip.body"),
+        Gold,
+        listOfNotNull(
+            ui("tree.points_total") to "${tree.total}",
+            ui("tree.points_spent") to "${tree.spent}",
+            ui("tree.points_available") to "${tree.available}",
+            ui("tree.points_tip.per_level") to "+${classes.pointsPerLevel}",
+            classes.bonusEvery.takeIf { it > 0 }?.let { ui("tree.points_tip.bonus", it) to "+1" },
+            bonus.takeIf { it > 0 }?.let { ui("tree.points_tip.rewards") to "+$it" },
+        ),
+    )
+}
 
 /** Кнопка поверх древа: круглая тональная компактная иконка-кнопка, со счётчиком [badge] в углу. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, onClick: () -> Unit) {

@@ -43,8 +43,8 @@ const val LOCKED_TILE_ALPHA = .45f
 /**
  * Плитка хаба («Развитие», «Город»): название, значок на квадрате цвета [accent], строка того, что внутри ([note]), и
  * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [lockedUntil] - уровень открытия, пока герой
- * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»). Без [onOpen] - заглушка
- * будущего места: пунктирная рамка, тускло, не нажимается.
+ * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»); [badgeTip] - что значит счётчик: касание счётчика открывает
+ * его окном. Без [onOpen] - заглушка будущего места: пунктирная рамка, тускло, не нажимается.
  */
 @Immutable data class HubTile(
     val title: String,
@@ -54,6 +54,7 @@ const val LOCKED_TILE_ALPHA = .45f
     val news: String?,
     val badge: Int = 0,
     val lockedUntil: Int? = null,
+    val badgeTip: String? = null,
     val onOpen: (() -> Unit)?,
 )
 
@@ -100,12 +101,17 @@ const val LOCKED_TILE_ALPHA = .45f
         }
         if (locked != null) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
         if (hot) {
-            Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Tipped(tile.badgeTip?.let { tip -> { Tip(body = tip, tint = tile.accent) } }, Modifier.align(Alignment.TopEnd), Alignment.TopEnd) {
+                Box(Modifier.padding(start = BADGE_REACH, bottom = BADGE_REACH).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                    Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
+
+/** На сколько касание счётчика плитки выходит за него влево и вниз: счётчик остаётся в углу, зона касания растёт от угла внутрь. */
+private val BADGE_REACH = 12.dp
 
 /** Пунктирная рамка заглушки: контур [shape] штрихами цвета [color]. */
 internal fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier = drawBehind {

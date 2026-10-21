@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
@@ -31,7 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,8 +55,11 @@ import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
+import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.solid
 import com.sperance.exileforge.ui.nav.Route
@@ -64,13 +71,16 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.depthPanel
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Кнопка нижней панели: номер вкладки, ключ подписи и значок. */
-private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector) {
+/**
+ * Кнопка нижней панели: номер вкладки, ключ подписи и значок; [freeReason] - ключ причины числа свободных очков в углу, [alertReason] -
+ * ключ причины точки (долгое нажатие на вкладку называет их).
+ */
+private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector, val freeReason: String? = null, val alertReason: String? = null) {
     HERO(TAB_HERO, "nav.hero", ForgeGlyphs.Helm),
-    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil),
-    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords),
+    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, freeReason = "nav.reason.tree_points"),
+    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords, freeReason = "nav.reason.atlas_points"),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
-    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil),
+    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil, alertReason = "nav.reason.crafts_away"),
     ;
 
     companion object {
@@ -88,7 +98,7 @@ private const val CAPSULE_GROW = 2.4f
  * изнутри, возвращает к своему корню.
  *
  * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие»; досчёт ремёсел после отлучки, ещё не показанный
- * листом, - точкой на «Ремёслах».
+ * листом, - точкой на «Ремёслах». Долгое нажатие на вкладку с замком, числом или точкой называет причину окном у неё.
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
@@ -106,19 +116,27 @@ private const val CAPSULE_GROW = 2.4f
                 TAB_PROGRESS -> game.freeTreePoints
                 else -> 0
             }
-            BarCapsule(
-                BarTab.of(index),
-                selected = route.root?.tab == index,
-                locked = !game.unlocked(Feature.ofTab(index)),
-                free = free,
-                alert = index == TAB_CRAFTS && craftsAway,
-            ) { shell.tab(index) }
+            val tab = BarTab.of(index)
+            val feature = Feature.ofTab(index)
+            val locked = !game.unlocked(feature)
+            val alert = index == TAB_CRAFTS && craftsAway
+            val reason = when {
+                locked -> feature?.let { ui("unlock.locked", ui(it.title), it.level(game.index?.rules)) }
+                free > 0 -> tab.freeReason?.let { ui(it, free) }
+                alert -> tab.alertReason?.let { ui(it) }
+                else -> null
+            }
+            BarCapsule(tab, selected = route.root?.tab == index, locked = locked, free = free, alert = alert, reason = reason) { shell.tab(index) }
         }
     }
 }
 
-/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число очков или точка [alert]. */
-@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, onClick: () -> Unit) {
+/**
+ * Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число очков или точка [alert].
+ * Долгое нажатие открывает [reason] - почему в углу знак; нет причины - долгого нажатия нет.
+ */
+@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, reason: String?, onClick: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
     val tint by animateColorAsState(if (selected) Gold else Muted, tween(TAB_SHIFT_MS, easing = TabShiftEasing), label = "capsuleTint")
@@ -128,7 +146,13 @@ private const val CAPSULE_GROW = 2.4f
         Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(44.dp).clip(shape)
             .background(PanelRaised.copy(alpha = grow))
             .border(1.dp, Gold.copy(alpha = .4f * grow), shape)
-            .selectable(selected, role = Role.Tab, onClick = onClick),
+            .combinedClickable(
+                role = Role.Tab,
+                onLongClickLabel = reason?.let { ui("hint.hold.info") },
+                onLongClick = reason?.let { { open = true } },
+                onClick = onClick,
+            )
+            .semantics { this.selected = selected },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -153,6 +177,7 @@ private const val CAPSULE_GROW = 2.4f
                 Icon(tab.icon, label, tint = tint, modifier = Modifier.size(22.dp))
             }
         }
+        if (open && reason != null) TipCallout(Tip(body = reason)) { open = false }
         AnimatedVisibility(
             selected,
             enter = expandHorizontally(tween(TAB_SHIFT_MS, easing = TabShiftEasing)) + fadeIn(spec),

@@ -33,6 +33,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
+import com.sperance.exileforge.ui.theme.Muted
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -55,7 +56,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
     BackTrailHost(ui("account.title")) {
         TrailLevel(ui("redemption.title"), onBack = vm::back) {
-            TrailData(ui("redemption.count", admin.redemptions.size))
+            TrailData(ui("redemption.count", admin.redemptions.size), Tip(body = ui("redemption.count_tip"), tint = Muted))
             PullToRefreshBox(isRefreshing = game.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     item { NewCodePanel(game, vm) }

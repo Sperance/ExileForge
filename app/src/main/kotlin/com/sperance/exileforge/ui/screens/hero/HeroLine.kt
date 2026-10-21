@@ -33,6 +33,8 @@ import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.FateChip
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.RoleMark
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,7 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Герой одной строкой: портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
- * опыта, без нажатия. Это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
+ * опыта; касание имени и уровня - подсказка опыта до следующего уровня ([heroLevelTip]). Это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
  * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты и меню. Золото
  * - справа под полосой опыта, в строке её подписи, слева от него [counter] (чип счёта дара `FateChip`): длинное имя
  * сокращается многоточием и не выталкивает ни значки, ни число золота, длинная подпись опыта - тоже.
@@ -64,19 +66,21 @@ import kotlinx.coroutines.flow.StateFlow
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp).then(onPortrait?.let { Modifier.clickable(onClickLabel = ui("nav.account"), onClick = it) } ?: Modifier), round = true)
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    RoleMark(hero.role, 14.dp)
-                    Text("· " + ui("hero.line_level", hero.level), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+            Tipped({ heroLevelTip(hero) }, Modifier.weight(1f)) {
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        RoleMark(hero.role, 14.dp)
+                        Text("· " + ui("hero.line_level", hero.level), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
+                    }
+                    Text(
+                        hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"),
+                        color = Muted,
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-                Text(
-                    hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
             trailing()
         }
@@ -100,8 +104,27 @@ import kotlinx.coroutines.flow.StateFlow
     shown.tally?.let { FateChip(it, shown.card, shown.visit, onVisit) }
 }
 
-/** Опыт внутри уровня: доля полосы и подпись. */
-private class Experience(val fraction: Float, val label: String)
+/** Опыт внутри уровня: доля полосы и подпись; [gained] и [span] - набрано и нужно в уровне, null - масштаба нет или уровень последний. */
+private class Experience(val fraction: Float, val label: String, val gained: Long? = null, val span: Long? = null)
+
+/**
+ * Подсказка имени и уровня героя [hero]: уровень, опыт в уровне «набрано / нужно» и сколько осталось до следующего уровня; на последнем
+ * уровне - что он последний. Без таблицы опыта - только уровень.
+ */
+internal fun heroLevelTip(hero: HeroHeaderState): Tip {
+    val xp = experienceOf(hero.classes, hero.level, hero.experience)
+    val gained = xp.gained
+    val span = xp.span
+    val steps = when {
+        gained != null && span != null -> listOf(
+            ui("hero.level_tip.xp") to "${groupedNumber(gained)} / ${groupedNumber(span)}",
+            ui("hero.level_tip.left", hero.level + 1) to groupedNumber(span - gained),
+        )
+        hero.classes != null -> listOf(ui("hero.level_tip.xp") to ui("hero.xp_last"))
+        else -> emptyList()
+    }
+    return Tip(hero.name, tint = GoldBright, facts = listOf(ui("hero.level_tip.level") to "${hero.level}") + steps)
+}
 
 /**
  * Сколько пройдено в этом уровне. Таблица опыта классов говорит, сколько стоит следующий уровень, - клиент читает её, чтобы
@@ -119,5 +142,5 @@ private fun experienceOf(classes: ClassesFile?, level: Int, experience: Double):
         next == null -> ui("hero.xp_last")
         else -> ui("hero.xp_compact", Math.round(fraction * 100), groupedNumber(inLevel.toLong()), groupedNumber(span.toLong()))
     }
-    return Experience(fraction, label)
+    return if (next != null) Experience(fraction, label, inLevel.toLong(), span.toLong()) else Experience(fraction, label)
 }

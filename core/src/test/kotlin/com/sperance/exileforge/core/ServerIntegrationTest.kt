@@ -28,6 +28,7 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -87,6 +88,10 @@ class ServerIntegrationTest {
             assertTrue(parts.complete, "the first view did not bring every part")
             assertEquals(heroClass, parts.hero.heroClass)
             assertEquals(null, api.hero.view(heroId, parts), "an unchanged hero should answer 304")
+            delivered = null
+            val town = api.hero.town(heroId)
+            assertNull(town.guild.guild, "a new hero entered the town in a guild")
+            assertNotNull(delivered, "the town visit brought no hero snapshot")
             val sheet = Sheets.calculate(index, parts.hero.level, heroClass, parts.tree, parts.items)
             assertTrue((sheet.stats["STOCK_HEALTH"] ?: 0.0) > 0.0)
 

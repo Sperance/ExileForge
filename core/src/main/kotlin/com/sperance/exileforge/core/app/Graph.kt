@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.town.TownActions
 import com.sperance.exileforge.core.world.WorldRepository
 
 /** Репозитории :core одним узлом: их делят сервисы приложения (`AppService`). */
@@ -47,4 +48,5 @@ class Actions(
     val heroSync: HeroSync,
     val expedition: ExpeditionActions,
     val trial: TrialActions,
+    val town: TownActions,
 )

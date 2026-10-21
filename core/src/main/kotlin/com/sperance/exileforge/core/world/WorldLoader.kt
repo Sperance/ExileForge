@@ -18,11 +18,13 @@ import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
+import com.sperance.exileforge.core.model.sync.ContentManifest
 import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.rules.content.ContentFiles
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
@@ -167,6 +169,14 @@ class WorldLoader(
     /** Parsing a served document is CPU work of its size, and never belongs on the main thread. */
     private suspend fun <T> parsed(parse: () -> T): T = withContext(Dispatchers.Default) { parse() }
 
+    /**
+     * Контент из текстов файлов правилами: файлы разбираются параллельно, без сверки (её сделал сервер при старте - инварианты контента
+     * серверные) и с отпечатками файлов из манифеста [manifest] - теми же SHA-256 текстов, что считает сервер, так что
+     * `ContentIndex.hash` сходится с серверным без хеширования на устройстве.
+     */
+    private suspend fun parsedContent(manifest: ContentManifest, read: (String) -> String): ContentIndex =
+        withContext(Dispatchers.Default) { ContentLoader.loadAsync(WireJson, verify = false, hashes = manifest.chunks, read = read) }
+
     suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { flights.run(PORTRAITS) { readPortraits() } }
 
     /** Хоть один портрет разошёлся - весь набор одним документом. */
@@ -217,7 +227,7 @@ class WorldLoader(
      * A warm start reads none of it from the server. [fresh] asks the manifest again — on entering a hero.
      *
      * Каждый чанк знает, пришёл ли он с устройства или из сети; скачанное сохраняется, только когда прочитался весь мир - битая загрузка
-     * качается снова. Контент, проверенный сервером, читается терпимым JSON клиента.
+     * качается снова. Контент, проверенный сервером, читается терпимым JSON клиента и без своей сверки ([parsedContent]).
      */
     suspend fun ensureContent(fresh: Boolean = false) = locked {
         val server = sessions.state.value.server
@@ -244,7 +254,7 @@ class WorldLoader(
             trace.end(reading, e)
             throw e
         }
-        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsed { ContentLoader.load(WireJson) { chunks.getValue(it).first } } }
+        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsedContent(manifest) { chunks.getValue(it).first } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
     }
@@ -283,7 +293,7 @@ class WorldLoader(
                 store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
             }
             val index = try {
-                parsed { ContentLoader.load(WireJson) { texts.getValue(it) } }
+                parsedContent(manifest.content) { texts.getValue(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

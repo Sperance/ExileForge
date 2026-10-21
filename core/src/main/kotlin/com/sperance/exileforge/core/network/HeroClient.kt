@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
+import com.sperance.exileforge.core.model.town.TownVisit
 import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -51,6 +52,12 @@ class HeroClient internal constructor(private val http: Transport) {
         val answer = http.request("GET", "$HERO/view", heroQuery(heroId), authenticated = true, headers = headers)
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
     }
+
+    /**
+     * Вход в Город (сервер `POST hero/town`): доска заданий, ремёсла, гильдия и свой рынок одним ответом, снимок героя - в конверте.
+     * Чтение-команда: сервер пишет выдачу, досчёт и заход в гильдию, как их прежние маршруты.
+     */
+    suspend fun town(heroId: String): TownVisit = http.post("$HERO/town", heroQuery(heroId))
 
     /** Every figure of the hero's statistics: only what is not zero. */
     suspend fun stats(heroId: String): com.sperance.exileforge.core.model.hero.HeroStatsView = http.get("$HERO/stats", heroQuery(heroId))

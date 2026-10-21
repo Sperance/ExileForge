@@ -54,7 +54,11 @@ class QuestActions(
     fun load(fresh: Boolean = false) = commands.read(Reads.QUESTS, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
-        val board = api.quests.board(id)
+        land(id, api.quests.board(id))
+    }
+
+    /** Доска героя [id] из ответа - своего или входа в Город. */
+    internal fun land(id: String, board: QuestBoard) {
         if (heroes.onScreen(id)) quests { it.copy(board = board) }
     }
 

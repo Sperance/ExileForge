@@ -189,7 +189,7 @@ class ConnectionActions(
 
     /**
      * What the player looks at, read again quietly: the hero (unless [hero] is off - the queue's answers already brought it), and
-     * the tab's own data where it has any.
+     * the tab's own data where it has any. На вкладке Города - один вход в Город: доска, ремёсла, гильдия, лоты и герой одним ответом.
      */
     fun refreshScreen(hero: Boolean = true) {
         run {
@@ -199,19 +199,15 @@ class ConnectionActions(
 
                 AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
 
-                AppPhase.GAME -> {
-                    if (hero) read(Reads.HERO, silent = true) { heroSync.readHero() }
-                    when (now.tab) {
-                        TAB_CRAFTS -> crafts.load(silent = true)
+                AppPhase.GAME -> when {
+                    now.tab == TAB_CITY && glance.reachable(Feature.ofBuilding(now.building)) -> {
+                        town.enter(silent = true)
+                        if (now.building == Building.AUCTION) market.loadShowcase()
+                    }
 
-                        TAB_CITY -> if (glance.reachable(Feature.ofBuilding(now.building))) {
-                            when (now.building) {
-                                Building.QUESTS -> quests.load()
-                                Building.AUCTION -> market.loadAuction()
-                                Building.GUILD -> guild.load()
-                                Building.MERCHANT, Building.HISTORY, Building.HALL, null -> Unit
-                            }
-                        }
+                    else -> {
+                        if (hero) read(Reads.HERO, silent = true) { heroSync.readHero() }
+                        if (now.tab == TAB_CRAFTS) crafts.load(silent = true)
                     }
                 }
             }

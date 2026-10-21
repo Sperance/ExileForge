@@ -255,6 +255,13 @@ class MarketActions(
     /** Свой рынок из ответа: лоты, места, сделки и свои ставки. */
     private fun mine(answer: AuctionMine) = market { it.copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids) }
 
+    /** Свой рынок героя [id] из входа в Город: рынок открыт, замка по уровню нет. */
+    internal fun land(id: String, answer: AuctionMine) {
+        if (!heroes.onScreen(id)) return
+        mine(answer)
+        market { it.copy(locked = null) }
+    }
+
     private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, maxAgeMs: Long = 0, block: suspend () -> Unit) {
         if (writing) {
             commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated { reread(block) } }

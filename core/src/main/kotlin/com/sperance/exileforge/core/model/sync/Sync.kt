@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.display.PortraitManifest
 import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
+import com.sperance.exileforge.core.model.campaign.RunState
 import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.RouteInfo
 import com.sperance.exileforge.core.model.crafts.WorkState
@@ -20,14 +21,16 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 /**
  * Ревизия API, против которой написан клиент: совпадает с `API_REVISION` закреплённого сервера (сабмодуль `backend/`) и меняется
  * вместе с ним. История ревизий - `audit/versions.md`.
  */
-const val API_REVISION = 98
+const val API_REVISION = 99
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())
@@ -64,8 +67,8 @@ const val API_REVISION = 98
     }
 }
 
-/** One part of the hero and its fingerprint (sixteen hex digits of the part's JSON). */
-@Serializable data class HeroPart(val version: String, val data: JsonElement)
+/** One part of the hero and its fingerprint (sixteen hex digits of the part's JSON); [data] без значения - `null` части (закрытый заход). */
+@Serializable data class HeroPart(val version: String, val data: JsonElement = JsonNull)
 
 /** The hero as the server answers it: only the parts whose fingerprints the client did not hold. */
 @Serializable data class HeroSnapshot(val version: String, val parts: Map<String, HeroPart> = emptyMap(), val unread: Int = 0, val now: Long = 0)
@@ -114,7 +117,10 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val overflow: List<ItemInstance> get() = decode(OVERFLOW, ListSerializer(ItemInstance.serializer()))
     val bag: Map<String, Long> get() = decode(BAG, MapSerializer(String.serializer(), Long.serializer()))
     val tree: List<TakenNode> get() = decode(TREE, ListSerializer(TakenNode.serializer()))
-    val campaign: CampaignState get() = decode(CAMPAIGN, CampaignState.serializer())
+    /** Кампания с открытым заходом: часть [CAMPAIGN] без захода и часть [RUN] - заход (null - закрыт) - сложены в одно состояние. */
+    val campaign: CampaignState get() = memo.derived(CAMPAIGN_RUN, parts.getValue(CAMPAIGN).version + ":" + parts.getValue(RUN).version) {
+        decode(CAMPAIGN, CampaignState.serializer()).copy(run = decode(RUN, RunState.serializer().nullable))
+    }
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
 
@@ -131,9 +137,12 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val BAG = "bag"
         const val TREE = "tree"
         const val CAMPAIGN = "campaign"
+
+        /** Открытый заход (`RunState?`, null - закрыт): сервер шлёт его отдельно от кампании, клиент кладёт в `campaign.run`. */
+        const val RUN = "run"
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
-        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
+        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, RUN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
 
         /**
          * Части, что сервер считает по часам, а не по версии героя, и миг (часы сервера, мс), когда каждая устареет сама;
@@ -141,8 +150,9 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
          */
         private val CLOCKED: Map<String, (HeroParts) -> Long> = mapOf(MERCHANT to { it.merchant.refreshAt })
 
-        /** Ключ памяти собранных вещей (не часть сервера). */
+        /** Ключи памяти собранных вещей и кампании с заходом (не части сервера). */
         private const val ITEMS = "#items"
+        private const val CAMPAIGN_RUN = "#campaign"
     }
 }
 

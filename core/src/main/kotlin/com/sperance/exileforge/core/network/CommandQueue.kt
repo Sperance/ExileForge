@@ -153,10 +153,10 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         const val BUG_REPORT = "api/v1/bugreport"
 
         /**
-         * Команды-чтения: досчёт ремёсел, выдача заданий, заход в гильдию и токен апелляции - их ответ ждёт
+         * Команды-чтения: досчёт ремёсел, выдача заданий, заход в гильдию, вход в Город и токен апелляции - их ответ ждёт
          * экран, а не очередь; без сети они падают, как чтение.
          */
-        private val READS = listOf("api/v1/hero/crafts/settle", "api/v1/hero/quests/refresh", "api/v1/guild/quests/refresh", "api/v1/guild/visit", "api/v1/notice/token")
+        private val READS = listOf("api/v1/hero/crafts/settle", "api/v1/hero/quests/refresh", "api/v1/guild/quests/refresh", "api/v1/guild/visit", "api/v1/hero/town", "api/v1/notice/token")
 
         fun queues(path: String): Boolean = path != BUG_REPORT && path !in READS && !path.startsWith(ADMIN) && OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 

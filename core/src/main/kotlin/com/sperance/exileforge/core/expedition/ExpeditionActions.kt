@@ -146,6 +146,9 @@ class ExpeditionActions(
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
 
+    /** Ключ пачки журнала, что уже лежит на диске: та же пачка в полёте снова диск не трогает. */
+    private var keyOnDisk: String? = null
+
     /** Следующая отправка сама по себе: повтор после неудачной. */
     private var sendJob: Job? = null
 
@@ -421,21 +424,32 @@ class ExpeditionActions(
         failures = 0
     }
 
-    /** Журнал на диск через миг после последнего события: залп убийств - одна запись. */
+    /**
+     * Журнал на диск не чаще раза в [SAVE_EVERY]: залп событий - одна запись, и новое событие ждущую запись не откладывает. Записывается
+     * журнал, что к тому мигу всё ещё идёт: закрытый поход не воскресает на диске.
+     */
     private fun persist() {
         val j = runJournal ?: return
-        saveJob?.cancel()
+        if (saveJob?.isActive == true) return
         saveJob = scope.launch {
-            delay(SAVE_AFTER)
-            store.saveJournal(j.heroId, j.encode())
+            delay(SAVE_EVERY)
+            if (runJournal === j) store.saveJournal(j.heroId, j.encode())
         }
+    }
+
+    /** Журнал на диск сейчас: уход в фон - процесс могут убить до плановой записи. */
+    private fun persistNow() {
+        val j = runJournal ?: return
+        saveJob?.cancel()
+        saveJob = scope.launch { if (runJournal === j) store.saveJournal(j.heroId, j.encode()) }
     }
 
     /**
      * Отправляет, что держит журнал - пачку в пути снова под её ключом или ожидающие события под новым; ответ -
      * счёт сервера и награда каждого события, снимок героя едет с ним.
      *
-     * Ключ пачки - на диске до её ухода: потерянный с процессом ответ спрашивается снова. Отклонённое начало боя - не потеря игрока, о нём
+     * Ключ пачки - на диске до её ухода (новый ключ пишется сразу, пачка в полёте снова - нет): потерянный с процессом ответ спрашивается снова;
+     * после ответа - одна запись. Отклонённое начало боя - не потеря игрока, о нём
      * не говорят; прочие отказы - красный тост с причиной сервера поверх тоста добычи. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
      * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
      * офлайн или таймаут - снова скоро.
@@ -449,7 +463,10 @@ class ExpeditionActions(
         }
         val (batch, pending) = outgoing
         try {
-            store.saveJournal(j.heroId, j.encode())
+            if (batch.key != keyOnDisk) {
+                store.saveJournal(j.heroId, j.encode())
+                keyOnDisk = batch.key
+            }
             val report = api.campaign.events(j.heroId, j.runId, pending, batch.key)
             linkBack()
             if (report == null) {
@@ -592,8 +609,9 @@ class ExpeditionActions(
         if (marked == j.runId) expedition { it.copy(saleMarks = it.saleMarks + ids) }
     }
 
-    /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
+    /** Отправить журнал сейчас: приложение уходит в фон или поход окончен; журнал прежде ложится на диск. */
     fun flushRun() {
+        persistNow()
         flushes.trySend(Unit)
     }
 
@@ -902,6 +920,7 @@ class ExpeditionActions(
         /** Первый повтор после неудачной отправки и сколько раз пауза удваивается до часовой. */
         const val RETRY_FIRST = 2_000L
         const val RETRY_DOUBLINGS = 3
-        const val SAVE_AFTER = 800L
+        /** Не чаще этого журнал пишется на диск между отправками. */
+        const val SAVE_EVERY = 5_000L
     }
 }

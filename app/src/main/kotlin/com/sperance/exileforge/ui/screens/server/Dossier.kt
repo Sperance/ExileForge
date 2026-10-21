@@ -28,7 +28,9 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.fateDescription
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.network.AccountRole
@@ -36,6 +38,7 @@ import com.sperance.exileforge.core.network.DeviceView
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.DossierHero
 import com.sperance.exileforge.core.network.GameServer
+import com.sperance.exileforge.core.network.RunFlag
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
@@ -164,20 +167,28 @@ private enum class DossierFold(val title: String) {
     ECONOMY("moderation.economy"),
     LINKS("moderation.links"),
     HISTORY("moderation.history"),
+    PACE("moderation.run_flags"),
     FATE("moderation.fate.title"),
 }
 
 /**
  * Свёрнутые строки досье: экономика (стоимость снаряжения и уникальные), связи (устройства, гильдия, другие герои), история
- * (санкции, апелляции и отчёты) и Предначертание (лента с датой выбора; своё досье администратора - «Сменить»). Итог строки -
- * справа, раскрыта одна. [onBanDevice] - бан устройства из связей.
+ * (санкции, апелляции и отчёты), метки темпа героя (только когда они есть) и Предначертание (лента с датой выбора; своё досье
+ * администратора - «Сменить»). Итог строки - справа, раскрыта одна. [onBanDevice] - бан устройства из связей.
  *
  * Смена дара - только администратор и только себе: сервер берёт цель из сессии.
  */
 @Composable private fun DossierFolds(account: AccountUi, vm: ModerationModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
     var open by remember(dossier.account.userId, dossier.hero?.heroId) { mutableStateOf<DossierFold?>(null) }
     var redrawing by remember { mutableStateOf(false) }
-    val folds = DossierFold.entries.filter { it != DossierFold.ECONOMY || dossier.economy != null }
+    val runFlags = dossier.hero?.runFlags.orEmpty()
+    val folds = DossierFold.entries.filter {
+        when (it) {
+            DossierFold.ECONOMY -> dossier.economy != null
+            DossierFold.PACE -> runFlags.isNotEmpty()
+            else -> true
+        }
+    }
     val shape = RoundedCornerShape(10.dp)
     Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape)) {
         folds.forEachIndexed { i, fold ->
@@ -207,6 +218,8 @@ private enum class DossierFold(val title: String) {
                             MutedText(ui("moderation.reports", dossier.appeals, dossier.reports))
                         }
 
+                        DossierFold.PACE -> runFlags.asReversed().forEach { flag -> RunFlagLine(flag) }
+
                         DossierFold.FATE -> {
                             val fate = dossier.account.fate
                             if (fate == null) MutedText(DASH) else FateRibbon(FateCard(fate), ui("moderation.fate.chosen", dossier.account.fateAt?.let(::dayOf) ?: DASH), Modifier.fillMaxWidth())
@@ -228,7 +241,10 @@ private enum class DossierFold(val title: String) {
     }
 }
 
-/** Итог свёрнутой строки [fold] справа и его цвет: «снаряж. 41K · 5 уник.», «2 устр. · общих нет», «чисто», дата выбора дара. */
+/**
+ * Итог свёрнутой строки [fold] справа и его цвет: «снаряж. 41K · 5 уник.», «2 устр. · общих нет», «чисто», «меток: 3» (есть вес
+ * отказа - [Ember]), дата выбора дара.
+ */
 private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = when (fold) {
     DossierFold.ECONOMY -> dossier.economy?.let { ui("dossier.economy_sum", compactNumber(it.gearValue.toDouble()), it.uniques) to Muted } ?: (DASH to Muted)
 
@@ -242,7 +258,39 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
         else -> ui("dossier.sanctions", dossier.sanctions.size) to if (dossier.sanctions.any { it.active }) LifeRed else Caution
     }
 
+    DossierFold.PACE -> {
+        val flags = dossier.hero?.runFlags.orEmpty()
+        ui("dossier.run_flags", flags.size) to if (flags.any { it.weight >= REFUSE_WEIGHT }) Ember else Caution
+    }
+
     DossierFold.FATE -> (dossier.account.fateAt?.let(::dayOf) ?: DASH) to Muted
+}
+
+/**
+ * Метка темпа героя: «14.10 21:03 · зона» и вес справа (вес отказа [REFUSE_WEIGHT] и выше - [Ember]), причина и значение строкой
+ * [Line], слагаемые стены ([RunFlag.trace]) одной приглушённой строкой - у меток без стены её нет.
+ */
+@Composable private fun RunFlagLine(flag: RunFlag) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            MutedText("${momentOf(flag.at)} · ${placeTitle(flag.zone)}", style = MaterialTheme.typography.labelSmall)
+            Text(ui("moderation.run_flag.weight", flag.weight), color = if (flag.weight >= REFUSE_WEIGHT) Ember else Caution, style = MaterialTheme.typography.labelSmall)
+        }
+        Line(ui("moderation.run_flag.reason.${flag.reason}"), fineNumber(flag.value))
+        flag.trace?.let { trace ->
+            MutedText(
+                ui("moderation.run_flag.trace", trace.dps?.let(::fineNumber) ?: DASH, trace.foe?.let(::compactNumber) ?: DASH, fineNumber(trace.wall), fineNumber(trace.paid), trace.batch),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+    }
+}
+
+/** Место метки темпа словарём: зона похода, регион раша, Разлом или башня - как сервер пишет [RunFlag.zone]. */
+private fun placeTitle(zone: String): String = when {
+    zone == RIFT || zone == TOWER -> ui("moderation.run_flag.zone.$zone")
+    zone.startsWith(REGION) -> regionTitle(zone)
+    else -> mapTitle(zone)
 }
 
 /** Связи досье: устройства (модель, первая дата, последний вход, версия, общее с кем и бан устройства), гильдия, другие герои. */
@@ -564,3 +612,11 @@ private const val SERVER_NAME = 32
 /** Подозрения досье, что подсвечивают свою строку. */
 private const val LEVEL_RATE = "LEVEL_RATE"
 private const val TRADES = "TRADES"
+
+/** Вес метки темпа, с которого сервер отказывает событию, а не только помечает заход. */
+private const val REFUSE_WEIGHT = 2
+
+/** Места меток темпа вне зон похода, как их пишет сервер: Разлом, башня и префикс кодов регионов раша. */
+private const val RIFT = "rift"
+private const val TOWER = "tower"
+private const val REGION = "REGION_"

@@ -7,34 +7,36 @@ import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage
-import com.sperance.exileforge.core.model.auction.AuctionSlots
+import com.sperance.exileforge.core.model.auction.LotTerms
 import com.sperance.exileforge.core.model.command.AUCTION_PAGE_SIZE
+import com.sperance.exileforge.rules.trade.LotMode
 
 private const val AUCTION = "api/v1/auctionlot"
 
-/** The player auction: the showcase, a hero's own lots, listing, buying and withdrawing. */
+/** Рынок игроков: витрина лотов за цену и торгов, свои лоты и ставки, выставление, покупка, ставка, выкуп и снятие. */
 class AuctionClient internal constructor(private val http: Transport) {
     /** The showcase, narrowed and paged by the server: every field the filter compares is a snapshot the lot carries. */
     /** The showcase page after the lot [after] ("" — from the start), by cursor: [cursors] are the trail kept for «back». */
-    suspend fun search(heroId: String, filter: AuctionFilter, cursors: List<String>): AuctionPage {
+    /** [mode] - лоты за цену (витрина) или торги (вкладка «Аукцион»). */
+    suspend fun search(heroId: String, filter: AuctionFilter, cursors: List<String>, mode: LotMode = LotMode.FIXED): AuctionPage {
         val after = cursors.lastOrNull().orEmpty()
-        val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "size" to AUCTION_PAGE_SIZE.toString()) + filter.query())
+        val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "size" to AUCTION_PAGE_SIZE.toString(), "mode" to mode.name) + filter.query())
         return page.copy(page = cursors.size - 1, cursors = cursors.ifEmpty { listOf("") })
     }
 
     /** Свой аукцион героя одним запросом: лоты, места и сделки последних дней. */
     suspend fun mine(heroId: String): AuctionMine = http.get("$AUCTION/mine", heroQuery(heroId))
 
-    /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. */
-    suspend fun sellEquipment(heroId: String, itemId: String, priceOrb: String, price: Long): AuctionMine {
+    /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. Торгами - [terms], цена - выкуп. */
+    suspend fun sellEquipment(heroId: String, itemId: String, priceOrb: String, price: Long, terms: LotTerms = LotTerms()): AuctionMine {
         requireItemId(itemId)
-        return sell("equipment", heroId, priceOrb, price, mapOf("itemId" to itemId))
+        return sell("equipment", heroId, priceOrb, price, mapOf("itemId" to itemId) + terms.query())
     }
 
-    suspend fun sellItem(heroId: String, code: String, amount: Long, priceOrb: String, price: Long): AuctionMine {
+    suspend fun sellItem(heroId: String, code: String, amount: Long, priceOrb: String, price: Long, terms: LotTerms = LotTerms()): AuctionMine {
         require(code.isNotBlank()) { ui("api.choose_item") }
         require(amount > 0) { ui("api.amount_positive") }
-        return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()))
+        return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()) + terms.query())
     }
 
     /** Выставление отвечает своим аукционом с новым лотом и снимком героя. */
@@ -47,8 +49,20 @@ class AuctionClient internal constructor(private val http: Transport) {
     /** Payment, delivery and closing the lot are one server transaction. Repeated only under its key. */
     suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
 
-    /** Снятие отвечает своим аукционом. */
+    /** Снятие отвечает своим рынком; у торгов со ставкой сервер возвращает залог лидеру письмом. */
     suspend fun cancel(heroId: String, lotId: String): AuctionMine = lot("cancel", heroId, lotId)
+
+    /** Ставка [amount] сфер в торгах: ответ - лот глазами героя; ставка от выкупа - выкуп. Повтор - только под своим ключом. */
+    suspend fun bid(heroId: String, lotId: String, amount: Long): AuctionLot {
+        requireId(lotId)
+        return http.post("$AUCTION/bid", heroQuery(heroId, "lotId" to lotId, "amount" to amount.toString()))
+    }
+
+    /** Выкуп торгов за цену выкупа в любой момент. Повтор - только под своим ключом. */
+    suspend fun buyout(heroId: String, lotId: String): AuctionLot = lot("buyout", heroId, lotId)
+
+    /** Продажа своих торгов лучшей ставке досрочно: отвечает своим рынком. */
+    suspend fun accept(heroId: String, lotId: String): AuctionMine = lot("accept", heroId, lotId)
 
     /** Another week on the showcase: only the author, only on the lot's last day. Repeated only under its key. */
     suspend fun extend(heroId: String, lotId: String): AuctionMine = lot("extend", heroId, lotId)

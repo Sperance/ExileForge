@@ -7,8 +7,10 @@ import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage
+import com.sperance.exileforge.core.model.auction.LotTerms
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.GameApi
@@ -21,12 +23,13 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.trade.LotMode
 import kotlinx.coroutines.CancellationException
 
 /**
- * Аукцион игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. Сделка - один
- * запрос: ответ несёт снимок героя, а команды над своими лотами - ещё и свой аукцион. Полка торговца едет в снимке героя.
- * Действия общие для экранов Города и для продажи из сундука героя.
+ * Рынок игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. Сделка - один
+ * запрос: ответ несёт снимок героя, а команды над своими лотами - ещё и свой рынок. Полка торговца едет в снимке героя.
+ * Действия общие для экранов Города и для продажи из сундука героя. Витрина и торги читаются под одним фильтром.
  */
 class MarketActions(
     private val repository: MarketRepository,
@@ -41,7 +44,7 @@ class MarketActions(
 
     private fun market(transform: (Market) -> Market) = repository.update(transform)
 
-    fun tab(tab: Int) = market { it.copy(tab = tab) }
+    fun tab(tab: MarketTab) = market { it.copy(tab = tab) }
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
 
     /**
@@ -49,21 +52,22 @@ class MarketActions(
      * страницы; свои лоты при этом не прячутся.
      */
     fun sellerLots(sellerId: String, name: String) {
-        market { it.copy(tab = SHOWCASE_TAB, filter = AuctionFilter(sellerId = sellerId, sellerName = name, showOwnLots = it.filter.showOwnLots || sellerId == heroes.heroId)) }
+        market { it.copy(tab = MarketTab.SHOWCASE, filter = AuctionFilter(sellerId = sellerId, sellerName = name, showOwnLots = it.filter.showOwnLots || sellerId == heroes.heroId)) }
         loadShowcase()
     }
 
-    /** Витрина с первой страницы под фильтром, как он стоит; не загрузилась - отметка отказа ([Market.showcaseFailed]). */
+    /** Витрина и торги с первой страницы под фильтром, как он стоит; не загрузились - отметка отказа ([Market.showcaseFailed]). */
     fun loadShowcase() = trade(restart = true) {
-        val showcase = try {
-            api.auction.search(heroes.heroId, showcaseFilter(), listOf(""))
+        val filter = showcaseFilter()
+        val (showcase, auctions) = try {
+            api.auction.search(heroes.heroId, filter, listOf(""), LotMode.FIXED) to api.auction.search(heroes.heroId, filter, listOf(""), LotMode.BID)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             if ((e as? ApiFailure)?.code != LEVEL_GATE) market { it.copy(showcaseFailed = true) }
             throw e
         }
-        market { it.copy(showcase = showcase, showcaseFailed = false) }
+        market { it.copy(showcase = showcase, auctions = auctions, showcaseFailed = false) }
     }
 
     /**
@@ -81,6 +85,18 @@ class MarketActions(
         }
     }
 
+    /** «Показать ещё» торгов: следующая страница по курсору, как у витрины ([moreShowcase]). */
+    fun moreAuctions() = trade {
+        val shown = market.auctions
+        val trail = shown.nextTrail ?: return@trade
+        val filter = showcaseFilter()
+        val more = api.auction.search(heroes.heroId, filter, trail, LotMode.BID)
+        market {
+            val auctions = it.auctions
+            if (auctions.cursors != shown.cursors || auctions.next != shown.next || showcaseFilter() != filter) it else it.copy(auctions = auctions.followedBy(more))
+        }
+    }
+
     /** Фильтр, как его читает сервер: свои лоты убраны, если не просили, названия на языке экрана. */
     private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.filter.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
 
@@ -89,8 +105,7 @@ class MarketActions(
      * отказ сервера по уровню здесь молчит.
      */
     fun loadMyLots(glance: Boolean = false, fresh: Boolean = false) = trade(key = Reads.LOTS, glance = glance, maxAgeMs = freshness(fresh)) {
-        val mine = api.auction.mine(heroes.heroId)
-        market { it.copy(myLots = mine.lots, slots = mine.slots, history = mine.history) }
+        mine(api.auction.mine(heroes.heroId))
     }
 
     /** Два списка аукциона; торговец - своё здание его полка едет в снимке героя. */
@@ -134,14 +149,46 @@ class MarketActions(
         market { it.copy(showcase = it.showcase.without(lotId)) }
     }
 
-    /** Выставляет копию за цену в сферах - [priceOrb] код предмета-валюты. */
-    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = trade(writing = true) {
-        listed(api.auction.sellEquipment(heroes.heroId, itemId, priceOrb, price))
+    /** Выставляет копию за цену в сферах - [priceOrb] код предмета-валюты; торгами - [terms], цена - выкуп. */
+    fun sellEquipment(itemId: String, priceOrb: String, price: Long, terms: LotTerms = LotTerms()) = trade(writing = true) {
+        listed(api.auction.sellEquipment(heroes.heroId, itemId, priceOrb, price, terms))
     }
 
-    /** Выставляет стопку из сумки по коду. */
-    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = trade(writing = true) {
-        listed(api.auction.sellItem(heroes.heroId, code, amount, priceOrb, price))
+    /** Выставляет стопку из сумки по коду; торгами - [terms]. */
+    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long, terms: LotTerms = LotTerms()) = trade(writing = true) {
+        listed(api.auction.sellItem(heroes.heroId, code, amount, priceOrb, price, terms))
+    }
+
+    /**
+     * Ставка [amount] сфер в торгах [lotId]: лот в торгах и в своих ставках - как ответил сервер; ставка от выкупа - выкуп, лот уходит из
+     * торгов. Тост - «ставка принята» или «выкуплено».
+     */
+    fun bid(lotId: String, amount: Long) = trade(writing = true) {
+        val lot = api.auction.bid(heroes.heroId, lotId, amount)
+        notices.toast(ui(if (lot.onSale) "toast.bid_placed" else "toast.bought", lot.title))
+        traded(lot)
+    }
+
+    /** Выкуп торгов [lotId] за цену выкупа: лот уходит из торгов и своих ставок. */
+    fun buyout(lotId: String) = trade(writing = true) {
+        val lot = api.auction.buyout(heroes.heroId, lotId)
+        notices.toast(ui("toast.bought", lot.title))
+        traded(lot)
+    }
+
+    /** Продажа своих торгов [lotId] лучшей ставке досрочно: ответ - свой рынок. */
+    fun accept(lotId: String) = trade(writing = true) {
+        mine(api.auction.accept(heroes.heroId, lotId), "toast.sold_to_bid")
+    }
+
+    /** Лот торгов после своей команды: открытый - на своё место в торгах и своих ставках, закрытый - из торгов и ставок прочь. */
+    private fun traded(lot: AuctionLot) = market { state ->
+        if (lot.onSale) {
+            val bids = listOf(lot) + state.myBids.filterNot { it.id == lot.id }
+            state.copy(auctions = state.auctions.copy(items = state.auctions.items.map { if (it.id == lot.id) lot else it }), myBids = bids)
+        } else {
+            state.copy(auctions = state.auctions.without(lot.id), myBids = state.myBids.filterNot { it.id == lot.id })
+        }
     }
 
     /** Ещё неделя своему лоту в его последний день. */
@@ -171,17 +218,20 @@ class MarketActions(
         mine(api.auction.cancel(heroes.heroId, lotId), "toast.withdrawn")
     }
 
-    /** Выставлено: ответ уже несёт свой аукцион и героя - перечитывать нечего; экран - на свои лоты. */
+    /** Выставлено: ответ уже несёт свой рынок и героя - перечитывать нечего; экран - на свои лоты. */
     private fun listed(answer: AuctionMine) {
         mine(answer, "toast.listed")
-        market { it.copy(tab = 1) }
+        market { it.copy(tab = MarketTab.LOTS) }
     }
 
-    /** Свой аукцион из ответа команды и тост о её лоте. */
+    /** Свой рынок из ответа команды и тост о её лоте. */
     private fun mine(answer: AuctionMine, toast: String) {
         answer.lot?.let { notices.toast(ui(toast, it.title)) }
-        market { it.copy(myLots = answer.lots, slots = answer.slots, history = answer.history) }
+        mine(answer)
     }
+
+    /** Свой рынок из ответа: лоты, места, сделки и свои ставки. */
+    private fun mine(answer: AuctionMine) = market { it.copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids) }
 
     private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, maxAgeMs: Long = 0, block: suspend () -> Unit) {
         if (writing) {
@@ -200,7 +250,7 @@ class MarketActions(
             throw e
         } catch (e: ApiFailure) {
             if (e.code != LEVEL_GATE) throw e
-            market { it.copy(locked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), myLots = emptyList()) }
+            market { it.copy(locked = locError(e.code, e.message.orEmpty()), showcase = AuctionPage(), auctions = AuctionPage(), myLots = emptyList(), myBids = emptyList()) }
             if (!glance) throw e
         }
     }
@@ -214,5 +264,3 @@ class MarketActions(
     }
 }
 
-/** Вкладка витрины аукциона: первая из «витрина, свои лоты, история». */
-private const val SHOWCASE_TAB = 0

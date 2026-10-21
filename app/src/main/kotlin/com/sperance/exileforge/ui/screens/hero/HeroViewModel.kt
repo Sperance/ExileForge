@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.market.MarketActions
+import com.sperance.exileforge.core.model.auction.LotTerms
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.Activity
@@ -87,8 +88,8 @@ class HeroViewModel(
     fun openMightBoard(heroId: String) = hall.open(HallBoard.MIGHT, heroId)
 
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
-    fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)
-    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = market.sellItem(code, amount, priceOrb, price)
+    fun sellEquipment(itemId: String, priceOrb: String, price: Long, terms: LotTerms = LotTerms()) = market.sellEquipment(itemId, priceOrb, price, terms)
+    fun sellItem(code: String, amount: Long, priceOrb: String, price: Long, terms: LotTerms = LotTerms()) = market.sellItem(code, amount, priceOrb, price, terms)
 
     /** Выдачи окна тестирования и код награды, как их просят страницы настроек; пустые редкость и слот случайной вещи - любые. */
     fun grant(template: String, rarity: Rarity? = null) = hero.grant(template, rarity)

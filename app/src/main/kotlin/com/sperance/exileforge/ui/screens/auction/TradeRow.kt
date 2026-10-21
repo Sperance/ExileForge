@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
 @Immutable internal data class TradeMark(val text: String, val tint: Color = Rune)
 
 /** Факты товара одной строкой и пометки [marks] своими цветами в конце, через «·». */
-@Composable private fun TradeFacts(facts: List<String>, marks: List<TradeMark>) {
+@Composable internal fun TradeFacts(facts: List<String>, marks: List<TradeMark>) {
     val line = buildAnnotatedString {
         append(facts.joinToString(" · "))
         marks.forEach { mark ->

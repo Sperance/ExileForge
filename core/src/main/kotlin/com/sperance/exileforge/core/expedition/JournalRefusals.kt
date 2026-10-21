@@ -4,18 +4,16 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.rules.content.TrialEventKind
-import com.sperance.exileforge.rules.run.Refusal
 import com.sperance.exileforge.rules.run.RunEventKind
 
 /**
- * Отказ сервера по журналу захода или испытания: отклонённые события [rejected] - строкой на каждую причину из [refusals] (без
- * причины - отказ правила), в строке - виды отклонённых событий со счётом повторов; событие, чей вид неизвестен, - числом.
- * [kindKeys] - по номеру события ключ локали его вида из [refusedKey]. Красным «!» ([NoticeKind.FAILED]); ничего не отклонено - тоста нет.
+ * Отказ правила сервера по журналу захода или испытания: отклонённые события [rejected] одной строкой - виды отклонённых событий со
+ * счётом повторов; событие, чей вид неизвестен, - числом. [kindKeys] - по номеру события ключ локали его вида из [refusedKey]. Красным
+ * «!» ([NoticeKind.FAILED]); ничего не отклонено - тоста нет.
  */
-internal fun Notices.refused(rejected: Collection<Int>, refusals: Map<Int, Refusal>, kindKeys: Map<Int, String>) {
+internal fun Notices.refused(rejected: Collection<Int>, kindKeys: Map<Int, String>) {
     if (rejected.isEmpty()) return
-    val byCause = rejected.groupBy { refusals[it] ?: Refusal.RULE }
-    toast(Refusal.entries.mapNotNull { cause -> byCause[cause]?.let { ui("expedition.refused.${cause.name}", refusedKinds(it, kindKeys)) } }.joinToString("\n"), NoticeKind.FAILED)
+    toast(ui("expedition.refused.rule", refusedKinds(rejected.toList(), kindKeys)), NoticeKind.FAILED)
 }
 
 /** Виды отклонённых событий [numbers] через запятую по ключам [kindKeys]: «бой со стаей ×2, сундук»; без вида - «событий: N». */

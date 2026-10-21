@@ -40,3 +40,4 @@
 - часть `Hero.riftRun` 1 - 0.16.11 - сняты незаконченные забеги Разлома (`campaign.trials.rift.run`: Честь и ключи вместо здоровья), документы целы.
 - `HeroUnique` 1, `task.heroUniques` 1 - 0.17.0 - находки героев из карты `Hero.uniques` в коллекцию `HeroUnique` (документ на шаблон у героя), поле `uniques` снято, `uniquesFound` и номера копий целы.
 - часть `BugReport.votes` 1 - 0.17.1 - сняты поля голосов `likes`, `dislikes`, `rating`, документы целы.
+- части `Hero.runFlags` 1, `HeroRun.wallDebt` 1 - 0.17.1 - сняты поля проверки темпа (`flags`, `campaign.trials.run.wall`, `run.debt|paceAt|spare`), документы целы.

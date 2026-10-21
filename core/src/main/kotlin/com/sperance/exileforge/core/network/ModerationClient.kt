@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.paging.Page
-import com.sperance.exileforge.rules.run.RunFlag
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.encodeToJsonElement
 
@@ -199,8 +198,6 @@ sealed interface ModerationFate {
     val tester: Boolean = false,
     /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
-    /** Метки темпа героя ([RunFlag] правил - тот же тип, что пишет сервер, старые первыми); решает смотрящий. */
-    val runFlags: List<RunFlag> = emptyList(),
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)

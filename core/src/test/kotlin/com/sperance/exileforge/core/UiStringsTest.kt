@@ -186,6 +186,7 @@ class UiStringsTest {
         val expected = buildSet {
             LotKind.entries.forEach { add("enum.lot.${it.name}") }
             com.sperance.exileforge.core.model.auction.LotReturn.entries.forEach { add("auction.returned.${it.name}") }
+            com.sperance.exileforge.core.market.MarketDue.entries.forEach { add("auction.due.${it.name}") }
             Orb.entries.forEach {
                 add("enum.orb.${it.name}")
                 add("enum.orb.${it.name}.rule")

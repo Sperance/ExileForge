@@ -100,8 +100,8 @@ import kotlinx.serialization.Serializable
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
 
-    /** Whether its author may extend it now: on sale, with no more than [window] ms left. */
-    fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = onSale && timeLeft(now)?.let { it in 1..window } == true
+    /** Продлевается ли лот к «сейчас» [now]: лот за цену на витрине, осталось не больше [window] мс; торги не продлеваются. */
+    fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = mode == LotMode.FIXED && onSaleAt(now) && timeLeft(now)?.let { it in 1..window } == true
 
     /** Продлевается ли лот сейчас по правилам аукциона [rules]: в окне продления и не сверх `extendMax` раз. */
     fun extendable(rules: com.sperance.exileforge.rules.content.AuctionRules, now: Long = System.currentTimeMillis()): Boolean = extended < rules.extendMax && extendable(rules.extendWindowMillis, now)

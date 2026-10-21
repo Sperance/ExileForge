@@ -49,9 +49,9 @@ fun AuctionScreen() {
             }
             return@Column
         }
-        val tabs = MarketTab.entries.map(::tabTitle)
         val tab = market.tab
-        PillTabs(tabs, tab.ordinal, { model.tab(MarketTab.entries[it]) }, enabled = !busy, badges = MarketTab.entries.map { if (it == MarketTab.LOTS) slotsBadge(market) else null })
+        val chores by model.chores.collectAsStateWithLifecycle()
+        MarketTabs(market, due = chores.total > 0, enabled = !busy) { model.tab(it) }
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
@@ -73,6 +73,15 @@ private fun tabTitle(tab: MarketTab): String = when (tab) {
     MarketTab.HISTORY -> ui("auction.history")
 }
 
-/** Места лотов у вкладки «Мои лоты»: «3/5», все заняты - красным; пока мест не знаем - число своих лотов на продаже. */
-private fun slotsBadge(market: Market): TabBadge? = market.slots?.let { TabBadge(ui("auction.slots_value", it.used, it.limit), alert = it.full) }
-    ?: market.ownLots.count { !it.expiredBack }.takeIf { it > 0 }?.let { TabBadge(it.toString()) }
+/** Вкладки рынка; у «Моих лотов» - места ([slotsBadge]) и жёлтая точка, пока там есть дело рынка ([due]). */
+@Composable private fun MarketTabs(market: Market, due: Boolean, enabled: Boolean, onSelect: (MarketTab) -> Unit) {
+    val badges = MarketTab.entries.map { if (it == MarketTab.LOTS) slotsBadge(market, due) else null }
+    PillTabs(MarketTab.entries.map(::tabTitle), market.tab.ordinal, { onSelect(MarketTab.entries[it]) }, enabled = enabled, badges = badges)
+}
+
+/**
+ * Места лотов у вкладки «Мои лоты»: «3/5», все заняты - красным; пока мест не знаем - число своих лотов на продаже; [due] - точка
+ * дела.
+ */
+private fun slotsBadge(market: Market, due: Boolean): TabBadge? = market.slots?.let { TabBadge(ui("auction.slots_value", it.used, it.limit), alert = it.full, due = due) }
+    ?: market.ownLots.count { !it.expiredBack }.takeIf { it > 0 || due }?.let { TabBadge(if (it > 0) it.toString() else "", due = due) }

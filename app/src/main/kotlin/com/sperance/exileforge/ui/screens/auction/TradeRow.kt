@@ -72,8 +72,11 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Пометка строки товара: [text] цветом [tint] - руническим синим, срок на исходе - [Caution]. */
-@Immutable internal data class TradeMark(val text: String, val tint: Color = Rune)
+/**
+ * Пометка строки товара: [text] цветом [tint] - руническим синим, срок на исходе - [Caution]. [due] - пометка дела, что ждёт действия
+ * ([com.sperance.exileforge.core.market.MarketDue]): перед ней жёлтая точка - та же, что у вкладки и на плитке Города.
+ */
+@Immutable internal data class TradeMark(val text: String, val tint: Color = Rune, val due: Boolean = false)
 
 /** Факты товара одной строкой и пометки [marks] своими цветами в конце, через «·». */
 @Composable internal fun TradeFacts(facts: List<String>, marks: List<TradeMark>) {
@@ -81,6 +84,7 @@ import com.sperance.exileforge.ui.theme.*
         append(facts.joinToString(" · "))
         marks.forEach { mark ->
             if (length > 0) append(" · ")
+            if (mark.due) withStyle(SpanStyle(color = Caution)) { append("● ") }
             withStyle(SpanStyle(color = mark.tint)) { append(mark.text) }
         }
     }

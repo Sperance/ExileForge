@@ -22,6 +22,8 @@ import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketChores
+import com.sperance.exileforge.core.market.MarketDue
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.rules.content.Rarity
@@ -102,25 +104,33 @@ private val Building.titleKey: String
         }
     }
     LaunchedEffect(game.heroId, game.sessionEpoch, auction) { if (game.heroId.isNotBlank() && auction) market.glanceLots() }
+    val chores by market.chores.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
     OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
-        HubGrid(cityTiles(game, board, trade, guilds) { shell.building(it) })
+        HubGrid(
+            cityTiles(game, board, trade, chores, guilds) { building ->
+                if (building == Building.AUCTION) market.attend(chores.first)
+                shell.building(building)
+            },
+        )
         Spacer(Modifier.height(12.dp))
     }
 }
 
 /**
  * Здания площади плитками хаба (как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
- * награды заданий, приглашения в гильдию, свои лоты аукциона, что пора продлить.
+ * награды заданий, приглашения в гильдию, дела рынка ([chores]: лоты к продлению, перебитые ставки, торги, что можно продать) - у рынка
+ * ещё и строкой на каждое дело.
  */
-private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
-    fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0) = HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building)) { open(building) }
+private fun cityTiles(game: GameUi, board: Quests, trade: Market, chores: MarketChores, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
+    fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0, lines: List<String> = emptyList()) =
+        HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building), chores = lines) { open(building) }
     return listOf(
         tile(Building.QUESTS, ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
         tile(Building.MERCHANT, ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),
-        tile(Building.AUCTION, ForgeGlyphs.Orb, Gold, auctionNews(trade), lotsToExtend(game, trade)),
+        tile(Building.AUCTION, ForgeGlyphs.Orb, Gold, auctionNews(trade), chores.total, choreLines(chores)),
         tile(Building.GUILD, ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
         tile(Building.HISTORY, ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
         tile(Building.HALL, ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
@@ -130,8 +140,8 @@ private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds
 /** Задания доски, что ждут награды. */
 private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (board.daily + board.weekly + board.contracts).count { it.done && !it.claimed } } ?: 0
 
-/** Свои лоты, срок которых подходит к концу и которые уже можно продлить (окно продления правил). */
-private fun lotsToExtend(game: GameUi, market: Market): Int = game.index?.rules?.auction?.let { rules -> market.myLots.count { it.extendable(rules) } } ?: 0
+/** Строки дел рынка на плитке: «Можно продлить: 1», «Ставка перебита: 2», «Можно продать: 1» - только непустые. */
+private fun choreLines(chores: MarketChores): List<String> = MarketDue.entries.mapNotNull { due -> chores.count(due).takeIf { it > 0 }?.let { ui("auction.due.${due.name}", it) } }
 
 /** How many quests wait for their reward, or how many are under way; сюжет - в «Походе», не здесь. */
 private fun questNews(quests: Quests): String {

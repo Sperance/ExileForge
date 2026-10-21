@@ -19,10 +19,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.ui.theme.*
 
-/** Число у подписи вкладки («Мои лоты 3/5»): приглушённое, [alert] - красное (мест нет). */
-data class TabBadge(val text: String, val alert: Boolean = false)
+/**
+ * Число у подписи вкладки («Мои лоты 3/5»): приглушённое, [alert] - красное (мест нет); [due] - во вкладке есть дело, что ждёт
+ * действия: жёлтая точка после числа (без числа - после подписи).
+ */
+data class TabBadge(val text: String, val alert: Boolean = false, val due: Boolean = false)
+
+/** Размер жёлтой точки дела у подписи вкладки. */
+private val DUE_DOT_SIZE = 9.sp
 
 /**
  * Вкладки экрана таблетками («Мягкий»): открытая - на приподнятом фоне светлым текстом, зелёный остаётся главной
@@ -61,7 +68,8 @@ data class TabBadge(val text: String, val alert: Boolean = false)
                 Text(
                     buildAnnotatedString {
                         append(label)
-                        badge?.let { withStyle(SpanStyle(color = if (it.alert) LifeRed else Muted, fontWeight = FontWeight.Normal)) { append(" " + it.text) } }
+                        badge?.takeIf { it.text.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (it.alert) LifeRed else Muted, fontWeight = FontWeight.Normal)) { append(" " + it.text) } }
+                        if (badge?.due == true) withStyle(SpanStyle(color = Caution, fontSize = DUE_DOT_SIZE)) { append(" ●") }
                     },
                     color = if (on && !segmented) {
                         Ink

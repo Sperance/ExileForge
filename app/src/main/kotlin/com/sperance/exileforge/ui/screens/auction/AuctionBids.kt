@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -18,22 +19,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketDue
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.unmetNeeds
@@ -57,6 +66,7 @@ import com.sperance.exileforge.ui.theme.*
     val rules = game.index?.rules?.auction
     val page = market.auctions
     val now = rememberServerNow(LOT_TICK_MS)
+    val chores by vm.chores.collectAsStateWithLifecycle()
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { ShowcaseHeader(game, market, vm) } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (page.items.isEmpty() && market.showcaseFailed) {
@@ -71,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
         } else if (page.items.isEmpty()) {
             item { InfoCard(ui("tree.nothing_found"), ui("auction.bids_empty")) }
         }
-        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openLot = lot.id } }
+        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id } }
         if (page.next != null) {
             item {
                 ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = vm::moreAuctions, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
@@ -83,20 +93,37 @@ import com.sperance.exileforge.ui.theme.*
     page.items.firstOrNull { it.id == openLot }?.let { lot -> BidSheetOf(game, lot, now, vm) { openLot = null } }
 }
 
-/** Лист ставки [BidSheet] торгов [lot] из среза игры: правила, герой и товар карточкой; команды - модели рынка [vm]. */
+/**
+ * Лист ставки [BidSheet] торгов [lot] из среза игры: правила, герой, счёт золота и товар карточкой, медиана похожих сделок - тихим
+ * чтением подсказки цены (одна на вещь за сеанс); команды - модели рынка [vm].
+ */
 @Composable internal fun BidSheetOf(game: GameUi, lot: AuctionLot, now: Long, vm: MarketViewModel, onDismiss: () -> Unit) {
     val index = game.index ?: return
     val rules = index.rules.auction
-    BidSheet(lot, rules, index, game.hero, enabled = !game.busy, now = now, goods = { BidGoods(game, lot) }, onDismiss = onDismiss, onBid = { amount -> vm.bid(lot.id, amount) }, onBuyout = { vm.buyout(lot.id) })
+    val hint by produceState<PriceHint?>(null, lot.itemCode, lot.rarity, lot.itemLevel) { value = vm.priceHint(lot) }
+    BidSheet(
+        lot,
+        rules,
+        index,
+        game.hero,
+        enabled = !game.busy,
+        now = now,
+        hint = hint,
+        goldBill = game::goldBill,
+        goods = { BidGoods(game, lot) },
+        onDismiss = onDismiss,
+        onBid = { amount -> vm.bid(lot.id, amount) },
+        onBuyout = { vm.buyout(lot.id) },
+    )
 }
 
 /**
  * Строка торгов (вариант A), как [TradeRow], из готовых данных: плита товара - значок вида [visual], имя цветом редкости, факты [facts] и
  * пометки (ставок N, «вы лидер» / «ставку перебили»), срок к «сейчас» [now] (часы сервера); справа колонка - ставка крупно (без ставок -
  * первая ставка) и выкуп под ней; снизу полоса оставшегося срока, в последние часы хвоста ставки - красная. Лидер и перебитая ставка -
- * цветной кромкой слева: зелёной и красной.
+ * цветной кромкой слева: зелёной и красной. [due] - дело строки ([MarketDue]): жёлтая точка у пометки «ставку перебили» или «можно продать».
  */
-@Composable internal fun BidRow(lot: AuctionLot, facts: List<String>, visual: ItemVisualKind, rules: AuctionRules?, now: Long, enabled: Boolean, onClick: () -> Unit) {
+@Composable internal fun BidRow(lot: AuctionLot, facts: List<String>, visual: ItemVisualKind, rules: AuctionRules?, now: Long, enabled: Boolean, due: MarketDue? = null, onClick: () -> Unit) {
     val card = RoundedCornerShape(16.dp)
     val frame = RoundedCornerShape(12.dp)
     val color = lotColor(lot)
@@ -113,7 +140,7 @@ import com.sperance.exileforge.ui.theme.*
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(lot.title, color = color, style = itemName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                TradeFacts(facts, bidMarks(lot))
+                TradeFacts(facts, bidMarks(lot, due))
                 lotLeft(lot, now)?.let { Text(ui("auction.left", it), color = if (ending) LifeRed else Muted, style = MaterialTheme.typography.labelSmall) }
             }
             BidColumn(lot)
@@ -139,11 +166,12 @@ internal fun bidFacts(lang: Lang, lot: AuctionLot): List<String> = if (lot.equip
     stackFacts(lang, lot)
 }
 
-/** Пометки торгов: число ставок (нет ставок - приглушённо) и где ставка героя. */
-internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
+/** Пометки торгов: число ставок (нет ставок - приглушённо), где ставка героя и дело строки [due] - с жёлтой точкой. */
+private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOfNotNull(
     if (lot.bidCount > 0) TradeMark(ui("auction.bids_count", lot.bidCount), Quiet) else TradeMark(ui("auction.no_bids"), Muted),
     TradeMark(ui("auction.you_lead"), Vital).takeIf { lot.leading },
-    TradeMark(ui("auction.you_outbid"), LifeRed).takeIf { lot.outbid },
+    TradeMark(ui("auction.you_outbid"), LifeRed, due = due == MarketDue.OUTBID).takeIf { lot.outbid },
+    TradeMark(ui("auction.sell_now"), Caution, due = true).takeIf { due == MarketDue.SELL },
 )
 
 /** Колонка цены торгов: подпись, ставка крупно (без ставок - первая ставка), выкуп под ней. */
@@ -159,7 +187,7 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
     }
 }
 
-/** Число сфер [code] со знаком сферы: крупно [big] - ставка, мелко - выкуп и запасы. */
+/** Число сфер [code] со знаком сферы: крупно [big] - ставка, мелко - выкуп, лента и запасы. */
 @Composable private fun OrbAmount(code: String, amount: Long, big: Boolean = false, tint: Color = GoldBright) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(
@@ -181,11 +209,14 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
 }
 
 /**
- * Лист ставки: сверху товар [goods] (карточка вещи, у стопки - значок и имя) и факты торгов - текущая или первая ставка с числом ставок,
- * выкуп, срок к «сейчас» [now] (часы сервера), продавец (касание - карточка игрока) и правило торгов. Внизу закреплены: где ставка героя,
- * шаги «−» / «+» и «Мин. ставка», запас сфер и недостача, кнопки «Поставить N» и «Выкупить за M» - удержанием. Шаг, наименьшая ставка и
- * залог (сферы и сбор) - правила `:core` ([minBid], [bidCost]) против сумки и кошелька героя [hero]; своя лидирующая ставка не
- * перебивается, свой лот - только смотреть, лот другого героя своего аккаунта - кнопки погашены и сказано почему ([sameAccount]).
+ * Лист ставки сверху вниз: товар [goods] (карточка вещи, у стопки - значок и имя), где ставка героя ([BidStatus]: перебита - что
+ * вернулось письмом, лидирует - залог в торгах), срок «через N» к «сейчас» [now] (часы сервера; касание - точное время) с полосой,
+ * шкала цены от первой ставки до выкупа с текущей, своей суммой и медианой похожих сделок [hint] ([PriceScale]), правила торгов - в ⓘ,
+ * лента ставок без имён ([BidFeed]) и продавец (касание - карточка игрока). Внизу закреплены: когда кончатся торги, если поставить сейчас
+ * ([BidTailLine]), шаги «−» / «+» с наименьшей ставкой и шагом, залог «Спишется сейчас» - сферы и сбор против сумки и кошелька
+ * ([BidPledge], золото - счёт [goldBill]), сбор выкупа и кнопки «Поставить N» и «Выкупить за M» - удержанием. Шаг, наименьшая ставка,
+ * залог и срок - правила `:core` ([minBid], [bidCost], [endsAfterBid]); своя лидирующая ставка не перебивается, свой лот - только
+ * смотреть, лот другого героя своего аккаунта - кнопки погашены и сказано почему ([sameAccount]).
  */
 @Composable internal fun BidSheet(
     lot: AuctionLot,
@@ -194,6 +225,8 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
     hero: HeroView?,
     enabled: Boolean,
     now: Long,
+    hint: PriceHint?,
+    goldBill: (Long) -> GoldBill?,
     goods: @Composable () -> Unit,
     onDismiss: () -> Unit,
     onBid: (Long) -> Unit,
@@ -207,6 +240,7 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
     val bidShort = hero?.shortfall(bidCost)?.text()
     val buyShort = hero?.shortfall(lot.cost)?.text()
     val open = enabled && lot.onSaleAt(now) && !own && !account
+    val bidding = open && !lot.leading
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = SheetBody.Scroll(),
@@ -215,29 +249,36 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
         } else {
             {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    standingText(lot)?.let { (text, tint) -> Text(text, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold) }
                     if (account) Text(ui("auction.own_account"), color = Caution, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                    BidTailLine(lot, rules, now)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        ForgeIconButton(Icons.Outlined.Remove, ui("auction.bid_less"), { amount = lot.bidDown(rules, amount) }, kind = ButtonKind.Secondary, state = ButtonState.of(open && amount > least), repeatOnHold = true)
+                        ForgeIconButton(Icons.Outlined.Remove, ui("auction.bid_less"), { amount = lot.bidDown(rules, amount) }, kind = ButtonKind.Secondary, state = ButtonState.of(bidding && amount > least), repeatOnHold = true)
                         Box(
-                            Modifier.weight(1f).height(ButtonSize.Wide.height).background(Abyss, RoundedCornerShape(10.dp)).border(1.dp, if (bidShort != null) LifeRed else Bronze, RoundedCornerShape(10.dp)),
+                            Modifier.weight(1f).height(ButtonSize.Wide.height).background(Abyss, RoundedCornerShape(10.dp)).border(1.dp, if (bidShort != null && bidding) LifeRed else Bronze, RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center,
-                        ) { OrbAmount(lot.priceOrb, amount, big = true, tint = if (bidShort != null) LossText else GoldBright) }
-                        ForgeIconButton(Icons.Outlined.Add, ui("auction.bid_more"), { amount = lot.bidUp(rules, amount) }, kind = ButtonKind.Secondary, state = ButtonState.of(open && amount < lot.price), repeatOnHold = true)
-                        ForgeButton(onClick = { amount = least }, kind = ButtonKind.Secondary, state = ButtonState.of(open && amount != least)) { Text(ui("auction.min_bid"), maxLines = 1) }
+                        ) { OrbAmount(lot.priceOrb, amount, big = true, tint = if (!bidding) Muted else if (bidShort != null) LossText else GoldBright) }
+                        ForgeIconButton(Icons.Outlined.Add, ui("auction.bid_more"), { amount = lot.bidUp(rules, amount) }, kind = ButtonKind.Secondary, state = ButtonState.of(bidding && amount < lot.price), repeatOnHold = true)
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        MutedText(ui("auction.bid_have", number((hero?.count(lot.priceOrb) ?: 0L).toDouble())), Modifier.weight(1f))
-                        Text(bidShort ?: ui("auction.bid_step", percent(rules.bidStep), rules.bidStepMin), color = if (bidShort != null) LossText else Muted, style = MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        MutedText(ui("auction.bid_min_hint", number(least.toDouble())))
+                        MutedText(ui("auction.bid_step", percent(rules.bidStep), rules.bidStepMin))
+                    }
+                    BidPledge(lot, index, hero, if (lot.leading) null else amount, goldBill)
+                    bidShort?.takeIf { bidding }?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
+                    goldBill(lot.fee)?.let { bill ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            MutedText(ui("auction.buyout_fee"), Modifier.weight(1f))
+                            GoldCost(bill)
+                        }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ForgeButton(
                             onClick = { onBid(amount) },
                             modifier = Modifier.weight(1f),
                             kind = ButtonKind.Secondary,
-                            state = ButtonState.of(open && bidShort == null && !lot.leading),
+                            state = ButtonState.of(bidding && bidShort == null),
                             hold = Hold(),
-                        ) { Text(ui("auction.bid_do", number(amount.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        ) { Text(ui(if (lot.leading) "auction.you_lead_button" else "auction.bid_do", number(amount.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         ForgeButton(
                             onClick = onBuyout,
                             modifier = Modifier.weight(1f),
@@ -245,34 +286,215 @@ internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
                             hold = Hold(),
                         ) { Text(ui("auction.buyout_do", number(lot.price.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
-                    buyShort?.takeIf { bidShort == null }?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
+                    buyShort?.takeIf { open && (bidShort == null || !bidding) }?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
                 }
             }
         },
     ) {
         goods()
+        BidStatus(lot, index, own)
+        BidTerm(lot, rules, now)
         ForgePanel {
-            val bid = lot.currentBid
-            if (bid > 0) {
-                PropertyRow(ui("auction.current_bid"), "${number(bid.toDouble())} ${orbTitle(lot)} · ${ui("auction.bids_count", lot.bidCount)}", Glyph.ITEM)
-            } else {
-                PropertyRow(ui("auction.first_bid_title"), "${number((lot.bidding?.minPrice ?: 0L).toDouble())} ${orbTitle(lot)} · ${ui("auction.no_bids")}", Glyph.ITEM)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val bid = lot.currentBid
+                Text(ui(if (bid > 0) "auction.current_bid" else "auction.first_bid_title"), color = Parchment, style = MaterialTheme.typography.titleSmall)
+                OrbAmount(lot.priceOrb, if (bid > 0) bid else lot.bidding?.minPrice ?: 0)
+                Spacer(Modifier.weight(1f))
+                InfoMark(ui("auction.rules_about"), Rune) {
+                    Text(ui("auction.rules_about"), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(ui("auction.bid_rules", percent(rules.bidStep), rules.bidTailHours, rules.lotDays), color = Parchment, style = MaterialTheme.typography.bodySmall)
+                    Text(ui("auction.bid_fee", percent(rules.buyerFee)), color = Parchment, style = MaterialTheme.typography.bodySmall)
+                }
             }
-            PropertyRow(ui("auction.buyout"), "${number(lot.price.toDouble())} ${orbTitle(lot)}", Glyph.ITEM)
-            lotLeft(lot, now)?.let { PropertyRow(ui("auction.expires_in"), it, Glyph.STATE) }
-            if (!own) Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
-            if (own) MutedText(ui("auction.own_lot"), style = MaterialTheme.typography.labelMedium)
-            MutedText(ui("auction.bid_rules", percent(rules.bidStep), rules.bidTailHours, rules.lotDays))
-            MutedText(ui("auction.bid_fee", percent(rules.buyerFee)))
+            PriceScale(lot, if (lot.leading || !open) null else amount, lot.median(hint), hint?.sales ?: 0)
+        }
+        ForgePanel { BidFeed(lot, now, if (bidding) amount else null) }
+        if (!own) Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
+    }
+}
+
+/**
+ * Где ставка героя: перебита - красной плашкой, что его последняя ставка ленты и её сбор вернулись письмом; лидирует - зелёной, что
+ * залог (ставка и сбор) лежит в торгах; свой лот - что купить его нельзя. Не ставил - ничего.
+ */
+@Composable private fun BidStatus(lot: AuctionLot, index: ContentIndex, own: Boolean) {
+    val (title, tint, detail) = when {
+        own -> Triple(ui("auction.own_lot"), Caution, null)
+        lot.leading -> Triple(ui("auction.bid_leading"), Vital, ui("auction.status_held", "${number(lot.currentBid.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, lot.currentBid).toDouble())))
+        lot.outbid -> Triple(ui("auction.bid_outbid"), LifeRed, lot.lastOwnBid?.let { ui("auction.status_back", "${number(it.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, it).toDouble())) })
+        else -> return
+    }
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().background(tint.copy(alpha = .1f), shape).border(1.dp, tint.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(8.dp).background(tint, CircleShape))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            detail?.let { MutedText(it) }
         }
     }
 }
 
-/** Где ставка героя словами и цветом: лидирует - зелёным, перебита - красным; не ставил - null. */
-internal fun standingText(lot: AuctionLot): Pair<String, Color>? = when {
-    lot.leading -> ui("auction.bid_leading") to Vital
-    lot.outbid -> ui("auction.bid_outbid") to LifeRed
-    else -> null
+/** Срок торгов: «Срок · через N» к «сейчас» [now] (касание - точное время конца, если ставок больше не будет) и полоса срока. */
+@Composable private fun BidTerm(lot: AuctionLot, rules: AuctionRules, now: Long) {
+    val left = lotLeft(lot, now) ?: return
+    val ending = lot.bidEnding(rules, now)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(ui("auction.term"), color = Quiet, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            Tipped({ Tip(body = ui("auction.ends_exact", stampText(lot.expiresAt))) }, Modifier.heightIn(min = 44.dp), contentAlignment = Alignment.CenterEnd) {
+                Text(ui("auction.in_time", left), color = if (ending) LossText else Parchment, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.Underline)
+            }
+        }
+        TimeBar(lot.timeShare(rules, now), ending)
+    }
+}
+
+/**
+ * Шкала цены торгов от первой ставки до выкупа: залита до текущей ставки, отметки - текущая, своя сумма [mine] (null - не ставит:
+ * лидирует или торги закрыты ему) и медиана похожих сделок [median] из [sales]; под ней края и подписи отметок цветами отметок.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun PriceScale(lot: AuctionLot, mine: Long?, median: Long?, sales: Int) {
+    val bid = lot.currentBid
+    val low = lot.bidding?.minPrice ?: 0L
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier.fillMaxWidth().height(14.dp).drawBehind {
+                val track = 6.dp.toPx()
+                val top = (size.height - track) / 2
+                drawRoundRect(Abyss, Offset(0f, top), Size(size.width, track), CornerRadius(track / 2))
+                if (bid > 0) drawRoundRect(Gold.copy(alpha = .6f), Offset(0f, top), Size(size.width * lot.priceShare(bid), track), CornerRadius(track / 2))
+                fun mark(amount: Long, color: Color) {
+                    val x = (size.width * lot.priceShare(amount)).coerceIn(1.5.dp.toPx(), size.width - 1.5.dp.toPx())
+                    drawLine(color, Offset(x, 0f), Offset(x, size.height), 3.dp.toPx(), StrokeCap.Round)
+                }
+                median?.let { mark(it, Rune) }
+                if (bid > 0) mark(bid, GoldBright)
+                mine?.let { mark(it, Caution) }
+            },
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            MutedText(ui("auction.scale_first", number(low.toDouble())))
+            MutedText(ui("auction.scale_buyout", number(lot.price.toDouble())))
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (bid > 0) ScaleKey(GoldBright, ui(if (lot.leading) "auction.scale_now_mine" else "auction.scale_now", number(bid.toDouble())))
+            mine?.let { ScaleKey(Caution, ui("auction.scale_mine", number(it.toDouble()))) }
+            median?.let { ScaleKey(Rune, ui("auction.scale_median", number(it.toDouble()), sales)) } ?: MutedText(ui("auction.scale_no_median"))
+        }
+    }
+}
+
+/** Подпись отметки шкалы: знак её цвета [color] и текст [text]. */
+@Composable private fun ScaleKey(color: Color, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(Modifier.size(width = 3.dp, height = 10.dp).background(color, RoundedCornerShape(2.dp)))
+        Text(text, color = Quiet, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/**
+ * Лента ставок без имён, новые сверху ([feedLines] ядра): сумма, «вы» у своих (у лидирующей своей - зелёным), «лидирует» - у той, что
+ * лидирует сейчас, и давность к «сейчас» [now]; над ней пунктиром - своя сумма [pending], пока ставка не сделана. Видны [FEED_SHOWN] верхних, остальные свёрнуты «Ещё N».
+ * Ставок нет - что своя будет первой и наименьшая.
+ */
+@Composable private fun BidFeed(lot: AuctionLot, now: Long, pending: Long?) {
+    val feed = lot.feedLines
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(ui("auction.feed"), color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        if (lot.bidCount > 0) MutedText(ui("auction.feed_meta", lot.bidCount))
+    }
+    pending?.let { PendingBid(lot, it) }
+    if (feed.isEmpty()) {
+        MutedText(if (lot.bidCount > 0) ui("auction.bids_count", lot.bidCount) else ui("auction.feed_empty", "${number((lot.bidding?.minPrice ?: 0L).toDouble())} ${orbTitle(lot)}"))
+        return
+    }
+    feed.take(FEED_SHOWN).forEach { FeedRow(lot, it, now) }
+    val rest = feed.drop(FEED_SHOWN)
+    if (rest.isEmpty()) return
+    var open by remember(lot.id) { mutableStateOf(false) }
+    val label = ui("auction.feed_more", rest.size)
+    Row(Modifier.fillMaxWidth().foldToggle(open, label) { open = !open }.heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        FoldChevron(open)
+    }
+    Column { FoldBody(open) { rest.forEach { FeedRow(lot, it, now) } } }
+}
+
+/** Строка ленты [feed]: сумма со знаком сферы, «вы» у своей, «лидирует» у лидирующей и давность. */
+@Composable private fun FeedRow(lot: AuctionLot, feed: FeedLine, now: Long) {
+    val leading = feed.leading
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OrbAmount(lot.priceOrb, feed.line.orbs, tint = if (leading) GoldBright else Quiet)
+        if (feed.line.own) Text(ui("auction.feed_you"), color = if (leading) Vital else Muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        Text(if (leading) ui("auction.feed_leads") else "", color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+        Text(agoText(now - feed.line.at), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}
+
+/** Своя сумма [amount] над лентой пунктиром: ставка ещё не сделана. */
+@Composable private fun PendingBid(lot: AuctionLot, amount: Long) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        Modifier.fillMaxWidth().dashedBorder(Caution.copy(alpha = .7f), shape).padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OrbAmount(lot.priceOrb, amount, tint = Caution)
+        Text(ui("auction.feed_pending"), color = Caution, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+    }
+}
+
+/** Сколько верхних ставок ленты видно без раскрытия. */
+private const val FEED_SHOWN = 4
+
+/**
+ * Когда кончатся торги, если поставить сейчас ([BidTail]): не раньше такого-то времени через хвост ставки, раньше нынешнего конца -
+ * предупреждение, предел срока лота - что дальше не продлят; своя лидирует - что перебитая ставка вернётся и торги продлятся.
+ */
+@Composable private fun BidTailLine(lot: AuctionLot, rules: AuctionRules, now: Long) {
+    val at = stampText(lot.endsAfterBid(rules, now))
+    val (text, tint) = when {
+        lot.leading -> ui("auction.tail_leading", rules.bidTailHours) to Muted
+        else -> when (lot.bidTail(rules, now)) {
+            BidTail.EXTENDS -> ui("auction.tail_extends", at, rules.bidTailHours) to Muted
+            BidTail.SHORTENS -> ui("auction.tail_shortens", at, rules.bidTailHours, lotLeft(lot, now).orEmpty()) to Caution
+            BidTail.CAPPED -> ui("auction.tail_capped", at) to Muted
+        }
+    }
+    Text(text, color = tint, style = MaterialTheme.typography.bodySmall)
+}
+
+/**
+ * Залог ставки: «Спишется сейчас» - сферы ставки [amount] против сумки и сбор золотом против кошелька ([goldBill]); своя лидирует
+ * ([amount] null) - «Ваш залог в торгах»: что уже лежит в лоте.
+ */
+@Composable private fun BidPledge(lot: AuctionLot, index: ContentIndex, hero: HeroView?, amount: Long?, goldBill: (Long) -> GoldBill?) {
+    val orbs = amount ?: lot.currentBid
+    val fee = lot.bidFee(index, orbs)
+    val have = hero?.count(lot.priceOrb) ?: 0L
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        MutedText(ui(if (amount == null) "auction.pledge_held" else "auction.pledge_now"), Modifier.weight(1f))
+        OrbAmount(lot.priceOrb, orbs, tint = if (amount != null && have < orbs) LossText else GoldBright)
+        if (amount != null) MutedText("/ ${compactNumber(have.toDouble())}")
+        MutedText(ui("auction.pledge_fee"))
+        if (amount == null) GoldPrice(fee) else goldBill(fee)?.let { GoldCost(it) } ?: GoldPrice(fee)
+    }
+}
+
+/** Давность ставки [ago] мс: «только что», минуты, часы, дни. */
+private fun agoText(ago: Long): String {
+    val minutes = ago.coerceAtLeast(0) / 60_000
+    return when {
+        minutes < 1 -> ui("auction.ago_now")
+        minutes < 60 -> ui("auction.ago_minutes", minutes)
+        minutes < MINUTES_A_DAY -> ui("auction.ago_hours", minutes / 60)
+        else -> ui("auction.ago_days", minutes / MINUTES_A_DAY)
+    }
 }
 
 /** Доля правил в процентах без лишнего «.0». */

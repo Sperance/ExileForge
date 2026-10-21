@@ -27,6 +27,7 @@ import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.reward.RedemptionKind
+import com.sperance.exileforge.rules.text.LocaleAudit
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.trade.LotKind
 import java.io.File
@@ -37,8 +38,8 @@ import kotlin.test.assertTrue
 /**
  * The client's own dictionaries must not drift apart.
  *
- * This mirrors the server's `LocalizationTest`: the languages hold the same keys, nothing is left
- * empty, and a numbered hole never disappears in translation. The last one matters most - a label
+ * The checks are the server's `LocalizationTest` ones, from the rules' [LocaleAudit]: the languages hold the same keys,
+ * nothing is left empty, and a placeholder never disappears in translation. The last one matters most - a label
  * that lost its `{0}` silently drops a number the player was meant to read.
  *
  * The final test is the one the server cannot have: it reads the sources and checks that every key
@@ -47,6 +48,9 @@ import kotlin.test.assertTrue
 class UiStringsTest {
 
     private val languages = Lang.entries
+
+    /** Словари по коду языка - вход проверок [LocaleAudit]. */
+    private val tables: Map<String, Map<String, String>> by lazy { languages.associate { it.code to UiStrings.table(it) } }
 
     @Test
     fun every_language_has_a_table() {
@@ -57,37 +61,18 @@ class UiStringsTest {
 
     @Test
     fun the_languages_have_exactly_the_same_keys() {
-        val reference = UiStrings.keys(Lang.RU)
-
-        languages.forEach {
-            val keys = UiStrings.keys(it)
-            assertEquals(emptySet(), reference - keys, "${it.code}: нет ключей")
-            assertEquals(emptySet(), keys - reference, "${it.code}: лишние ключи")
-        }
+        assertEquals(emptyMap(), LocaleAudit.missingKeys(tables), "по языку - ключи, которых в нём нет")
     }
 
     @Test
     fun nothing_is_left_empty() {
-        languages.forEach { lang ->
-            UiStrings.table(lang).forEach { (key, text) ->
-                assertTrue(text.isNotBlank(), "${lang.code}: пустая строка у $key")
-            }
-        }
+        assertEquals(emptyMap(), LocaleAudit.emptyValues(tables), "по языку - ключи с пустой строкой")
     }
 
+    /** Подстановки клиента - `{0}` и порог правил `{r:…}`, обе покрывает [LocaleAudit.PLACEHOLDER]. */
     @Test
     fun a_placeholder_never_disappears_in_translation() {
-        val hole = Regex("\\{\\d+}")
-        val reference = UiStrings.table(Lang.RU)
-
-        languages.filterNot { it == Lang.RU }.forEach { lang ->
-            val table = UiStrings.table(lang)
-            reference.forEach { (key, text) ->
-                val expected = hole.findAll(text).map { it.value }.toSet()
-                val actual = hole.findAll(table.getValue(key)).map { it.value }.toSet()
-                assertEquals(expected, actual, "$key: в ru $expected, в ${lang.code} $actual")
-            }
-        }
+        assertEquals(emptyList(), LocaleAudit.lostPlaceholders(tables, Lang.RU.code), "ключ: подстановки ru против перевода")
     }
 
     /**

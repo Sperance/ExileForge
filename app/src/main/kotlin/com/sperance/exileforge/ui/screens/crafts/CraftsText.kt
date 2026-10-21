@@ -246,11 +246,9 @@ internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnot
 internal const val TILES = 3
 
 /**
- * The variants a choosing work offers: every one, whatever the profession's level (a locked one shows its lock and
- * the sheet names the level) — but for the condensing only the essences the bag can feed a cycle of, else a hundred and
- * forty chips would bury the few that can run.
- *
- * Ритуал тира - только изученные умения; почему вариант закрыт, называет низ листа.
+ * Варианты работы с выбором: все, при любом уровне профессии (до которого она не доросла - закрыт в шторке с уровнем открытия), но у
+ * сгущения - только эссенции, на цикл которых хватает сумки, иначе сотня с лишним вариантов похоронит те, что можно начать.
+ * Ритуал тира - только изученные умения.
  */
 internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.filter { option ->
     when (work.kind) {
@@ -258,4 +256,16 @@ internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.
         JobKind.EVOLVE -> (game.hero?.skills?.level(option.choice) ?: 0) > 0
         else -> true
     }
+}
+
+/** Подпись строки выбора варианта работы вида [kind]: что выбирается - книга, эссенция, материал, база, умение, руна или кузнец. */
+internal fun jobChoiceLabel(kind: JobKind): String = when (kind) {
+    JobKind.BOOK -> ui("crafts.pick.book")
+    JobKind.CONDENSE -> ui("crafts.pick.essence")
+    JobKind.REFINE -> ui("crafts.pick.material")
+    JobKind.TOOL -> ui("crafts.pick.base")
+    JobKind.EVOLVE -> ui("crafts.pick.skill")
+    JobKind.CARVE -> ui("crafts.pick.rune")
+    JobKind.EQUIPMENT -> ui("crafts.pick.smith")
+    JobKind.ITEM, JobKind.MAP, JobKind.FLASK, JobKind.JEWEL, JobKind.DESECRATE -> ui("crafts.choose")
 }

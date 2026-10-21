@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.rules.content.CoreAttribute
 import com.sperance.exileforge.rules.content.Rarity
 
 /**
@@ -8,7 +9,9 @@ import com.sperance.exileforge.rules.content.Rarity
  * [key] уходит вызывающему при выборе (null - вариант «любое»/«все»), [title] - имя варианта, [subtitle] - подназвание под именем в
  * шторке (переносится целиком), [brief] - короткое подназвание под значением на чипе (нет - на чипе [subtitle]), [glyph] - знак по
  * смыслу, [accent] - цвет полосы слева, [data] - короткое значение ровной колонкой справа, [group] - заголовок группы: варианты одной
- * группы идут подряд; [terms] - слова, по которым вариант тоже находит поиск, но которые не печатаются (код узла).
+ * группы идут подряд; [terms] - слова, по которым вариант тоже находит поиск, но которые не печатаются (код узла). [locked] - почему
+ * вариант закрыт («с ур. 58»): он не выбирается, в шторке - тусклый, с замком и этой подписью справа вместо данных; мапперы ставят
+ * закрытые в конец группы.
  */
 data class PickOption<out K>(
     val key: K?,
@@ -20,13 +23,14 @@ data class PickOption<out K>(
     val data: PickData? = null,
     val group: String? = null,
     val terms: List<String> = emptyList(),
+    val locked: String? = null,
 ) {
     /** Строка под значением на чипе: [brief], а без него - [subtitle]. */
     val chipLine: String? get() = brief ?: subtitle
 }
 
-/** Данные справа от варианта: [value] крупно, [caption] мелко под ним («6» и «в ранге»). */
-data class PickData(val value: String, val caption: String? = null)
+/** Данные справа от варианта: [value] крупно, [caption] мелко под ним («6» и «в ранге»); [short] - чего-то нет («0 в сумке»), число красным. */
+data class PickData(val value: String, val caption: String? = null, val short: Boolean = false)
 
 /** Знак варианта: значок смысла ([Sign]) или эмблема вида вещи ([Emblem]); рисует их `:app`. */
 sealed interface PickGlyph {
@@ -47,6 +51,9 @@ sealed interface PickAccent {
 
     /** Полоса [band] из чередующихся цветов групп: регион, полка сумки. */
     data class Band(val band: Int) : PickAccent
+
+    /** Цвет атрибута [attribute]: выбор кузнеца. */
+    data class OfAttribute(val attribute: CoreAttribute) : PickAccent
 }
 
 /** Группа шторки выбора: заголовок [title] (null - без заголовка) и её варианты [options]. */

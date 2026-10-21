@@ -167,7 +167,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         }
     }
     if (picking) {
-        ToolPicker(game, profession, onDismiss = { picking = false }) { id ->
+        ToolPickSheet(game, profession, onDismiss = { picking = false }) { id ->
             picking = false
             vm.equipTool(id)
         }

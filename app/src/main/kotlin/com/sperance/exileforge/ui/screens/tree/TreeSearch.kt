@@ -47,7 +47,6 @@ import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -77,13 +76,14 @@ import kotlin.math.sin
 /**
  * Finding a node by name.
  *
+ * [search] - слова поиска узлов на язык интерфейса ([PickOptions.nodes]), общие с подсветкой узлов на карте.
+ *
  * The tree is over a hundred nodes across seven class areas, so panning to one by eye is not
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
-@Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
-    val list = remember(nodes, game.lang) { PickList(PickOptions.nodes(nodes)) }
+@Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, search: PickList<String>, onSelect: (String) -> Unit) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
-    val matches = remember(list, rawQuery) { if (rawQuery.isBlank()) emptyList() else list.found(rawQuery).take(FOUND_SHOWN).mapNotNull { option -> option.key?.let { byCode[it] } } }
+    val matches = remember(search, rawQuery) { if (rawQuery.isBlank()) emptyList() else search.found(rawQuery).take(FOUND_SHOWN).mapNotNull { option -> option.key?.let { byCode[it] } } }
     if (rawQuery.isBlank()) return
     ForgePanel {
         Engraved(ui("tree.find_node"))
@@ -132,12 +132,6 @@ private const val FOUND_SHOWN = 8
 
 /** The tags the tree's filter offers: the ones its lines carry most. */
 internal val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")
-
-/** Nodes whose name, or any stat they give, holds [query]. */
-internal fun nodesMatching(index: ContentIndex, query: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
-    val stats = (node.lines + node.options.flatten()).flatMap { line -> index.modifier(line.code)?.effects?.map { statTitle(it.stat) }.orEmpty() }
-    node.code.takeIf { nodeTitle(it).contains(query, true) || stats.any { stat -> stat.contains(query, true) } }
-}
 
 internal fun nodesTagged(index: ContentIndex, tag: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
     node.code.takeIf { (node.lines + node.options.flatten()).any { line -> index.modifier(line.code)?.tags?.contains(tag) == true } }

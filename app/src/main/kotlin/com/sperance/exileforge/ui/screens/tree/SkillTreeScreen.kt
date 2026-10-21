@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.PickList
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
@@ -147,7 +149,8 @@ fun SkillTreePanel(
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
     var tag by remember { mutableStateOf<String?>(null) }
     val query = rawQuery.trim()
-    val found = remember(index, query, game.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
+    val search = remember(index, game.lang) { PickList(PickOptions.nodes(index)) }
+    val found = remember(search, query) { if (query.length < 2) emptySet() else search.found(query).mapNotNullTo(HashSet()) { it.key } }
     val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
     var filtersOpen by remember { mutableStateOf(false) }
     val filtering = tag != null || query.length >= 2
@@ -193,8 +196,6 @@ fun SkillTreePanel(
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, onClick = view::reset)
         }
         if (nodeOpen) {
             val shape = RoundedCornerShape(12.dp)
@@ -263,7 +264,7 @@ fun SkillTreePanel(
                 }
                 item { TreeTotals(game, tree) }
                 item {
-                    TreeSearch(game, rawQuery, selected, nodes) { code ->
+                    TreeSearch(game, rawQuery, selected, nodes, search) { code ->
                         onSelect(code)
                         detailsOpen = false
                         nodeOpen = true
@@ -274,7 +275,7 @@ fun SkillTreePanel(
     }
 }
 
-/** Where the map looks: the zoom and the pan, held by the panel so its «back to the whole tree» button can reset them. */
+/** Where the map looks: the zoom and the pan, held by the panel so the tree keeps its view while the panel lives. */
 @Stable internal class TreeView {
     var scale by mutableFloatStateOf(1f)
     var pan by mutableStateOf(Offset.Zero)

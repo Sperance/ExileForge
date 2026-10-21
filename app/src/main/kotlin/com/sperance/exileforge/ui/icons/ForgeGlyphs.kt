@@ -140,14 +140,6 @@ object ForgeGlyphs {
     /** Waypoint portal: servers and travel. */
     val Portal = glyph("Portal", { poly(12f to 2f, 20f to 12f, 12f to 22f, 4f to 12f) }, { poly(12f to 6f, 17f to 12f, 12f to 18f, 7f to 12f) }, { ring(12f, 12f, 1.6f) })
 
-    /** Crosshair: back to the frontier of the world map. */
-    val Target = glyph("Target", { ring(12f, 12f, 6.5f) }, { ring(12f, 12f, 1.6f) }, {
-        line(12f, 2.5f, 12f, 6.5f)
-        line(12f, 17.5f, 12f, 21.5f)
-        line(2.5f, 12f, 6.5f, 12f)
-        line(17.5f, 12f, 21.5f, 12f)
-    })
-
     /** Nearer and farther on the world map. */
     val Plus = glyph("Plus", {
         line(12f, 5f, 12f, 19f)

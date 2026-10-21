@@ -41,11 +41,11 @@ import kotlin.math.sin
  * canvas never moves a node, it only chooses where to look. It clips, because a canvas does not:
  * without that the outer nodes are painted over whatever the map happens to be sitting on. And the
  * pan is held to the tree's own half-extent, so a stray flick cannot drag the whole graph away and
- * leave an empty rectangle with no way back but the reset.
+ * leave an empty rectangle with no way back but the double-tap reset.
  *
- * Первый взгляд - на старт класса. Масштаб - вокруг точки (щипок, двойное касание). Доступные узлы дышат в рисовании, без анимаций светятся
+ * Первый взгляд - на старт класса. Масштаб - щипком вокруг точки. Доступные узлы дышат в рисовании, без анимаций светятся
  * ровно. Детекторы - по графу и читают вид как он есть: ключ по масштабу и сдвигу перезапускал бы касание на каждом кадре и съедал бы
- * второй палец щипка. Двойное касание приближает, с ближайшего - назад к целому дереву. Ближайший узел выигрывает только в своём круге не
+ * второй палец щипка. Двойное касание на любом масштабе возвращает к целому дереву. Ближайший узел выигрывает только в своём круге не
  * меньше пальца. Неподвижный слой рисуется заново лишь со сдвигом, масштабом или выбором; дышащий - только узлы на шаг от взятого и только
  * на экране.
  */
@@ -96,13 +96,7 @@ import kotlin.math.sin
                 }
                 .pointerInput(nodes) {
                     detectTapGestures(
-                        onDoubleTap = { at ->
-                            if (view.scale >= MAX_ZOOM - .01f) {
-                                view.reset()
-                            } else {
-                                zoomAt(at, DOUBLE_TAP_ZOOM, Offset.Zero, size.width.toFloat(), size.height.toFloat())
-                            }
-                        },
+                        onDoubleTap = { view.reset() },
                         onTap = { tap ->
                             val width = size.width.toFloat()
                             val height = size.height.toFloat()
@@ -223,9 +217,6 @@ internal const val MAX_ZOOM = 3f
 
 /** The zoom the tree opens at, centred on the class's start. */
 internal const val FOCUS_ZOOM = 1.8f
-
-/** How much closer one double tap brings the map. */
-internal const val DOUBLE_TAP_ZOOM = 2f
 
 /** The smallest circle a tap finds a node in, however far the map is zoomed out. */
 internal val MIN_TOUCH = 18.dp

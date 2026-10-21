@@ -298,6 +298,18 @@ class ExpeditionWorld(
     /** Объекты карты: алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
     val features = mutableListOf<FeatureSpot>()
 
+    /** Куда встало тело после шага ([slide]): одно на мир. */
+    internal val footing = Footing()
+
+    /** Объекты в досягаемости из клетки героя ([gatherReach]) и клетка с числом объектов, для которых они собраны. */
+    private val nearChests = ArrayList<Chest>()
+    private val nearFountains = ArrayList<Fountain>()
+    private val nearCrystals = ArrayList<CrystalSpot>()
+    private val nearCracks = ArrayList<AbyssSpot>()
+    private var reachX = Int.MIN_VALUE
+    private var reachY = Int.MIN_VALUE
+    private var reachPlaced = -1
+
     init {
         light()
     }
@@ -401,48 +413,56 @@ class ExpeditionWorld(
             val speed = heroSpeed * length * stride
             facingX = paceX / length
             facingY = paceY / length
-            val (nx, ny) = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
-            heroX = nx
-            heroY = ny
+            val landed = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
+            heroX = landed.x
+            heroY = landed.y
         }
         light()
+        gatherReach()
         val nearExit = atExit
         if (!nearExit) exitArmed = true
-        chests.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }?.let { chest ->
+        nearChests.reached({ it.cell }) { !it.opened }?.let { chest ->
             chest.opened = true
             return WorldEvent.Opened(chest)
         }
-        val fountain = fountains.firstOrNull { !it.used && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
+        val fountain = nearFountains.reached({ it.cell }) { !it.used }
         if (fountain == null) {
             atFountain = null
         } else if (fountain !== atFountain) {
             atFountain = fountain
             return WorldEvent.AtFountain(fountain)
         }
-        val crystal = crystals.firstOrNull { !it.freed && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
+        val crystal = nearCrystals.reached({ it.cell }) { !it.freed }
         if (crystal == null) {
             atCrystal = null
         } else if (crystal !== atCrystal) {
             atCrystal = crystal
             return WorldEvent.Crystal(crystal)
         }
-        val crack = cracks.firstOrNull { !it.opened && hypot(it.cell.x + 0.5 - heroX, it.cell.y + 0.5 - heroY) < rules.chestReach }
+        val crack = nearCracks.reached({ it.cell }) { !it.opened }
         if (crack == null) {
             atCrack = null
         } else if (crack !== atCrack) {
             atCrack = crack
             return WorldEvent.Abyss(crack)
         }
-        features.map { it.touch(this, dt) }.firstOrNull { it != null }?.let { return WorldEvent.Feature(it) }
+        var acted: FeatureAction? = null
+        for (i in features.indices) {
+            val action = features[i].touch(this, dt)
+            if (acted == null) acted = action
+        }
+        acted?.let { return WorldEvent.Feature(it) }
         portal?.let { cell ->
-            val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < rules.chestReach
+            val near = reached(cell)
             if (near && portalArmed) {
                 portalArmed = false
                 return WorldEvent.Portal
             }
             if (!near) portalArmed = true
         }
-        agents.filter { it.alive }.forEach { agent ->
+        for (i in agents.indices) {
+            val agent = agents[i]
+            if (!agent.alive) continue
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
             if (toHero < rules.contact) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
@@ -454,6 +474,38 @@ class ExpeditionWorld(
         return null
     }
 
+    /** Дотягивается ли герой до клетки [cell] ([ExpeditionRules.chestReach]). */
+    private fun reached(cell: Cell): Boolean = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < rules.chestReach
+
+    /** Первый из списка, кто ещё [standing] и до чьей клетки [cellOf] герой дотягивается. */
+    private inline fun <T> List<T>.reached(cellOf: (T) -> Cell, standing: (T) -> Boolean): T? {
+        for (i in indices) {
+            val spot = this[i]
+            if (standing(spot) && reached(cellOf(spot))) return spot
+        }
+        return null
+    }
+
+    /**
+     * Объекты, до которых герой может дотянуться из своей клетки: собираются заново, когда он её сменил или объектов стало больше, - такт
+     * меряет расстояние до них, а не до всех на карте. Центр клетки объекта не дальше [ExpeditionRules.chestReach] и полудиагонали клетки
+     * от центра клетки героя - так в список входит всё, до чего дотянуться из любой её точки.
+     */
+    private fun gatherReach() {
+        val x = floor(heroX).toInt()
+        val y = floor(heroY).toInt()
+        val placed = chests.size + fountains.size + crystals.size + cracks.size
+        if (x == reachX && y == reachY && placed == reachPlaced) return
+        reachX = x
+        reachY = y
+        reachPlaced = placed
+        val reach = rules.chestReach + REACH_SLACK
+        chests.filterTo(nearChests.apply { clear() }) { hypot((it.cell.x - x).toDouble(), (it.cell.y - y).toDouble()) < reach }
+        fountains.filterTo(nearFountains.apply { clear() }) { hypot((it.cell.x - x).toDouble(), (it.cell.y - y).toDouble()) < reach }
+        crystals.filterTo(nearCrystals.apply { clear() }) { hypot((it.cell.x - x).toDouble(), (it.cell.y - y).toDouble()) < reach }
+        cracks.filterTo(nearCracks.apply { clear() }) { hypot((it.cell.x - x).toDouble(), (it.cell.y - y).toDouble()) < reach }
+    }
+
     /**
      * Удар отбросил героя на [dx], [dy] клеток: скольжением вдоль стен, по долям не длиннее радиуса героя - сквозь скалу
      * отброс не проходит.
@@ -461,9 +513,9 @@ class ExpeditionWorld(
     internal fun knock(dx: Double, dy: Double) {
         val parts = ceil(hypot(dx, dy) / rules.heroRadius).toInt().coerceAtLeast(1)
         repeat(parts) {
-            val (nx, ny) = slide(heroX, heroY, dx / parts, dy / parts, rules.heroRadius)
-            heroX = nx
-            heroY = ny
+            val landed = slide(heroX, heroY, dx / parts, dy / parts, rules.heroRadius)
+            heroX = landed.x
+            heroY = landed.y
         }
         light()
     }
@@ -476,6 +528,9 @@ class ExpeditionWorld(
 
         /** What a hero sees by when the server has not said: the level-1 base. */
         internal const val MIN_WALK = 0.8
+
+        /** Полудиагональ клетки с запасом: дальше центра своей клетки герой внутри неё не уходит. */
+        private const val REACH_SLACK = 0.75
 
         /** Как далеко от объекта встаёт стая стражей, в шагах. */
         private const val SUMMON_STEPS = 3

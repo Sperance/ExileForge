@@ -143,8 +143,11 @@ private const val CORNER = 1e-9
  * Грань скалы видна, когда до неё доходит луч или она граничит с освещённой землёй; что за ней - нет.
  */
 internal fun ExpeditionWorld.light() {
-    val here = Cell(floor(heroX).toInt(), floor(heroY).toInt())
-    if (here == litFrom) return
+    val x = floor(heroX).toInt()
+    val y = floor(heroY).toInt()
+    val from = litFrom
+    if (from != null && from.x == x && from.y == y) return
+    val here = Cell(x, y)
     litFrom = here
     lit.fill(false)
     val reach = ceil(lightRadius).toInt()
@@ -171,7 +174,7 @@ private fun ExpeditionWorld.see(x: Int, y: Int) {
 /** Лежит ли рядом со скалой (8 соседей) видимая открытая клетка. */
 private fun ExpeditionWorld.bordersLit(x: Int, y: Int): Boolean = ExpeditionWorld.STEPS.any { (dx, dy) -> map.clear(x + dx, y + dy) && lit(x + dx, y + dy) }
 
-/** A move that slides along walls (по скруглённым углам, [WallBody]). */
-internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> = body.slide(x, y, dx, dy, radius)
+/** A move that slides along walls (по скруглённым углам, [WallBody]); итог - в [ExpeditionWorld.footing], читать сразу. */
+internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Footing = body.slide(x, y, dx, dy, radius, footing)
 
 internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = body.free(x, y, radius)

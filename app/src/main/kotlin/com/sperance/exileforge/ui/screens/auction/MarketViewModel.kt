@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.market.MarketTab
 import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionLot
+import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import kotlinx.coroutines.flow.StateFlow
@@ -46,4 +48,7 @@ class MarketViewModel(
 
     /** Вход с плитки Города: открыть «Мои лоты» на строке [lotId], что ждёт действия; null - без подсветки. */
     fun attend(lotId: String?) = actions.attend(lotId)
+
+    /** Медиана похожих сделок для шкалы листа ставки. */
+    suspend fun priceHint(lot: AuctionLot): PriceHint? = actions.priceHint(lot)
 }

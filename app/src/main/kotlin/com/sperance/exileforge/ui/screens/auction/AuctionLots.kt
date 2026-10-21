@@ -386,10 +386,13 @@ private fun stackTitle(game: GameUi, code: String): String = if (Orb.of(code) !=
 
 /** «Продано: Имя · 12.10 14:30» or «Куплено у Имя · …». */
 internal fun dealMark(deal: AuctionLot, heroId: String): String {
-    val at = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(deal.soldAt))
+    val at = stampText(deal.soldAt)
     return if (deal.belongsTo(heroId)) {
         ui("auction.history_sold_to", deal.buyerName.ifBlank { "…" }, at)
     } else {
         ui("auction.history_bought_from", sellerName(deal), at)
     }
 }
+
+/** Момент [at] (мс эпохи) днём и временем часов устройства: «12.10 14:30» - сделки истории и конец торгов. */
+internal fun stampText(at: Long): String = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(at))

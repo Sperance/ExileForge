@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.rules.content.AuctionRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.trade.AuctionFees
+import com.sperance.exileforge.rules.trade.BidEntry
 import com.sperance.exileforge.rules.trade.BidStanding
 import com.sperance.exileforge.rules.trade.Bidding
 import com.sperance.exileforge.rules.trade.LotMode
@@ -70,3 +71,44 @@ data class LotTerms(val mode: LotMode = LotMode.FIXED, val minPrice: Long = 0) {
     /** Условия можно отправить при выкупе [price]: у торгов первая ставка - от 1 до выкупа. */
     fun valid(price: Long): Boolean = mode == LotMode.FIXED || minPrice in 1..price
 }
+
+/** Лента ставок торгов, новые первыми: суммы и время без имён, свои отмечены сервером ([BidEntry.own]). */
+val AuctionLot.feed: List<BidEntry> get() = bidding?.feed.orEmpty().asReversed()
+
+/** Последняя своя ставка в ленте - перебитому она и её сбор вернулись письмом; null - своих ставок в ленте нет. */
+val AuctionLot.lastOwnBid: Long? get() = bidding?.feed?.lastOrNull { it.own }?.orbs
+
+/** Как ставка сейчас двигает конец торгов ([Bidding.endsAfterBid]). */
+enum class BidTail {
+    /** Торги кончатся через хвост ставки (`auction.bidTailHours`) - не раньше нынешнего конца. */
+    EXTENDS,
+
+    /** Через хвост ставки - раньше нынешнего конца: первая ставка сокращает долгий срок. */
+    SHORTENS,
+
+    /** Упирается в крайний срок лота: дальше ставки его не продлят. */
+    CAPPED,
+}
+
+/** Когда кончатся торги, если поставить к «сейчас» [now] (часы сервера) ([Bidding.endsAfterBid]); у лота за цену - его срок. */
+fun AuctionLot.endsAfterBid(rules: AuctionRules, now: Long): Long = bidding?.let { Bidding.endsAfterBid(rules, it, now) } ?: expiresAt
+
+/** Что ставка к «сейчас» [now] сделает со сроком торгов ([BidTail]). */
+fun AuctionLot.bidTail(rules: AuctionRules, now: Long): BidTail {
+    val ends = endsAfterBid(rules, now)
+    return when {
+        bidding != null && ends >= bidding.until -> BidTail.CAPPED
+        expiresAt > 0 && ends < expiresAt -> BidTail.SHORTENS
+        else -> BidTail.EXTENDS
+    }
+}
+
+/** Место суммы [amount] на шкале цены торгов от первой ставки до выкупа: 0..1. */
+fun AuctionLot.priceShare(amount: Long): Float {
+    val low = bidding?.minPrice ?: 0L
+    val span = (price - low).coerceAtLeast(1L)
+    return ((amount - low).toFloat() / span).coerceIn(0f, 1f)
+}
+
+/** Медиана похожих сделок [hint] в сфере цены лота за весь товар (стопка - на её число); подсказка в другой сфере - null. */
+fun AuctionLot.median(hint: PriceHint?): Long? = hint?.takeIf { it.priceOrb == priceOrb && it.price > 0 }?.let { it.price * amount }

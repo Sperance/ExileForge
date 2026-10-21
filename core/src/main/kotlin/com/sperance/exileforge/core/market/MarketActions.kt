@@ -239,12 +239,18 @@ class MarketActions(
         mine(api.auction.extend(heroes.heroId, lotId), "toast.extended")
     }
 
-    /** Подсказка цены тому, что герой выставляет: читается тихо, ошибка - просто нет подсказки; одна на вещь за сеанс. */
+    /**
+     * Подсказка цены - медиана похожих сделок - тому, что герой выставляет или на что ставит: читается тихо, ошибка - просто нет подсказки;
+     * одна на вещь за сеанс.
+     */
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? {
         val key = "$itemCode/${rarity?.name}/$itemLevel"
         hints[key]?.let { return it.value }
         return quietly { api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) } }
     }
+
+    /** Подсказка цены товара лота [lot] ([priceHint]): вещь - по базе, редкости и уровню, стопка - по коду. */
+    suspend fun priceHint(lot: AuctionLot): PriceHint? = priceHint(lot.itemCode, lot.rarity, lot.itemLevel)
 
     /** Подсказки цен сеанса: сделки копятся медленно, а лист выставления открывают часто. */
     private val hints = java.util.concurrent.ConcurrentHashMap<String, Hint>()

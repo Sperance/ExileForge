@@ -190,7 +190,7 @@ val appModule = module {
     }
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
-    single { TownActions(get(), get(), get(), get(), get(), get(), get(), get()) }
+    single { TownActions(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     singleOf(::Actions)
     single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get(), get(), get()) }
     single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get(), get()) }

@@ -46,7 +46,9 @@ class HeroPartsTest {
     @Test
     fun a_hero_without_the_run_part_is_not_complete() {
         val parts = HeroParts.NAMES.filter { it != HeroParts.RUN }.associateWith { HeroPart("1", JsonObject(emptyMap())) }
-        assertFalse(HeroParts("hero").merge(HeroSnapshot("7", parts), fresh = false).complete)
+        val kept = HeroParts("hero").merge(HeroSnapshot("7", parts), fresh = false)
+        assertFalse(kept.complete)
+        assertNull(kept.campaign.run)
         assertTrue(held().complete)
     }
 

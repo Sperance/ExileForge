@@ -44,7 +44,12 @@ class MarketActions(
 
     private fun market(transform: (Market) -> Market) = repository.update(transform)
 
-    fun tab(tab: MarketTab) = market { it.copy(tab = tab) }
+    /** Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром. */
+    fun tab(tab: MarketTab) {
+        market { it.copy(tab = tab) }
+        if (tab.mode != null && market.readUnder[tab] != showcaseFilter()) loadShowcase()
+    }
+
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
 
     /**
@@ -56,18 +61,35 @@ class MarketActions(
         loadShowcase()
     }
 
-    /** Витрина и торги с первой страницы под фильтром, как он стоит; не загрузились - отметка отказа ([Market.showcaseFailed]). */
-    fun loadShowcase() = trade(restart = true) {
-        val filter = showcaseFilter()
-        val (showcase, auctions) = try {
-            api.auction.search(heroes.heroId, filter, listOf(""), LotMode.FIXED) to api.auction.search(heroes.heroId, filter, listOf(""), LotMode.BID)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            if ((e as? ApiFailure)?.code != LEVEL_GATE) market { it.copy(showcaseFailed = true) }
-            throw e
+    /**
+     * Страница активной вкладки - витрина или торги - с первой страницы под фильтром, как он стоит; другая читается при входе на свою
+     * вкладку ([tab]). На вкладках без страницы обе лишь помечены к чтению. Не загрузилась - отметка отказа ([Market.showcaseFailed]).
+     */
+    fun loadShowcase() {
+        val tab = market.tab
+        if (tab.mode == null) return market { it.copy(readUnder = emptyMap()) }
+        trade(restart = true) {
+            val read = try {
+                page(tab)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if ((e as? ApiFailure)?.code != LEVEL_GATE) market { it.copy(showcaseFailed = true) }
+                throw e
+            }
+            market { read(it.copy(showcaseFailed = false)) }
         }
-        market { it.copy(showcase = showcase, auctions = auctions, showcaseFailed = false) }
+    }
+
+    /** Первая страница вкладки [tab] под фильтром, как он стоит: что положить в рынок; у вкладки без страницы - ничего. */
+    private suspend fun page(tab: MarketTab): (Market) -> Market {
+        val mode = tab.mode ?: return { it }
+        val filter = showcaseFilter()
+        val page = api.auction.search(heroes.heroId, filter, listOf(""), mode)
+        return { state ->
+            val read = state.readUnder + (tab to filter)
+            if (mode == LotMode.BID) state.copy(auctions = page, readUnder = read) else state.copy(showcase = page, readUnder = read)
+        }
     }
 
     /**
@@ -235,10 +257,38 @@ class MarketActions(
 
     private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, maxAgeMs: Long = 0, block: suspend () -> Unit) {
         if (writing) {
-            commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated(block) }
+            commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated { reread(block) } }
         } else {
             commands.read(key, restart, silent = glance, tag = heroes.heroId, maxAgeMs = maxAgeMs) { gated(block, glance) }
         }
+    }
+
+    /**
+     * Команда [block]; отказ, что значит «показанное устарело» ([STALE]: ставку перебили, своя уже лидирует, лот закрыт), - страница
+     * активной вкладки и свои лоты со ставками читаются заново внутри команды (её ключи чтения заняты ею), и лист пересчитывает
+     * наименьшую ставку и срок. Отказ печатается всё равно; сбой перечитывания его не заслоняет.
+     */
+    private suspend fun reread(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: ApiFailure) {
+            if (e.code in STALE) {
+                fresh()?.let { (page, answer) ->
+                    market(page)
+                    mine(answer)
+                }
+            }
+            throw e
+        }
+    }
+
+    /** Страница активной вкладки и свой рынок, прочитанные заново; не прочитались - null. */
+    private suspend fun fresh(): Pair<(Market) -> Market, AuctionMine>? = try {
+        page(market.tab) to api.auction.mine(heroes.heroId)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
     }
 
     private suspend fun gated(block: suspend () -> Unit, glance: Boolean = false) {
@@ -261,6 +311,17 @@ class MarketActions(
 
         /** Код сервера «у торговца нет такого предложения»: полка сменилась. */
         const val RESTOCKED = "CH_017"
+
+        /** Отказы сервера, после которых показанные лоты устарели: лот закрыт, ставка ниже наименьшей, своя ставка уже лидирует. */
+        val STALE = setOf("AU_004", "AU_019", "AU_020")
+
+        /** Режим лотов страницы вкладки: витрина - за цену, «Аукцион» - торги; у прочих вкладок страницы нет. */
+        val MarketTab.mode: LotMode?
+            get() = when (this) {
+                MarketTab.SHOWCASE -> LotMode.FIXED
+                MarketTab.AUCTION -> LotMode.BID
+                MarketTab.LOTS, MarketTab.HISTORY -> null
+            }
     }
 }
 

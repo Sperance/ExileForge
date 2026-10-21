@@ -101,7 +101,10 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when (tab) {
-                    FoeTab.STATS -> StatsTab(foe, body, hero, rules)
+                    FoeTab.STATS -> {
+                        IdolRows(foe, fight)
+                        StatsTab(foe, body, hero, rules)
+                    }
                     FoeTab.SKILLS -> SkillsTab(foe, body, hero, traits, name)
                     FoeTab.PHASES -> ownBoss?.let { PhasesTab(it, totems, name) }
                     FoeTab.MODS -> ModsTab(foe, shares)
@@ -137,6 +140,24 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 @Composable private fun Head(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 6.dp))
 
 private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
+
+/**
+ * Идол Стража Врат в его листе - числа правил `WardenRule`: доля здоровья Стража, что идол кладёт на Стража, пока стоит, и на сколько
+ * ускоряет возврат печатей; если разбить - через сколько секунд печать будет возвращаться без него. Не идол - ничего.
+ */
+@Composable private fun IdolRows(foe: FoeView, fight: FightHud) {
+    val index = LocalContentIndex.current
+    val rule = index?.campaign?.trials?.rift?.guardians?.warden?.takeIf { foe.inert && it.idol == foe.monster.code } ?: return
+    val standing = fight.foes.count { it.inert && it.alive }
+    val now = rule.every / rule.idolPace(standing)
+    val broken = rule.every / rule.idolPace(standing - 1)
+    val faster = (rule.idolRate - 1) / rule.idolCount.coerceAtLeast(1) * 100
+    val lines = rule.idolLines.map { SkillText.statLine(it.stat, it.op, it.value, index) } + ui("fight.idol.seals_faster", fineNumber(faster))
+    Head(ui("fight.idol.title"))
+    Row2(ui("fight.idol.share"), ui("fight.idol.share_value", fineNumber(rule.idolLife)), FrameGoldBright)
+    Row2(ui("fight.idol.standing"), ui("fight.idol.on_warden"), FrameGoldBright, note = lines.joinToString("\n"))
+    Row2(ui("fight.idol.broken"), ui("fight.idol.broken_value", fineNumber(now), fineNumber(broken)), FrameGoldBright)
+}
 
 /** Характеристики: запасы, скорость, урон, защита - и что от защиты остаётся против героя. */
 @Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Проверка клиента перед пушем и шаги job `core` и `app` в android.yml - один список задач Gradle (RULES.md, «CI»).
 #   check.sh core               :core:ktlintCheck, commentStyle, :core:test                      (job core)
-#   check.sh app [--no-compile] :app:ktlintCheck, сторожа :app, commentStyle, компиляция :app    (job app - без компиляции)
+#   check.sh app [--no-compile] :app:ktlintCheck, сторожа :app, commentStyle, Android Lint, компиляция :app (job app - без компиляции)
 #   check.sh all [--no-compile] то и другое одним запуском Gradle
 # Целиком :app собирают только релизные job: minified, minified-strict, release-apk.
 set -euo pipefail
@@ -23,7 +23,7 @@ for arg in "$@"; do
 done
 
 core=(:core:ktlintCheck commentStyle :core:test)
-app=(:app:ktlintCheck :app:androidOnly :app:forgeButtonsOnly commentStyle)
+app=(:app:ktlintCheck :app:androidOnly :app:forgeButtonsOnly commentStyle :app:lintRelease)
 if [ "$compile" = true ]; then
     app+=(:app:compileMinifiedTestKotlin :app:compileMinifiedTestAndroidTestKotlin)
 fi

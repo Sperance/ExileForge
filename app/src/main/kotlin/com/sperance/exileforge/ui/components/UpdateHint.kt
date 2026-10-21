@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -136,7 +137,8 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
  */
 @Composable internal fun SoftUpdateToast(update: AvailableUpdate, onLater: () -> Unit, onInstall: () -> Unit) {
     val navigator = koinInject<Navigator>()
-    val barShown by remember(navigator) { navigator.current.map { it.bars }.distinctUntilChanged() }.collectAsStateWithLifecycle(navigator.current.value.bars)
+    val route = navigator.current.collectAsStateWithLifecycle()
+    val barShown by remember(route) { derivedStateOf { route.value.bars } }
     Box(
         Modifier.fillMaxSize().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = if (barShown) ABOVE_BAR else RUN_BOTTOM),
         contentAlignment = Alignment.BottomCenter,

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -106,8 +107,8 @@ import org.koin.compose.viewmodel.koinViewModel
     LaunchedEffect(buzzes, haptics) { buzzes.flow.collect(haptics::play) }
     val settingsModel = koinViewModel<SettingsViewModel>()
     val navigator = koinInject<Navigator>()
-    val inGame by remember(navigator) { navigator.current.map { it.phase == AppPhase.GAME }.distinctUntilChanged() }
-        .collectAsStateWithLifecycle(navigator.current.value.phase == AppPhase.GAME)
+    val route = navigator.current.collectAsStateWithLifecycle()
+    val inGame by remember(route) { derivedStateOf { route.value.phase == AppPhase.GAME } }
     val hardVersionCode by remember(updates) { updates.state.map { it.update?.takeIf { u -> u.hard }?.info?.versionCode }.distinctUntilChanged() }
         .collectAsStateWithLifecycle(null)
     CompositionLocalProvider(

@@ -30,7 +30,10 @@ val AuctionLot.outbid: Boolean get() = standing == BidStanding.OUTBID
 fun AuctionLot.sameAccount(userId: String?): Boolean = isBidding && !userId.isNullOrEmpty() && sellerUser == userId
 
 /** Продавец может продать торги лучшей ставке досрочно: торги открыты и ставка есть. */
-val AuctionLot.acceptable: Boolean get() = isBidding && onSale && currentBid > 0
+val AuctionLot.acceptable: Boolean get() = acceptableAt(System.currentTimeMillis())
+
+/** [acceptable] к «сейчас» [now] (часы сервера). */
+fun AuctionLot.acceptableAt(now: Long): Boolean = isBidding && onSaleAt(now) && currentBid > 0
 
 /** Наименьшая ставка по правилам торгов [rules] ([Bidding.minBid]); не выше выкупа. */
 fun AuctionLot.minBid(rules: AuctionRules): Long = bidding?.let { Bidding.minBid(rules, it, price) } ?: price

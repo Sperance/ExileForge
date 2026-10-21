@@ -1,12 +1,15 @@
 package com.sperance.exileforge.ui.screens.auction
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +43,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.DealEntry
 import com.sperance.exileforge.core.market.DealLedger
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketChores
+import com.sperance.exileforge.core.market.ownAuctions
+import com.sperance.exileforge.core.market.ownFixed
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.content.AuctionRules
@@ -67,38 +73,45 @@ import com.sperance.exileforge.ui.theme.*
  * ([lotMarks]: в последний день - цветом [Caution], в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
  * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
  * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
+ *
+ * Дела рынка ([MarketChores] к «сейчас» часов сервера): строка, что ждёт действия, несёт жёлтую точку у своей пометки, заголовок раздела -
+ * «● ждут: N»; вход с плитки Города ([Market.spotlight]) листает к первой такой строке и обводит её, пока открыта вкладка.
  */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var openBid by remember { mutableStateOf<String?>(null) }
     val rules = game.index?.rules?.auction
     val now = rememberServerNow(LOT_TICK_MS)
-    val (auctions, lots) = remember(market.ownLots) { market.ownLots.partition { it.isBidding && it.onSale } }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        market.slots?.takeIf { it.bidLimit > 0 }?.let { slots ->
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    MutedText(ui("auction.my_fixed") + " " + ui("auction.slots_value", slots.used, slots.limit))
-                    MutedText(ui("auction.my_bids") + " " + ui("auction.slots_value", slots.bids, slots.bidLimit))
+    val auctions = market.ownAuctions
+    val lots = market.ownFixed
+    val chores = remember(market, game.heroId, rules, now) { MarketChores.of(market, game.heroId, rules, now) }
+    val rows = remember(market, chores, game.lang) { myLotsRows(market, auctions, lots, chores) }
+    val list = rememberLazyListState()
+    LaunchedEffect(market.spotlight) {
+        val index = rows.indexOfFirst { it.key == market.spotlight }
+        if (index >= 0) list.animateScrollToItem(index)
+    }
+    LazyColumn(Modifier.weight(1f), state = list, verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
+        items(rows, key = { it.key }) { row ->
+            when (row) {
+                is MyLotsRow.Slots -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    MutedText(ui("auction.my_fixed") + " " + ui("auction.slots_value", row.slots.used, row.slots.limit))
+                    MutedText(ui("auction.my_bids") + " " + ui("auction.slots_value", row.slots.bids, row.slots.bidLimit))
+                }
+
+                MyLotsRow.Empty -> InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
+
+                is MyLotsRow.Section -> SectionTitle(row.title, row.count, row.due)
+
+                is MyLotsRow.Lot -> Box(Modifier.spotlit(row.key == market.spotlight)) {
+                    val lot = row.lot
+                    when (row.kind) {
+                        MyLotKind.AUCTION -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id }
+                        MyLotKind.BID -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openBid = lot.id }
+                        MyLotKind.FIXED -> LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { openLot = lot.id }
+                    }
                 }
             }
-        }
-        if (market.ownLots.isEmpty() && market.myBids.isEmpty()) {
-            item {
-                InfoCard(ui("auction.no_lots"), ui("auction.no_lots_hint"))
-            }
-        }
-        if (auctions.isNotEmpty()) {
-            item { SectionTitle(ui("auction.my_auctions"), auctions.size) }
-            items(auctions, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openLot = lot.id } }
-        }
-        if (market.myBids.isNotEmpty()) {
-            item { SectionTitle(ui("auction.my_bids"), market.myBids.size) }
-            items(market.myBids, key = { "bid-${it.id}" }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openBid = lot.id } }
-        }
-        if (lots.isNotEmpty() && (auctions.isNotEmpty() || market.myBids.isNotEmpty())) item { SectionTitle(ui("auction.my_fixed"), lots.size) }
-        items(lots, key = { it.id }) { lot ->
-            LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { openLot = lot.id }
         }
     }
     market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, now, vm) { openBid = null } }
@@ -137,11 +150,64 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Заголовок раздела своих лотов: имя и сколько в нём строк. */
-@Composable private fun SectionTitle(title: String, count: Int) {
+/** Раздел «Моих лотов», к которому относится строка лота: свои торги, свои ставки, лоты за цену. */
+private enum class MyLotKind { AUCTION, BID, FIXED }
+
+/** Строка списка «Моих лотов»; [key] - ключ ленивого списка, у строки лота - id лота (по нему же подсветка входа с плитки). */
+private sealed interface MyLotsRow {
+    val key: String
+
+    /** Места лотов и ставок над списком. */
+    data class Slots(val slots: AuctionSlots) : MyLotsRow {
+        override val key: String get() = "slots"
+    }
+
+    /** Ни лотов, ни ставок. */
+    data object Empty : MyLotsRow {
+        override val key: String get() = "empty"
+    }
+
+    /** Заголовок раздела: имя, сколько строк и сколько из них ждут действия ([due]). */
+    data class Section(val title: String, val count: Int, val due: Int) : MyLotsRow {
+        override val key: String get() = "section-$title"
+    }
+
+    /** Лот раздела [kind]. */
+    data class Lot(val lot: AuctionLot, val kind: MyLotKind) : MyLotsRow {
+        override val key: String get() = lot.id
+    }
+}
+
+/**
+ * Строки «Моих лотов» по порядку: места, пусто, свои торги [auctions], свои ставки, лоты за цену [lots]; у заголовков - число дел
+ * [chores] раздела. Заголовок лотов за цену - только когда выше есть другие разделы.
+ */
+private fun myLotsRows(market: Market, auctions: List<AuctionLot>, lots: List<AuctionLot>, chores: MarketChores): List<MyLotsRow> = buildList {
+    market.slots?.takeIf { it.bidLimit > 0 }?.let { add(MyLotsRow.Slots(it)) }
+    if (market.ownLots.isEmpty() && market.myBids.isEmpty()) add(MyLotsRow.Empty)
+    fun section(title: String, among: List<AuctionLot>, kind: MyLotKind, titled: Boolean = true) {
+        if (among.isEmpty()) return
+        if (titled) add(MyLotsRow.Section(title, among.size, chores.count(among)))
+        among.forEach { add(MyLotsRow.Lot(it, kind)) }
+    }
+    section(ui("auction.my_auctions"), auctions, MyLotKind.AUCTION)
+    section(ui("auction.my_bids"), market.myBids, MyLotKind.BID)
+    section(ui("auction.my_fixed"), lots, MyLotKind.FIXED, titled = auctions.isNotEmpty() || market.myBids.isNotEmpty())
+}
+
+/** Обводка строки, подсвеченной входом с плитки Города: жёлтая рамка по контуру плиты товара. */
+private fun Modifier.spotlit(on: Boolean): Modifier = if (on) border(2.dp, Caution, RoundedCornerShape(16.dp)) else this
+
+/** Заголовок раздела своих лотов: имя, сколько в нём строк и справа - сколько ждут действия ([due], ноль не печатается). */
+@Composable private fun SectionTitle(title: String, count: Int, due: Int = 0) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, color = Parchment, style = MaterialTheme.typography.titleSmall)
         Text(count.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
+        if (due > 0) {
+            Spacer(Modifier.weight(1f))
+            ChoreDot()
+            Text(ui("auction.due_count", due), color = Caution, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -175,7 +241,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Пометки строки своего лота к «сейчас» [now] (часы сервера): куда вернулся истёкший ([lotReturn]), иначе «ещё N» - в окне продления
- * (последний день, [rules]) цветом [Caution] - и «можно продлить», пока продления не кончились; срока нет - пометок нет.
+ * (последний день, [rules]) цветом [Caution] - и «можно продлить» с точкой дела, пока продления не кончились; срока нет - пометок нет.
  */
 private fun lotMarks(lot: AuctionLot, rules: AuctionRules?, now: Long): List<TradeMark> {
     lotReturn(lot)?.let { return listOf(TradeMark(it)) }
@@ -183,7 +249,7 @@ private fun lotMarks(lot: AuctionLot, rules: AuctionRules?, now: Long): List<Tra
     val ending = rules != null && lot.extendable(rules.extendWindowMillis, now)
     return listOfNotNull(
         TradeMark(ui("auction.left", left), if (ending) Caution else Rune),
-        TradeMark(ui("auction.extend_now")).takeIf { rules != null && lot.extendable(rules, now) },
+        TradeMark(ui("auction.extend_now"), Caution, due = true).takeIf { rules != null && lot.extendable(rules, now) },
     )
 }
 

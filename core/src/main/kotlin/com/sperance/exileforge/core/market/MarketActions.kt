@@ -46,13 +46,19 @@ class MarketActions(
 
     /**
      * Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром, свой рынок («Мои лоты»,
-     * «История») - если прочитан дольше полуминуты назад.
+     * «История») - если прочитан дольше полуминуты назад. Подсветка входа с плитки гаснет.
      */
     fun tab(tab: MarketTab) {
-        market { it.copy(tab = tab) }
+        market { it.copy(tab = tab, spotlight = null) }
         if (tab.mode != null && market.readUnder[tab] != showcaseFilter()) loadShowcase()
         if (tab.ownMarket) loadMyLots(fresh = true)
     }
+
+    /**
+     * Вход с плитки Города: есть дело - рынок открывается на «Моих лотах» с подсвеченной строкой [lotId] (первое дело,
+     * [MarketChores.first]); дел нет - вкладка как была, без подсветки.
+     */
+    fun attend(lotId: String?) = market { if (lotId == null) it.copy(spotlight = null) else it.copy(tab = MarketTab.LOTS, spotlight = lotId) }
 
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
 

@@ -32,6 +32,8 @@ import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.market.MarketDue
+import com.sperance.exileforge.core.market.due
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.session.Reads
@@ -71,7 +73,7 @@ import com.sperance.exileforge.ui.theme.*
         } else if (page.items.isEmpty()) {
             item { InfoCard(ui("tree.nothing_found"), ui("auction.bids_empty")) }
         }
-        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openLot = lot.id } }
+        items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = rules?.let { lot.due(game.heroId, it, now) }) { openLot = lot.id } }
         if (page.next != null) {
             item {
                 ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = vm::moreAuctions, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
@@ -94,9 +96,9 @@ import com.sperance.exileforge.ui.theme.*
  * Строка торгов (вариант A), как [TradeRow], из готовых данных: плита товара - значок вида [visual], имя цветом редкости, факты [facts] и
  * пометки (ставок N, «вы лидер» / «ставку перебили»), срок к «сейчас» [now] (часы сервера); справа колонка - ставка крупно (без ставок -
  * первая ставка) и выкуп под ней; снизу полоса оставшегося срока, в последние часы хвоста ставки - красная. Лидер и перебитая ставка -
- * цветной кромкой слева: зелёной и красной.
+ * цветной кромкой слева: зелёной и красной. [due] - дело строки ([MarketDue]): жёлтая точка у пометки «ставку перебили» или «можно продать».
  */
-@Composable internal fun BidRow(lot: AuctionLot, facts: List<String>, visual: ItemVisualKind, rules: AuctionRules?, now: Long, enabled: Boolean, onClick: () -> Unit) {
+@Composable internal fun BidRow(lot: AuctionLot, facts: List<String>, visual: ItemVisualKind, rules: AuctionRules?, now: Long, enabled: Boolean, due: MarketDue? = null, onClick: () -> Unit) {
     val card = RoundedCornerShape(16.dp)
     val frame = RoundedCornerShape(12.dp)
     val color = lotColor(lot)
@@ -113,7 +115,7 @@ import com.sperance.exileforge.ui.theme.*
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(lot.title, color = color, style = itemName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                TradeFacts(facts, bidMarks(lot))
+                TradeFacts(facts, bidMarks(lot, due))
                 lotLeft(lot, now)?.let { Text(ui("auction.left", it), color = if (ending) LifeRed else Muted, style = MaterialTheme.typography.labelSmall) }
             }
             BidColumn(lot)
@@ -139,11 +141,12 @@ internal fun bidFacts(lang: Lang, lot: AuctionLot): List<String> = if (lot.equip
     stackFacts(lang, lot)
 }
 
-/** Пометки торгов: число ставок (нет ставок - приглушённо) и где ставка героя. */
-internal fun bidMarks(lot: AuctionLot): List<TradeMark> = listOfNotNull(
+/** Пометки торгов: число ставок (нет ставок - приглушённо), где ставка героя и дело строки [due] - с жёлтой точкой. */
+private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOfNotNull(
     if (lot.bidCount > 0) TradeMark(ui("auction.bids_count", lot.bidCount), Quiet) else TradeMark(ui("auction.no_bids"), Muted),
     TradeMark(ui("auction.you_lead"), Vital).takeIf { lot.leading },
-    TradeMark(ui("auction.you_outbid"), LifeRed).takeIf { lot.outbid },
+    TradeMark(ui("auction.you_outbid"), LifeRed, due = due == MarketDue.OUTBID).takeIf { lot.outbid },
+    TradeMark(ui("auction.sell_now"), Caution, due = true).takeIf { due == MarketDue.SELL },
 )
 
 /** Колонка цены торгов: подпись, ставка крупно (без ставок - первая ставка), выкуп под ней. */

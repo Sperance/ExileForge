@@ -32,6 +32,8 @@ data class Market(
     val myBids: List<AuctionLot> = emptyList(),
     /** Под каким фильтром прочитана страница вкладки - витрина или торги; нет записи - страницу читать при входе на вкладку. */
     val readUnder: Map<MarketTab, AuctionFilter> = emptyMap(),
+    /** Строка «Моих лотов», что ждёт действия и подсвечена входом с плитки Города ([MarketChores.first]); null - подсветки нет. */
+    val spotlight: String? = null,
 ) {
     /**
      * Свои лоты: что ещё продаются, чей срок вышел и что ещё возвращаются ([AuctionLot.returning]), и ниже - истёкшие, чей товар уже

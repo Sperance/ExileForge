@@ -43,4 +43,7 @@ class MarketViewModel(
     fun bid(lotId: String, amount: Long) = actions.bid(lotId, amount)
     fun buyout(lotId: String) = actions.buyout(lotId)
     fun accept(lotId: String) = actions.accept(lotId)
+
+    /** Вход с плитки Города: открыть «Мои лоты» на строке [lotId], что ждёт действия; null - без подсветки. */
+    fun attend(lotId: String?) = actions.attend(lotId)
 }

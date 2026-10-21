@@ -83,7 +83,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
     val warming = warmup?.takeIf { !it.finished }
     val verdict = StartGate.verdict(
-        StartInput(reach.reach, window.fit, s.mandatory, s.checking, stages.deviceReady, warming != null, window.elapsedMs, window.released, busy),
+        StartInput(reach.reach, window.fit, s.hardFound, s.checking, stages.deviceReady, warming != null, window.elapsedMs, window.released, busy),
     )
     LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) actions.release() }
     var visible by remember { mutableStateOf(false) }
@@ -132,7 +132,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
             }
         }
 
-        s.askSources && window.released && !s.mandatory -> Locked { SourcesBody() }
+        s.askSources && window.released && !s.hardFound -> Locked { SourcesBody() }
     }
 }
 

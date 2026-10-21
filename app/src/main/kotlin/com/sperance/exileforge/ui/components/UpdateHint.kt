@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.update.AvailableUpdate
+import com.sperance.exileforge.core.update.notesHeadline
+import com.sperance.exileforge.ui.nav.Navigator
+import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -45,23 +47,23 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Quiet
 import com.sperance.exileforge.ui.theme.depthPanel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import org.koin.compose.koinInject
 import kotlin.math.ceil
 
 /**
- * Плашка жёсткого обновления в бою и её кружок - одно состояние на игру ([LocalUpdateHint]): плашка раскрыта ([open]) первые
- * [HINT_MS] после показа или касания кружка, затем свёрнута - кружок у кнопки меню забега ([UpdateMark]). [shows] - сколько раз её
- * раскрывали: с каждым разом отсчёт идёт заново.
+ * Плашка жёсткого обновления в бою и её кружок - одно состояние на найденную сборку ([LocalUpdateHint]; хозяин заводит новое на другую
+ * сборку): плашка раскрыта ([open]) первые [HINT_MS] после показа или касания кружка, затем свёрнута - кружок у кнопки меню забега
+ * ([UpdateMark]). Свёрнутая плашка выходит из композиции, раскрытая снова отсчитывает заново.
  */
 @Stable
 class UpdateHintState {
     var open by mutableStateOf(true)
         private set
-    var shows by mutableIntStateOf(0)
-        private set
 
     fun expand() {
         open = true
-        shows++
     }
 
     fun collapse() {
@@ -81,7 +83,7 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
     val hint = LocalUpdateHint.current
     if (!hint.open) return
     val now by rememberNow(HINT_TICK_MS)
-    val since = remember(hint.shows) { now }
+    val since = remember(hint) { now }
     val left = HINT_MS - (now - since)
     if (left <= 0) {
         LaunchedEffect(Unit) { hint.collapse() }
@@ -106,17 +108,19 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
 
 /**
  * Кружок свёрнутой плашки жёсткого обновления - сразу за кнопкой меню забега (32 dp в зоне касания 44, цвет осторожности): касание
- * разворачивает плашку заново. Жёсткого обновления нет или плашка раскрыта - ничего.
+ * разворачивает плашку заново. Жёсткого обновления нет или плашка раскрыта - ничего. Читает один срез модели - версию ждущей жёсткой
+ * сборки, не ход её загрузки.
  */
 @Composable fun UpdateMark() {
     val updates = LocalUpdates.current ?: return
-    val s by updates.state.collectAsStateWithLifecycle()
-    val update = s.update?.takeIf { it.hard } ?: return
+    val version by remember(updates) { updates.state.map { it.update?.takeIf { u -> u.hard }?.info?.versionName }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(null)
+    val waiting = version ?: return
     val hint = LocalUpdateHint.current
     if (hint.open) return
     ForgeIconButton(
         Icons.Outlined.Upgrade,
-        ui("update.waiting", update.info.versionName),
+        ui("update.waiting", waiting),
         onClick = hint::expand,
         kind = ButtonKind.Secondary,
         size = ButtonSize.Compact,
@@ -126,11 +130,13 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
 }
 
 /**
- * Тост мягкого обновления снизу над панелью вкладок ([barShown]; без панели - у края): «Доступна X», размер, первая строка «Что нового»
- * в одну строку с многоточием, «Позже» ([onLater] - до холодного запуска) и «Обновить» ([onInstall] - окно обновления). Высота постоянна:
- * длинные заметки его не растят.
+ * Тост мягкого обновления снизу над панелью вкладок (есть ли она - у текущего экрана навигатора, [Route.bars]; без панели - у края):
+ * «Доступна X», размер, первая строка «Что нового» ([notesHeadline]) в одну строку с многоточием, «Позже» ([onLater] - до холодного
+ * запуска) и «Обновить» ([onInstall] - окно обновления). Высота постоянна: длинные заметки его не растят.
  */
-@Composable internal fun SoftUpdateToast(update: AvailableUpdate, barShown: Boolean, onLater: () -> Unit, onInstall: () -> Unit) {
+@Composable internal fun SoftUpdateToast(update: AvailableUpdate, onLater: () -> Unit, onInstall: () -> Unit) {
+    val navigator = koinInject<Navigator>()
+    val barShown by remember(navigator) { navigator.current.map { it.bars }.distinctUntilChanged() }.collectAsStateWithLifecycle(navigator.current.value.bars)
     Box(
         Modifier.fillMaxSize().navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = if (barShown) ABOVE_BAR else RUN_BOTTOM),
         contentAlignment = Alignment.BottomCenter,
@@ -143,7 +149,7 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
                     if (update.info.size > 0) UpdateMeta(ui("update.size", megabytes(update.info.size)))
                 }
             }
-            val headline = update.info.headline
+            val headline = notesHeadline(update.info.notes)
             if (headline.isNotEmpty()) {
                 Text(ui("update.soft_notes", headline), color = Quiet, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
             }

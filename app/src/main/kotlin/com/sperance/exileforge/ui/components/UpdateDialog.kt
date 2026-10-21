@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Upgrade
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,26 +39,30 @@ import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.update.UpdateInstaller
 
 /**
- * Хозяин обновления - своё окно поверх игры, не состояние заставки запуска. Жёсткое ([AvailableUpdate.hard], [UpdateState.mandatory]) -
+ * Хозяин обновления - своё окно поверх игры, не состояние заставки запуска. Жёсткое ([AvailableUpdate.hard], [UpdateState.hardFound]) -
  * диалог по центру ([UpdateDialog]), игра под ним видна, но не нажимается; закрыть его нельзя ни «назад», ни касанием мимо. [busy] - идёт
  * поход, испытание или Разлом: пока бой, о жёстком говорит плашка у низа экрана ([RunUpdateHint]), диалог - по его концу. Мягкое -
- * тост снизу над панелью вкладок ([SoftUpdateToast], [barShown] - панель на виду), только вне боя и пока его не отложили
- * ([UpdateState.offered]). «Обновить» плашки и тоста открывает тот же диалог, но закрываемый: игра под ним играет.
+ * тост снизу над панелью вкладок ([SoftUpdateToast]), только в игре вне боя ([offerShown] - окно запуска отпустило и игрок в игре, не на
+ * входе и не в выборе героя) и пока его не отложили ([UpdateState.offered]). «Обновить» плашки и тоста открывает тот же диалог, но
+ * закрываемый: игра под ним играет. Загрузка и установка ([UpdateState.progress], [UpdateState.installing]) держат диалог открытым,
+ * откуда бы их ни начали (карточка настроек тоже); ошибка загрузки открывает его сама - один раз, закрыть можно.
  */
-@Composable fun UpdateHost(updates: UpdateModel, busy: Boolean, barShown: Boolean) {
+@Composable fun UpdateHost(updates: UpdateModel, busy: Boolean, offerShown: Boolean) {
     val s by updates.state.collectAsState()
     val update = s.update ?: return
     var opened by remember(update.info.versionCode) { mutableStateOf(false) }
     val locked = update.hard && !busy
+    val working = s.progress != null || s.installing
+    LaunchedEffect(s.error) { if (s.error != null) opened = true }
     when {
         update.hard && busy -> RunUpdateHint(update, onInstall = { opened = true })
-        !update.hard && !busy -> s.offered?.let { SoftUpdateToast(it, barShown, onLater = updates::later, onInstall = { opened = true }) }
+        !update.hard && !busy && offerShown -> s.offered?.let { SoftUpdateToast(it, onLater = updates::later, onInstall = { opened = true }) }
     }
-    if (!locked && !opened) return
-    val dismiss: () -> Unit = { opened = false }
+    if (!locked && !opened && !working) return
+    val closable = !locked && !working
     Dialog(
-        onDismissRequest = if (locked) ({}) else dismiss,
-        properties = DialogProperties(dismissOnBackPress = !locked, dismissOnClickOutside = !locked, usePlatformDefaultWidth = false),
+        onDismissRequest = { if (closable) opened = false },
+        properties = DialogProperties(dismissOnBackPress = closable, dismissOnClickOutside = closable, usePlatformDefaultWidth = false),
     ) {
         ChordOverWindow()
         Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
@@ -67,9 +72,9 @@ import com.sperance.exileforge.update.UpdateInstaller
 }
 
 /**
- * Окно обязательного обновления: печать, «Нужно обновление», версии «было → станет» чипами, «Что нового» с прокруткой внутри, внизу -
- * «Обновить» и размер; пока качается - тонкая полоса и «64% · 24 из 38 МБ» мелко; установка, разрешение на неё и ошибка загрузки - в этом
- * же окне. Не влезает в экран (крупный шрифт) - прокручивается целиком. [onInstall] - «Обновить» и «Повторить»; [onPermissionAsked] -
+ * Окно обновления: печать, заголовок по виду обновления (жёсткое - «Нужно обновление», мягкое - «Доступно обновление»), версии
+ * «было → станет» чипами, «Что нового» с прокруткой внутри, внизу - «Обновить» и размер; пока качается - тонкая полоса и
+ * «64% · 24 из 38 МБ» мелко; установка, разрешение на неё и ошибка загрузки - в этом же окне. Не влезает в экран (крупный шрифт) - прокручивается целиком. [onInstall] - «Обновить» и «Повторить»; [onPermissionAsked] -
  * игрок ушёл в настройки за разрешением.
  *
  * Обход установщика: страница релиза на GitHub, APK руками.
@@ -85,7 +90,7 @@ import com.sperance.exileforge.update.UpdateInstaller
         Box(Modifier.size(56.dp).background(Abyss, CircleShape).border(1.dp, Gold.copy(alpha = .7f), CircleShape), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.Upgrade, null, tint = Gold, modifier = Modifier.size(28.dp))
         }
-        Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif, textAlign = TextAlign.Center)
+        Text(ui(if (update.hard) "update.title" else "update.title_soft"), color = GoldBright, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif, textAlign = TextAlign.Center)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VersionChip(BuildConfig.VERSION_NAME, Parchment)
             Icon(Icons.AutoMirrored.Outlined.ArrowForward, null, tint = Muted, modifier = Modifier.size(16.dp))

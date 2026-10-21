@@ -112,7 +112,8 @@ data class RunMenuItem(
  * Меню забега - одно на поход, Разлом и испытания: быстрые настройки боя, «Все
  * настройки» поверх забега, «Журнал боя» последнего боя ([LocalFightReport]) и пункты режима [items]; [extra] - свой блок режима над ними (мутаторы),
  * [badge] - свои данные справа от заголовка (срок недели). [palette] - краски листа, строк и пунктов.
- * Пока меню или открытый из него системный лист на экране, [hold] держит забег.
+ * Пока меню или открытый из него системный лист на экране, [hold] держит забег. Сразу за кнопкой меню ([trigger]) - кружок ждущего
+ * жёсткого обновления ([UpdateMark]): режимы его не ставят.
  */
 @Composable fun RunMenu(
     items: List<RunMenuItem>,
@@ -128,6 +129,7 @@ data class RunMenuItem(
     val sheets = LocalSystemSheets.current
     val report = LocalFightReport.current
     trigger { open = true }
+    UpdateMark()
     if (open || journal || sheets?.open == true) hold()
     report?.takeIf { journal }?.let { FightLogSheet(it) { journal = false } }
     if (!open) return

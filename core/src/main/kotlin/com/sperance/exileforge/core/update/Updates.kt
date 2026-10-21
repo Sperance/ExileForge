@@ -8,6 +8,7 @@ import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.CacheControl
@@ -27,7 +28,7 @@ data class Wire(val api: Int, val rules: Int) {
 
 /**
  * Сборка из релиза GitHub: `update.json` релиза - версия, провод, имя APK, размер, SHA-256, заметки и объявлена ли сборка обязательной
- * ([mandatory]: трейлер `Update-Mandatory: yes` коммита релиза; старые `update.json` поля не несут - не обязательна).
+ * ([forced]: поле `mandatory` - трейлер `Update-Mandatory: yes` коммита релиза; старые `update.json` поля не несут - не обязательна).
  */
 @Serializable data class AppBuild(
     val versionCode: Int,
@@ -38,46 +39,54 @@ data class Wire(val api: Int, val rules: Int) {
     val size: Long = 0,
     val sha256: String,
     val notes: String = "",
-    val mandatory: Boolean = false,
+    @SerialName("mandatory") val forced: Boolean = false,
 ) {
     val wire: Wire get() = Wire(apiRevision, rules)
-
-    /** Первая строка заметок без разметки (маркер списка, жирный, код) - для тоста в одну строку; заметок нет - пусто. */
-    val headline: String
-        get() = notes.lineSequence()
-            .map { it.trim().trimStart('-', '*', '•', '#', ' ').replace("**", "").replace("`", "").trim() }
-            .firstOrNull { it.isNotEmpty() }.orEmpty()
 }
 
 /** Заметки релиза: версия, дата публикации (ISO) и текст `RELEASE_NOTES.md` той версии. */
 @Serializable data class ReleaseNotes(
-    @kotlinx.serialization.SerialName("tag_name") val tag: String,
-    @kotlinx.serialization.SerialName("published_at") val published: String? = null,
+    @SerialName("tag_name") val tag: String,
+    @SerialName("published_at") val published: String? = null,
     val body: String = "",
 ) {
     val version: String get() = tag.removePrefix("v")
 }
 
-/**
- * Найденная сборка: что это, откуда качать APK и страница релиза для браузера. [hard] - обновление жёсткое: игра без него не играет
- * ([UpdatePolicy.hard]); иначе мягкое - предлагается, но не держит.
- */
-data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String, val hard: Boolean)
+/** Какое обновление: [SOFT] - предлагается, но не держит; [HARD] - игра без него не играет. */
+enum class UpdateKind { SOFT, HARD }
 
 /**
- * Нужна ли сборка и жёсткое ли это обновление. Предлагается любая новее этой, что говорит на проводе сервера (или этой сборки, пока
- * сервер не ответил): сервер на другом проводе - старая играть не может. Сборка на проводе, которого сервер ещё не знает, не
- * предлагается: она не войдёт. Исключение - [outdated]: сервер сам назвал эту сборку устаревшей (426 `CL_001`), значит, его провод уже
- * не её, даже если узнать его не вышло, - нужна любая новее.
+ * Найденная сборка: что это, откуда качать APK и страница релиза для браузера. [kind] - вердикт [UpdatePolicy.verdict]; [hard] - обновление
+ * жёсткое.
+ */
+data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String, val kind: UpdateKind) {
+    val hard: Boolean get() = kind == UpdateKind.HARD
+}
+
+/**
+ * Один вердикт о найденной сборке ([verdict]): не нужна (null), мягкая или жёсткая. Предлагается любая новее этой, что говорит на проводе
+ * сервера (или этой сборки, пока сервер не ответил): сервер на другом проводе - старая играть не может. Сборка на проводе, которого сервер
+ * ещё не знает, не предлагается: она не войдёт. Исключение - `outdated`: сервер сам назвал эту сборку устаревшей (426 `CL_001`), значит,
+ * его провод уже не её, даже если узнать его не вышло, - нужна любая новее.
  *
- * Жёсткое ([hard]) - сервер назвал сборку устаревшей, провод найденной сборки не свой (сервер ушёл на него) или релиз объявлен
- * обязательным ([AppBuild.mandatory]); сборка на своём проводе без объявления - мягкое: тост и карточка в настройках, без диалога.
+ * Жёсткая ([UpdateKind.HARD]) - сервер назвал сборку устаревшей, провод найденной сборки не свой (сервер ушёл на него) или релиз объявлен
+ * обязательным ([AppBuild.forced]); сборка на своём проводе без объявления - мягкая ([UpdateKind.SOFT]): тост и карточка в настройках, без
+ * диалога.
  */
 object UpdatePolicy {
-    fun required(build: AppBuild, versionCode: Int, own: Wire, server: Wire?, outdated: Boolean = false): Boolean = build.versionCode > versionCode && (outdated || build.wire == (server ?: own))
-
-    fun hard(build: AppBuild, own: Wire, outdated: Boolean = false): Boolean = outdated || build.mandatory || build.wire != own
+    fun verdict(build: AppBuild, versionCode: Int, own: Wire, server: Wire?, outdated: Boolean = false): UpdateKind? = when {
+        build.versionCode <= versionCode -> null
+        !outdated && build.wire != (server ?: own) -> null
+        outdated || build.forced || build.wire != own -> UpdateKind.HARD
+        else -> UpdateKind.SOFT
+    }
 }
+
+/** Первая строка заметок [notes] без разметки (маркер списка, жирный, код) - для тоста в одну строку; заметок нет - пусто. */
+fun notesHeadline(notes: String): String = notes.lineSequence()
+    .map { it.trim().trimStart('-', '*', '•', '#', ' ').replace("**", "").replace("`", "").trim() }
+    .firstOrNull { it.isNotEmpty() }.orEmpty()
 
 /**
  * Обновления только с GitHub Releases: последний релиз отдаёт `update.json` и APK по постоянным адресам,
@@ -103,7 +112,7 @@ class Updates(link: HttpLink = ForgeHttp.link) {
             response.body.string()
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server, outdated) }?.available(UpdatePolicy.hard(info, Wire.OWN, outdated))
+        UpdatePolicy.verdict(info, versionCode, Wire.OWN, server, outdated = outdated)?.let { info.available(it) }
     }
 
     /** Заметки [count] последних релизов, новые первыми; GitHub не ответил - ошибка. */
@@ -115,7 +124,7 @@ class Updates(link: HttpLink = ForgeHttp.link) {
         NOTES_JSON.decodeFromString(ListSerializer(ReleaseNotes.serializer()), text).take(count)
     }
 
-    private fun AppBuild.available(hard: Boolean) = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName", hard)
+    private fun AppBuild.available(kind: UpdateKind) = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName", kind)
 
     /**
      * APK [update] в [target], [progress] - прочитано байт из всех. Начатый файл докачивается с места обрыва (`Range`);

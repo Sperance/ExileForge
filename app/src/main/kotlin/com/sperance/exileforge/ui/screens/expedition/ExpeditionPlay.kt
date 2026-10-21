@@ -315,7 +315,7 @@ private val BELT_FLASK = 40.dp
 }
 
 /**
- * Пульт шапки карты: меню захода, кружок ждущего обновления ([UpdateMark]), имя карты (до двух строк, полное - подсказкой по касанию),
+ * Пульт шапки карты: меню захода (с кружком ждущего обновления), имя карты (до двух строк, полное - подсказкой по касанию),
  * снаряжение, герой, задания.
  */
 @Composable private fun MapPult(
@@ -333,7 +333,6 @@ private val BELT_FLASK = 40.dp
             hold = { HoldsRun(run) },
             trigger = { open -> PultButton(Icons.Outlined.Menu, ui("run.menu"), ButtonSize.Compact, open) },
         )
-        UpdateMark()
         MapName(if (zone) ui("vaal.title", mapTitle(hud.mapCode)) else mapTitle(hud.mapCode), if (zone) VaalName else GoldBright, Modifier.weight(1f))
         PultButton(ForgeGlyphs.Helm, ui("expedition.gear"), ButtonSize.Wide, onGear)
         PultButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), ButtonSize.Wide, onStats)

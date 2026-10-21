@@ -66,6 +66,7 @@ import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.update.AppBuild
 import com.sperance.exileforge.core.update.AvailableUpdate
+import com.sperance.exileforge.core.update.UpdateKind
 import com.sperance.exileforge.core.update.UpdateState
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.rules.content.ActiveSlot
@@ -331,7 +332,7 @@ class KeyScreensShotTest {
     /** Окно обязательного обновления: найдено (версии чипами, заметки с прокруткой, «Обновить», размер) и загрузка (тонкая полоса и «64% · 24 из 38 МБ»). */
     @Test fun update() = shot("update", scroll = false) {
         val notes = (1..9).joinToString("\n") { "• Строки предмета сгруппированы по источникам, пункт $it" }
-        val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com", hard = true)
+        val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com", UpdateKind.HARD)
         Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update), {}, {}) }
         Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {}) }
     }

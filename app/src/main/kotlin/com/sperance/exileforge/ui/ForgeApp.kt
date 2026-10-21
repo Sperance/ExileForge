@@ -105,10 +105,14 @@ import org.koin.compose.viewmodel.koinViewModel
     val haptics = koinInject<Haptics>()
     LaunchedEffect(buzzes, haptics) { buzzes.flow.collect(haptics::play) }
     val settingsModel = koinViewModel<SettingsViewModel>()
-    val route by koinInject<Navigator>().current.collectAsStateWithLifecycle()
+    val navigator = koinInject<Navigator>()
+    val inGame by remember(navigator) { navigator.current.map { it.phase == AppPhase.GAME }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(navigator.current.value.phase == AppPhase.GAME)
+    val hardVersionCode by remember(updates) { updates.state.map { it.update?.takeIf { u -> u.hard }?.info?.versionCode }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(null)
     CompositionLocalProvider(
         LocalUpdates provides updates,
-        LocalUpdateHint provides remember { UpdateHintState() },
+        LocalUpdateHint provides remember(hardVersionCode) { UpdateHintState() },
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
@@ -134,7 +138,7 @@ import org.koin.compose.viewmodel.koinViewModel
             diagnostics = watchdog::diagnostics,
             launchLine = { settingsModel.launchLine(LaunchLines.keys(uiLanguage)) },
         )
-        UpdateHost(updates, busy = expedition != null || trial != null || rift.arena != null, barShown = route.bars)
+        UpdateHost(updates, busy = expedition != null || trial != null || rift.arena != null, offerShown = window.released && inGame)
     }
 }
 

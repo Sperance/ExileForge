@@ -30,8 +30,8 @@ import java.io.File
 
 /**
  * Где обновление. [checking]/[failure] - идёт проверка или почему она не вышла. [update] - найденная сборка: жёсткая держит игру, пока не
- * встанет ([mandatory]), мягкая предлагается тостом ([offered]), пока игрок не отложил её ([snoozed] - номер отложенной сборки, до холодного
- * запуска; другая найденная сборка предлагается снова). [progress] - её загрузка, 0..1; [installing] - в системном установщике.
+ * встанет ([hardFound]), мягкая предлагается тостом ([offered]), пока игрок не отложил её ([snoozed] - номер отложенной сборки, null - не
+ * откладывали; до холодного запуска, другая найденная сборка предлагается снова). [progress] - её загрузка, 0..1; [installing] - в системном установщике.
  * [askSources] - «установка неизвестных приложений» ещё не разрешена: игра просит её, пока не разрешат, чтобы обновление встало сразу.
  */
 data class UpdateState(
@@ -43,10 +43,10 @@ data class UpdateState(
     val needsPermission: Boolean = false,
     val error: String? = null,
     val askSources: Boolean = false,
-    val snoozed: Int = 0,
+    val snoozed: Int? = null,
 ) {
-    /** Сборка, без которой игра не играет: найдено жёсткое обновление. */
-    val mandatory: Boolean get() = update?.hard == true
+    /** Найдено жёсткое обновление ([AvailableUpdate.hard]): сборка, без которой игра не играет, - окно запуска и диалог держат игру. */
+    val hardFound: Boolean get() = update?.hard == true
 
     /** Мягкое обновление, что ещё не отложили: его предлагает тост. */
     val offered: AvailableUpdate? get() = update?.takeIf { !it.hard && it.info.versionCode != snoozed }
@@ -231,7 +231,7 @@ class UpdateModel(
         mutable.update { it.copy(checking = true) }
         try {
             val wire: Wire? = reach.freshWire()
-            val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(build.code, wire, outdated) }
+            val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(build.code, wire, outdated = outdated) }
             mutable.update { s ->
                 val next = if (s.progress != null || s.installing) s.update else found
                 s.copy(

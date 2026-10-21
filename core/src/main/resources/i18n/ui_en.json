@@ -3796,6 +3796,7 @@
   "unlock.about.GUILD": "Guilds: joining, the treasury, the stash and quests",
   "unlock.about.RIFT": "The Weekly Rift: three acts with guardians and a table for your world",
   "update.title": "Update required",
+  "update.title_soft": "Update available",
   "update.size": "Size: {0} MB",
   "update.notes": "What's new",
   "update.downloading": "Downloading: {0}%",

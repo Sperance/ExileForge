@@ -40,7 +40,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val body = blow.body ?: me.body
     val foe = if (me.side == Side.MONSTER) me.index else target.index
     if (target.invulnerable) {
-        record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, spell = blow.spell)
+        record(me.side, blow.action, HitKind.INVULNERABLE, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, spell = blow.spell)
         return false
     }
     val sure = me === heroFighter && nextCrit

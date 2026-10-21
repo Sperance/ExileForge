@@ -193,6 +193,9 @@ class Battle(
         var barrierUntil = 0.0
         var invulnerableUntil = -1.0
 
+        /** Сколько секунд длится неуязвимость фазы, что держит его до [invulnerableUntil]: шкала отсчёта на рамке босса. */
+        var invulnerableFor = 0.0
+
         /** When each of its skills is ready again, by code for a monster and by slot for the hero. */
         val readyAt = mutableMapOf<String, Double>()
 
@@ -642,10 +645,13 @@ class Battle(
     /**
      * The foe the hero's next swing goes to: the focus while it can be struck, else the class's
      * pick among those that can. A focus behind a taunter waits its turn.
+     *
+     * Неуязвимого обходят - и фокус, и выбор класса, - пока есть другой досягаемый враг; один неуязвимый остаётся целью.
      */
     fun target(): Fighter? {
-        val reach = foeFighters.filter { reachable(it.index) }
-        if (reach.isEmpty()) return null
+        val reachable = foeFighters.filter { reachable(it.index) }
+        if (reachable.isEmpty()) return null
+        val reach = if (reachable.any { it.invulnerable } && reachable.any { !it.invulnerable }) reachable.filter { !it.invulnerable } else reachable
         focus?.let { f -> reach.firstOrNull { it.index == f }?.let { return it } }
         fun weakest() = reach.minBy { it.life + it.shield }
         fun threat() = reach.maxBy { it.body.threat }

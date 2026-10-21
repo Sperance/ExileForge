@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.PhaseStep
-import kotlin.math.max
 import kotlin.math.min
 
 /** Шаг фазы босса в бою: шаг правил и умение, которое он даёт, уже найденное среди умений монстров. */
@@ -38,7 +37,10 @@ internal fun Battle.phase(foe: Fighter) {
             foe.barrier += max * step.shield / 100
             foe.barrierUntil = FOREVER
         }
-        if (step.invulnerable > 0) foe.invulnerableUntil = max(foe.invulnerableUntil, time + step.invulnerable)
+        if (step.invulnerable > 0 && time + step.invulnerable > foe.invulnerableUntil) {
+            foe.invulnerableUntil = time + step.invulnerable
+            foe.invulnerableFor = step.invulnerable
+        }
         if (step.summon > 0) summon(foe, step.summon)
         if (phase.totems.isNotEmpty()) raiseTotem(foe, phase.totems)
         note(foe, NoteKind.PHASE, code, step.at)

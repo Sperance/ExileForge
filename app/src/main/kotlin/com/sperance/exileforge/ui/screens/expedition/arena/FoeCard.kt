@@ -360,7 +360,7 @@ private val FOE_AVATAR_NARROW = 46.dp
 }
 
 /** Удар по герою: число всегда кровью и с «−», за ним - значок стихии её цветом; по врагу - цветом стихии. */
-private val FloatingHit.onHero: Boolean get() = target == Side.HERO && amount > 0 && !(kind == HitKind.EVADED || kind == HitKind.BLOCKED)
+private val FloatingHit.onHero: Boolean get() = target == Side.HERO && amount > 0 && !(kind == HitKind.EVADED || kind == HitKind.BLOCKED || kind == HitKind.INVULNERABLE)
 
 private fun hitLabel(hit: FloatingHit): AnnotatedString {
     if (!hit.onHero) return AnnotatedString(hitText(hit))
@@ -376,6 +376,7 @@ private fun hitText(hit: FloatingHit): String = when {
     hit.amount == 0 && hit.healed > 0 -> "+${hit.healed}"
     hit.kind == HitKind.EVADED -> ui("expedition.evaded")
     hit.kind == HitKind.BLOCKED -> ui("expedition.blocked")
+    hit.kind == HitKind.INVULNERABLE -> ui("expedition.invulnerable")
     hit.kind == HitKind.CRIT -> ui("expedition.crit", hit.amount)
     else -> hit.amount.toString()
 }
@@ -383,6 +384,7 @@ private fun hitText(hit: FloatingHit): String = when {
 private fun hitColour(hit: FloatingHit): Color = when {
     hit.amount == 0 && hit.healed > 0 -> Vital
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
+    hit.kind == HitKind.INVULNERABLE -> FrameGoldBright
     hit.onHero -> HeroHurt
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     else -> tickTint(hit.ailment, hit.type)

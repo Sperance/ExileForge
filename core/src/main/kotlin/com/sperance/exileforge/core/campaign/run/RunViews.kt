@@ -152,6 +152,9 @@ data class FoeView(
     val barrier: Int = 0,
     /** Ждёт своего раунда: ещё не на поле, но его ещё бить. */
     val waiting: Boolean = false,
+    /** Неуязвим ещё столько секунд (0 - уязвим) из [invulnerableFor] своей неуязвимости: удары по нему - без урона. */
+    val invulnerable: Double = 0.0,
+    val invulnerableFor: Double = 0.0,
 ) {
     /** Its card is on the field: it fights there, or fell there. */
     val onField: Boolean get() = place >= 0

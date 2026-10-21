@@ -163,8 +163,8 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
 
 /**
- * Рамка босса в три ряда, одна для любого босса: имя (сжимается до минимума, дальше многоточие) с чипами фазы, ярости, Разлома и
- * Скверны; слой здоровья - полоса с уровнем и Мощью внутри справа, под ней тонкие нити маны и накоплений; каст. Эффекты босса -
+ * Рамка босса в три ряда, одна для любого босса: имя (сжимается до минимума, дальше многоточие) с чипами фазы, неуязвимости с
+ * отсчётом, ярости, Разлома и Скверны; слой здоровья - полоса с уровнем и Мощью внутри справа, под ней тонкие нити маны и накоплений; каст. Эффекты босса -
  * не здесь, а лентой над его головой на арене ([EffectRibbon]).
  */
 @Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame, modifier: Modifier) {
@@ -177,6 +177,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         Row(Modifier.heightIn(min = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
             if (boss.marks.isNotEmpty()) PhaseChip(boss, name)
+            if (foe.alive && foe.invulnerable > 0) InvulnerableChip(foe.invulnerable, foe.invulnerableFor)
             if (foe.alive) {
                 fight.rage?.let { RageChip(it) }
                 boss.rift?.let { RiftChip(boss, it, frame) }
@@ -274,6 +275,9 @@ private val GemEdge = Color(0xFF7A5A1E)
 /** Черта порога фазы поперёк полосы. */
 private val MarkTick = FrameGoldBright.copy(alpha = .55f)
 
+/** Штриховка полосы неуязвимого босса. */
+private val InvulnerableHatch = FrameGoldBright.copy(alpha = .55f)
+
 /**
  * Кристаллы порогов фаз [marks] (проценты здоровья) на нижней кромке полосы: ромбы и кисти горящих собираются раз на размер
  * полосы, кадр только рисует их.
@@ -310,7 +314,8 @@ private class PhaseGems(private val marks: List<Double>) {
 
 /**
  * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, черты порогов фаз поперёк и кристаллы
- * на нижней кромке поверх соседних нитей (сработавшие гаснут), щит - штриховкой поверх, барьер - золотым свечением. Внутри слева -
+ * на нижней кромке поверх соседних нитей (сработавшие гаснут), щит - штриховкой поверх, неуязвимость - золотой штриховкой во всю
+ * полосу, барьер - золотым свечением. Внутри слева -
  * здоровье (щит и барьер) числом на тёмной плашке, справа - уровень и Мощь.
  *
  * Кристаллы порогов считаются раз на пороги и размер полосы; блик и свечение барьера - в рисовании.
@@ -358,6 +363,13 @@ private class PhaseGems(private val marks: List<Double>) {
                         drawLine(ShieldCyan.copy(alpha = .7f), Offset(s, h), Offset(s + h, 0f), 1.2.dp.toPx())
                         s += 5.dp.toPx()
                     }
+                }
+            }
+            if (foe.invulnerable > 0) {
+                var s = -h
+                while (s < w) {
+                    drawLine(InvulnerableHatch, Offset(s, h), Offset(s + h, 0f), 2.dp.toPx())
+                    s += 6.dp.toPx()
                 }
             }
             boss.marks.forEach { mark ->

@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.app.ShellModel
 import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.app.WarmupActions
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
+import com.sperance.exileforge.core.contest.ContestModel
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.expedition.ExpeditionActions
@@ -85,6 +86,7 @@ import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.auction.MarketViewModel
 import com.sperance.exileforge.ui.screens.city.HistoryViewModel
+import com.sperance.exileforge.ui.screens.contest.ContestViewModel
 import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionViewModel
@@ -208,6 +210,7 @@ val appModule = module {
     factoryOf(::SanctionModel)
     singleOf(::HallFocus)
     factoryOf(::HallModel)
+    singleOf(::ContestModel)
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
     single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }
@@ -227,6 +230,7 @@ val appModule = module {
     viewModelOf(::GuildViewModel)
     viewModelOf(::HistoryViewModel)
     viewModelOf(::HallViewModel)
+    viewModelOf(::ContestViewModel)
     viewModelOf(::PlayerCardViewModel)
     viewModelOf(::CraftsViewModel)
     viewModelOf(::ProgressViewModel)

@@ -52,6 +52,10 @@ object Reads {
     const val TOWN = "town"
     const val HALL = "hall"
 
+    /** Здание состязаний и таблица лиги. */
+    const val CONTESTS = "contests"
+    const val CONTEST_TABLE = "contest_table"
+
     /** Карточка игрока. */
     const val PLAYER_CARD = "player_card"
 

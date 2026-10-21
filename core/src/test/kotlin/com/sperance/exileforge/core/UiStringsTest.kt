@@ -222,6 +222,14 @@ class UiStringsTest {
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
             com.sperance.exileforge.rules.content.QuestKind.entries.forEach { add("summary.quest_kind.${it.name}") }
             com.sperance.exileforge.rules.roll.WorkMiss.entries.forEach { add("crafts.miss.${it.name}") }
+            com.sperance.exileforge.rules.content.ContestKind.entries.forEach { kind ->
+                listOf("contest.kind", "contest.kind_short", "contest.kind_card", "contest.mail.kind", "contest.next", "contest.prizes_when", "player.contest_title").forEach { add("$it.${kind.name}") }
+                com.sperance.exileforge.rules.content.ContestMetric.entries.forEach { add("contest.title.${it.name}.${kind.name}") }
+            }
+            com.sperance.exileforge.rules.content.ContestMetric.entries.forEach { metric ->
+                listOf("contest.metric", "contest.metric_short", "contest.metric_sum", "contest.metric_desc", "contest.join").forEach { add("$it.${metric.name}") }
+            }
+            (1..TestContent.index.rules.contests.podium).forEach { add("contest.frame.$it") }
             com.sperance.exileforge.core.forge.ScouredTrait.entries.forEach { add("forge.scoured.${it.name}") }
             TestContent.index.professions.professions.flatMap { it.jobs }.forEach { add("crafts.group.${com.sperance.exileforge.core.crafts.JobGroups.key(it, TestContent.index)}") }
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }

@@ -246,6 +246,7 @@ class HeroBuild(
 /**
  * Память листа по строкам боя: последние [capacity] наборов строк и что на них сведено. Ключ - сами строки по порядку: свод
  * зависит от него (замена «последняя держит», порядок сложения), а бой собирает строки героя всегда в одном порядке.
+ * Без синхронизации: один поток на [HeroBuild], как и сам бой.
  */
 internal class LineMemo<V : Any>(private val capacity: Int = CAPACITY) {
     private val kept = object : LinkedHashMap<List<StatLine>, V>(capacity * 2, 0.75f, true) {
@@ -264,7 +265,10 @@ internal class LineMemo<V : Any>(private val capacity: Int = CAPACITY) {
     }
 }
 
-/** Рост урона [inner] с памятью по виду: удар читает увеличение каждого своего вида, лист раскладывает строки один раз на вид. */
+/**
+ * Рост урона [inner] с памятью по виду: удар читает увеличение каждого своего вида, лист раскладывает строки один раз на вид.
+ * Без синхронизации: один поток на [HeroBuild], как и сам бой.
+ */
 private class TypedGrowth(private val inner: DamageGrowth) : DamageGrowth {
     private val increases = HashMap<String, Double>()
     private val mores = HashMap<String, Double>()

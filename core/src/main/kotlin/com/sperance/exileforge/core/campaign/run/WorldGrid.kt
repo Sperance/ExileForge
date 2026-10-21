@@ -174,7 +174,7 @@ private fun ExpeditionWorld.see(x: Int, y: Int) {
 /** Лежит ли рядом со скалой (8 соседей) видимая открытая клетка. */
 private fun ExpeditionWorld.bordersLit(x: Int, y: Int): Boolean = ExpeditionWorld.STEPS.any { (dx, dy) -> map.clear(x + dx, y + dy) && lit(x + dx, y + dy) }
 
-/** A move that slides along walls (по скруглённым углам, [WallBody]); итог - в [ExpeditionWorld.footing], читать сразу. */
-internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Footing = body.slide(x, y, dx, dy, radius, footing)
+/** A move that slides along walls (по скруглённым углам, [WallBody]); итог - в [ExpeditionWorld.footing], читать до следующего шага. */
+internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double) = body.slide(x, y, dx, dy, radius, footing)
 
 internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = body.free(x, y, radius)

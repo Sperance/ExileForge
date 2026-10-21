@@ -210,16 +210,25 @@ private class LastOf<R>(private val compute: (ContentIndex) -> R) {
 }
 
 /**
- * Память видов копий ([ItemView]) по содержимому копии: та же копия ([ItemInstance] - данные, ключ - её поля) над тем же
- * контентом даёт тот же вид, и его ленивые строки считаются раз, а не при каждой перерисовке списка. Вид одной копии и одного
- * контента одинаков - память не меняет отображение. Держит не больше [LIMIT] видов, давно не спрошенные уходят первыми; новый
- * контент сбрасывает всё. Потокобезопасна: виды спрашивают и вне главного потока (фильтр вещей, примерка, ремёсла).
+ * Память видов копий ([ItemView]) по содержимому копии: та же копия над тем же контентом даёт тот же вид, и его ленивые строки
+ * считаются раз, а не при каждой перерисовке списка. Копия - только по значению: ключ ([Key]) - id и хеш её полей, посчитанный
+ * один раз на запрос, совпавший ключ сверяется с самой запомненной копией; мутаторы правил на запомненной копии не зовутся,
+ * изменённая копия даёт другой хеш и другой вид. Помнится и отсутствие вида (шаблона нет в контенте) - неизвестная копия не ищется
+ * в контенте каждый раз. Вид одной копии и одного контента одинаков - память не меняет отображение. Держит не больше [LIMIT] видов,
+ * давно не спрошенные уходят первыми; новый контент сбрасывает всё. Потокобезопасна: виды спрашивают и вне главного потока
+ * (фильтр вещей, примерка, ремёсла).
  */
 private class ItemViews(private val limit: Int = LIMIT) {
     private var index: ContentIndex? = null
-    private val known = object : LinkedHashMap<ItemInstance, ItemView>(limit * 4 / 3 + 1, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ItemInstance, ItemView>): Boolean = size > limit
+    private val known = object : LinkedHashMap<Key, Entry>(limit * 4 / 3 + 1, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, Entry>): Boolean = size > limit
     }
+
+    /** Ключ памяти: id копии и хеш её полей. */
+    private data class Key(val id: String, val hash: Int)
+
+    /** Запомненная копия и её вид; null - шаблона копии в контенте нет. */
+    private class Entry(val item: ItemInstance, val view: ItemView?)
 
     /** Вид копии [item] над контентом [index] из памяти или заново; null - шаблона копии в контенте нет. */
     fun of(item: ItemInstance, index: ContentIndex): ItemView? = synchronized(this) {
@@ -227,7 +236,9 @@ private class ItemViews(private val limit: Int = LIMIT) {
             this.index = index
             known.clear()
         }
-        known[item] ?: ItemView.of(item, index)?.also { known[item] = it }
+        val key = Key(item.id, item.hashCode())
+        known[key]?.takeIf { it.item == item }?.let { return it.view }
+        ItemView.of(item, index).also { known[key] = Entry(item, it) }
     }
 
     private companion object {

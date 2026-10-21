@@ -413,9 +413,9 @@ class ExpeditionWorld(
             val speed = heroSpeed * length * stride
             facingX = paceX / length
             facingY = paceY / length
-            val landed = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
-            heroX = landed.x
-            heroY = landed.y
+            slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
+            heroX = footing.x
+            heroY = footing.y
         }
         light()
         gatherReach()
@@ -513,9 +513,9 @@ class ExpeditionWorld(
     internal fun knock(dx: Double, dy: Double) {
         val parts = ceil(hypot(dx, dy) / rules.heroRadius).toInt().coerceAtLeast(1)
         repeat(parts) {
-            val landed = slide(heroX, heroY, dx / parts, dy / parts, rules.heroRadius)
-            heroX = landed.x
-            heroY = landed.y
+            slide(heroX, heroY, dx / parts, dy / parts, rules.heroRadius)
+            heroX = footing.x
+            heroY = footing.y
         }
         light()
     }

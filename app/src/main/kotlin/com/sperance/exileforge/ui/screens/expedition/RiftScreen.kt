@@ -1036,16 +1036,24 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
  */
 @Composable private fun CofferCards(game: GameUi, offer: RiftOffer.Coffers, coffers: Map<Int, Reward>, idle: Boolean, onAct: (RiftAct) -> Unit) {
     PlateTitle(ui("rift.coffers_title"), RiftColors.Hot, listOf(ui("rift.coffers_hint"), ui("rift.coffers_note")))
-    val groups = remember(offer.row) { offer.row.withIndex().groupBy({ it.value }, { it.index }) }
-    groups.forEach { (metal, slots) ->
-        key(metal) {
-            val opened = slots.filter { it in offer.opened }
-            CofferGroup(game, metal, opened.size, slots.size, slots.firstOrNull { it !in offer.opened }, opened.mapNotNull(coffers::get).reduceOrNull(Reward::plus), idle) {
-                onAct(RiftAct.Open(it))
-            }
+    val groups = remember(offer, coffers) { CofferMetal.of(offer, coffers) }
+    groups.forEach { group ->
+        key(group.metal) {
+            CofferGroup(game, group.metal, group.opened, group.total, group.next, group.found, idle) { onAct(RiftAct.Open(it)) }
         }
     }
     Text(ui("rift.coffers_note"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+}
+
+/** Сундуки одного металла [metal] в ряду Владыки: открыто [opened] из [total], следующий неоткрытый [next], что лежало в открытых [found]. */
+private class CofferMetal(val metal: RiftMetal, val opened: Int, val total: Int, val next: Int?, val found: Reward?) {
+    companion object {
+        /** Ряд [offer] по металлам, по порядку ряда; [coffers] - что лежало в открытых, по номеру в ряду. */
+        fun of(offer: RiftOffer.Coffers, coffers: Map<Int, Reward>): List<CofferMetal> = offer.row.withIndex().groupBy({ it.value }, { it.index }).map { (metal, slots) ->
+            val opened = slots.filter { it in offer.opened }
+            CofferMetal(metal, opened.size, slots.size, slots.firstOrNull { it !in offer.opened }, opened.mapNotNull(coffers::get).reduceOrNull(Reward::plus))
+        }
+    }
 }
 
 /**

@@ -5333,7 +5333,7 @@
   "stat.detail.STOCK_AURA_EFFECT": "Your auras act stronger: their lines grow by this many percent.\nWorks while an aura stands in a passive skill slot. Life auras also get «Blood Aura Effect» on top.\nThe share of mana or life an aura holds does not grow.",
   "stat.detail.STOCK_WARCRY_EFFECT": "Your warcries act stronger: their buff lines grow by this many percent.\nWorks in fights, for every warcry.\nThe buff's duration does not change.",
   "stat.detail.STOCK_CURSE_EFFECT": "Your curses act stronger: their lines on the foe grow by this many percent.\nWorks in fights - for curse skills and for curses cast in answer to a hit.",
-  "stat.detail.STOCK_MARK_EFFECT": "Your marks store more damage: the share of damage a mark gathers and releases in its blast grows by this many percent.\nWorks in fights for skills with a mark.",
+  "stat.detail.STOCK_MARK_EFFECT": "Your marks store more damage: the share of damage a mark gathers and releases in its blast grows by this many percent.\nThe skill Mark of Ruin puts the mark on a foe; works in fights.",
   "stat.detail.STOCK_SKILL_HEALING": "Healing skills restore more life and mana: their healing is this many percent stronger.\nWorks in fights for active healing skills; it does not grow passive skills' answers or flasks.\nReduced regeneration and Wound do not cut a skill's healing.",
   "stat.detail.STOCK_SKILL_TARGETS": "Attack skills that strike targets hit this many extra foes; fractions are dropped.\nWorks in fights. No more targets than foes on the field.\nFor spells - «Spell Targets».",
   "stat.detail.STOCK_SPELL_TARGETS": "Spells that strike targets hit this many extra foes; fractions are dropped.\nWorks in fights. No more targets than foes on the field.\nFor attacks - «Skill Targets».",

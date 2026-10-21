@@ -120,12 +120,17 @@ import kotlin.math.roundToInt
 /** Сколько миллисекунд без касаний журнал, отлистанный вниз, ждёт, прежде чем сам вернуться к новой строке. */
 private const val LOG_RETURN_MS = 3_000L
 
-/** A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. */
+/**
+ * A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. [key] - место строки в стае
+ * (противник и номер события): не меняется ни с фильтром, ни с новыми событиями живого боя.
+ */
 private sealed interface PackRow {
-    data class Head(val text: String) : PackRow
+    val key: String
+
+    data class Head(override val key: String, val text: String) : PackRow
 
     /** [at] - секунда шага целиком: бой начинается с [PackHit.start], а время его событий - с нуля. */
-    data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?, val at: Double = event.time) : PackRow
+    data class Line(override val key: String, val event: CombatEvent, val name: String, val shift: LifeShift?, val at: Double = event.time) : PackRow
 }
 
 /** Здоровье цели строки до удара и после, как его показывает экран боя. */
@@ -177,17 +182,17 @@ private const val HERO_KEY = -1
         buildList {
             if (byFoe) {
                 pack.forEachIndexed { index, hit ->
-                    if (pack.size > 1) add(PackRow.Head(ui("expedition.report_pack_enemy", index + 1, pack.size, names[index])))
+                    if (pack.size > 1) add(PackRow.Head("foe:$index", ui("expedition.report_pack_enemy", index + 1, pack.size, names[index])))
                     val shifts = lifeShifts(hit.events)
-                    hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line(event, names[index], shifts[i])) }
+                    hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line("$index:$i", event, names[index], shifts[i])) }
                 }
             } else {
                 val stages = pack.withIndex().groupBy { it.value.start }.entries.sortedBy { it.key }
                 stages.forEachIndexed { stage, (start, hits) ->
-                    if (stages.size > 1) add(PackRow.Head(ui("expedition.log_stage", stage + 1, hits.joinToString { names[it.index] })))
-                    val timeline = hits.flatMap { (index, hit) -> hit.events.map { it to names[index] } }.sortedBy { it.first.time }
-                    val shifts = lifeShifts(timeline.map { it.first })
-                    timeline.forEachIndexed { i, (event, name) -> if (LogKind.of(event) in shown) add(PackRow.Line(event, name, shifts[i], start + event.time)) }
+                    if (stages.size > 1) add(PackRow.Head("stage:$stage", ui("expedition.log_stage", stage + 1, hits.joinToString { names[it.index] })))
+                    val timeline = hits.flatMap { (index, hit) -> hit.events.mapIndexed { i, event -> Triple("$index:$i", event, names[index]) } }.sortedBy { it.second.time }
+                    val shifts = lifeShifts(timeline.map { it.second })
+                    timeline.forEachIndexed { i, (key, event, name) -> if (LogKind.of(event) in shown) add(PackRow.Line(key, event, name, shifts[i], start + event.time)) }
                 }
             }
         }
@@ -205,7 +210,7 @@ private const val HERO_KEY = -1
                 PillTabs(listOf(ui("expedition.log_by_time"), ui("expedition.log_by_foe")), if (byFoe) 1 else 0, { byFoe = it == 1 }, segmented = true)
             }
         }
-        items(rows) { row ->
+        items(rows, key = { it.key }, contentType = { it is PackRow.Head }) { row ->
             when (row) {
                 is PackRow.Head -> Caption(row.text)
                 is PackRow.Line -> EventRow(row.event, row.at, row.name, row.shift, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })

@@ -8,7 +8,9 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.DamageGrowth
@@ -83,9 +85,31 @@ class SheetModel(
     fun against(states: Set<Condition>): Double = conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
 
     /**
-     * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида) и «больше» вида - на них растут чары и урон во времени.
+     * Безусловные операции листа, разложенные по характеристике, как их складывает свод ([SheetFold.increased], [SheetFold.more]):
+     * сумма увеличений и произведение «больше» каждой - один раз на лист, строки боя ложатся на них в своём порядке.
      */
-    fun growth(lines: List<StatLine> = emptyList()): DamageGrowth = fold.growth(lines)
+    private val baseIncreased: Map<String, Double> by lazy { unconditional(Op.INCREASED).mapValues { (_, found) -> found.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) } } }
+    private val baseMore: Map<String, Double> by lazy { unconditional(Op.MORE).mapValues { (_, found) -> found.fold(1.0) { product, op -> product * (1 + op.resolve(op.perStat?.let { plain[it] } ?: 0.0) / 100) } } }
+
+    private fun unconditional(op: Op): Map<String, List<StatOperation>> = ops.filter { it.condition == null }.flatMap(calculator::spread).filter { it.op == op }.groupBy { it.stat }
+
+    /**
+     * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида) и «больше» вида - на них растут чары и урон во времени.
+     * Тот же итог, что у свода правил ([SheetFold.growth]): операции листа сложены заранее, строки боя - поверх, в порядке свода.
+     */
+    fun growth(lines: List<StatLine> = emptyList()): DamageGrowth = object : DamageGrowth {
+        override fun increased(type: String): Double {
+            var sum = baseIncreased[type] ?: 0.0
+            for (line in lines) if (line.op == Op.INCREASED && type in StatSpread.targets(line.stat, line.op)) sum += line.value
+            return sum
+        }
+
+        override fun more(type: String): Double {
+            var product = baseMore[type] ?: 1.0
+            for (line in lines) if (line.op == Op.MORE && type in StatSpread.targets(line.stat, line.op)) product *= 1 + line.value / 100
+            return product
+        }
+    }
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
     override fun hashCode(): Int = plain.hashCode()

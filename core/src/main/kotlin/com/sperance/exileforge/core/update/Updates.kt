@@ -110,18 +110,31 @@ class Updates(link: HttpLink = ForgeHttp.link) {
      * каждым релизом: описание спрашивается условно по ETag прошлого ответа - тот же релиз отвечает 304 без тела.
      */
     suspend fun check(versionCode: Int, server: Wire?, outdated: Boolean = false): AvailableUpdate? = withContext(Dispatchers.IO) {
-        val held = fetched
-        val request = Request.Builder().url(LATEST).apply { held?.let { header("If-None-Match", it.etag) } }.build()
-        val text = small.newCall(request).execute().use { response ->
+        val text = latest(fetched) ?: return@withContext null
+        val info = WireJson.decodeFromString(AppBuild.serializer(), text)
+        UpdatePolicy.verdict(info, versionCode, Wire.OWN, server, outdated = outdated)?.let { info.available(it) }
+    }
+
+    /**
+     * Текст `update.json`: условно по ETag удержанного ответа [held], 304 - его текст. 304 без удержанного тела (ответил посредник) -
+     * ещё один запрос без условия ([again]), затем - ошибка; 404 - релиза нет, удержанное забыто, null.
+     */
+    private fun latest(held: Fetched?, again: Boolean = true): String? {
+        val request = Request.Builder().url(LATEST).apply { held?.let { header("If-None-Match", it.etag) } ?: header("Cache-Control", "no-cache") }.build()
+        return small.newCall(request).execute().use { response ->
             when {
-                response.code == 404 -> return@withContext null
-                response.code == 304 && held != null -> held.text
+                response.code == 404 -> {
+                    fetched = null
+                    null
+                }
+
+                response.code == 304 -> held?.text ?: if (again) latest(null, again = false) else throw IOException("HTTP 304")
+
                 !response.isSuccessful -> throw IOException("HTTP ${response.code}")
+
                 else -> response.body.string().also { body -> response.header("ETag")?.let { fetched = Fetched(it, body) } }
             }
         }
-        val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        UpdatePolicy.verdict(info, versionCode, Wire.OWN, server, outdated = outdated)?.let { info.available(it) }
     }
 
     /** Заметки [count] последних релизов, новые первыми; GitHub не ответил - ошибка. */

@@ -161,16 +161,21 @@ class CommandRunner(
     /**
      * Чтение под ключом [key]: одно за раз. С [tag] (обычно id героя) удачное чтение запоминается, и вызов с
      * [maxAgeMs] пропускается, пока прошлый ответ для того же [tag] моложе - экран, открытый снова, не спрашивает сервер.
-     * Команда, что трогает ключ, срок сбрасывает.
+     * Команда, что трогает ключ, срок сбрасывает. [brings] - ключи, чьи ответы это чтение приносит с собой (Город - доску, ремёсла,
+     * гильдию, лоты): пока оно в полёте, они в полёте тоже - экран, открытый за это время, не шлёт свой запрос вторым.
+     *
+     * true - чтение пошло или уже идёт; false - пропущено: прошлый ответ ещё свеж или ключ трогает команда.
      */
-    fun read(key: String, restart: Boolean = false, silent: Boolean = false, tag: String? = null, maxAgeMs: Long = 0, block: suspend () -> Unit) {
-        if (key in touching) return
+    fun read(key: String, restart: Boolean = false, silent: Boolean = false, tag: String? = null, maxAgeMs: Long = 0, brings: Set<String> = emptySet(), block: suspend () -> Unit): Boolean {
+        if (key in touching) return false
         val now = System.currentTimeMillis()
-        if (!restart && tag != null && maxAgeMs > 0 && done[key]?.let { it.tag == tag && now - it.at < maxAgeMs } == true) return
+        if (!restart && tag != null && maxAgeMs > 0 && done[key]?.let { it.tag == tag && now - it.at < maxAgeMs } == true) return false
         if (restart) reads.remove(key)?.cancel()
-        if (reads[key]?.isActive == true) return
-        if (silent) quiet += key else quiet -= key
-        readOrigins[key] = origin()
+        if (reads[key]?.isActive == true) return true
+        val keys = brings + key
+        if (silent) quiet += keys else quiet -= keys
+        val from = origin()
+        keys.forEach { readOrigins[it] = from }
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 block()
@@ -180,27 +185,26 @@ class CommandRunner(
             } catch (e: Exception) {
                 report(e, writing = false)
             } finally {
-                if (reads[key] === coroutineContext[Job]) {
-                    reads.remove(key)
-                    quiet -= key
-                    readOrigins -= key
-                }
-                mutable.update { it.copy(loading = loading()) }
+                forget(keys, coroutineContext[Job])
             }
         }
-        reads[key] = job
+        keys.forEach { reads[it] = job }
         mutable.update { it.copy(loading = loading()) }
-        if (!silent) {
-            guard(job, READ + key) {
-                if (reads[key] === job) {
-                    reads.remove(key)
-                    quiet -= key
-                    readOrigins -= key
-                }
-                mutable.update { it.copy(loading = loading()) }
+        if (!silent) guard(job, READ + key) { forget(keys, job) }
+        job.start()
+        return true
+    }
+
+    /** Снимает чтение [job] с ключей [keys], где оно ещё числится, - полоса загрузки без них. */
+    private fun forget(keys: Set<String>, job: Job?) {
+        keys.forEach { key ->
+            if (reads[key] === job) {
+                reads.remove(key)
+                quiet -= key
+                readOrigins -= key
             }
         }
-        job.start()
+        mutable.update { it.copy(loading = loading()) }
     }
 
     /**

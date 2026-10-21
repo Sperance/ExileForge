@@ -81,8 +81,9 @@ internal fun ExpeditionRun.roadFlow(): LifeFlow {
 }
 
 /**
- * Полка снимка по несомому: прежние плитки, пока несомое и тело героя те же (несомое неизменяемо - списки сравниваются по
- * содержимому), - снимок не собирает их заново десять раз в секунду, пока на герое ничего нет.
+ * Полка снимка по несомому: прежние плитки, пока несомое и тело героя те же, - снимок не собирает их заново десять раз в секунду,
+ * пока на герое ничего нет. «То же» - тот самый список (стоящий поход несёт его из такта в такт) или оба пустых: несомое, что тает
+ * (секунды остатка), каждый такт - новый список с новыми числами, и сравнивать его по содержимому - платить за ответ «нет».
  */
 internal class CarriedShelf<T, V> {
     private var carried: List<T>? = null
@@ -90,7 +91,7 @@ internal class CarriedShelf<T, V> {
     private var shown: List<V> = emptyList()
 
     /** Прежние плитки для [carried] на теле [hero]; null - несомое или тело сменились. */
-    fun of(carried: List<T>, hero: Combatant): List<V>? = shown.takeIf { hero === body && carried == this.carried }
+    fun of(carried: List<T>, hero: Combatant): List<V>? = shown.takeIf { hero === body && (carried === this.carried || carried.isEmpty() && this.carried?.isEmpty() == true) }
 
     /** Запоминает плитки [views] для [carried] на теле [hero]. */
     fun keep(carried: List<T>, hero: Combatant, views: List<V>): List<V> {

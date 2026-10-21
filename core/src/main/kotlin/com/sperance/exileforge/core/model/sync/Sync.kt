@@ -67,7 +67,12 @@ const val API_REVISION = 99
     }
 }
 
-/** One part of the hero and its fingerprint (sixteen hex digits of the part's JSON); [data] без значения - `null` части (закрытый заход). */
+/**
+ * One part of the hero and its fingerprint (sixteen hex digits of the part's JSON).
+ *
+ * @property version отпечаток части: тот же - часть не разбирается заново и не едет с сервера.
+ * @property data JSON части, как его прислал сервер; [JsonNull] - у части нет значения (закрытый заход), разбирается в `null`.
+ */
 @Serializable data class HeroPart(val version: String, val data: JsonElement = JsonNull)
 
 /** The hero as the server answers it: only the parts whose fingerprints the client did not hold. */
@@ -117,10 +122,12 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val overflow: List<ItemInstance> get() = decode(OVERFLOW, ListSerializer(ItemInstance.serializer()))
     val bag: Map<String, Long> get() = decode(BAG, MapSerializer(String.serializer(), Long.serializer()))
     val tree: List<TakenNode> get() = decode(TREE, ListSerializer(TakenNode.serializer()))
-
-    /** Кампания с открытым заходом: часть [CAMPAIGN] без захода и часть [RUN] - заход (null - закрыт) - сложены в одно состояние. */
-    val campaign: CampaignState get() = memo.derived(CAMPAIGN_RUN, parts.getValue(CAMPAIGN).version + ":" + parts.getValue(RUN).version) {
-        decode(CAMPAIGN, CampaignState.serializer()).copy(run = decode(RUN, RunState.serializer().nullable))
+    /**
+     * Кампания с открытым заходом: часть [CAMPAIGN] без захода и часть [RUN] - заход (null - закрыт) - сложены в одно состояние.
+     * Копия без части [RUN] (снимок прежнего набора частей) читается как без захода, а не падает: её неполноту решает [complete].
+     */
+    val campaign: CampaignState get() = memo.derived(CAMPAIGN_RUN, parts.getValue(CAMPAIGN).version + ":" + parts[RUN]?.version.orEmpty()) {
+        decode(CAMPAIGN, CampaignState.serializer()).copy(run = parts[RUN]?.let { decode(RUN, RunState.serializer().nullable) })
     }
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())

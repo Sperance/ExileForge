@@ -18,8 +18,8 @@ import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
-import com.sperance.exileforge.core.model.sync.ContentManifest
 import com.sperance.exileforge.core.model.sync.StaticManifest
+import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
@@ -27,6 +27,7 @@ import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
+import com.sperance.exileforge.rules.content.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -171,10 +172,11 @@ class WorldLoader(
 
     /**
      * Контент из текстов файлов правилами: файлы разбираются параллельно, без сверки (её сделал сервер при старте - инварианты контента
-     * серверные) и с отпечатками файлов из манифеста [manifest] - теми же SHA-256 текстов, что считает сервер, так что
-     * `ContentIndex.hash` сходится с серверным без хеширования на устройстве.
+     * серверные) и со сверенными отпечатками файлов [hashes] из манифеста - теми же SHA-256 текстов, что считает сервер, так что
+     * `ContentIndex.hash` сходится с серверным без второго хеширования на устройстве.
      */
-    private suspend fun parsedContent(manifest: ContentManifest, read: (String) -> String): ContentIndex = withContext(Dispatchers.Default) { ContentLoader.loadAsync(WireJson, verify = false, hashes = manifest.chunks, read = read) }
+    private suspend fun parsedContent(hashes: Map<String, String>, read: (String) -> String): ContentIndex =
+        withContext(Dispatchers.Default) { ContentLoader.loadAsync(WireJson, verify = false, hashes = hashes, read = read) }
 
     suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { flights.run(PORTRAITS) { readPortraits() } }
 
@@ -225,15 +227,22 @@ class WorldLoader(
      * again only when the start manifest's fingerprint for that chunk moves, and parsed by the rules.
      * A warm start reads none of it from the server. [fresh] asks the manifest again — on entering a hero.
      *
-     * Каждый чанк знает, пришёл ли он с устройства или из сети; скачанное сохраняется, только когда прочитался весь мир - битая загрузка
-     * качается снова. Контент, проверенный сервером, читается терпимым JSON клиента и без своей сверки ([parsedContent]).
+     * Каждый чанк знает, пришёл ли он с устройства или из сети; скачанное сверяется с отпечатком манифеста и сохраняется, только когда
+     * прочитался весь мир - битая загрузка качается снова. Чанк из сети не сошёлся с манифестом - контент сменился, пока качался:
+     * манифест спрашивается заново один раз, затем - отказ. Контент, проверенный сервером, читается терпимым JSON клиента и без своей
+     * сверки ([parsedContent]).
      */
     suspend fun ensureContent(fresh: Boolean = false) = locked {
+        if (!readContent(fresh) && !readContent(fresh = true)) throw ApiFailure(null, null, ui("api.content_moved"))
+    }
+
+    /** Одна попытка [ensureContent] по манифесту ([fresh] - спрошенному заново); false - чанк из сети не сошёлся с его отпечатком. */
+    private suspend fun readContent(fresh: Boolean): Boolean {
         val server = sessions.state.value.server
         val served = trace.step(StartStage.CONTENT, "start.step.manifest") { api.manifest(fresh) }
         world.update { it.server(served) }
         val manifest = served.content
-        if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@locked
+        if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return true
         val total = ContentFiles.ALL.size
         val done = java.util.concurrent.atomic.AtomicInteger()
         val reading = trace.begin(StartStage.CONTENT, "start.step.chunks", 0, total)
@@ -253,9 +262,13 @@ class WorldLoader(
             trace.end(reading, e)
             throw e
         }
-        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsedContent(manifest) { chunks.getValue(it).first } }
-        chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
+        val verified = withContext(Dispatchers.Default) { chunks.all { (file, chunk) -> !chunk.second || sha256(chunk.first) == manifest.chunks[file] } }
+        if (!verified) return false
+        val hashes = manifest.chunks.filterKeys { it in chunks }
+        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsedContent(hashes) { chunks.getValue(it).first } }
+        chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, hashes.getValue(file), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
+        return true
     }
 
     /**
@@ -292,7 +305,7 @@ class WorldLoader(
                 store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
             }
             val index = try {
-                parsedContent(manifest.content) { texts.getValue(it) }
+                parsedContent(manifest.content.chunks.filterKeys { it in texts }) { texts.getValue(it) }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

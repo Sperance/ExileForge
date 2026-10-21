@@ -122,10 +122,10 @@ internal fun ExpeditionWorld.walk(agent: MonsterAgent, speed: Double, dt: Double
     val distance = hypot(dx, dy)
     if (distance < 0.05) return false
     val stepLength = (speed * dt).coerceAtMost(distance)
-    val landed = slide(agent.x, agent.y, dx / distance * stepLength, dy / distance * stepLength, rules.monsterRadius)
-    val moved = hypot(landed.x - agent.x, landed.y - agent.y) > stepLength * 0.2
-    agent.x = landed.x
-    agent.y = landed.y
+    slide(agent.x, agent.y, dx / distance * stepLength, dy / distance * stepLength, rules.monsterRadius)
+    val moved = hypot(footing.x - agent.x, footing.y - agent.y) > stepLength * 0.2
+    agent.x = footing.x
+    agent.y = footing.y
     return moved
 }
 

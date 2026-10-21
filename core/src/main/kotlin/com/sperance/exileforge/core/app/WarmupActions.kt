@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.app
 
+import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldLoader
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 
 /** The steps of the warm-up, in the order the loading screen lists them. */
 enum class WarmStep { CONTENT, LOCALE, ICONS, HERO }
@@ -70,7 +72,11 @@ class WarmupActions(
                         }
                         launch {
                             step(id, WarmStep.HERO) {
-                                runCatching { town.visit() }.onFailure { if (it is CancellationException) throw it }
+                                try {
+                                    town.visit()
+                                } catch (_: ApiFailure) {
+                                } catch (_: IOException) {
+                                }
                                 if (heroes.state.value.readAt == 0L) heroSync.readHero()
                             }
                         }

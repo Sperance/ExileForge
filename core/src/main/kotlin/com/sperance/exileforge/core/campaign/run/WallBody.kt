@@ -6,17 +6,16 @@ import com.sperance.exileforge.core.campaign.WallField
 import kotlin.math.floor
 import kotlin.math.hypot
 
-/** Куда встало тело после шага ([WallBody.slide]): одно на мир, шаг пишет в него - без пары на каждый такт. */
+/** Куда встало тело после шага ([WallBody.slide]): одно на мир, шаг пишет в него - без пары на каждый такт; читать до следующего шага. */
 internal class Footing {
     var x = 0.0
         private set
     var y = 0.0
         private set
 
-    fun at(x: Double, y: Double): Footing {
+    fun at(x: Double, y: Double) {
         this.x = x
         this.y = y
-        return this
     }
 }
 
@@ -36,9 +35,9 @@ internal class WallBody(private val map: ExpeditionMap, private val walls: () ->
 
     /**
      * Шаг ([dx], [dy]) из ([x], [y]): целиком, если свободно; иначе - вдоль кромки (составляющая шага по касательной), иначе - по
-     * осям порознь. Так круг обтекает выступ скалы, а не упирается в него.
+     * осям порознь. Так круг обтекает выступ скалы, а не упирается в него. Итог - в [into]: читать до следующего шага, он перепишет.
      */
-    fun slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double, into: Footing): Footing {
+    fun slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double, into: Footing) {
         if (free(x + dx, y + dy, radius)) return into.at(x + dx, y + dy)
         nearest(x + dx, y + dy, radius)?.let { hit ->
             val along = dx * hit.nx + dy * hit.ny
@@ -48,7 +47,7 @@ internal class WallBody(private val map: ExpeditionMap, private val walls: () ->
         }
         val nx = if (free(x + dx, y, radius)) x + dx else x
         val ny = if (free(nx, y + dy, radius)) y + dy else y
-        return into.at(nx, ny)
+        into.at(nx, ny)
     }
 
     /** Ближайшая к точке кромка в пределах [reach]: подножие скалы или контур глади - что ближе. */

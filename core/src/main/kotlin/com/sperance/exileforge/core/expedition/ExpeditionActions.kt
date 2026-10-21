@@ -144,10 +144,9 @@ class ExpeditionActions(
     /** Заход, который сервер уже закрыл по ответу журнала (выход или гибель, `RunReport.open` = false): бросать его нечего. */
     private var shut: String? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
-    private var saveJob: Job? = null
 
-    /** Ключ пачки журнала, что уже лежит на диске: та же пачка в полёте снова диск не трогает. */
-    private var keyOnDisk: String? = null
+    /** Журнал на диске: один писатель на все заявки, отправка ждёт его. */
+    private val journals = JournalWriter(store, scope) { runJournal }
 
     /** Следующая отправка сама по себе: повтор после неудачной. */
     private var sendJob: Job? = null
@@ -303,7 +302,7 @@ class ExpeditionActions(
             runJournal?.let { j ->
                 flush()
                 check(j.settled || runJournal == null) { ui("expedition.unsent") }
-                store.clearJournal(id)
+                journals.clear(id)
                 runJournal = null
             }
             val started = try {
@@ -340,7 +339,7 @@ class ExpeditionActions(
         marked = started.id
         scope.launch { prefs.keepLastZone(id, zone.code) }
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, saleMarks = marks, chestStock = started.chestStock).also { runJournal = it }
-        if (marks.isNotEmpty()) persist()
+        if (marks.isNotEmpty()) journals.later()
         val board = quests.board().takeIf { it.board != null }
         expedition {
             it.copy(
@@ -358,7 +357,7 @@ class ExpeditionActions(
             prefs = prefs.runPrefs(i.rules.fight),
         ).also { r -> if (toBoss) r.send(RunCommand.ToBoss) }
         vaalKilled = started.vaalKilled
-        persist()
+        journals.later()
     }
 
     /**
@@ -383,7 +382,7 @@ class ExpeditionActions(
     private fun recorded(event: RunEvent) {
         val j = runJournal ?: return
         expedition { it.copy(pending = j.pending.size) }
-        persist()
+        journals.later()
         when {
             failures > 0 -> Unit
             event.kind in CHECKPOINTS || j.pending.size >= RunJournal.MAX_BATCH -> flushes.trySend(Unit)
@@ -425,48 +424,27 @@ class ExpeditionActions(
     }
 
     /**
-     * Журнал на диск не чаще раза в [SAVE_EVERY]: залп событий - одна запись, и новое событие ждущую запись не откладывает. Записывается
-     * журнал, что к тому мигу всё ещё идёт: закрытый поход не воскресает на диске.
-     */
-    private fun persist() {
-        val j = runJournal ?: return
-        if (saveJob?.isActive == true) return
-        saveJob = scope.launch {
-            delay(SAVE_EVERY)
-            if (runJournal === j) store.saveJournal(j.heroId, j.encode())
-        }
-    }
-
-    /** Журнал на диск сейчас: уход в фон - процесс могут убить до плановой записи. */
-    private fun persistNow() {
-        val j = runJournal ?: return
-        saveJob?.cancel()
-        saveJob = scope.launch { if (runJournal === j) store.saveJournal(j.heroId, j.encode()) }
-    }
-
-    /**
      * Отправляет, что держит журнал - пачку в пути снова под её ключом или ожидающие события под новым; ответ -
      * счёт сервера и награда каждого события, снимок героя едет с ним.
      *
-     * Ключ пачки - на диске до её ухода (новый ключ пишется сразу, пачка в полёте снова - нет): потерянный с процессом ответ спрашивается снова;
-     * после ответа - одна запись. Отклонённое начало боя - не потеря игрока, о нём
+     * Ключ пачки - на диске до её ухода (новый ключ пишется сразу, пачка в полёте снова ждёт лишь заявленное, [JournalWriter.written]):
+     * потерянный с процессом ответ спрашивается снова; после ответа - одна запись. Отклонённое начало боя - не потеря игрока, о нём
      * не говорят; прочие отказы - красный тост с причиной сервера поверх тоста добычи. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
      * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
      * офлайн или таймаут - снова скоро.
      */
     private suspend fun flush() {
         val j = runJournal ?: return
-        val outgoing = j.outgoing { UUID.randomUUID().toString() }
+        var minted = false
+        val outgoing = j.outgoing { UUID.randomUUID().toString().also { minted = true } }
         if (outgoing == null) {
             if (j.closed) done(j)
             return
         }
         val (batch, pending) = outgoing
         try {
-            if (batch.key != keyOnDisk) {
-                store.saveJournal(j.heroId, j.encode())
-                keyOnDisk = batch.key
-            }
+            if (minted) journals.now()
+            journals.written()
             val report = api.campaign.events(j.heroId, j.runId, pending, batch.key)
             linkBack()
             if (report == null) {
@@ -480,7 +458,7 @@ class ExpeditionActions(
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
             notices.refused(report.rejected.filter { it !in engages }, report.refusals, pending.associate { it.n to it.kind.refusedKey() })
-            if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
+            if (!report.open && j.settled) done(j, report) else journals.now()
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)
         } catch (e: CancellationException) {
@@ -508,7 +486,7 @@ class ExpeditionActions(
         runs().forEach { it.send(RunCommand.Settled(end)) }
         j.confirm(end)
         expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
-        if (j.closed && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
+        if (j.closed && j.settled) done(j) else journals.now()
         heroSync.readHero()
         campaign()
         if (!j.settled) flushes.trySend(Unit)
@@ -570,7 +548,7 @@ class ExpeditionActions(
     private suspend fun done(j: RunJournal, report: RunReport? = null) {
         if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
-        store.clearJournal(j.heroId)
+        journals.clear(j.heroId)
         quests.turnIn(j.heroId, report?.turnIns, report?.guildQuests) { turnedIn ->
             val shown = mutableRun.value?.journal?.runId == j.runId
             if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnedIn) }
@@ -586,7 +564,7 @@ class ExpeditionActions(
         expedition { it.copy(saleMarks = if (itemId in it.saleMarks) it.saleMarks - itemId else it.saleMarks + itemId) }
         runJournal?.let { j ->
             j.saleMarks = repository.state.value.saleMarks
-            persist()
+            journals.later()
         }
     }
 
@@ -595,7 +573,7 @@ class ExpeditionActions(
         if (itemId in repository.state.value.saleMarks) expedition { it.copy(saleMarks = it.saleMarks - itemId) }
         runJournal?.takeIf { itemId in it.saleMarks }?.let { j ->
             j.saleMarks = j.saleMarks - itemId
-            persist()
+            journals.later()
         }
     }
 
@@ -611,7 +589,7 @@ class ExpeditionActions(
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен; журнал прежде ложится на диск. */
     fun flushRun() {
-        persistNow()
+        journals.now()
         flushes.trySend(Unit)
     }
 
@@ -628,13 +606,13 @@ class ExpeditionActions(
     private suspend fun resumeJournal(id: String, kept: RunJournal) {
         val open = hero?.takeIf { it.id == id }?.campaign?.run
         if (open?.id != kept.runId) {
-            store.clearJournal(id)
+            journals.clear(id)
             return
         }
         marked = kept.runId
         expedition { it.copy(saleMarks = kept.saleMarks) }
         if (kept.settled) {
-            if (kept.saleMarks.isEmpty()) store.clearJournal(id)
+            if (kept.saleMarks.isEmpty()) journals.clear(id)
             return
         }
         runJournal = kept
@@ -873,7 +851,7 @@ class ExpeditionActions(
         runJournal?.takeIf { it.runId == runId }?.let { j ->
             flush()
             if (runJournal === j) runJournal = null
-            store.clearJournal(heroId)
+            journals.clear(heroId)
         }
         if (shut != runId) api.campaign.abandon(heroId, runId)
     }
@@ -920,7 +898,5 @@ class ExpeditionActions(
         /** Первый повтор после неудачной отправки и сколько раз пауза удваивается до часовой. */
         const val RETRY_FIRST = 2_000L
         const val RETRY_DOUBLINGS = 3
-        /** Не чаще этого журнал пишется на диск между отправками. */
-        const val SAVE_EVERY = 5_000L
     }
 }

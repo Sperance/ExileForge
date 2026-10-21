@@ -134,6 +134,7 @@
   "api.choose_node": "Choose a node of the tree",
   "api.choose_recipe": "Pick a bench line",
   "api.choose_socket": "Choose a socket",
+  "api.content_moved": "The server's content changed while it was loading: open the hero again",
   "api.credentials": "Enter a login and a password",
   "api.empty_reward": "A promo code must give something",
   "api.enter_promo": "Enter a promo code",

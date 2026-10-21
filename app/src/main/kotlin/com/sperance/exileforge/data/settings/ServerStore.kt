@@ -18,14 +18,19 @@ import com.sperance.exileforge.core.i18n.Lang
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 private val Context.settings by preferencesDataStore("server_settings")
 
@@ -168,14 +173,22 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     /**
      * The journal of a hero's run, as text, so events the server has not taken survive the process: what
      * was not sent is sent on the next launch, as long as the hero's run is still the one it names.
+     *
+     * Файл меняется целиком ([replace]) и под замком героя: две записи не идут вместе, а оборванная не портит лежащий журнал.
      */
-    override suspend fun journal(heroId: String): String? = withContext(Dispatchers.IO) { journalFile(heroId).takeIf { it.isFile }?.readText() }
-    override suspend fun saveJournal(heroId: String, text: String) = withContext(Dispatchers.IO) { journalFile(heroId).apply { parentFile?.mkdirs() }.writeText(text) }
-    override suspend fun clearJournal(heroId: String) = withContext(Dispatchers.IO) {
-        journalFile(heroId).delete()
-        Unit
+    override suspend fun journal(heroId: String): String? = journalLock(heroId).withLock { withContext(Dispatchers.IO) { journalFile(heroId).takeIf { it.isFile }?.readText() } }
+    override suspend fun saveJournal(heroId: String, text: String) = journalLock(heroId).withLock { withContext(Dispatchers.IO) { replace(journalFile(heroId), text) } }
+    override suspend fun clearJournal(heroId: String) = journalLock(heroId).withLock {
+        withContext(Dispatchers.IO) {
+            journalFile(heroId).delete()
+            Unit
+        }
     }
     private fun journalFile(heroId: String) = File(context.filesDir, "journal/$heroId.json")
+
+    /** Замки файлов журналов по герою. */
+    private val journalLocks = ConcurrentHashMap<String, Mutex>()
+    private fun journalLock(heroId: String): Mutex = journalLocks.getOrPut(heroId) { Mutex() }
 
     /**
      * The commands one server has not answered yet, in order, as text: they survive the process and
@@ -227,13 +240,18 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun serverFile(kind: String, name: String) = File(context.filesDir, "$kind/" + UUID.nameUUIDFromBytes(name.toByteArray()) + ".json")
 
     /** Written beside and moved over: a process killed mid-write leaves the old file, not half of the new one. */
+    /** Файл [target] - текстом [text] целиком: пишется рядом и встаёт на место одним переименованием, читатель не видит половины. */
     private fun replace(target: File, text: String) {
         target.parentFile?.mkdirs()
         val temp = File(target.parentFile, target.name + ".tmp")
         temp.writeText(text)
-        if (!temp.renameTo(target)) {
-            target.delete()
-            temp.renameTo(target)
+        try {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: Exception) {
+            if (!temp.renameTo(target)) {
+                target.delete()
+                temp.renameTo(target)
+            }
         }
     }
 

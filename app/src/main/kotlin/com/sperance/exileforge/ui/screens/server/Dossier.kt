@@ -38,10 +38,10 @@ import com.sperance.exileforge.core.network.DeviceView
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.DossierHero
 import com.sperance.exileforge.core.network.GameServer
-import com.sperance.exileforge.core.network.RunFlag
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.rules.run.RunFlag
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*

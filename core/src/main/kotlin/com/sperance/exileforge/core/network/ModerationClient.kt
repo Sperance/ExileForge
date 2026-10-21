@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.rules.run.RunFlag
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.encodeToJsonElement
 
@@ -196,29 +197,9 @@ sealed interface ModerationFate {
     val tester: Boolean = false,
     /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
-    /** Метки темпа героя ([RunFlag], старые первыми); решает смотрящий. */
+    /** Метки темпа героя ([RunFlag] правил - тот же тип, что пишет сервер, старые первыми); решает смотрящий. */
     val runFlags: List<RunFlag> = emptyList(),
 )
-
-/**
- * Метка подозрительного захода, как её пишет сервер: когда [at] (мс эпохи), где [zone] (код зоны, региона раша, `rift` или
- * `tower`), что не сошлось [reason] (код причины), значение [value], вес [weight] 1-3 по тому, во сколько раз превышен порог;
- * [trace] - слагаемые долга стены у метки темпа, у прочих меток его нет.
- */
-@Serializable data class RunFlag(
-    val at: Long,
-    val zone: String,
-    val reason: String,
-    val value: Double,
-    val weight: Int = 1,
-    val trace: PaceTrace? = null,
-)
-
-/**
- * Слагаемые долга стены события боя: урон героя в секунду [dps] и стойкость сильнейшего врага [foe] (у боя испытания их нет),
- * секунды стены события [wall], зачтённые в их погашение секунды [paid] и число событий [batch] пачки журнала, с которой событие пришло.
- */
-@Serializable data class PaceTrace(val dps: Double? = null, val foe: Double? = null, val wall: Double = 0.0, val paid: Double = 0.0, val batch: Int = 0)
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)
 

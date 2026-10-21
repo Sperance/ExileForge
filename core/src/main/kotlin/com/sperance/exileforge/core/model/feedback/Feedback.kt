@@ -173,10 +173,11 @@ import kotlinx.serialization.Serializable
 
 /**
  * Переписка отчёта по порядку: слово модерации [reason] и ответы автора [answers] - сервер шлёт их, пока у отчёта нет Issue, - затем
- * переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и автор. С Issue слово и ответы - его первые комментарии в том
- * же порядке, дважды они не встают.
+ * переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и автор. Выгрузка кладёт слово и ответы первыми комментариями
+ * Issue в том же порядке, поэтому с Issue слово берётся только оттуда и дважды не встаёт, даже если сервер прислал его и полем.
  */
-private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
+private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> =
+    listOfNotNull(reason.takeIf { it.isNotBlank() && issue == null }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
 
 /**
  * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести по машине состояний сервера,

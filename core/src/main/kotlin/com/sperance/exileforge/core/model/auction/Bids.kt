@@ -23,6 +23,12 @@ val AuctionLot.leading: Boolean get() = standing == BidStanding.LEADING
 /** Ставку героя в этих торгах перебили. */
 val AuctionLot.outbid: Boolean get() = standing == BidStanding.OUTBID
 
+/**
+ * Торги выставил другой герой аккаунта [userId] (`sellerUser` сервера): ставить и выкупать их нельзя (сервер - `AU_021`); свой лот -
+ * [AuctionLot.belongsTo].
+ */
+fun AuctionLot.sameAccount(userId: String?): Boolean = isBidding && !userId.isNullOrEmpty() && sellerUser == userId
+
 /** Продавец может продать торги лучшей ставке досрочно: торги открыты и ставка есть. */
 val AuctionLot.acceptable: Boolean get() = isBidding && onSale && currentBid > 0
 
@@ -44,11 +50,11 @@ fun AuctionLot.bidFee(index: ContentIndex, amount: Long): Long = goods?.let { Au
 /** Что спишет ставка [amount]: сферы и сбор в залог; ставка от выкупа - цена выкупа и её сбор ([AuctionLot.cost]). */
 fun AuctionLot.bidCost(index: ContentIndex, amount: Long): Cost = if (buysOut(amount)) cost else Cost.item(priceOrb, amount) + Cost.gold(bidFee(index, amount))
 
-/** Торги кончаются скоро: осталось не больше хвоста ставки (`auction.bidTailHours`) - полоса времени красная. */
-fun AuctionLot.bidEnding(rules: AuctionRules, now: Long = System.currentTimeMillis()): Boolean = timeLeft(now)?.let { it <= rules.bidTailMillis } == true
+/** Торги кончаются скоро к «сейчас» [now] (часы сервера): осталось не больше хвоста ставки (`auction.bidTailHours`) - полоса времени красная. */
+fun AuctionLot.bidEnding(rules: AuctionRules, now: Long): Boolean = timeLeft(now)?.let { it <= rules.bidTailMillis } == true
 
-/** Доля срока торгов, что ещё осталась, от полного срока лота (`auction.lotDays`): 0..1 - длина полосы времени. */
-fun AuctionLot.timeShare(rules: AuctionRules, now: Long = System.currentTimeMillis()): Float = ((timeLeft(now) ?: 0L).toFloat() / rules.lotMillis).coerceIn(0f, 1f)
+/** Доля срока торгов, что ещё осталась к «сейчас» [now], от полного срока лота (`auction.lotDays`): 0..1 - длина полосы времени. */
+fun AuctionLot.timeShare(rules: AuctionRules, now: Long): Float = ((timeLeft(now) ?: 0L).toFloat() / rules.lotMillis).coerceIn(0f, 1f)
 
 /**
  * Условия выставления: за цену или торгами ([mode]) с первой ставкой [minPrice]; цена листа - выкуп. Плата за место у обоих - по цене

@@ -165,6 +165,9 @@ data class HeroView(
     }
     fun count(code: String): Long = bag[code] ?: 0L
 
+    /** Чего герою не хватает на [cost] - сумкой и кошельком. */
+    fun shortfall(cost: com.sperance.exileforge.core.model.trade.Cost): com.sperance.exileforge.core.model.trade.Shortfall = cost.shortfall(::count, money)
+
     /** Первое взятое гнездо самоцвета дерева, где ничего не стоит; null - такого нет. */
     fun freeSocket(index: ContentIndex): String? = tree.map { it.code }.firstOrNull { code -> index.tree.node(code)?.type == SkillNodeType.JEWEL_SOCKET && code !in jewels }
 

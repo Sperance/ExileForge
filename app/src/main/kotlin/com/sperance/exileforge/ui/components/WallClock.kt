@@ -44,7 +44,10 @@ val LocalWallClock = staticCompositionLocalOf<WallClock> { TickingClock }
  * Сколько мс осталось до [until] (мс эпохи сервера) по часам сервера ([ServerClock]) для живой подписи с тактом [tickMs]; срок вышел -
  * 0. «Сейчас» - из часов экрана ([rememberNow]), к нему прибавляется сдвиг часов сервера.
  */
-@Composable fun rememberServerLeft(until: Long, tickMs: Long): Long {
+@Composable fun rememberServerLeft(until: Long, tickMs: Long): Long = (until - rememberServerNow(tickMs)).coerceAtLeast(0)
+
+/** «Сейчас» по часам сервера ([ServerClock]) для живых подписей с тактом [tickMs]: часы экрана ([rememberNow]) со сдвигом сервера. */
+@Composable fun rememberServerNow(tickMs: Long): Long {
     val now by rememberNow(tickMs)
-    return (until - now - ServerClock.offset).coerceAtLeast(0)
+    return now + ServerClock.offset
 }

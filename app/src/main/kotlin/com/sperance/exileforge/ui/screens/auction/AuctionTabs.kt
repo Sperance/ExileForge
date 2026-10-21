@@ -35,6 +35,7 @@ import com.sperance.exileforge.core.display.itemVisualKind
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
@@ -80,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
         TradeRow(
             lot.title,
             lotColor(lot),
-            stackFacts(game, lot) + seller,
+            stackFacts(game.lang, lot) + seller,
             enabled = !game.busy,
             marks = marks,
             onClick = onClick,
@@ -115,10 +116,13 @@ internal fun lotReturn(lot: AuctionLot): String? {
     return ui("auction.returning").takeIf { lot.returning }
 }
 
-/** Сколько ещё стоит свой лот: дни и часы, в последний день - часы и минуты; null - срока нет или лот ушёл с витрины ([lotReturn]). */
-internal fun lotLeft(lot: AuctionLot): String? {
+/**
+ * Сколько ещё стоит лот к «сейчас» [now] (часы сервера): дни и часы, в последний день - часы и минуты; null - срока нет или лот ушёл с
+ * витрины ([lotReturn]).
+ */
+internal fun lotLeft(lot: AuctionLot, now: Long): String? {
     if (lotReturn(lot) != null) return null
-    val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
+    val minutes = ((lot.timeLeft(now) ?: return null) + 59_999) / 60_000
     return if (minutes >= MINUTES_A_DAY) {
         ui("auction.left_days", minutes / MINUTES_A_DAY, minutes % MINUTES_A_DAY / 60)
     } else {
@@ -128,16 +132,22 @@ internal fun lotLeft(lot: AuctionLot): String? {
 
 internal const val MINUTES_A_DAY = 1_440L
 
+/** Такт живых сроков рынка ([lotLeft], полоса времени торгов): подпись - с точностью до минуты. */
+internal const val LOT_TICK_MS = 30_000L
+
 /**
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
-@Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) {
+@Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) = LotIcon(lot, lotVisualKind(game, lot), modifier)
+
+/** Рисунок лота: спрайт сервера по коду, иначе эмблема вида [visual] ([lotVisualKind]). */
+@Composable internal fun LotIcon(lot: AuctionLot, visual: ItemVisualKind, modifier: Modifier) {
     val sprite = when (lot.kind) {
         LotKind.EQUIPMENT -> equipmentIcon(lot.itemCode)
         LotKind.ITEM -> itemIcon(lot.itemCode)
     }
-    if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(game, lot), lotColor(lot), modifier)
+    if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(visual, lotColor(lot), modifier)
 }
 
 internal fun lotVisualKind(game: GameUi, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
@@ -154,7 +164,7 @@ internal fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…
 internal fun lotUnmet(game: GameUi, lot: AuctionLot): List<String> = lot.equipment?.let { game.unmetFor(it.template) }.orEmpty()
 
 /** A stack lot's facts: how many, or what kind of goods when it is one. */
-internal fun stackFacts(game: GameUi, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, game.lang))
+internal fun stackFacts(lang: Lang, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, lang))
 
 /**
  * One lot in full, with the goods drawn as the stash draws them.

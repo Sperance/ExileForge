@@ -72,7 +72,8 @@ import com.sperance.exileforge.ui.theme.*
     var openLot by remember { mutableStateOf<String?>(null) }
     var openBid by remember { mutableStateOf<String?>(null) }
     val rules = game.index?.rules?.auction
-    val (auctions, lots) = market.ownLots.partition { it.isBidding && it.onSale }
+    val now = rememberServerNow(LOT_TICK_MS)
+    val (auctions, lots) = remember(market.ownLots) { market.ownLots.partition { it.isBidding && it.onSale } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         market.slots?.takeIf { it.bidLimit > 0 }?.let { slots ->
             item {
@@ -89,22 +90,20 @@ import com.sperance.exileforge.ui.theme.*
         }
         if (auctions.isNotEmpty()) {
             item { SectionTitle(ui("auction.my_auctions"), auctions.size) }
-            items(auctions, key = { it.id }) { lot -> BidRow(game, lot, rules) { openLot = lot.id } }
+            items(auctions, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openLot = lot.id } }
         }
         if (market.myBids.isNotEmpty()) {
             item { SectionTitle(ui("auction.my_bids"), market.myBids.size) }
-            items(market.myBids, key = { "bid-${it.id}" }) { lot -> BidRow(game, lot, rules) { openBid = lot.id } }
+            items(market.myBids, key = { "bid-${it.id}" }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openBid = lot.id } }
         }
         if (lots.isNotEmpty() && (auctions.isNotEmpty() || market.myBids.isNotEmpty())) item { SectionTitle(ui("auction.my_fixed"), lots.size) }
         items(lots, key = { it.id }) { lot ->
-            LotRow(game, lot, marks = lotMarks(lot, rules), withSeller = false) { openLot = lot.id }
+            LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { openLot = lot.id }
         }
     }
-    market.myBids.firstOrNull { it.id == openBid }?.let { lot ->
-        BidSheet(game, lot, onDismiss = { openBid = null }, onBid = { amount -> vm.bid(lot.id, amount) }, onBuyout = { vm.buyout(lot.id) })
-    }
+    market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, now, vm) { openBid = null } }
     auctions.firstOrNull { it.id == openLot }?.let { lot ->
-        OwnBidSheet(game, lot, onDismiss = { openLot = null }, onWithdraw = {
+        OwnBidSheet(game, lot, now, onDismiss = { openLot = null }, onWithdraw = {
             openLot = null
             vm.cancel(lot.id)
         }) {
@@ -120,8 +119,8 @@ import com.sperance.exileforge.ui.theme.*
             enabled = !game.busy && lot.onSale,
             note = lotReturn(lot),
             onDismiss = { openLot = null },
-            left = lotLeft(lot),
-            extra = if (rules != null && lot.extendable(rules)) {
+            left = lotLeft(lot, now),
+            extra = if (rules != null && lot.extendable(rules, now)) {
                 {
                     ExtendRow(game, game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L, rules) {
                         openLot = null
@@ -151,10 +150,10 @@ import com.sperance.exileforge.ui.theme.*
  * ставке - с предупреждением, что ставка вернётся покупателю письмом; при ставке рядом «Продать за N» - удержанием: торги кончаются сейчас,
  * предмет уходит лучшей ставке ([acceptable]).
  */
-@Composable private fun OwnBidSheet(game: GameUi, lot: AuctionLot, onDismiss: () -> Unit, onWithdraw: () -> Unit, onAccept: () -> Unit) {
+@Composable private fun OwnBidSheet(game: GameUi, lot: AuctionLot, now: Long, onDismiss: () -> Unit, onWithdraw: () -> Unit, onAccept: () -> Unit) {
     val bid = lot.currentBid
     val note = if (bid > 0) "${ui("auction.current_bid")}: ${number(bid.toDouble())} ${orbTitle(lot)} · ${ui("auction.bids_count", lot.bidCount)}" else ui("auction.no_bids")
-    LotSheet(game, lot, action = null, enabled = false, note = note, onDismiss = onDismiss, left = lotLeft(lot), extra = {
+    LotSheet(game, lot, action = null, enabled = false, note = note, onDismiss = onDismiss, left = lotLeft(lot, now), extra = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (bid > 0) {
                 MutedText(ui("auction.withdraw_bid_warn", "${number(bid.toDouble())} ${orbTitle(lot)}"))
@@ -175,16 +174,16 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Пометки строки своего лота: куда вернулся истёкший ([lotReturn]), иначе «ещё N» - в окне продления (последний день, [rules]) цветом
- * [Caution] - и «можно продлить», пока продления не кончились; срока нет - пометок нет.
+ * Пометки строки своего лота к «сейчас» [now] (часы сервера): куда вернулся истёкший ([lotReturn]), иначе «ещё N» - в окне продления
+ * (последний день, [rules]) цветом [Caution] - и «можно продлить», пока продления не кончились; срока нет - пометок нет.
  */
-private fun lotMarks(lot: AuctionLot, rules: AuctionRules?): List<TradeMark> {
+private fun lotMarks(lot: AuctionLot, rules: AuctionRules?, now: Long): List<TradeMark> {
     lotReturn(lot)?.let { return listOf(TradeMark(it)) }
-    val left = lotLeft(lot) ?: return emptyList()
-    val ending = rules != null && lot.extendable(rules.extendWindowMillis)
+    val left = lotLeft(lot, now) ?: return emptyList()
+    val ending = rules != null && lot.extendable(rules.extendWindowMillis, now)
     return listOfNotNull(
         TradeMark(ui("auction.left", left), if (ending) Caution else Rune),
-        TradeMark(ui("auction.extend_now")).takeIf { rules != null && lot.extendable(rules) },
+        TradeMark(ui("auction.extend_now")).takeIf { rules != null && lot.extendable(rules, now) },
     )
 }
 

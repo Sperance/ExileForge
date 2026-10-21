@@ -96,7 +96,8 @@ jobs:
           cache-read-only: false
           # Неиспользуемые файлы кэша удаляются перед сохранением: кэш не копится до лимита GitHub
           cache-cleanup: on-success
-      - run: bash gradlew :core:ktlintCheck commentStyle :core:test
+      # Задачи job - в scripts/check.sh: та же проверка перед пушем
+      - run: scripts/check.sh core
 
   app:
     needs: changes
@@ -123,9 +124,10 @@ jobs:
         with:
           cache-read-only: false
           cache-cleanup: on-success
-      # Отладочной сборки нет нигде (4.12.x): lint - по релизному варианту, APK - только R8-сборки ниже
+      # Отладочной сборки нет нигде: lint - по релизному варианту, APK - только R8-сборки ниже
       # Сторожа :app: каждый файл с Android или @Composable - расчёты и модели экранов в :core; кнопки и чипы Material - только в ui/components
-      - run: bash gradlew :app:ktlintCheck :app:androidOnly :app:forgeButtonsOnly
+      # Задачи job - в scripts/check.sh (та же проверка перед пушем); компилируют :app только релизные job
+      - run: scripts/check.sh app --no-compile
       # Android Lint - перед релизом и по ручному запуску: на обычном пуше хватает ktlint
       - if: ${{ needs.changes.outputs.release == 'true' || github.event_name == 'workflow_dispatch' }}
         run: bash gradlew :app:lintRelease

@@ -82,8 +82,8 @@ internal fun Battle.hud(
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = place(f.index), buildup = buildup(f),
             barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0, waiting = waits(f.index),
-            invulnerable = if (f.alive) (f.invulnerableUntil - time).coerceAtLeast(0.0) else 0.0, invulnerableFor = f.invulnerableFor,
-            still = f.still,
+            invulnerableLeft = if (f.alive) (f.invulnerableUntil - time).coerceAtLeast(0.0) else 0.0, invulnerableTotal = f.invulnerableTotal,
+            inert = f.inert,
         )
     }
     return FightHud(

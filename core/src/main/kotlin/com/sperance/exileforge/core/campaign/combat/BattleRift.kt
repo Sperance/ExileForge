@@ -57,7 +57,7 @@ internal fun Battle.riftTick() {
     val boss = riftBoss()?.takeIf { it.alive } ?: return
     if (!fight.opened) {
         fight.opened = true
-        fight.rules.warden?.let { summon(boss, it.idolCount, still = true) }
+        fight.rules.warden?.let { raiseIdols(boss, it.idolCount) }
     }
     fight.rules.warden?.let { warden(fight, it, boss) }
     fight.rules.devourer?.let { devour(fight, it, boss) }
@@ -88,7 +88,7 @@ private fun Battle.warden(fight: RiftFight, rule: WardenRule, boss: Fighter) {
 /** Через сколько секунд возвращается следующая печать: в фазе быстрее, и каждый стоящий идол ускоряет на свою долю ([WardenRule.idolPace]). */
 private fun Battle.regrowEvery(fight: RiftFight, rule: WardenRule): Double {
     val phase = if (fight.wardenPhased) rule.phaseRegrow else 1.0
-    return rule.every / phase / rule.idolPace(foeFighters.count { it.still && it.alive })
+    return rule.every / phase / rule.idolPace(foeFighters.count { it.inert && it.alive })
 }
 
 /** Множитель урона по [target]: пока стоит хоть одна печать Стража - его [WardenRule.taken]; 1 - вне Разлома. */

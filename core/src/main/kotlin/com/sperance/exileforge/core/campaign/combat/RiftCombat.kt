@@ -119,7 +119,7 @@ fun PhaseFoes.withShades(foes: List<Foe>, shade: Foe, count: Int): List<Foe> {
 }
 
 /**
- * Идолы Стража Врат: к стае [foes] добавлены [WardenRule.idolCount] копий [idol] - его свита, что не бьёт ([Foe.still]) и встаёт с
+ * Идолы Стража Врат: к стае [foes] добавлены [WardenRule.idolCount] копий [idol] - его свита, что не бьёт ([Foe.inert]) и встаёт с
  * началом боя; здоровье каждого - [WardenRule.idolLife]% наибольшего здоровья стража, пока стоит - на страже его строки
  * [WardenRule.idolLines]. Страж получает слоты под них.
  */
@@ -131,7 +131,7 @@ fun PhaseFoes.withIdols(foes: List<Foe>, idol: Foe, rule: WardenRule): List<Foe>
         body = idol.body.copy(stats = idol.body.stats + life),
         origin = idol.origin?.let { it.copy(stats = it.stats + life) },
         summonOf = boss,
-        still = true,
+        inert = true,
         ward = rule.idolLines.map { StatLine(it.stat, it.op, it.value) },
     )
     val grown = foes.mapIndexed { i, foe -> if (i == boss) foe.copy(slots = maxOf(foe.slots, rule.idolCount)) else foe }

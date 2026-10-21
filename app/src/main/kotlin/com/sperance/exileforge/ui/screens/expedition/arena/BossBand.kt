@@ -178,7 +178,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         Row(Modifier.heightIn(min = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
             if (boss.marks.isNotEmpty()) PhaseChip(boss, name)
-            if (foe.alive && foe.invulnerable > 0) InvulnerableChip(foe.invulnerable, foe.invulnerableFor)
+            if (foe.alive && foe.invulnerableLeft > 0) InvulnerableChip(foe.invulnerableLeft, foe.invulnerableTotal)
             if (foe.alive) {
                 fight.rage?.let { RageChip(it) }
                 boss.rift?.let { RiftChip(boss, it, frame) }
@@ -366,7 +366,7 @@ private class PhaseGems(private val marks: List<Double>) {
                     }
                 }
             }
-            if (foe.invulnerable > 0) {
+            if (foe.invulnerableLeft > 0) {
                 var s = -h
                 while (s < w) {
                     drawLine(InvulnerableHatch, Offset(s, h), Offset(s + h, 0f), 2.dp.toPx())
@@ -645,7 +645,7 @@ private fun DrawScope.archFrame(glow: Color?) {
         }
         mark?.let { FocusBadge(it, Modifier.align(Alignment.TopCenter).offset(y = (-6).dp)) }
         val share = if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f
-        if (foe.still) {
+        if (foe.inert) {
             Plaque(ui("fight.idol_plaque", monsterTitle(foe.monster.code), (share * 100).roundToInt()), Parchment, share, IdolLife)
         } else {
             Plaque(monsterTitle(foe.monster.code), Parchment, share, LifeMid)

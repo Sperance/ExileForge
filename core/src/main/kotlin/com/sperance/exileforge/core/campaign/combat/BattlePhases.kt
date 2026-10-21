@@ -39,7 +39,7 @@ internal fun Battle.phase(foe: Fighter) {
         }
         if (step.invulnerable > 0 && time + step.invulnerable > foe.invulnerableUntil) {
             foe.invulnerableUntil = time + step.invulnerable
-            foe.invulnerableFor = step.invulnerable
+            foe.invulnerableTotal = step.invulnerable
         }
         if (step.summon > 0) summon(foe, step.summon)
         if (phase.totems.isNotEmpty()) raiseTotem(foe, phase.totems)
@@ -54,15 +54,21 @@ internal fun Battle.phase(foe: Fighter) {
 }
 
 /**
- * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт. [still] - зовёт идолов ([Foe.still]), иначе
- * свиту, что бьётся: зов фаз и кражи идолов не трогает. Кто встал - номера в стае (тень Поглотителя получает украденный дар); строки
- * вставшей на босса ([Foe.ward]) ложатся сразу.
- *
- * Слоты вокруг босса заняты - приспешник не встаёт.
+ * Свита [count] босса [boss], что бьётся, встаёт на поле сразу (зов фаз, тени Поглотителя); идолов ([Foe.inert]) не зовёт. Кто встал -
+ * номера в стае (тень Поглотителя получает украденный дар).
  */
-internal fun Battle.summon(boss: Fighter, count: Int, still: Boolean = false): List<Int> {
+internal fun Battle.summon(boss: Fighter, count: Int): List<Int> = call(boss, count) { !it.inert }
+
+/** Идолы [count] босса [boss] ([Foe.inert]) встают с началом боя. */
+internal fun Battle.raiseIdols(boss: Fighter, count: Int): List<Int> = call(boss, count) { it.inert }
+
+/**
+ * Свита [count] босса [boss], что проходит [which], встаёт на поле: без свободного слота вокруг босса - не встаёт; строки вставшей на
+ * босса ([Foe.ward]) ложатся сразу.
+ */
+private fun Battle.call(boss: Fighter, count: Int, which: (Foe) -> Boolean): List<Int> {
     val risen = mutableListOf<Int>()
-    foes.indices.filter { foes[it].summonOf == boss.index && foes[it].still == still && it !in called }.take(count).forEach { index ->
+    foes.indices.filter { foes[it].summonOf == boss.index && which(foes[it]) && it !in called }.take(count).forEach { index ->
         val slot = freeSlot() ?: return@forEach
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index

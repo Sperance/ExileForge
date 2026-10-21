@@ -125,8 +125,8 @@ class Battle(
             attackInterval = 1 / next.attackSpeed
         }
 
-        /** Не бьёт и не применяет умений ([Foe.still]): идол стража. */
-        val still: Boolean = side == Side.MONSTER && index >= 0 && foes[index].still
+        /** Не бьёт и не применяет умений ([Foe.inert]): идол стража. */
+        val inert: Boolean = side == Side.MONSTER && index >= 0 && foes[index].inert
 
         /** Босс боя: уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, устрашение, силы). */
         val chief: Boolean get() = side == Side.MONSTER && index >= 0 && foes[index].rarity >= MonsterRarity.UNIQUE
@@ -197,7 +197,7 @@ class Battle(
         var invulnerableUntil = -1.0
 
         /** Сколько секунд длится неуязвимость фазы, что держит его до [invulnerableUntil]: шкала отсчёта на рамке босса. */
-        var invulnerableFor = 0.0
+        var invulnerableTotal = 0.0
 
         /** When each of its skills is ready again, by code for a monster and by slot for the hero. */
         val readyAt = mutableMapOf<String, Double>()
@@ -696,7 +696,7 @@ class Battle(
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
-        outcome != null || !fighter.alive || fighter.still -> 0f
+        outcome != null || !fighter.alive || fighter.inert -> 0f
         else -> (1 - (fighter.nextAttack - time) / (fighter.attackInterval * fighter.slow())).toFloat().coerceIn(0f, 1f)
     }
 

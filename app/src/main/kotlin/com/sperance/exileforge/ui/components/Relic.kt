@@ -29,12 +29,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.R
@@ -158,6 +162,35 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
         contentAlignment = Alignment.Center,
     ) { ItemIcon(item, look.rarity, Modifier.size(size * .66f)) }
 }
+
+/**
+ * Уровень вещи числом на углу гнезда - один значок для плитки ([ItemTile]) и плиты ([ItemRow]): у карты без тира - уровень карты
+ * ([ItemView.mapLevel]) цветом `Rune`, у прочих - уровень предмета в нити редкости; для чтения с экрана - подпись целиком.
+ * Уровня нет - значка нет. Место на гнезде - правый нижний угол со сдвигом [LevelBadgeOffset].
+ */
+@Composable fun LevelBadge(item: ItemView, look: RelicLook, modifier: Modifier) {
+    val map = item.mapLevel
+    val level = map ?: item.level.takeIf { it > 0 } ?: return
+    val tint = if (map != null) Rune else look.rarity
+    val shape = RoundedCornerShape(8.dp)
+    val label = if (map != null) ui("card.map_level", map) else ui("row.level", level)
+    Text(
+        level.toString(),
+        color = if (map != null) Rune else Parchment,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        modifier = modifier.widthIn(min = 22.dp).heightIn(min = 16.dp).background(BadgeGround, shape).border(1.dp, tint.copy(alpha = .55f), shape)
+            .padding(horizontal = 4.dp).clearAndSetSemantics { contentDescription = label },
+    )
+}
+
+/** Сдвиг значка уровня за правый нижний угол гнезда - одинаковый у плитки и плиты. */
+val LevelBadgeOffset = DpOffset(7.dp, 6.dp)
+
+/** Подложка значка уровня - темнее гнезда, чтобы число читалось поверх рисунка. */
+private val BadgeGround = Color(0xFF0B1013)
 
 /** Цвета значков тира: первый тир - янтарь, второй - мята, третий - лёд, ниже - серый. */
 private val TierAmber = Color(0xFFF5B547)

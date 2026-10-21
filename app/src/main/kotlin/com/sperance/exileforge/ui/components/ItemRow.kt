@@ -37,8 +37,8 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Вещь в списке - «Плита» (выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
- * экземпляра уникальной или мифической, строка «что это · уровень · база», а ниже - каждая строка вещи со значком тира:
+ * Вещь в списке - «Плита» (выбор владельца): гнездо с иконкой в цвете редкости и уровнем на углу ([LevelBadge], как у плитки сумки),
+ * имя серифами, под ним номер экземпляра уникальной или мифической, строка «что это · база», а ниже - каждая строка вещи со значком тира:
  * модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом угле.
  * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
  * [compact] - две линии (лут после боя): имя целиком, под ним значки тиров и отметки, без текстов строк.
@@ -47,8 +47,8 @@ import com.sperance.exileforge.ui.theme.*
  * [extra] - факты после слота, [trailing] - напротив имени (цена лота), [price] - цена торговца, когда напротив имени больше ничего,
  * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. Две линии вместо плиты - лут после боя; «Ценник» -
  * ярлык цены сверху плиты; «лучше или хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка;
- * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - уровень предмета плашкой первым, значки тиров, качество,
- * состояния и замок; каждая строка вещи видна без карточки. [accent] - цвет рамки метки строки ([note]): «лучше надетого» в походе.
+ * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - значки тиров, качество, состояния и замок; уровень -
+ * только на гнезде; каждая строка вещи видна без карточки. [accent] - цвет рамки метки строки ([note]): «лучше надетого» в походе.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -79,7 +79,7 @@ fun ItemRow(
     val card = RoundedCornerShape(16.dp)
     val base = item.base.flatMap { it.values }.filter { it.stat.isNotBlank() }
     val sub = (
-        listOf(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), ui("row.level", item.level)) + facts +
+        listOf(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot)) + facts +
             base.take(2).map { "${statTitle(it.stat).lowercase()} ${it.text}" }
         ).joinToString(" · ")
     Box(Modifier.fillMaxWidth()) {
@@ -128,7 +128,6 @@ fun ItemRow(
             }
             if (compact) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                    LevelChip(item.level)
                     item.orderedLines.forEach { TierHex(it.marks, 16.dp) }
                     if (item.orderedLines.isNotEmpty()) Spacer(Modifier.width(3.dp))
                     QualityBadge(item, compact = true)
@@ -154,18 +153,6 @@ fun ItemRow(
     }
 }
 
-/** Уровень предмета плашкой второй линии лута: «ур. предм. N» светлым на тёмной подложке, как плашка уровня карточки. */
-@Composable private fun LevelChip(level: Int) {
-    Text(
-        ui("row.level", level),
-        color = Parchment,
-        fontWeight = FontWeight.SemiBold,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        modifier = Modifier.background(Color.White.copy(alpha = .07f), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
-    )
-}
-
 /** Ярлык цены «Ценника»: свисает с верхнего края плиты, скруглён снизу, в тонкой золотой нити. */
 @Composable private fun PriceTag(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
     val shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp)
@@ -178,7 +165,8 @@ fun ItemRow(
 }
 
 /**
- * Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - замок, запрет и отметка надетого.
+ * Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - запрет (слева сверху), замок (справа сверху), отметка
+ * надетого (слева снизу) и уровень вещи ([LevelBadge], справа снизу - тот же значок и сдвиг, что у плитки сумки).
  *
  * Отметка на строке одна: чего не хватает, говорит карточка или подсказка отметки.
  */
@@ -205,9 +193,10 @@ fun ItemRow(
                 Icons.Outlined.CheckCircle,
                 ui("row.worn"),
                 tint = Ink,
-                modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(14.dp),
+                modifier = Modifier.align(Alignment.BottomStart).offset((-4).dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(14.dp),
             )
         }
+        LevelBadge(item, look, Modifier.align(Alignment.BottomEnd).offset(x = LevelBadgeOffset.x, y = LevelBadgeOffset.y))
     }
 }
 

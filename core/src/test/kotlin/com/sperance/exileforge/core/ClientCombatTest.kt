@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
  * под `Recovery`, потолки, лёд шкалы с длительностями, одинаковые ауры,
  * отрицательная регенерация; пакет 7 - одна сила возрождения на смерть, провокация героя.
  */
-class CombatRulesTest {
+class ClientCombatTest {
     private val index get() = TestContent.index
     private val rules get() = index.campaign.combat
 

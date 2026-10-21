@@ -12,15 +12,15 @@ fun interface CrashTraces {
 }
 
 /**
- * Что прикладывается к отчёту игрока: к ошибке - последние падения клиента и снимок героя; журнал сбоев сервера - по правилам
- * контента, без прочитанного контента отчёт уходит без него.
+ * Что прикладывается к отчёту игрока: к ошибке - последние падения клиента, снимок героя и, из забега, сжатый разбор его последнего
+ * боя ([fights], [FightDigest]); журнал сбоев сервера - по правилам контента, без прочитанного контента отчёт уходит без него.
  */
-class BugEvidence(private val slice: GameSlice, private val connection: ServerConnection, private val crashes: CrashTraces) {
+class BugEvidence(private val slice: GameSlice, private val connection: ServerConnection, private val crashes: CrashTraces, private val fights: LastFight) {
     /** Отчёт [report] с приложенным на этот миг. */
     suspend fun attach(report: BugReportRequest): BugReportRequest {
         val rules = slice.ui.value.index?.rules?.feedback
         val evidence = if (report.kind == FeedbackKind.BUG) {
-            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet().orEmpty())
+            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet().orEmpty(), fight = fights.report()?.let(FightDigest::of).orEmpty())
         } else {
             report
         }

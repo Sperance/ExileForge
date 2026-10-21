@@ -29,9 +29,11 @@ import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.RiftActions
+import com.sperance.exileforge.core.expedition.RunLastFight
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.feedback.LastFight
 import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.ReportTrail
 import com.sperance.exileforge.core.feedback.SeenReplies
@@ -198,7 +200,8 @@ val appModule = module {
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get<StallWatchdog>(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
-    single { BugEvidence(get(), get(), get<com.sperance.exileforge.platform.CrashKeeper>()) }
+    single<LastFight> { RunLastFight(get(), get(), get()) }
+    single { BugEvidence(get(), get(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
     factoryOf(::ShellModel)
     factoryOf(::ModerationModel)
     factoryOf(::SanctionModel)

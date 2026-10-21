@@ -445,6 +445,8 @@ data class RunHud(
     val summon: SummonView? = null,
     /** Босс карты убит в этом заходе: герой идёт быстрее - след и значок над ним. */
     val swift: Boolean = false,
+    /** Множитель шага героя под холодом ([ExpeditionRun.stride]); 1 - холода нет, подписи под жетоном нет. */
+    val stride: Double = 1.0,
     /** Счёт боевых заданий за этот заход: счётчик летописи - сколько прибавит. */
     val questTally: Map<String, Long> = emptyMap(),
     /** Выигранных в заходе боёв Разгона ([com.sperance.exileforge.core.campaign.combat.FateRun.won]); без рычага - 0. */

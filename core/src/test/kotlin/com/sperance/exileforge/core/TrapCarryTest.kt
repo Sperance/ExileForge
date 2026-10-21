@@ -4,12 +4,17 @@ import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.CarriedAilment
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.FeatureAction
 import com.sperance.exileforge.core.campaign.run.TrapSpot
+import com.sperance.exileforge.core.campaign.run.afflict
 import com.sperance.exileforge.core.campaign.run.engage
 import com.sperance.exileforge.core.campaign.run.spring
+import com.sperance.exileforge.core.campaign.run.stride
+import com.sperance.exileforge.core.campaign.run.walk
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -22,6 +27,7 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.run.TrapAxis
 import com.sperance.exileforge.rules.run.TrapLayout
+import kotlin.math.hypot
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -102,6 +108,37 @@ class TrapCarryTest {
         assertEquals(kotlin.math.floor((5.0 - .4) / kind.every).toInt() + 1, inside, "one strike per beat over five seconds in the zone")
         world.heroX += 6
         assertEquals(0, (0 until 150).count { beat() != null }, "no strike once the hero has left")
+    }
+
+    /** Холод морозной ловушки укорачивает шаг по карте тем же растяжением, что действия в бою; самый сильный холод - не ниже пола. */
+    @Test
+    fun chill_shortens_the_step_on_the_map_but_not_below_the_floor() {
+        val run = expedition()
+        run.stickX = 1.0
+        assertEquals(1.0, run.stride(), 1e-9, "no chill - a full step")
+        val plain = run.stepLength()
+        run.spring(MapFeature.Trap(1, index.campaign.features!!.traps.kind("FROST")!!))
+        val chill = run.carry.ailments.single { it.ailment == Ailment.CHILLED }.magnitude
+        assertEquals(1 / (1 + chill / 100), run.stride(), 1e-9, "the step divides by the fight's chill stretch")
+        val chilled = run.stepLength()
+        assertTrue(chilled < plain, "the chilled step is shorter")
+        assertEquals(plain * run.stride(), chilled, 1e-6, "shorter by the stride")
+        run.afflict(CarriedAilment(Ailment.CHILLED, 10.0, 1_000.0, 10.0))
+        assertEquals(ExpeditionWorld.CHILL_FLOOR, run.stride(), 1e-9, "the strongest chill stops at the floor")
+        assertEquals(plain * ExpeditionWorld.CHILL_FLOOR, run.stepLength(), 1e-6, "and so does the step")
+    }
+
+    /** Длина одного кадра шага героя с клетки посреди пола, вдали от стен и монстров: ни стена, ни встреча шаг не режут. */
+    private fun ExpeditionRun.stepLength(): Double {
+        val map = world.map
+        val cell = (2 until map.width - 2).flatMap { x -> (2 until map.height - 2).map { y -> x to y } }.first { (x, y) ->
+            (-2..2).all { dx -> (-2..2).all { dy -> map.walkable(x + dx, y + dy) } } &&
+                world.agents.all { hypot(it.x - x - .5, it.y - y - .5) > world.rules.contact + 2 }
+        }
+        world.heroX = cell.first + .5
+        world.heroY = cell.second + .5
+        walk(1.0 / 30)
+        return hypot(world.heroX - cell.first - .5, world.heroY - cell.second - .5)
     }
 
     private companion object {

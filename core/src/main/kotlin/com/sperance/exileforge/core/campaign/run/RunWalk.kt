@@ -20,10 +20,14 @@ import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.charged
+import com.sperance.exileforge.core.campaign.combat.chillStretch
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
+import com.sperance.exileforge.core.campaign.combat.strongestChill
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.display.shareText
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -53,6 +57,7 @@ import kotlin.random.Random
  * Недуги из боя и ловушек тикают на дороге и убивают. Страж вручную - сперва экран-вызов; запечатанный босс не встаёт. Крышка сундука
  * открывается сразу, герой идёт дальше: добыча вылетает сразу из запаса сундуков захода. Шаг героя сбрасывает идущий сбор узла
  * ([breakGather]), как и начало боя ([engage], экран-вызов стража); встреча с запечатанным стражем, что в бой не встаёт, сбор не трогает.
+ * Холод на герое укорачивает шаг ([stride]).
  */
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
@@ -60,7 +65,7 @@ internal fun ExpeditionRun.walk(dt: Double) {
     if (phase != RunPhase.MAP) return
     openArena()
     val (x, y) = IsoGrid.pace(stickX, stickY)
-    val event = world.step(dt, x, y)
+    val event = world.step(dt, x, y, stride())
     if (world.moving) breakGather()
     when (event) {
         is WorldEvent.Encounter -> if (event.agent !== world.boss) {
@@ -97,6 +102,16 @@ internal fun ExpeditionRun.walk(dt: Double) {
         null -> Unit
     }
 }
+
+/**
+ * Множитель шага героя под холодом: шаг делится на то же растяжение, что замедляет действия в бою ([chillStretch] по
+ * сильнейшему из носимых холодов - из боя и морозной ловушки, не сумме), но не ниже пола [ExpeditionWorld.CHILL_FLOOR];
+ * 1 - холода нет. Множится с ускорением после босса ([ExpeditionWorld.heroSpeed]). Считается каждый тик шага без аллокаций.
+ */
+internal fun ExpeditionRun.stride(): Double = (1 / chillStretch(carry.ailments.strongestChill())).coerceAtLeast(ExpeditionWorld.CHILL_FLOOR)
+
+/** Подпись холода под жетоном героя на карте: «−X%» шага по множителю [stride], процент - как в сводке героя ([shareText]). */
+fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))
 
 /** Фонтан выпит: его доля здоровья и маны назад, и каждой фляге - его доля её ёмкости зарядов ([charged]). */
 internal fun ExpeditionRun.drink(spring: Fountain) {

@@ -4,7 +4,6 @@
 
 ## API_REVISION (сервер `Constants.kt`, клиент `core/model/sync/Sync.kt`)
 
-- 90 - 0.16.2 - стек падения с версией сборки, отчёты модерации без системных данных, место на доске Мощи, раздел `CHARGES`, `{r:…}` по пути правил.
 - 91 - 0.16.3 - `RunStart.chestStock`, `EventReward.chestStock`, `ActiveMap.sources`, `AuctionLot.returned`, `WorkGains/WorkTally.missed`, `FountainRule.flasks`.
 - 92 - 0.16.5 - `Received.overflowSold|autoSold` (`Sale`) вместо `sold/gold/shards`, `ProfessionView.layers` вместо `bonus`, `POST admin/fate?user=&reason=`, `GET admin/feedback/detail`.
 - 93 - 0.16.6 - снят `GET admin/feedback/detail` (`ReportDetail`); `BugReportRequest|OwnReport|FullReport.topic` (улучшение администратора), `CrashTrace.count` на сервере (склейка падений отчёта).
@@ -14,6 +13,7 @@
 - 97 - 0.16.11 - `HeroView.freeProgress` (замки прогресса - только тестировщику со свободным прогрессом) и `POST hero/tester/freeProgress?on=`, `RunReport|TrialReport.refusals` (только причины темпа), `run.plausibility.rushBossSeconds`, `TrialRun.nextBoss|wall`; Разлом: `RiftRun.honor|keys|burned` вместо `life`, `RiftAct.Fight.taken` вместо `life`/`hurt`, `RiftAct.Chalice|Open`, `RiftOffer.Coffers`, `RiftOffer.Forge.chalice`, `RiftNode.key`, `RiftResult.honor|honorScore|burned`, `RiftReport.coffer`, `rift.honor|keys`, `RiftScore.honor` вместо `flawless`, снят `RiftNodes.restHeal`.
 - 98 - 0.16.11 - `POST guild/stash/deposit?tab=` - пакетный вклад: тело - посылки `GuildDepositParcel` (копия `itemId` или стопка `code`+`amount`), ответ `GuildDeposited` (`stash`, `placed`, `refused` по `DepositBar`); правило `GuildDeposit`, событие журнала `STASH_IN_MANY`; торги рынка: `AuctionLot.mode|bidding|standing` (`LotMode`, `BidState`), `POST auctionlot/bid|buyout|accept`, `sell/*?mode=BID&minPrice=`, `search?mode=`, `AuctionMine.bids`, `AuctionSlots.bids|bidLimit`, `rules.auction.bidStep|bidStepMin|bidTailHours|bidsMax`, `slots` 100, письма `mail.auction_outbid|bid_returned|sold|won`, отказы `AU_018`-`AU_024`.
 - 99 - 0.17.0 - часть снимка `campaign` разделена на `campaign` и `run` (`RunState?`, null - заход закрыт), новый `POST hero/town` (`TownVisit`: доска заданий, ремёсла, гильдия, свой рынок одним ответом).
+- 100 - 0.17.1 - статусы отчёта `BugStatus.DISCUSSION`/`WITHDRAWN`, `POST admin/feedback/comment` (комментарий модерации, письмо `mail.feedback_comment`), `POST bugreport/close` (отказ `BUG_011`) вместо `POST bugreport/delete` (удаление - `POST admin/feedback/delete`), `OwnReport.closable` вместо `deletable`, `AdminReport.discussable`; `GET admin/feedback?kind&queue&q&sort&page` - `FeedbackQueuePage`, сняты `GET bugreport/known`, `POST bugreport/vote` (`KnownReport`, `Vote`, `BUG_003`); `GET admin/moderation/log` - `ModerationLogPage`; страница списков - `rules.pageSize` вместо `moderation.pageSize`, без параметра `size` у `guild/search`, `guild/log`, `auctionlot/search`.
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 

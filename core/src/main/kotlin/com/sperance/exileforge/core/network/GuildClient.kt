@@ -16,9 +16,6 @@ import kotlinx.serialization.json.encodeToJsonElement
 
 private const val GUILD = "api/v1/guild"
 
-/** Страница журнала гильдии, что клиент просит у сервера; страница короче - конец журнала. */
-const val GUILD_LOG_PAGE_SIZE = 20
-
 /**
  * Команда над участником: путь сервера и действие таблицы прав `GuildPolicy`, по которой клиент её показывает.
  *
@@ -141,7 +138,7 @@ class GuildClient internal constructor(private val http: Transport) {
     /** Страница [page] журнала гильдии, новые сверху, и есть ли старше. */
     suspend fun log(heroId: String, page: Int): GuildLogPage {
         requirePage(page)
-        return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString(), "size" to GUILD_LOG_PAGE_SIZE.toString()))
+        return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString()))
     }
 
     private suspend fun onGuild(operation: String, heroId: String, guildId: String): GuildMine {

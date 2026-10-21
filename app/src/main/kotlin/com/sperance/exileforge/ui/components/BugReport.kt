@@ -72,7 +72,7 @@ val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 /**
  * The report sheet: where the player is, a field for the words, and the send. Nothing else goes with it —
  * no context of the device and the hero, no tail of the request journal; снимков экрана нет. Под формой -
- * «Мои отчёты» и «Известные» ([onReports]); подсказки «Похожее уже известно» во время набора нет.
+ * «Мои отчёты» ([onReports]); подсказки «Похожее уже известно» во время набора нет.
  *
  * Только отчёт об ошибке; черновик возвращается с устройства и пишется по мере набора. У администратора сверху - таблетки темы
  * «Ошибка | Улучшение» ([ReportTopic]), черновик у тем общий. Вошедший игрок может отметить «Добавить логи сервера» ([ServerLogConsent]);
@@ -86,7 +86,7 @@ fun BugSheet(
     run: ExpeditionRun?,
     drafts: DraftStore,
     onDismiss: () -> Unit,
-    onReports: (ReportsTab) -> Unit,
+    onReports: () -> Unit,
     onSend: (BugReportRequest) -> Unit,
 ) {
     val screen = remember { bugScreen(route, run) }
@@ -132,14 +132,10 @@ fun BugSheet(
         )
         if (game.session.signedIn) {
             ServerLogConsent(serverLog) { serverLog = it }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ReportsTab.entries.forEach { tab ->
-                    ForgeButton(onClick = {
-                        onDismiss()
-                        onReports(tab)
-                    }, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui(if (tab == ReportsTab.MINE) "feedback.open_mine" else "feedback.open_known")) }
-                }
-            }
+            ForgeButton(onClick = {
+                onDismiss()
+                onReports()
+            }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("feedback.open_mine")) }
         }
     }
 }

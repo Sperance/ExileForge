@@ -63,7 +63,7 @@ class SystemSheets {
     var bug by mutableStateOf(false)
     var settings by mutableStateOf(false)
 
-    /** Лист отчётов: вкладка и отчёт, к которому он прокручен; null - закрыт. */
+    /** Лист отчётов: отчёт, к которому он прокручен; null - закрыт. */
     var reports by mutableStateOf<ReportsView?>(null)
 
     val open: Boolean get() = bug || settings

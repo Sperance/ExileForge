@@ -5,9 +5,6 @@ import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.ReportTopic
 import kotlinx.serialization.Serializable
 
-/** The showcase is paged by the server, so this is what the client asks it for. */
-const val AUCTION_PAGE_SIZE = 20
-
 /** The document that makes a hero: the rest the server defaults. */
 @Serializable data class CreateHeroCommand(val userId: String, val name: String, val description: String = "", val heroClass: String)
 

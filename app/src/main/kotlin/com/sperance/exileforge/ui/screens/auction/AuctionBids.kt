@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -50,7 +49,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Вкладка «Аукцион»: торги под той же строкой поиска и фильтром, что витрина ([ShowcaseHeader]); строка торгов - [BidRow], касание
- * открывает лист ставки ([BidSheet]). Не загрузились - отказ и «Повторить», а не «ничего не найдено»; «Показать ещё» - следующая страница.
+ * открывает лист ставки ([BidSheet]). Не загрузились - отказ и «Повторить», а не «ничего не найдено»; листание до края дочитывает
+ * следующую страницу ([PagedColumn]).
  */
 @Composable internal fun ColumnScope.BidsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
@@ -58,7 +58,7 @@ import com.sperance.exileforge.ui.theme.*
     val page = market.auctions
     val now = rememberServerNow(LOT_TICK_MS)
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { ShowcaseHeader(game, market, vm) } }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
+    PagedColumn(page.items.size, page.next != null, Reads.AUCTION in game.loading, vm::moreAuctions, Modifier.weight(1f), reset = market.filter, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (page.items.isEmpty() && market.showcaseFailed) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -72,13 +72,6 @@ import com.sperance.exileforge.ui.theme.*
             item { InfoCard(ui("tree.nothing_found"), ui("auction.bids_empty")) }
         }
         items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy) { openLot = lot.id } }
-        if (page.next != null) {
-            item {
-                ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = vm::moreAuctions, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                    Text(ui("auction.more", page.items.size, page.totalItems))
-                }
-            }
-        }
     }
     page.items.firstOrNull { it.id == openLot }?.let { lot -> BidSheetOf(game, lot, now, vm) { openLot = null } }
 }

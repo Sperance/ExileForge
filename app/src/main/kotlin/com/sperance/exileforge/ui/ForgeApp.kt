@@ -210,7 +210,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     expedition,
                     drafts,
                     onDismiss = { sheets.bug = false },
-                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
+                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView() },
                     onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
                 )
             }

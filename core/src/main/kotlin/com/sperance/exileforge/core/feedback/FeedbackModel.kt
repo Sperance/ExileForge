@@ -3,13 +3,12 @@ package com.sperance.exileforge.core.feedback
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Vote
+import com.sperance.exileforge.core.model.paging.followedBy
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
@@ -33,9 +32,8 @@ interface SeenReplies {
 }
 
 /**
- * Голоса игроков и почта аккаунта: предложения с голосами, свои отчёты, чтение администратора,
- * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core. Ящик - глазами
- * героя в игре, и почта между героями ([LetterActions]).
+ * Отчёты и почта аккаунта: свои отчёты, очередь модерации страницами, ящик с вложениями, письма администратора. Первая модель экрана на
+ * репозиториях :core. Ящик - глазами героя в игре, и почта между героями ([LetterActions]).
  */
 class FeedbackModel(
     private val repository: FeedbackRepository,
@@ -63,31 +61,44 @@ class FeedbackModel(
     /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */
     fun takeMailTo(): MailAddressee? = feedback.value.mailTo.also { if (it != null) feedback { f -> f.copy(mailTo = null) } }
 
-    /** Свои отчёты и известные проблемы: обе вкладки листа отчётов; новый вызов сменяет идущий. */
+    /** Свои отчёты - лист отчётов; новый вызов сменяет идущий. */
     fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {
         val mine = api.feedback.mine()
-        val known = api.feedback.known()
-        feedback { it.copy(known = known, mine = mine) }
+        feedback { it.copy(mine = mine) }
     }
 
     /** Ответы на свои отчёты [reports] видены (вкладка «Мои» открыта). */
     fun markSeen(reports: List<OwnReport>) = replies.mark(reports.mapNotNull { own -> own.replyPrint?.let { own.id to it } }.filter { (id, print) -> seen.value[id] != print }.toMap())
 
-    /** Тот же голос снова снимает его; голос за другую сторону переключает. */
-    fun vote(id: String, vote: Vote) = commands.task(writing = true) {
-        val current = feedback.value.known.firstOrNull { it.id == id } ?: return@task
-        val answered = api.feedback.vote(id, if (current.vote == vote) Vote.NONE else vote)
-        feedback { f -> f.copy(known = f.known.map { if (it.id == id) answered else it }) }
+    /** Новый отбор очереди модерации [change] - вид, очередь, поиск или порядок: очередь читается с первой страницы. */
+    fun filterQueue(change: (ReportQueue) -> ReportQueue) {
+        feedback { it.copy(queue = change(it.queue)) }
+        loadQueue()
     }
 
     /**
-     * Отчёты у модерации вида [kind] и статуса [status]: своим ключом чтения, новый вызов сменяет идущий - последний
-     * выбранный фильтр не теряется за прежним чтением.
+     * Первая страница очереди модерации под её отбором: своим ключом чтения, новый вызов сменяет идущий - последний выбранный отбор не
+     * теряется за прежним чтением, ответ на прежний отбор в очередь не ложится.
      */
-    fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
+    fun loadQueue() = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
         check(sessions.state.value.isModerator) { ui("moderation.staff_only") }
-        val reports = api.feedback.all(kind, status)
-        feedback { it.copy(reports = reports) }
+        val asked = feedback.value.queue
+        val page = api.feedback.queue(asked.kind, asked.queue, asked.query, asked.sort, 0)
+        feedback { f -> if (f.queue.sameFilter(asked)) f.copy(queue = f.queue.copy(page = page)) else f }
+    }
+
+    /**
+     * Следующая страница очереди модерации под показанными (листание до края списка): чтение не перезапускается - это уронило бы свежую
+     * первую страницу, - а страница ложится, только пока отбор и прочитанные страницы те же.
+     */
+    fun moreQueue() = commands.read(Reads.FEEDBACK_ADMIN) {
+        val asked = feedback.value.queue
+        if (!asked.page.more) return@read
+        val next = api.feedback.queue(asked.kind, asked.queue, asked.query, asked.sort, asked.page.page + 1)
+        feedback { f ->
+            val shown = f.queue
+            if (!shown.sameFilter(asked) || shown.page.page != asked.page.page) f else f.copy(queue = shown.copy(page = next.copy(items = shown.page.items.followedBy(next.items) { it.report.id })))
+        }
     }
 
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
@@ -118,17 +129,17 @@ class FeedbackModel(
     /** Комментарий модерации автору: отчёт - в «Обсуждении», автору уходит письмо. */
     fun commentReport(id: String, text: String) = answer(ui("feedback.comment_sent")) { api.feedback.comment(id, text) }
 
-    /** Удаление отчёта модерацией: уходит из окна модерации и из общего списка. */
+    /** Удаление отчёта модерацией: уходит из очереди. */
     fun deleteReport(id: String) = commands.task(writing = true) {
         api.feedback.delete(id)
-        feedback { f -> f.copy(known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
+        feedback { f -> f.copy(queue = f.queue.copy(page = f.queue.page.copy(items = f.queue.page.items.filterNot { it.report.id == id }))) }
         notices.toast(ui("feedback.deleted"))
     }
 
-    /** Ответ модерации на действие: отчёт встаёт на место в списке. */
+    /** Ответ модерации на действие: отчёт встаёт на место своей строки в очереди. */
     private fun answer(done: String, call: suspend () -> AdminReport) = commands.task(writing = true) {
         val answered = call()
-        feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == answered.report.id) answered else it }) }
+        feedback { f -> f.copy(queue = f.queue.with(answered)) }
         notices.toast(done)
     }
 

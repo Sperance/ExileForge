@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.model.paging.followedBy
 import com.sperance.exileforge.rules.run.RunFlag
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.encodeToJsonElement
@@ -127,7 +128,10 @@ private const val DAY_MS = 86_400_000L
     val lastSeenAt: Long = 0,
     /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано или сервер старее. */
     val fate: String? = null,
-)
+) {
+    /** Ключ строки в списке: герой, а у аккаунта в корзине - его санкция удаления. */
+    val key: String get() = heroId.ifEmpty { sanction?.id ?: userId }
+}
 
 /**
  * Отбор списка модерации по Предначертанию, параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
@@ -154,7 +158,17 @@ sealed interface ModerationFate {
 /** Порядок списка модерации: последняя активность, уровень, дата создания, имя. */
 @Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
 
-@Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
+/** Страница списка модерации: всего строк [total], номер [page] и размер [size] страницы (`rules.pageSize` сервера), строки [rows]. */
+@Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList()) {
+    /** Есть ли за прочитанными страницами ещё строки. */
+    val more: Boolean get() = (page + 1).toLong() * size < total
+
+    /** [next] - следующая страница под этой: строки подряд, строка со стыка страниц - одна ([ModerationRow.key]). */
+    fun followedBy(next: ModerationPage): ModerationPage = next.copy(rows = rows.followedBy(next.rows) { it.key })
+}
+
+/** Страница журнала модерации: записи [entries], всего записей [total] и есть ли старше [more]. */
+@Serializable data class ModerationLogPage(val entries: List<ModerationEntryView> = emptyList(), val total: Long = 0, val more: Boolean = false)
 
 /** Что смотрящий может сделать с целью досье; [fate] - сменить её Предначертание (сервер `ModerationPolicy.canRedrawFate`). */
 @Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false, val fate: Boolean = false)
@@ -304,7 +318,8 @@ class ModerationClient internal constructor(private val http: Transport) {
 
     suspend fun delete(request: DeletionRequest): SanctionView = http.post("$MODERATION/delete", body = WireJson.encodeToJsonElement(request))
 
-    suspend fun log(page: Int, actor: String = ""): List<ModerationEntryView> = http.get("$MODERATION/log", mapOf("page" to page.toString(), "actor" to actor))
+    /** Страница [page] журнала модерации, новые сверху, с числом записей и признаком, что старше есть; [actor] - действия одного логина. */
+    suspend fun log(page: Int, actor: String = ""): ModerationLogPage = http.get("$MODERATION/log", mapOf("page" to page.toString(), "actor" to actor))
 
     suspend fun notice(id: String): SanctionNotice = decode(http.request("GET", NOTICE, mapOf("id" to id)))
 

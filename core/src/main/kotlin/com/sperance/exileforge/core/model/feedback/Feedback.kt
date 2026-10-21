@@ -18,8 +18,8 @@ import kotlinx.serialization.Serializable
 /**
  * Где отчёт (сервер `BugStatus`): [CREATED] - создан игроком и ждёт модерацию; [DISCUSSION] - модерация написала комментарий, идёт
  * переписка с автором; [SENT] - модерация отдала его в работу (Issue в GitHub); [REJECTED] - отклонён модерацией с причиной;
- * [WITHDRAWN] - закрыт автором. Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями
- * [AdminReport.moves], [AdminReport.discussable], [OwnReport.closable] и [KnownReport.votable].
+ * [WITHDRAWN] - закрыт автором. Куда отчёт может перейти, решает машина состояний сервера: она приходит полями [AdminReport.moves],
+ * [AdminReport.discussable] и [OwnReport.closable].
  */
 @Serializable enum class ReportStatus { CREATED, DISCUSSION, SENT, REJECTED, WITHDRAWN }
 
@@ -63,28 +63,6 @@ import kotlinx.serialization.Serializable
 
 /** Текст ответа в Issue из игры: автора отчёта или модерации. */
 @Serializable data class ReportAnswer(val text: String)
-
-/** A player's vote on a report («+ / −» у ошибок): one per account, switched by tapping again. */
-@Serializable enum class Vote { LIKE, DISLIKE, NONE }
-
-/** A known report in the public list (ошибки, без предложений): no author — only the administrator sees who wrote it; [mine] marks the viewer's own. */
-@Serializable data class KnownReport(
-    val id: String,
-    val text: String,
-    val status: ReportStatus,
-    val likes: Int,
-    val dislikes: Int,
-    val vote: Vote,
-    val mine: Boolean,
-    val createdAt: String = "",
-    /** Можно ли зрителю голосовать: не своё и ещё ждёт решения (и пока Issue открыт) - решает сервер. */
-    val votable: Boolean = false,
-    /** Ошибка или предложение (известные проблемы - и ошибки). */
-    val kind: FeedbackKind = FeedbackKind.BUG,
-    val issue: IssueView? = null,
-) {
-    val rating: Int get() = likes - dislikes
-}
 
 /** One of the viewer's own reports, with the administrator's word. */
 @Serializable data class OwnReport(
@@ -194,6 +172,25 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
     val moves: List<ReportStatus> = emptyList(),
     val deletable: Boolean = false,
     val discussable: Boolean = false,
+)
+
+/** Очередь модерации - чип над списком отчётов (сервер `FeedbackQueue`): новые, в обсуждении, в работе, закрыто, отклонено. */
+@Serializable enum class FeedbackQueue { NEW, DISCUSSION, WORK, CLOSED, REJECTED }
+
+/** Порядок очереди модерации (сервер `FeedbackSort`): свежие первыми, по рейтингу голосов, по номеру Issue. */
+@Serializable enum class FeedbackSort { NEWEST, RATING, ISSUE }
+
+/**
+ * Страница очереди модерации (`GET admin/feedback`): отчёты [items] страницы [page], всего в очереди [total], есть ли следующая [more];
+ * [counts] - счёт каждой очереди и [replied] - сколько обсуждений ждут модерацию, под тем же видом и поиском.
+ */
+@Serializable data class FeedbackQueuePage(
+    val items: List<AdminReport> = emptyList(),
+    val page: Int = 0,
+    val total: Long = 0,
+    val more: Boolean = false,
+    val counts: Map<FeedbackQueue, Long> = emptyMap(),
+    val replied: Long = 0,
 )
 
 /** A letter's thing to take: a template and its rarity, rolled at the hero's level when taken. */

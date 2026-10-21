@@ -35,6 +35,8 @@ data class Guilds(
     val mine: GuildMine? = null,
     val query: String = "",
     val search: GuildPage = GuildPage(),
+    /** Поиск, с которым прочитан показанный список: набранный [query] уходит в список только поиском с клавиатуры. */
+    val searched: String = "",
     /** Фракция, до которой сужен список; пусто - все. */
     val faction: String = "",
     /** Раздел, открытый над залом гильдии; null - сам зал. */

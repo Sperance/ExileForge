@@ -50,11 +50,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueState
 import com.sperance.exileforge.core.model.feedback.IssueView
-import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -135,21 +133,15 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
     }
 }
 
-/** Вкладка листа отчётов: свои отчёты или известные проблемы. */
-enum class ReportsTab { MINE, KNOWN }
-
-/** Что показать в листе отчётов: вкладку [tab] и отчёт [focus], к которому лист прокручен и который подсвечен; null - без него. */
-data class ReportsView(val tab: ReportsTab, val focus: String? = null)
+/** Что показать в листе отчётов: отчёт [focus], к которому лист прокручен и который подсвечен; null - без него. */
+data class ReportsView(val focus: String? = null)
 
 /**
- * Отчёты (без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
- * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −»); строка
- * поиска под вкладками ([SearchBar]) - общая у обеих вкладок ([ReportSearch]). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
- * перечитываются потягиванием вниз и нажатием на уже открытую вкладку.
+ * Свои отчёты (без падений) с судьбой их Issues и перепиской - тикеты-чаты; строка поиска ([SearchBar], [ReportSearch]) над ними.
+ * Открытые выше закрытых. Список перечитывается потягиванием вниз.
  *
- * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём
- * открыло лист) подсвечен, и лист прокручен к нему. [issueLinks] - тикеты обеих вкладок несут «Issue #N ↗» ([IssueLink]): тестировщику
- * и модерации.
+ * Открытый лист гасит новые ответы, точки этого показа остаются до следующего открытия. Отчёт [ReportsView.focus] (письмо о нём открыло
+ * лист) подсвечен, и лист прокручен к нему. [issueLinks] - тикеты несут «Issue #N ↗» ([IssueLink]): тестировщику и модерации.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -159,20 +151,16 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
     val activity by model.activity.collectAsStateWithLifecycle()
     val seen by model.seen.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { model.loadReports() }
-    var tab by rememberSaveable { mutableStateOf(start.tab) }
     var query by rememberSaveable { mutableStateOf("") }
-    val fresh = feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.map { it.id }.toSet()
-    val shownFresh = remember(tab, feedback.mine) { fresh }
-    LaunchedEffect(tab, feedback.mine) { if (tab == ReportsTab.MINE) model.markSeen(feedback.mine) }
+    val shownFresh = remember(feedback.mine) { feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.mapTo(HashSet()) { it.id } }
+    LaunchedEffect(feedback.mine) { model.markSeen(feedback.mine) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
-            PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
             SearchBar(query, { query = it }, ui("feedback.search"), maxLength = SEARCH_MAX)
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
                 CompositionLocalProvider(LocalIssueLinks provides issueLinks) {
-                    ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, model)
+                    ReportsList(feedback, query, shownFresh, start.focus, !activity.busy, model)
                 }
             }
         }
@@ -180,34 +168,20 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
 }
 
 /**
- * Список открытой вкладки [tab] по поиску [query] ([ReportSearch]): свои отчёты ([fresh] - с новыми ответами) или известные проблемы. Свой отчёт
- * [focus] подсвечен, и «Мои» прокручены к нему, как только он пришёл.
+ * Свои отчёты по поиску [query] ([ReportSearch]), [fresh] - с новыми ответами. Отчёт [focus] подсвечен, и список прокручен к нему, как
+ * только он пришёл.
  */
-@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel) {
+@Composable private fun ReportsList(feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel) {
     val list = rememberLazyListState()
     val search = remember(query) { ReportSearch(query) }
-    val mine = feedback.mine.filter { search.matches(it.text, it.issue) }.sortedBy { ReportFate.of(it.status, it.issue).closed }
-    val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { tab == ReportsTab.MINE && it >= 0 }
+    val mine = feedback.mine.filter { search.matches(it.text, it.thread, it.issue) }.sortedBy { ReportFate.of(it.status, it.issue).closed }
+    val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { it >= 0 }
     LaunchedEffect(focusAt) { focusAt?.let { list.animateScrollToItem(it) } }
     LazyColumn(Modifier.fillMaxSize(), state = list, verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-        when (tab) {
-            ReportsTab.MINE -> {
-                if (mine.isEmpty()) item { MutedText(ui(if (feedback.mine.isEmpty()) "feedback.none_mine" else "feedback.none_found")) }
-                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { model.closeReport(own.id) } }
-            }
-
-            ReportsTab.KNOWN -> {
-                val known = knownList(feedback.known, search)
-                if (known.isEmpty()) item { MutedText(ui(if (feedback.known.isEmpty()) "feedback.none_known" else "feedback.none_found")) }
-                items(known, key = { it.id }) { KnownCard(it, enabled) { v -> model.vote(it.id, v) } }
-            }
-        }
+        if (mine.isEmpty()) item { MutedText(ui(if (feedback.mine.isEmpty()) "feedback.none_mine" else "feedback.none_found")) }
+        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, own.id == focus, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { model.closeReport(own.id) } }
     }
 }
-
-/** Известные проблемы под поиском [search]: по рейтингу, затем по номеру. */
-private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownReport> = all.filter { search.matches(it.text, it.issue) }
-    .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 
 /**
  * Свой отчёт - тикет-чат: переписка пузырями, под ней поле ответа с круглой кнопкой - пока сервер разрешает ответ
@@ -263,32 +237,14 @@ private fun knownList(all: List<KnownReport>, search: ReportSearch): List<KnownR
     }
 }
 
-@Composable private fun KnownCard(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
-    val fate = ReportFate.of(known.status, known.issue)
-    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, known.issue?.notes.orEmpty(), dim = false) {
-        if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
-        VoteRow(known, enabled, onVote)
-    }
-}
-
 /** Голоса «+N / −M». */
 @Composable private fun Score(likes: Int, dislikes: Int) {
     Text(ui("feedback.score", likes, dislikes), color = Muted, style = MaterialTheme.typography.labelSmall)
 }
 
-@Composable private fun VoteRow(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
-    VoteButton("+", ui("feedback.vote.like", known.likes), known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
-    VoteButton("−", ui("feedback.vote.dislike", known.dislikes), known.dislikes, known.vote == Vote.DISLIKE, LossText, enabled && known.votable) { onVote(Vote.DISLIKE) }
-}
-
 /** Вопрос перед удалением отчёта: удержание - [onDelete], отмена - [onDismiss]. */
 @Composable fun ReportDeleteConfirm(busy: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
     ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, busy = busy, onConfirm = onDelete)
-}
-
-/** Голос «+» или «−» со счётом - чип цвета стороны [tint]: свой голос выбран; [name] - имя для чтения с экрана («Нравится, 3»). */
-@Composable private fun VoteButton(sign: String, name: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
-    ForgeChip("$sign$count", chosen, onClick, state = ButtonState.of(enabled), accent = tint, contentDescription = name)
 }
 
 /** Длина поиска по отчётам. */

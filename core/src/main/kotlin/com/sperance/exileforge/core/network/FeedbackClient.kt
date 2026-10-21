@@ -3,9 +3,11 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.FeedbackQueue
+import com.sperance.exileforge.core.model.feedback.FeedbackQueuePage
+import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.IssueMove
-import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.LetterRequest
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
@@ -13,21 +15,15 @@ import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Vote
 import kotlinx.serialization.json.encodeToJsonElement
 
 private const val REPORTS = "api/v1/bugreport"
 private const val MAIL = "api/v1/mail"
 private const val ADMIN = "api/v1/admin"
 
-/** Known reports and one's own (без предложений); the administrator's view of them all. */
+/** Свои отчёты игрока и очередь модерации страницами. */
 class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
-
-    /** Известные проблемы: ошибки с открытым Issue, по рейтингу. */
-    suspend fun known(): List<KnownReport> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
-
-    suspend fun vote(id: String, vote: Vote): KnownReport = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
     /** Ответ автора в Issue своего отчёта (сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
     suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
@@ -43,11 +39,18 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Комментарий модерации автору к отчёту [id]: отчёт - в «Обсуждении», автору письмо; ответ - отчёт как он теперь стоит. */
     suspend fun comment(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/comment", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
-    suspend fun all(kind: FeedbackKind?, status: ReportStatus?): List<AdminReport> = http.get(
+    /**
+     * Страница [page] очереди модерации: вид [kind] (null - любой), очередь [queue], поиск [query] (текст, переписка, номер Issue, логин
+     * автора) и порядок [sort] - отбор и порядок сервера, размер страницы - его `rules.pageSize`.
+     */
+    suspend fun queue(kind: FeedbackKind?, queue: FeedbackQueue, query: String, sort: FeedbackSort, page: Int): FeedbackQueuePage = http.get(
         "$ADMIN/feedback",
         buildMap {
             kind?.let { put("kind", it.name) }
-            status?.let { put("status", it.name) }
+            put("queue", queue.name)
+            query.trim().takeIf { it.isNotEmpty() }?.let { put("q", it) }
+            put("sort", sort.name)
+            put("page", page.coerceAtLeast(0).toString())
         },
     )
 
@@ -65,11 +68,6 @@ class FeedbackClient internal constructor(private val http: Transport) {
         mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
         WireJson.encodeToJsonElement(ReportAnswer(text)),
     )
-
-    private companion object {
-        /** Известных проблем за раз: весь открытый список, поиск и фильтр - на клиенте. */
-        const val KNOWN_PAGE = 100
-    }
 }
 
 /**

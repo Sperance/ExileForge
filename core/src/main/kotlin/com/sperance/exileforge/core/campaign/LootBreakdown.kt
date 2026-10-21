@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.rules.run.LootOrigin
 import com.sperance.exileforge.rules.run.Run
 
 /**
@@ -39,7 +40,7 @@ data class LootBreakdown(val total: Double, val parts: List<BoostPart>) {
          */
         fun gold(run: Run, pacts: Map<String, Double>, potion: Map<String, Double>, total: Double): LootBreakdown {
             val context = run.context.copy(pacts = pacts)
-            val all = Run(run.index, run.zone, run.seed, context).boost(MonsterRarity.NORMAL).gold
+            val all = Run(run.index, run.zone, run.seed, context).boost(MonsterRarity.NORMAL, origin = LootOrigin.MONSTER).gold
             return of(
                 total,
                 all,

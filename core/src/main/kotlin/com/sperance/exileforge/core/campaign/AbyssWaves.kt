@@ -18,6 +18,7 @@ import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
+import com.sperance.exileforge.rules.run.LootOrigin
 import com.sperance.exileforge.rules.run.Run
 import kotlin.math.roundToInt
 
@@ -34,9 +35,9 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     private val spawns = Spawns(index, run)
     private val campaign get() = index.campaign
 
-    /** Every depth of the rule from the zone's level, with the hoard as this run's bonuses grow it. */
+    /** Every depth of the rule from the zone's level, with the hoard as this run's bonuses grow it; копилка в зоне - с монстров ([LootOrigin.MONSTER]). */
     fun depths(rule: AbyssRule, zone: Zone): List<AbyssDepth> {
-        val bonus = run.hoardBonus(rule)
+        val bonus = run.hoardBonus(rule, LootOrigin.MONSTER)
         val rifts = AbyssRifts(index)
         return rule.waves.mapIndexed { i, wave -> AbyssDepth(wave.levelAt(run.levelOf(zone)), wave.count, wave.magic, wave.rare, wave.leader, rifts.view(rule, i + 1, bonus)) }
     }

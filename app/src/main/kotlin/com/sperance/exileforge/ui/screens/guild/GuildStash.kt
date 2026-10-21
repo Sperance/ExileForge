@@ -49,9 +49,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
-import com.sperance.exileforge.core.filter.modChoices
 import com.sperance.exileforge.core.guild.DepositBag
 import com.sperance.exileforge.core.guild.DepositKind
 import com.sperance.exileforge.core.guild.DepositLot
@@ -59,7 +57,6 @@ import com.sperance.exileforge.core.guild.DepositPreset
 import com.sperance.exileforge.core.guild.StashFilter
 import com.sperance.exileforge.core.guild.StashKind
 import com.sperance.exileforge.core.guild.depositBag
-import com.sperance.exileforge.core.guild.depositShown
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.model.guild.GuildMember
@@ -111,6 +108,7 @@ import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberItemFilter
+import com.sperance.exileforge.ui.components.rememberItemShelf
 import com.sperance.exileforge.ui.components.rememberPick
 import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -332,13 +330,14 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
     val hero = game.hero ?: return
     val bag = remember(hero.items, hero.bag, stash, tab, game.index, game.world) { game.depositBag(stash, tab) } ?: return
     val filterState = rememberItemFilter(ItemShelf.GUILD_DEPOSIT)
-    val filter = filterState.filter
     var kind by remember { mutableStateOf(DepositKind.GEAR) }
     var filtering by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<String?>(null) }
     val typed = remember { mutableStateMapOf<String, String>() }
-    val shownOf = { draft: ItemFilter -> game.depositShown(bag, kind, draft) }
-    val shown = remember(bag, kind, filter, hero.level, game.world) { shownOf(filter) }
+    val pieces = remember(bag, kind) { bag.pieces(kind) }
+    val shelf = rememberItemShelf(game, pieces, filterState) { null }
+    val query = filterState.query
+    val shown = remember(bag, kind, shelf, query) { bag.shown(kind, shelf, query) }
     val pick = rememberPick(bag.pickable, remember(shown) { shown.mapTo(HashSet()) { it.id } })
     val picked = pick.picked
     val inspect = rememberInspect()
@@ -407,12 +406,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
             }
         }
     }
-    if (filtering) {
-        val pieces = remember(bag) { bag.lots.mapNotNull { it.piece } }
-        val mods = remember(pieces, game.lang) { modChoices(pieces, game.lang) }
-        val rarities = remember(pieces) { pieces.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-        ItemFilterSheet(filterState, emptyList(), rarities, mods, game.lang, game.heroLevel, count = { shownOf(it).size }) { filtering = false }
-    }
+    if (filtering && shelf != null) ItemFilterSheet(filterState, shelf) { filtering = false }
 }
 
 /** Сколько цифр принимает поле количества стопки. */

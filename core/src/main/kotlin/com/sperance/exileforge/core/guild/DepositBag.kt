@@ -5,10 +5,10 @@ import com.sperance.exileforge.core.display.ItemSearch
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.filter.ItemFilter
+import com.sperance.exileforge.core.filter.ItemQuery
 import com.sperance.exileforge.core.filter.ItemSection
 import com.sperance.exileforge.core.filter.ItemShelf
-import com.sperance.exileforge.core.filter.itemShelf
+import com.sperance.exileforge.core.filter.ItemShelfView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.model.guild.GuildStashView
@@ -67,6 +67,20 @@ class DepositBag(val lots: List<DepositLot>, val free: Int, val size: Int) {
 
     fun of(kind: DepositKind): List<DepositLot> = lots.filter { it.kind == kind }
 
+    /** Вещи вкладки [kind] для витрины ([ItemShelf.GUILD_DEPOSIT]): старыми первыми, как их ждёт фильтр предметов; у стопок - пусто. */
+    fun pieces(kind: DepositKind): List<ItemView> = of(kind).mapNotNull { it.piece }.asReversed()
+
+    /**
+     * Видимое на вкладке [kind]: вещи - в порядке витрины [shelf] этой вкладки (пока она считается или собрана для другой - только
+     * её вещи вкладки), стопки - поиском [query] по имени.
+     */
+    fun shown(kind: DepositKind, shelf: ItemShelfView?, query: ItemQuery): List<DepositLot> {
+        val lots = of(kind)
+        if (kind == DepositKind.STACKS) return lots.filter { ItemSearch.matches(it.code, query.text) }
+        val byId = lots.associateBy { it.id }
+        return shelf?.visible.orEmpty().mapNotNull { byId[it.id] }
+    }
+
     /** Посылки запроса из отмеченного [picked] в его порядке; [typed] - набранные количества стопок по коду. */
     fun parcels(picked: List<DepositLot>, typed: Map<String, String>): List<GuildDepositParcel> = picked.map { it.parcel(typed[it.code]) }
 
@@ -94,15 +108,4 @@ fun GameUi.depositBag(stash: GuildStashView, tab: Int): DepositBag? {
     val stacks = hero.bag.filter { it.value > 0 }.entries.sortedBy { itemTitle(it.key) }.map { (code, amount) -> DepositLot(DepositKind.STACKS, code = code, owned = amount, bar = GuildDeposit.bar(index, code)) }
     val lots = (pieces + stacks).sortedBy { it.kind.ordinal }
     return DepositBag(lots, (stash.tabSize - stash.entries.count { it.tab == tab }).coerceAtLeast(0), stash.tabSize)
-}
-
-/**
- * Видимое на вкладке [kind] окна вклада под фильтром [filter]: вещи - общий фильтр предметов ([ItemShelf.GUILD_DEPOSIT]; он ждёт
- * вещи старыми первыми, как тайник), стопки - поиском по имени.
- */
-fun GameUi.depositShown(bag: DepositBag, kind: DepositKind, filter: ItemFilter): List<DepositLot> {
-    val lots = bag.of(kind)
-    if (kind == DepositKind.STACKS) return lots.filter { ItemSearch.matches(it.code, filter.query) }
-    val byId = lots.associateBy { it.id }
-    return itemShelf(lots.mapNotNull { it.piece }.asReversed(), ItemShelf.GUILD_DEPOSIT, filter) { null }.mapNotNull { byId[it.id] }
 }

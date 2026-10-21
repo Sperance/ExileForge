@@ -85,8 +85,8 @@ import kotlin.math.roundToInt
                 ForgeButton(onClick = { journal = true }, kind = ButtonKind.Secondary, accent = RiftColors.Text, modifier = Modifier.weight(1f)) { Text(ui("run.menu.log")) }
             }
             Text(ui("rift.recap.rift").uppercase(), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 6.dp))
-            HonorScroll(recap.honorBefore, recap.honorMax, recap.honorBefore - recap.honorAfter, Modifier.fillMaxWidth(), spent = true)
-            val key = recap.key
+            HonorScroll(recap.toll.before, recap.honorMax, recap.toll.before - recap.toll.after, Modifier.fillMaxWidth(), spent = true)
+            val key = recap.toll.key
             when {
                 recap.final -> RecapLine(ui("rift.recap.chests")) { ChestKeys(recap.keys) }
                 key != null -> RecapLine(ui("rift.recap.key")) { MetalName(key) }

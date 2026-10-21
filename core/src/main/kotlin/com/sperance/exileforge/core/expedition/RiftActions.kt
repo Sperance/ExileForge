@@ -68,28 +68,23 @@ data class RiftState(
 )
 
 /**
- * Итог боя с павшим стражем Разлома: страж [guardian] акта [act] ([final] - Владыка), сам бой [fight] (разбор и журнал), Честь до
- * [honorBefore] и после [honorAfter] из [honorMax], взятый ключ [key], ключи к сундукам по металлам [keys] (после Владыки - сколько их
- * ждёт), счёт забега до [scoreBefore] и после [scoreAfter]. [shown] - лист открыт: он открывается сам после принятого сервером итога,
- * закрытый ждёт плашкой «Итог боя» на карте до следующего боя.
+ * Итог боя с павшим стражем Разлома: страж [guardian] акта [act] ([final] - Владыка), сам бой [fight] (разбор и журнал), Честь и взятый
+ * ключ боя [toll] из предела [honorMax], ключи к сундукам по металлам [keys] (после Владыки - сколько их ждёт), счёт забега до
+ * [scoreBefore] и после [scoreAfter]. [shown] - лист открыт: он открывается сам после принятого сервером итога, закрытый ждёт плашкой
+ * «Итог боя» на карте до следующего боя.
  */
 data class RiftRecap(
     val guardian: MonsterCode,
     val act: Int,
     val final: Boolean,
     val fight: FightReport,
-    val honorBefore: Double,
-    val honorAfter: Double,
+    val toll: RiftToll,
     val honorMax: Double,
-    val key: RiftMetal?,
     val keys: Map<RiftMetal, Int>,
     val scoreBefore: Long,
     val scoreAfter: Long,
     val shown: Boolean = true,
 ) {
-    /** Сколько Чести снял бой, в целых, как её показывает свиток. */
-    val honorLost: Int get() = (honorBefore.roundToInt() - honorAfter.roundToInt()).coerceAtLeast(0)
-
     /** Очки, что принёс бой. */
     val points: Long get() = (scoreAfter - scoreBefore).coerceAtLeast(0)
 }
@@ -246,7 +241,7 @@ class RiftActions(
 
     /**
      * Итог боя [end] забега [before], принятый ответом [report], если пал страж: бой - журнал арены, Честь, ключ и счёт - до и после
-     * (кончился ли забег с ним - из итога забега). Не страж, проигрыш или нет журнала и контента - null.
+     * (кончился ли забег с ним - из итога забега). Не страж, проигрыш, нет журнала, контента или забега после боя - null.
      */
     private fun recap(before: RiftRun, end: RiftAct.Fight, report: RiftReport): RiftRecap? {
         val board = mutable.value.board ?: return null
@@ -255,18 +250,18 @@ class RiftActions(
         val rules = world.state.value.content?.campaign?.trials?.rift ?: return null
         val engine = engine(board) ?: return null
         val after = report.board.progress.run?.takeIf { it.id == before.id }
+        val result = report.result
+        val toll = after?.let { RiftToll.of(before, it) } ?: result?.let { RiftToll(before.honor, it.honor.toDouble(), null) } ?: return null
         return RiftRecap(
-            guardian = rules.guardians.monsters[node.act.coerceAtMost(rules.guardians.monsters.lastIndex)],
+            guardian = rules.guardian(node.act),
             act = node.act,
-            final = node.act >= rules.acts - 1,
+            final = rules.isFinal(node.act),
             fight = fight,
-            honorBefore = before.honor,
-            honorAfter = after?.honor ?: report.result?.honor?.toDouble() ?: 0.0,
+            toll = toll,
             honorMax = engine.maxHonor(after ?: before),
-            key = after?.let { RiftToll.of(before, it).key },
             keys = after?.keys.orEmpty(),
             scoreBefore = engine.score(before),
-            scoreAfter = after?.let(engine::score) ?: report.result?.score ?: engine.score(before),
+            scoreAfter = after?.let(engine::score) ?: result?.score ?: return null,
         )
     }
 

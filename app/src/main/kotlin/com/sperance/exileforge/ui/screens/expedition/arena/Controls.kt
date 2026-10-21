@@ -57,6 +57,7 @@ import com.sperance.exileforge.ui.theme.*
             hold = { ArenaHold(onCommand) },
             trigger = { onClick -> RunMenuButton(onClick = onClick) },
         )
+        UpdateMark()
     }
     if (fight.paused && live) {
         var asking by remember { mutableStateOf(false) }

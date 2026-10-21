@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.update.AppBuild
 import com.sperance.exileforge.core.update.UpdatePolicy
 import com.sperance.exileforge.core.update.Wire
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -11,7 +12,7 @@ class UpdatePolicyTest {
     private val own = Wire(45, 41)
     private val next = Wire(46, 41)
 
-    private fun build(code: Int, wire: Wire) = AppBuild(code, "3.$code", wire.api, wire.rules, "a.apk", 1, "x")
+    private fun build(code: Int, wire: Wire, mandatory: Boolean = false) = AppBuild(code, "3.$code", wire.api, wire.rules, "a.apk", 1, "x", mandatory = mandatory)
 
     @Test
     fun an_older_or_same_build_is_never_required() {
@@ -48,5 +49,30 @@ class UpdatePolicyTest {
         assertTrue(UpdatePolicy.required(build(11, next), 10, own, null, outdated = true))
         assertTrue(UpdatePolicy.required(build(11, next), 10, own, own, outdated = true))
         assertFalse(UpdatePolicy.required(build(10, next), 10, own, null, outdated = true))
+    }
+
+    /** Тот же провод - мягкое; другой провод - жёсткое. */
+    @Test
+    fun a_build_on_the_own_wire_is_soft_and_on_another_wire_hard() {
+        assertFalse(UpdatePolicy.hard(build(11, own), own))
+        assertTrue(UpdatePolicy.hard(build(11, next), own))
+    }
+
+    /** 426: сборка на своём проводе всё равно жёсткая. */
+    @Test
+    fun a_server_that_called_the_build_outdated_makes_the_update_hard() {
+        assertTrue(UpdatePolicy.hard(build(11, own), own, outdated = true))
+    }
+
+    /** Релиз объявлен обязательным (`Update-Mandatory: yes`): жёсткое и на том же проводе. */
+    @Test
+    fun a_release_declared_mandatory_is_hard() {
+        assertTrue(UpdatePolicy.hard(build(11, own, mandatory = true), own))
+    }
+
+    @Test
+    fun the_headline_is_the_first_note_line_without_markup() {
+        assertEquals("Аукцион стал Рынком", build(11, own).copy(notes = "\n- **Аукцион стал Рынком**\n- Второе").headline)
+        assertEquals("", build(11, own).copy(notes = "").headline)
     }
 }

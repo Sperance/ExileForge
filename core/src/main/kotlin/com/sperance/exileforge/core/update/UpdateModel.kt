@@ -29,9 +29,10 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
- * Where the update stands. [checking]/[failure] - the check under way or why it failed. [update] - the build found:
- * every one locks the game until it is installed. [progress] - its download, 0..1; [installing] - in the system installer.
- * [askSources] - «install unknown apps» is not allowed yet: the game asks for it until it is, so an update installs at once.
+ * Где обновление. [checking]/[failure] - идёт проверка или почему она не вышла. [update] - найденная сборка: жёсткая держит игру, пока не
+ * встанет ([mandatory]), мягкая предлагается тостом ([offered]), пока игрок не отложил её ([snoozed] - номер отложенной сборки, до холодного
+ * запуска; другая найденная сборка предлагается снова). [progress] - её загрузка, 0..1; [installing] - в системном установщике.
+ * [askSources] - «установка неизвестных приложений» ещё не разрешена: игра просит её, пока не разрешат, чтобы обновление встало сразу.
  */
 data class UpdateState(
     val checking: Boolean = true,
@@ -42,9 +43,13 @@ data class UpdateState(
     val needsPermission: Boolean = false,
     val error: String? = null,
     val askSources: Boolean = false,
+    val snoozed: Int = 0,
 ) {
-    /** The build the game must take before anything else: every update found is one. */
-    val mandatory: Boolean get() = update != null
+    /** Сборка, без которой игра не играет: найдено жёсткое обновление. */
+    val mandatory: Boolean get() = update?.hard == true
+
+    /** Мягкое обновление, что ещё не отложили: его предлагает тост. */
+    val offered: AvailableUpdate? get() = update?.takeIf { !it.hard && it.info.versionCode != snoozed }
 }
 
 /**
@@ -281,6 +286,9 @@ class UpdateModel(
 
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
+
+    /** «Позже» тоста мягкого обновления: эта сборка больше не предлагается до холодного запуска. */
+    fun later() = mutable.update { s -> s.copy(snoozed = s.update?.info?.versionCode ?: s.snoozed) }
 
     /** Отложенная проверка: просто проверка или, по возвращении в игру, сперва сверка ресурсов; вторая полнее. */
     private enum class Request { CHECK, RECHECK }

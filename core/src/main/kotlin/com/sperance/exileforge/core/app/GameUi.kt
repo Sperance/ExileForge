@@ -100,7 +100,7 @@ data class GameUi(
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
 
     /** Чего герою не хватает на [cost]; null, пока герой не прочитан. */
-    fun shortfall(cost: Cost): Shortfall? = hero?.let { h -> cost.shortfall({ h.bag[it] ?: 0L }, h.money) }
+    fun shortfall(cost: Cost): Shortfall? = hero?.shortfall(cost)
 
     /** Цена [price] в золоте против кошелька героя; null, пока герой не прочитан. */
     fun goldBill(price: Long): GoldBill? = hero?.let { GoldBill(price, it.money) }

@@ -175,6 +175,7 @@
   "auction.no_lots_hint": "An item is listed from its card, a stack from the bag.",
   "auction.orb_id": "orb …{0}",
   "auction.own_lot": "You cannot buy your own lot",
+  "auction.own_account": "An auction of your account: you cannot bid on or buy it out",
   "auction.page": "Page {0} of {1}",
   "auction.pieces": "{0} pcs",
   "auction.price_max": "Price at most",

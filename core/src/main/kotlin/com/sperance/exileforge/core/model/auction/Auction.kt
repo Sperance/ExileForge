@@ -38,6 +38,8 @@ import kotlinx.serialization.Serializable
     @SerialName("_id") val id: String = "",
     val sellerId: String = "",
     val sellerName: String = "",
+    /** Аккаунт продавца: торги своего аккаунта не перебить и другим героем ([sameAccount]). */
+    val sellerUser: String = "",
     /** What is on offer: a copy of an item or a stack of the bag, each with its own fields. */
     val goods: LotGoods? = null,
     /** The kind of [goods] as a snapshot the showcase filters by. */
@@ -84,7 +86,10 @@ import kotlinx.serialization.Serializable
 
     /** How many units go for the one price: one for an item. */
     val amount: Long get() = goods?.amount ?: 1
-    val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
+    val onSale: Boolean get() = onSaleAt(System.currentTimeMillis())
+
+    /** Лот на витрине к «сейчас» [now]: открыт и срок не вышел. */
+    fun onSaleAt(now: Long): Boolean = status == LotStatus.ACTIVE && (expiresAt == 0L || now < expiresAt)
 
     /** Срок вышел, а сервер лот ещё не закрыл: товар возвращается продавцу, купить и снять его уже нельзя. */
     val returning: Boolean get() = status == LotStatus.ACTIVE && expiresAt > 0 && System.currentTimeMillis() >= expiresAt

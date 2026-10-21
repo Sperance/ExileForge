@@ -175,6 +175,7 @@
   "auction.no_lots_hint": "Вещь выставляют из её карточки, стопку — из сумки.",
   "auction.orb_id": "сфера …{0}",
   "auction.own_lot": "Свой лот купить нельзя",
+  "auction.own_account": "Торги вашего аккаунта: ставить и выкупать их нельзя",
   "auction.page": "Страница {0} из {1}",
   "auction.pieces": "{0} шт.",
   "auction.price_max": "Цена не выше",

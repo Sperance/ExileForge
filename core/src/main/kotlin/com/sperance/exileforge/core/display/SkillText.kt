@@ -22,7 +22,6 @@ import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
-import com.sperance.exileforge.rules.text.numbered
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -210,7 +209,7 @@ object SkillText {
         val template = (negative ?: locOr(key, "")).takeIf(String::isNotBlank)
         val shown = if (negative != null) abs(value) else value
         val number = if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown)
-        val numbered = template?.let { index.numbered(it, stat) }
+        val numbered = template?.let { index.numberedText(it, stat) }
         return numbered?.let { fillTemplate(it.replace("{v}", "{0}"), listOf(number)) } ?: plainStatLine(stat, operation, value)
     }
 

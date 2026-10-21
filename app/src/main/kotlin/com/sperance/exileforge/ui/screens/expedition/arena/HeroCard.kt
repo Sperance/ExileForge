@@ -93,7 +93,7 @@ import kotlin.math.sin
                 val outline = shape.createOutline(size, layoutDirection, this)
                 swingAura(outline, Gold, glow)
                 drawOutline(outline, if (acting > 0f) PanelRaised else HeroGround)
-                if (fight.heroProvoke != null && acting == 0f && !hit) tauntAura(outline, frame.time)
+                if (fight.heroIntimidate != null && acting == 0f && !hit) tauntAura(outline, frame.time)
                 drawContent()
                 val border = when {
                     hit -> LifeRed
@@ -125,7 +125,7 @@ import kotlin.math.sin
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    fight.heroProvoke?.let { provoke -> TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(provoke) } }
+                    fight.heroIntimidate?.let { view -> TauntSeal(frame, Modifier.size(22.dp)) { intimidateTip(view) } }
                 }
                 if (fight.heroMaxShield > 0) VitalBar(fight.heroShield, fight.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
                 VitalBar(fight.heroLife, fight.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 }, reserved = hud.heroLifeReserved)

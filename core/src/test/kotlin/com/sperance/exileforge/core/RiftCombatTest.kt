@@ -11,7 +11,6 @@ import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.Foe
-import com.sperance.exileforge.core.campaign.combat.FoeTotem
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.RiftBoonLines
 import com.sperance.exileforge.core.campaign.combat.RiftCombat
@@ -19,6 +18,7 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.sealStruck
 import com.sperance.exileforge.core.campaign.combat.sealed
 import com.sperance.exileforge.core.campaign.combat.stolenSource
+import com.sperance.exileforge.core.campaign.combat.withIdols
 import com.sperance.exileforge.core.campaign.combat.withShades
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatLine
@@ -72,12 +72,12 @@ class RiftCombatTest {
     @Test
     fun seals_cut_the_damage_break_by_hits_and_crits_and_grow_back() {
         val warden = guardians.warden
-        val idol = FoeTotem(index.campaign.totems.byCode.getValue(warden.idols))
-        val quiet = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, ambush = 1e6, idol = idol))
+        val foes = PhaseFoes(index, rules).withIdols(listOf(boss()), boss().copy(rarity = MonsterRarity.NORMAL), warden)
+        val quiet = Battle(hero(), foes, rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, ambush = 1e6))
         val boss = quiet.foe(0)
         assertEquals(1 + warden.taken / 100, quiet.sealed(boss), 1e-9)
         quiet.run(0.2)
-        assertEquals(warden.idolCount, quiet.totems.size, "the idols stand")
+        assertEquals(warden.idolCount, foes.indices.drop(1).count { quiet.foe(it).alive }, "the idols stand")
         quiet.sealStruck(boss, crit = true)
         assertEquals(warden.seals - 1, quiet.boss(), "a crit breaks a seal at once")
         repeat(warden.hits - 1) { quiet.sealStruck(boss, crit = false) }
@@ -90,7 +90,7 @@ class RiftCombatTest {
         assertEquals(warden.seals, quiet.boss(), "and the rest one by one")
         assertTrue(quiet.notes(NoteKind.SEAL_BROKEN).size == 2 && quiet.notes(NoteKind.SEALS_RETURNED).size == 2)
 
-        val fight = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, idol = idol))
+        val fight = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden))
         fight.run(10.0)
         val sealedHit = fight.events.firstNotNullOfOrNull { e ->
             (e.trace as? HitTrace)?.takeIf { e.actor == Side.HERO && e.action == Action.ATTACK }?.factors?.firstOrNull { it.key == FactorKey.SEALS }

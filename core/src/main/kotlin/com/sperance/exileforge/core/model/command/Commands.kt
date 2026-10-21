@@ -115,6 +115,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val trail: List<String> = emptyList(),
     /** Снимок героя строками «что - значение»: здоровье, сопротивления, Мощь, умения, надетое кодами. */
     val heroSheet: List<String> = emptyList(),
+    /** Сжатый разбор последнего боя забега ([com.sperance.exileforge.core.feedback.FightDigest]); пусто - отчёт не из забега. */
+    val fight: List<String> = emptyList(),
     /**
      * Игрок отметил «Добавить логи сервера»: сервер добавит в Issue его строки лога за 15 минут до отчёта без личного. Только у ошибки
      * из формы; падению и зависанию сервер добавляет лог сам.

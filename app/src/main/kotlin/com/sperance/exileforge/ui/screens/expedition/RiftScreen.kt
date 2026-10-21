@@ -55,6 +55,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.expedition.RiftChart
 import com.sperance.exileforge.core.expedition.RiftDelivery
+import com.sperance.exileforge.core.expedition.RiftRecap
 import com.sperance.exileforge.core.expedition.RiftSpot
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.expedition.RiftToll
@@ -174,7 +175,8 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             val run = board.progress.run
             if (run == null) RiftGate(game, model, rules, board, engine, chart) else RiftRunView(game, model, rules, board, engine, chart, run, state, idle = !game.busy)
         }
-        state.result?.let { RiftResultSheet(game, model, it) }
+        val recap = state.recap?.takeIf { it.shown }
+        if (recap != null) RiftRecapSheet(game, recap, model::closeRiftRecap) else state.result?.let { RiftResultSheet(game, model, it) }
     }
 }
 
@@ -449,7 +451,7 @@ private enum class RunSheet { BOONS, CURSES }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
         RiftAscent(rules, engine, chart, state.walk, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
-        RiftHud(model, rules, board, engine, run, state.toll, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
+        RiftHud(model, rules, board, engine, run, state.toll, state.recap?.takeIf { !it.shown }, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
             enter = androidx.compose.animation.slideInVertically { it },
@@ -489,9 +491,21 @@ private enum class RunSheet { BOONS, CURSES }
 
 /**
  * HUD забега: счёт, Эхо и ключи захода, под ними свиток Чести; итог последнего боя ([toll]) - «−N Чести» и взятый ключ под свитком,
- * сам гаснет. Чипы даров и проклятий открывают шторки, обзор - сколько рядов видно; ☰ - меню забега.
+ * сам гаснет; закрытый лист павшего стража ([recap]) - плашкой «Итог боя» до следующего боя. Чипы даров и проклятий открывают шторки,
+ * обзор - сколько рядов видно; ☰ - меню забега.
  */
-@Composable private fun RiftHud(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, toll: RiftToll?, idle: Boolean, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
+@Composable private fun RiftHud(
+    model: ExpeditionViewModel,
+    rules: RiftRules,
+    board: RiftBoard,
+    engine: RiftEngine,
+    run: RiftRun,
+    toll: RiftToll?,
+    recap: RiftRecap?,
+    idle: Boolean,
+    modifier: Modifier,
+    onSheet: (RunSheet) -> Unit,
+) {
     Column(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
             .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
@@ -505,6 +519,7 @@ private enum class RunSheet { BOONS, CURSES }
         }
         HonorScroll(run.honor, engine.maxHonor(run), 0.0, Modifier.fillMaxWidth())
         toll?.let { TollLine(it, model::dismissRiftToll) }
+        recap?.let { RiftRecapPlate(it, model::openRiftRecap) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             RiftChip(ui("rift.boons", run.boons.size, rules.nodes.slots), RiftColors.Soft) { onSheet(RunSheet.BOONS) }
             RiftChip(ui("rift.curses_n", run.curses.size), RiftColors.Warn) { onSheet(RunSheet.CURSES) }
@@ -530,11 +545,12 @@ private enum class RunSheet { BOONS, CURSES }
 
 /**
  * Свиток Чести: бирюзовая полоса [honor] из [max] с подписью; [loss] - сколько снимет идущий бой: эта доля полосы заштрихована, у её
- * края тлеет огонёк (декор стоит при выключенном `LocalMotion`), справа - «−N за бой».
+ * края тлеет огонёк (декор стоит при выключенном `LocalMotion`), справа - «−N за бой». [spent] - потеря уже снята (итог боя): подпись -
+ * остаток после неё, справа - «−N Чести».
  *
  * Тление читается в рисовании: свиток перерисовывается без перекомпоновки.
  */
-@Composable internal fun HonorScroll(honor: Double, max: Double, loss: Double, modifier: Modifier = Modifier) {
+@Composable internal fun HonorScroll(honor: Double, max: Double, loss: Double, modifier: Modifier = Modifier, spent: Boolean = false) {
     val ember = motionPhase(EMBER_MS)
     val top = max.coerceAtLeast(1.0)
     val now = honor.coerceIn(0.0, top)
@@ -559,11 +575,11 @@ private enum class RunSheet { BOONS, CURSES }
                     val glow = .55f + .45f * (1 - kotlin.math.cos(ember.value * 2 * Math.PI).toFloat()) / 2
                     drawLine(RiftColors.Ember.copy(alpha = glow), Offset(keep, 0f), Offset(keep, size.height), 2.dp.toPx())
                 }
-            }.semantics { contentDescription = ui("rift.honor", now.roundToInt(), top.roundToInt()) },
+            }.semantics { contentDescription = ui("rift.honor", (if (spent) after else now).roundToInt(), top.roundToInt()) },
     ) {
         Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("rift.honor", now.roundToInt(), top.roundToInt()), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            if (toll > 0) Text(ui("rift.honor_fight", toll), color = RiftColors.Ember, style = MaterialTheme.typography.labelSmall)
+            Text(ui("rift.honor", (if (spent) after else now).roundToInt(), top.roundToInt()), color = RiftColors.Text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (toll > 0) Text(ui(if (spent) "rift.honor_toll" else "rift.honor_fight", toll), color = RiftColors.Ember, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

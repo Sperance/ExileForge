@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.PhaseStep
-import kotlin.math.max
 import kotlin.math.min
 
 /** Шаг фазы босса в бою: шаг правил и умение, которое он даёт, уже найденное среди умений монстров. */
@@ -38,7 +37,10 @@ internal fun Battle.phase(foe: Fighter) {
             foe.barrier += max * step.shield / 100
             foe.barrierUntil = FOREVER
         }
-        if (step.invulnerable > 0) foe.invulnerableUntil = max(foe.invulnerableUntil, time + step.invulnerable)
+        if (step.invulnerable > 0 && time + step.invulnerable > foe.invulnerableUntil) {
+            foe.invulnerableUntil = time + step.invulnerable
+            foe.invulnerableTotal = step.invulnerable
+        }
         if (step.summon > 0) summon(foe, step.summon)
         if (phase.totems.isNotEmpty()) raiseTotem(foe, phase.totems)
         note(foe, NoteKind.PHASE, code, step.at)
@@ -52,20 +54,28 @@ internal fun Battle.phase(foe: Fighter) {
 }
 
 /**
- * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт.
- * Кто встал - номера в стае (тень Поглотителя получает украденный дар).
- *
- * Слоты вокруг босса заняты - приспешник не встаёт.
+ * Свита [count] босса [boss], что бьётся, встаёт на поле сразу (зов фаз, тени Поглотителя); идолов ([Foe.inert]) не зовёт. Кто встал -
+ * номера в стае (тень Поглотителя получает украденный дар).
  */
-internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
+internal fun Battle.summon(boss: Fighter, count: Int): List<Int> = call(boss, count) { !it.inert }
+
+/** Идолы [count] босса [boss] ([Foe.inert]) встают с началом боя. */
+internal fun Battle.raiseIdols(boss: Fighter, count: Int): List<Int> = call(boss, count) { it.inert }
+
+/**
+ * Свита [count] босса [boss], что проходит [which], встаёт на поле: без свободного слота вокруг босса - не встаёт; строки вставшей на
+ * босса ([Foe.ward]) ложатся сразу.
+ */
+private fun Battle.call(boss: Fighter, count: Int, which: (Foe) -> Boolean): List<Int> {
     val risen = mutableListOf<Int>()
-    foes.indices.filter { foes[it].summonOf == boss.index && it !in called }.take(count).forEach { index ->
+    foes.indices.filter { foes[it].summonOf == boss.index && which(foes[it]) && it !in called }.take(count).forEach { index ->
         val slot = freeSlot() ?: return@forEach
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index
         risen += index
         enterField(index)
         bannerFor(foeFighters[index])
+        foes[index].ward.takeIf { it.isNotEmpty() }?.let { lines -> buff(boss, wardSource(index), lines, FOREVER, origin = foes[index].origin?.code?.let(EffectOrigin::Ward)) }
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
     return risen
@@ -87,7 +97,12 @@ internal fun Battle.dismissRetinue(boss: Fighter) {
     }
 }
 
-/** Приспешник пал: его слот свободен для новой свиты или тотема. */
+/** Приспешник пал: его слот свободен для новой свиты или тотема, его строки на боссе ([Foe.ward]) сняты. */
 internal fun Battle.freeMinionSlot(index: Int) {
     slotHolders.indices.firstOrNull { (slotHolders[it] as? SlotHolder.Minion)?.index == index }?.let { slotHolders[it] = null }
+    val boss = foes[index].summonOf?.let(foeFighters::get) ?: return
+    if (boss.effects.removeAll { it.source == wardSource(index) }) remake(boss)
 }
+
+/** Источник строк свиты [index] на её боссе ([Foe.ward]): по нему они снимаются, когда она падает. */
+private fun wardSource(index: Int) = "ward#$index"

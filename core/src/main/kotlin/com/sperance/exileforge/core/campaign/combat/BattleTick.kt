@@ -27,7 +27,7 @@ import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
 
 /**
  * Глоток идёт и в оглушении, умение ждёт, пока герой может двигаться (засада Разлома - и то и другое позже). Применение прерывают оглушение
- * и заморозка, его конец - срабатывание; спровоцированный умений не применяет, босс - с медленной перезарядкой, выжигание маны - тоже
+ * и заморозка, его конец - срабатывание; устрашённый умений не применяет, босс - с медленной перезарядкой, выжигание маны - тоже
  * медленная перезарядка. Первым ходит тот, чей срок раньше, в одном срезе могут несколько; рывок силы этого замаха не стирается интервалом.
  * Без предела времени и без отступления: бой идёт, пока не падёт одна из сторон.
  */
@@ -68,9 +68,9 @@ internal fun Battle.step(dt: Double) {
     taps.clear()
     drinks.clear()
     foeFighters.forEach { foe ->
-        if (!foe.alive || outcome != null) return@forEach
+        if (!foe.alive || foe.inert || outcome != null) return@forEach
         castTick(foe)
-        val silenced = provokedSkills(foe, dt)
+        val silenced = intimidatedSkills(foe, dt)
         burnedSkills(foe, dt)
         if (!foe.held && !silenced) monsterCast(foe)
     }
@@ -78,7 +78,7 @@ internal fun Battle.step(dt: Double) {
     val order = dueOrder()
     for (k in order.indices) {
         val me = order[k]
-        if (!me.alive || me.held || me.casting != null || me.nextAttack > time) continue
+        if (!me.alive || me.inert || me.held || me.casting != null || me.nextAttack > time) continue
         val target = if (me.side == Side.HERO) target() else heroFighter
         me.rushed = false
         if (target != null) strike(me, target, swingOf(me))

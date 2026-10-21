@@ -152,6 +152,11 @@ data class FoeView(
     val barrier: Int = 0,
     /** Ждёт своего раунда: ещё не на поле, но его ещё бить. */
     val waiting: Boolean = false,
+    /** Неуязвим ещё столько секунд (0 - уязвим) из [invulnerableTotal] секунд своей неуязвимости: удары по нему - без урона. */
+    val invulnerableLeft: Double = 0.0,
+    val invulnerableTotal: Double = 0.0,
+    /** Неживой ([com.sperance.exileforge.core.campaign.combat.Foe.inert]): идол стража - его табличка показывает долю здоровья. */
+    val inert: Boolean = false,
 ) {
     /** Its card is on the field: it fights there, or fell there. */
     val onField: Boolean get() = place >= 0
@@ -259,10 +264,10 @@ enum class CastState(val held: Boolean) {
 data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<Float>, val stunned: Boolean, val frozen: Boolean, val electrocuted: Boolean)
 
 /**
- * Провокация героя для подсказки: шанс [chance]%, на [seconds] секунд, урон спровоцированного по герою
+ * Устрашение героя для подсказки: шанс [chance]%, на [seconds] секунд, урон устрашённого по герою
  * меньше на [cut]% (боссов - [bossCut]%), повторно - через [immunity] секунд (боссов - [bossImmunity]).
  */
-data class ProvokeView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
+data class IntimidateView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
 
 data class FightHud(
     val leader: RolledMonster,
@@ -283,8 +288,8 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
-    /** Провокация героя: её числа для подсказки; null - героя без провокации. */
-    val heroProvoke: ProvokeView? = null,
+    /** Устрашение героя: его числа для подсказки; null - героя без устрашения. */
+    val heroIntimidate: IntimidateView? = null,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
     val heroMana: Int = 0,
     val heroMaxMana: Int = 0,

@@ -97,6 +97,7 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.f
         it.buff?.kind,
         it.lines,
         flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
+        origin = it.origin,
     )
 } + if (fighter === heroFighter) haltViews() else emptyList()
 

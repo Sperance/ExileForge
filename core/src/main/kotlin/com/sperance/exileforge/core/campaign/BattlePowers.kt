@@ -208,7 +208,8 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     /** Whether the standing lines changed since the last look: the hero's body is made again when they do. */
     fun restand(): Boolean {
         if (standingPowers.isEmpty()) return false
-        val lines = standingPowers.filter { value(it) != 0.0 && it.checks.all { check -> holds(check, it, PowerMoment(battle.target())) } }
+        val moment = PowerMoment(battle.target())
+        val lines = standingPowers.filter { value(it) != 0.0 && it.checks.all { check -> holds(check, it, moment) } }
             .flatMap { power -> power.effects.flatMap { effect -> effect.lines.map { line(power, it, draw = false) } } }
         if (lines == standing) return false
         standing = lines

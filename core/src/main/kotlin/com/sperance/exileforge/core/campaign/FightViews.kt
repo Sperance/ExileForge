@@ -12,7 +12,7 @@ import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.passiveViews
-import com.sperance.exileforge.core.campaign.combat.provokeView
+import com.sperance.exileforge.core.campaign.combat.intimidateView
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.combat.wanted
@@ -82,6 +82,8 @@ internal fun Battle.hud(
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = place(f.index), buildup = buildup(f),
             barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0, waiting = waits(f.index),
+            invulnerableLeft = if (f.alive) (f.invulnerableUntil - time).coerceAtLeast(0.0) else 0.0, invulnerableTotal = f.invulnerableTotal,
+            inert = f.inert,
         )
     }
     return FightHud(
@@ -94,7 +96,7 @@ internal fun Battle.hud(
         events = newestFirst(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
-        heroProvoke = provokeView(),
+        heroIntimidate = intimidateView(),
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(), heroFate = fateGlows(),
         heroBarrier = h.barrier.roundToInt(),
@@ -130,7 +132,7 @@ private fun Battle.recentHits(): List<FloatingHit> {
     for (index in from until log.size) {
         val event = log[index]
         if (event.time > time) continue
-        if (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) {
+        if (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.kind == HitKind.INVULNERABLE || event.action == Action.ATTACK) {
             hits += FloatingHit(
                 index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
                 event.type, event.inflicted, event.stunned, event.foe, event.ailment,
@@ -184,7 +186,7 @@ private fun Battle.heroCast(): HeroCastView? {
 /**
  * Босс боя: первый враг редкости босса или с фазами - его пороги и умение на подходе.
  *
- * На подходе первым - умение, что босс применяет сейчас; затем готовое, что держит оглушение, заморозка или провокация;
+ * На подходе первым - умение, что босс применяет сейчас; затем готовое, что держит оглушение, заморозка или устрашение;
  * затем ближайшее по отсчёту; готовое без повода - последним.
  */
 private fun Battle.bossHud(): BossHud? {
@@ -215,7 +217,7 @@ private fun Battle.bossHud(): BossHud? {
 private fun Battle.readiness(me: Battle.Fighter, skill: MonsterSkill): CastState = when {
     me.ailments.any { it.ailment == Ailment.FROZEN && it.until > time } -> CastState.FROZEN
     me.held -> CastState.STUNNED
-    me.provoked && !me.chief -> CastState.SILENCED
+    me.intimidated && !me.chief -> CastState.SILENCED
     !wanted(me, skill) -> CastState.WAITING
     else -> CastState.COUNTDOWN
 }

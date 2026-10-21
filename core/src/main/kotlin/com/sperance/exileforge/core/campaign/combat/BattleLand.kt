@@ -104,7 +104,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         if (target.alive && hexing()) hex(target)
         if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
         if (kind == HitKind.CRIT) critAt = time
-        if (blow.primary && target.alive) provoke(target)
+        if (blow.primary && target.alive) intimidate(target)
         if (kind == HitKind.CRIT) {
             flaskCharge(FlaskStat.CHARGE_ON_CRIT.code)
             trigger(SkillEvent.CRIT, target, hit = ailing)

@@ -23,8 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -134,6 +137,36 @@ private val ChipShape = RoundedCornerShape(9.dp)
         BossChip(text, Ember, Ember.copy(alpha = .55f), Ember.copy(alpha = .1f), tip)
     } else {
         BossChip(text, Muted, Color(0xFF33404A), Color.Transparent, tip)
+    }
+}
+
+/** Тёмные чернила на золоте чипа неуязвимости. */
+private val InvulnerableInk = Color(0xFF2A1A06)
+
+/**
+ * Чип неуязвимости босса: золотая капсула, кольцо отсчёта тает от полной неуязвимости [total] к нулю, рядом «Неуязвим N с» по
+ * остатку [left]; касание - что удары по нему сейчас без урона.
+ */
+@Composable internal fun InvulnerableChip(left: Double, total: Double) {
+    val seconds = ceil(left).toInt()
+    val share = if (total > 0) (left / total).toFloat().coerceIn(0f, 1f) else 1f
+    BossChip(
+        ui("boss.invulnerable", seconds),
+        InvulnerableInk,
+        FrameGoldBright,
+        FrameGoldBright,
+        { Tip(ui("boss.invulnerable", seconds), ui("boss.invulnerable_hint"), FrameGoldBright) },
+        weight = FontWeight.SemiBold,
+    ) { CountdownRing(share, InvulnerableInk) }
+}
+
+/** Кольцо отсчёта: дуга доли [share] от верха по часовой поверх бледного круга. */
+@Composable private fun CountdownRing(share: Float, tint: Color) {
+    Canvas(Modifier.size(11.dp)) {
+        val stroke = 1.6.dp.toPx()
+        val inset = stroke / 2
+        drawCircle(tint.copy(alpha = .3f), size.minDimension / 2 - inset, style = Stroke(stroke))
+        drawArc(tint, -90f, 360f * share, false, Offset(inset, inset), Size(size.width - stroke, size.height - stroke), style = Stroke(stroke, cap = StrokeCap.Round))
     }
 }
 

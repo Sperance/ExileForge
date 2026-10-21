@@ -108,10 +108,20 @@ class FeedbackModel(
     /** Отчёт в GitHub Issues: сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
     fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
 
-    /** Удаление отчёта: уходит из своих, из общего списка и из окна модерации разом. */
+    /** Автор закрывает свой отчёт («Закрыт автором»): без возврата, писать в него больше нельзя; отчёт встаёт на место закрытым. */
+    fun closeReport(id: String) = commands.task(writing = true) {
+        val closed = api.feedback.close(id)
+        feedback { f -> f.copy(mine = f.mine.map { if (it.id == id) closed else it }) }
+        notices.toast(ui("feedback.closed"))
+    }
+
+    /** Комментарий модерации автору: отчёт - в «Обсуждении», автору уходит письмо. */
+    fun commentReport(id: String, text: String) = answer(ui("feedback.comment_sent")) { api.feedback.comment(id, text) }
+
+    /** Удаление отчёта модерацией: уходит из окна модерации и из общего списка. */
     fun deleteReport(id: String) = commands.task(writing = true) {
         api.feedback.delete(id)
-        feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
+        feedback { f -> f.copy(known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
         notices.toast(ui("feedback.deleted"))
     }
 

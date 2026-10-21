@@ -350,6 +350,7 @@ class KeyScreensShotTest {
             login = "sperance",
             moves = if (status == ReportStatus.CREATED) listOf(ReportStatus.SENT, ReportStatus.REJECTED) else emptyList(),
             deletable = true,
+            discussable = status == ReportStatus.CREATED && kind == FeedbackKind.BUG,
         )
         val fresh = report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально, и проверь все экраны, где числа в секунду бывают нулём", ReportStatus.CREATED, crashes = 2, failures = 1)
         shot("moderation") {

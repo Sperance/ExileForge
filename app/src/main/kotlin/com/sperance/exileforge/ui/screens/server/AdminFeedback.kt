@@ -58,8 +58,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Отчёты для модерации: строка поиска ([SearchBar], [ReportSearch]) - как у игрока, плюс логин автора, чипы очереди со счётом ([Queue]) и в конце их ряда - вид выпадающим
  * выбором, ниже - порядок сегментами без подписи ([Order]: новые, рейтинг, номер Issue) - на клиенте, список вида приходит целиком. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же, что у игрока
  * ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает;
- * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». «Рассмотрения» нет: слово модерации к новому
- * отчёту отправляет его в GitHub сразу. Любой чип очереди, и уже выбранный, выбор вида и потягивание страницы перечитывают список с сервера.
+ * касание автора - досье модерации ([DossierView]) уровнем цепочки «назад». Комментарий модерации к новому отчёту переводит его в
+ * «Обсуждение», «В работу» - отправляет в GitHub. Любой чип очереди, и уже выбранный, выбор вида и потягивание страницы перечитывают список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>().model
@@ -121,10 +121,14 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Очередь модерации: новые ждут решения, в GitHub - Issue открыт или ещё выгружается, закрытые, отклонённые. */
+/**
+ * Очередь модерации: новые ждут решения, в обсуждении - переписка с автором, в работе - Issue открыт или ещё выгружается, закрытые - Issue
+ * закрыт или отчёт закрыт автором, отклонённые.
+ */
 private enum class Queue(val key: String) {
     NEW("feedback.queue.new"),
-    GITHUB("feedback.queue.github"),
+    DISCUSSION("feedback.queue.discussion"),
+    WORK("feedback.queue.work"),
     CLOSED("feedback.queue.closed"),
     REJECTED("feedback.queue.rejected"),
     ;
@@ -133,8 +137,9 @@ private enum class Queue(val key: String) {
         val report = entry.report
         return when (this) {
             NEW -> report.status == ReportStatus.CREATED
-            GITHUB -> report.status == ReportStatus.SENT && report.issue?.state?.open != false
-            CLOSED -> report.status == ReportStatus.SENT && report.issue?.state?.open == false
+            DISCUSSION -> report.status == ReportStatus.DISCUSSION
+            WORK -> report.status == ReportStatus.SENT && report.issue?.state?.open != false
+            CLOSED -> report.status == ReportStatus.WITHDRAWN || (report.status == ReportStatus.SENT && report.issue?.state?.open == false)
             REJECTED -> report.status == ReportStatus.REJECTED
         }
     }
@@ -156,8 +161,9 @@ private val FullReport.where: String get() = place.ifBlank { screen }
 }
 
 /**
- * Строка отчёта в две линии: значок вида цветом судьбы, первая строка текста и «×повторы · дата»; ниже - версия клиента, «⚠ N» падений и
- * «⛔ N» ошибок запросов (только ненулевые), «#Issue» у отправленного, «+N / −M» при голосах и логин автора; касание - [onOpen].
+ * Строка отчёта в две линии: значок вида цветом судьбы, первая строка текста и «×повторы · дата»; ниже - метка «новый ответ» (последнее
+ * слово обсуждения - автора) или «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у
+ * отправленного, «+N / −M» при голосах и логин автора; касание - [onOpen].
  */
 @Composable internal fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
     val report = entry.report
@@ -187,6 +193,10 @@ private val FullReport.where: String get() = place.ifBlank { screen }
             )
         }
         Row(Modifier.padding(start = 34.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            when {
+                report.awaitsModeration -> LineMark(ui("feedback.admin.new_reply"), Rune)
+                report.status == ReportStatus.WITHDRAWN -> LineMark(ui("feedback.fate.withdrawn"), Quiet)
+            }
             if (report.clientVersion.isNotBlank()) VersionTag(report.clientVersion)
             if (report.crashCount > 0) Badge(ui("feedback.admin.crashes", report.crashCount), ui("feedback.admin.crashes_hint", report.crashCount), LossText)
             if (report.failureCount > 0) Badge(ui("feedback.admin.failures", report.failureCount), ui("feedback.admin.failures_hint", report.failureCount), Caution)
@@ -197,25 +207,38 @@ private val FullReport.where: String get() = place.ifBlank { screen }
     }
 }
 
+/** Метка строки очереди - [text] на подложке своего цвета [tint]: «новый ответ», «Закрыт автором». */
+@Composable private fun LineMark(text: String, tint: Color) {
+    Text(
+        text,
+        color = tint,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.background(tint.copy(alpha = .14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+    )
+}
+
 /** Значок счёта строки: [text] цветом [tint], для чтеца экрана - [description]. */
 @Composable private fun Badge(text: String, description: String, tint: Color) {
     Text(text, color = tint, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1, softWrap = false, modifier = Modifier.semantics { contentDescription = description })
 }
 
 /**
- * Раскрытый отчёт модерации - тикет игрока ([ReportTicket]) с версией клиента в шапке и слотами модерации: строка автора ([AuthorLine],
- * касание логина - [onDossier] с аккаунтом автора), обстоятельства дела (у апелляции и жалобы), «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса (если есть) и действия
- * очереди: у нового «Отклонить» (со словом - причиной автору) и «В GitHub» (апелляция и жалоба не уходят наружу - «Принять»), у
- * отправленного - «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
+ * Раскрытый отчёт модерации - тот же тикет-чат, что у игрока ([ReportTicket]), с версией клиента в шапке и слотами модерации: строка
+ * автора ([AuthorLine], касание логина - [onDossier] с аккаунтом автора), обстоятельства дела (у апелляции и жалобы), «Дополнение
+ * модерации»; в переписке автор - своим логином, его последний ответ в обсуждении - «новый ответ». Под перепиской у нового и обсуждаемого
+ * - поле и решения ([Decisions]): «Комментировать» (автору, отчёт - в «Обсуждении»), «Отклонить» (поле - причина автору) и «В работу»
+ * (апелляция и жалоба не уходят наружу - «Принять»); у отправленного - ведение Issue по «Закрыть…». Подвал - голоса (если есть),
+ * «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
  */
 @Composable internal fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit, onDossier: (String) -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
-    val fresh = report.status == ReportStatus.CREATED
     val issue = report.issue
     var deleting by remember(report.id) { mutableStateOf(false) }
     var steering by remember(report.id) { mutableStateOf(false) }
-    var word by remember(report.id) { mutableStateOf(report.reason) }
     ReportTicket(
         report.kind,
         report.text,
@@ -226,6 +249,8 @@ private val FullReport.where: String get() = place.ifBlank { screen }
         dim = false,
         version = report.clientVersion,
         focused = true,
+        authorName = entry.login ?: ui("feedback.anonymous"),
+        newReply = report.awaitsModeration,
         onHeader = onCollapse,
         topic = report.topic,
         issueLink = true,
@@ -237,15 +262,9 @@ private val FullReport.where: String get() = place.ifBlank { screen }
                 Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 ForgeButton(state = ButtonState.of(!account.busy), onClick = { vm.reportToIssue(report.id) }, kind = ButtonKind.Secondary) { Text(ui("feedback.issue_retry")) }
             }
-            if (fresh) {
-                OutlinedTextField(
-                    word,
-                    { word = it.take(REASON) },
-                    placeholder = { Text(ui(if (report.kind.exported) "feedback.admin.word_github" else "feedback.reason_field")) },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+        },
+        below = {
+            if (entry.moves.isNotEmpty() || entry.discussable) Decisions(account, vm, entry)
             if (steering && issue?.state?.open == true) IssueSteer(account, vm, report.id)
         },
     ) {
@@ -253,30 +272,55 @@ private val FullReport.where: String get() = place.ifBlank { screen }
             Text(ui("feedback.admin.score", report.likes, report.dislikes), color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1, softWrap = false)
         }
         Row(Modifier.weight(1f).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-            when {
-                fresh -> {
-                    if (ReportStatus.REJECTED in entry.moves) {
-                        ForgeButton(state = ButtonState.of(!account.busy && word.isNotBlank()), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) {
-                            Text(ui("feedback.admin.reject"), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    if (ReportStatus.SENT in entry.moves) {
-                        ForgeButton(state = ButtonState.of(!account.busy), onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
-                            Text(ui(if (report.kind.exported) "feedback.admin.to_github" else "feedback.admin.accept"), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-
-                issue != null -> {
-                    if (issue.state.open) ForgeButton(state = ButtonState.of(!account.busy), onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
-                }
-            }
+            if (issue?.state?.open == true) ForgeButton(state = ButtonState.of(!account.busy), onClick = { steering = !steering }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.steer"), maxLines = 1) }
             if (entry.deletable) {
                 ForgeIconButton(Icons.Outlined.Delete, ui("feedback.delete"), onClick = { deleting = true }, kind = ButtonKind.Danger, size = ButtonSize.Compact, state = ButtonState.of(!account.busy))
             }
         }
     }
     if (deleting) ReportDeleteConfirm(account.busy, onDismiss = { deleting = false }) { vm.deleteReport(report.id) }
+}
+
+/**
+ * Решения модерации о новом и обсуждаемом отчёте: одно поле - комментарий автору, причина отказа или слово при отправке; под ним кнопки,
+ * не встающие в ширину - переносом, прижатые вправо: «Комментировать» ([AdminReport.discussable]: комментарий в переписку, автору письмо),
+ * «Отклонить» (поле - причина, без неё погашена) и «В работу» (слово необязательно; апелляция и жалоба - «Принять») - по
+ * [AdminReport.moves]. Отправленное действие очищает поле.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Decisions(account: AccountUi, vm: FeedbackModel, entry: AdminReport) {
+    val report = entry.report
+    var word by remember(report.id) { mutableStateOf("") }
+    val ready = !account.busy
+    val said = word.isNotBlank()
+    OutlinedTextField(
+        word,
+        { word = it.take(REASON) },
+        placeholder = { Text(ui(if (entry.discussable) "feedback.admin.comment_hint" else "feedback.reason_field")) },
+        minLines = 2,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (entry.discussable) {
+            ForgeButton(state = ButtonState.of(ready && said), onClick = {
+                vm.commentReport(report.id, word.trim())
+                word = ""
+            }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.comment"), maxLines = 1) }
+        }
+        if (ReportStatus.REJECTED in entry.moves) {
+            ForgeButton(state = ButtonState.of(ready && said), onClick = {
+                vm.setReportStatus(report.id, ReportStatus.REJECTED, word.trim())
+                word = ""
+            }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(ui("feedback.admin.reject"), maxLines = 1) }
+        }
+        if (ReportStatus.SENT in entry.moves) {
+            ForgeButton(state = ButtonState.of(ready), onClick = {
+                vm.setReportStatus(report.id, ReportStatus.SENT, word.trim())
+                word = ""
+            }) { Text(ui(if (report.kind.exported) "feedback.admin.to_work" else "feedback.admin.accept"), maxLines = 1) }
+        }
+    }
 }
 
 /**

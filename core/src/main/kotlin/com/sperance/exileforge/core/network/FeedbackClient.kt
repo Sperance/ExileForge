@@ -32,10 +32,16 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Ответ автора в Issue своего отчёта (сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
     suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
-    /** Удаление отчёта (сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
+    /** Автор закрывает свой отчёт - новый или в обсуждении: «Закрыт автором», без возврата; ответ - отчёт как он теперь стоит. */
+    suspend fun close(id: String): OwnReport = http.post("$REPORTS/close", mapOf("id" to id))
+
+    /** Удаление отчёта модерацией: ошибку и жалобу - да, апелляцию - никто. Свой отчёт автор не удаляет, а закрывает ([close]). */
     suspend fun delete(id: String) {
-        http.request("POST", "$REPORTS/delete", mapOf("id" to id), authenticated = true)
+        http.request("POST", "$ADMIN/feedback/delete", mapOf("id" to id), authenticated = true)
     }
+
+    /** Комментарий модерации автору к отчёту [id]: отчёт - в «Обсуждении», автору письмо; ответ - отчёт как он теперь стоит. */
+    suspend fun comment(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/comment", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
     suspend fun all(kind: FeedbackKind?, status: ReportStatus?): List<AdminReport> = http.get(
         "$ADMIN/feedback",

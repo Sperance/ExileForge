@@ -14,13 +14,13 @@ import kotlin.test.assertEquals
 class ReportThreadTest {
     private val word = "Принято, спасибо"
     private val answer = IssueNote(NoteAuthor.AUTHOR, "Ещё деталь")
-    private val issued = IssueView(7, notes = listOf(IssueNote(NoteAuthor.MODERATION, word), answer))
+    private val issued = IssueView(7, notes = listOf(answer, IssueNote(NoteAuthor.MODERATION, word)))
 
-    /** До Issue слово модерации - в переписке полем отчёта, вместе с ответами автора. */
+    /** До Issue слово решения модерации - в переписке полем отчёта, после переписки до Issue. */
     @Test
     fun the_word_stands_in_the_thread_until_the_issue() {
         val waiting = FullReport("r", "text", status = ReportStatus.SENT, reason = word, answers = listOf(answer))
-        assertEquals(listOf(word, answer.text), waiting.thread.map { it.text })
+        assertEquals(listOf(answer.text, word), waiting.thread.map { it.text })
     }
 
     /** С Issue слово модерации - только его комментарий: сервер прислал его и полем, а в тикете модерации и у автора оно одно. */

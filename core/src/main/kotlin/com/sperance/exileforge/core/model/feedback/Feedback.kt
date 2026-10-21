@@ -16,12 +16,12 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Где отчёт: [CREATED] - создан игроком и ждёт решения модерации (её комментарий его не отправляет), [SENT] - отправлен Issue в GitHub,
- * [REJECTED] - отклонён модерацией с причиной.
- * Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями [AdminReport.moves] и
- * [KnownReport.votable].
+ * Где отчёт (сервер `BugStatus`): [CREATED] - создан игроком и ждёт модерацию; [DISCUSSION] - модерация написала комментарий, идёт
+ * переписка с автором; [SENT] - модерация отдала его в работу (Issue в GitHub); [REJECTED] - отклонён модерацией с причиной;
+ * [WITHDRAWN] - закрыт автором. Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями
+ * [AdminReport.moves], [AdminReport.discussable], [OwnReport.closable] и [KnownReport.votable].
  */
-@Serializable enum class ReportStatus { CREATED, SENT, REJECTED }
+@Serializable enum class ReportStatus { CREATED, DISCUSSION, SENT, REJECTED, WITHDRAWN }
 
 /**
  * Судьба Issue отчёта (сервер `IssueState`): открыт - [OPEN] («В работе»; метки «в работе» нет);
@@ -96,16 +96,16 @@ import kotlinx.serialization.Serializable
     val likes: Int = 0,
     val dislikes: Int = 0,
     val createdAt: String = "",
-    /** Автор может удалить его: ошибку и предложение - да, апелляцию - нет. */
-    val deletable: Boolean = false,
     /** Issue отчёта; null - ещё не отправлен. */
     val issue: IssueView? = null,
     /** Тема ошибки: у улучшения карточка несёт «Идея». */
     val topic: ReportTopic = ReportTopic.ERROR,
-    /** Свои ответы, пока у отчёта нет Issue: сервер перенесёт их в Issue; с Issue они - в переписке [IssueView.notes]. */
+    /** Переписка, пока у отчёта нет Issue - комментарии модерации и свои ответы: сервер перенесёт её в Issue; с Issue она - в [IssueView.notes]. */
     val answers: List<IssueNote> = emptyList(),
     /** Можно ли ответить - решает сервер: отчёт на модерации или ждёт выгрузки, либо его Issue открыт; иначе поля ответа нет. */
     val answerable: Boolean = false,
+    /** Можно ли закрыть отчёт самому - решает сервер: новый или в обсуждении; закрытый ([ReportStatus.WITHDRAWN]) не возвращается. */
+    val closable: Boolean = false,
 ) {
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
@@ -164,24 +164,28 @@ import kotlinx.serialization.Serializable
     val failureCount: Int = 0,
     /** Тема ошибки: у улучшения карточка несёт «Идея». */
     val topic: ReportTopic = ReportTopic.ERROR,
-    /** Ответы автора из игры, пока у отчёта нет Issue; с Issue они - в переписке [IssueView.notes]. */
+    /** Переписка до Issue - комментарии модерации и ответы автора; с Issue она - в переписке [IssueView.notes]. */
     val answers: List<IssueNote> = emptyList(),
 ) {
     /** Переписка тикета модерации по порядку ([conversation]). */
     val thread: List<IssueNote> get() = conversation(reason, answers, issue)
+
+    /** «Новый ответ»: в обсуждении последнее слово переписки - автора, модерации ждёт его ответ (сервер `BugReport.AWAITS_MODERATION`). */
+    val awaitsModeration: Boolean get() = status == ReportStatus.DISCUSSION && answers.lastOrNull()?.author == NoteAuthor.AUTHOR
 }
 
 /**
- * Переписка отчёта по порядку: слово модерации [reason] и ответы автора [answers] - сервер шлёт их, пока у отчёта нет Issue, - затем
- * переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и автор. Выгрузка кладёт слово и ответы первыми комментариями
- * Issue в том же порядке, поэтому с Issue слово берётся только оттуда и дважды не встаёт, даже если сервер прислал его и полем.
+ * Переписка отчёта по порядку: переписка до Issue [answers] (комментарии модерации и ответы автора), затем слово решения модерации
+ * [reason] - сервер шлёт их, пока у отчёта нет Issue, - затем переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и
+ * автор. Выгрузка кладёт переписку и слово первыми комментариями Issue в том же порядке, поэтому с Issue слово берётся только оттуда и
+ * дважды не встаёт, даже если сервер прислал его и полем.
  */
 private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> =
-    listOfNotNull(reason.takeIf { it.isNotBlank() && issue == null }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
+    answers + listOfNotNull(reason.takeIf { it.isNotBlank() && issue == null }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + issue?.notes.orEmpty()
 
 /**
- * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести по машине состояний сервера,
- * [deletable] - может ли смотрящий его удалить.
+ * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести решением по машине состояний сервера,
+ * [deletable] - может ли смотрящий его удалить, [discussable] - можно ли написать автору комментарий (отчёт - в «Обсуждении»).
  */
 @Serializable data class AdminReport(
     val report: FullReport,
@@ -189,6 +193,7 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
     val role: com.sperance.exileforge.core.network.AccountRole? = null,
     val moves: List<ReportStatus> = emptyList(),
     val deletable: Boolean = false,
+    val discussable: Boolean = false,
 )
 
 /** A letter's thing to take: a template and its rarity, rolled at the hero's level when taken. */

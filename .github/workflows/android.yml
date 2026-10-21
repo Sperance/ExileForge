@@ -11,7 +11,8 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      # Снимки экранов до релиза (0.14.0, UI-SHOTS): R8-сборка для UI-тестов и эмулятор на любой ветке (и wip), без публикации
+      # Снимки ключевых экранов: R8-сборка для UI-тестов и эмулятор на любой ветке (и wip), без публикации; только здесь
+      # идёт KeyScreensShotTest
       shots:
         description: 'Emulator UI tests and key screen shots, no release'
         type: boolean
@@ -35,9 +36,8 @@ jobs:
       release: ${{ steps.release.outputs.pending }}
       shots: ${{ github.event_name == 'workflow_dispatch' && inputs.shots == true }}
     steps:
+      # paths-filter сам дотягивает коммит до пуша (или базу слияния): полная история не нужна
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         if: ${{ github.event_name != 'workflow_dispatch' }}
@@ -82,10 +82,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
-          fetch-depth: 0
-          # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
+          # Сервер - приватный репозиторий: токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      # История клиента Gradle не нужна, история сабмодуля - нужна: версию закреплённого сервера он считает по коммитам backend/
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -100,6 +100,8 @@ jobs:
 
   app:
     needs: changes
+    # При правке app, перед релизом и по ручному запуску; правка только core или сервера сторожей app не трогает
+    if: ${{ needs.changes.outputs.app == 'true' || needs.changes.outputs.release == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -111,16 +113,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
-          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -148,15 +146,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -189,15 +184,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -227,15 +219,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
@@ -280,6 +269,7 @@ jobs:
       contents: read
     env:
       API_LEVEL: 35
+      SHOTS: ${{ needs.changes.outputs.shots }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -294,21 +284,23 @@ jobs:
       # Эмулятор ставится заранее и с повторами (0.13.0): обрыв скачивания («Error on ZipFile unknown archive») ронял job, а
       # уже поставленный пакет раннер эмулятора не качает заново
       - name: Install the emulator
+        id: emulator
         run: |
-          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          home="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           for attempt in 1 2 3; do
-            "$sdk" --install emulator --channel=0 > /dev/null && [ -x "${ANDROID_HOME:-/usr/local/lib/android/sdk}/emulator/emulator" ] && exit 0
+            "$home/cmdline-tools/latest/bin/sdkmanager" --install emulator --channel=0 > /dev/null && [ -x "$home/emulator/emulator" ] && break
+            [ "$attempt" = 3 ] && exit 1
             sleep $((attempt * 15))
           done
-          exit 1
-      # Снимок загруженного эмулятора в кэше: прогон стартует из него, а не с холодной загрузки
+          echo "version=$(sed -n 's/^Pkg.Revision=//p' "$home/emulator/source.properties")" >> "$GITHUB_OUTPUT"
+      # Снимок загруженного эмулятора в кэше: прогон стартует из него, а не с холодной загрузки; новый эмулятор - новый снимок
       - uses: actions/cache@v4
         id: avd-cache
         with:
           path: |
             ~/.android/avd/*
             ~/.android/adb*
-          key: avd-${{ env.API_LEVEL }}-x86_64-pixel_2
+          key: avd-${{ env.API_LEVEL }}-x86_64-pixel_2-emu${{ steps.emulator.outputs.version }}
       - name: Create AVD snapshot
         if: ${{ steps.avd-cache.outputs.cache-hit != 'true' }}
         uses: reactivecircus/android-emulator-runner@v2
@@ -332,7 +324,9 @@ jobs:
           script: |
             adb install -r ui-apks/app.apk
             adb install -r ui-apks/app-androidTest.apk
-            adb shell am instrument -w com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
+            # Снимки ключевых экранов - только по ручному запуску с shots: релиз их не делает
+            if [ "$SHOTS" = true ]; then only=""; else only="-e notClass com.sperance.exileforge.ui.KeyScreensShotTest"; fi
+            adb shell am instrument -w $only com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
             python3 -c "import pathlib,re; text=pathlib.Path('ui-results.txt').read_text(); assert re.search(r'OK \(\d+ tests?\)', text), text"
             adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
             # Сборка UI-тестов и строгая R8 - разные APK одного пакета: ставим начисто
@@ -351,19 +345,22 @@ jobs:
             ui-results.txt
             release-smoke.txt
             design-preview
-      # Снимки ключевых экранов (0.14.0, UI-SHOTS): KeyScreensShotTest кладёт их в design/shots - отдельный артефакт
+      # Снимки ключевых экранов (shots: true): KeyScreensShotTest кладёт их в design/shots - отдельный артефакт; превью - в лог
       - name: Upload key screen shots
-        if: always()
+        if: ${{ always() && env.SHOTS == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: exile-forge-shots
           path: design-preview/shots
           if-no-files-found: warn
       - name: Preview image in verification log
+        if: ${{ env.SHOTS == 'true' }}
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"
       - name: Hero preview in verification log
+        if: ${{ env.SHOTS == 'true' }}
         run: python3 -c "import base64,pathlib; print('HERO_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/hero.jpg').read_bytes()).decode()); print('HERO_IMAGE_END')"
       - name: Narrow screen preview in verification log
+        if: ${{ env.SHOTS == 'true' }}
         run: python3 -c "import base64,pathlib; print('NARROW_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/narrow.jpg').read_bytes()).decode()); print('NARROW_IMAGE_END')"
 
   client-server:
@@ -382,8 +379,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          fetch-depth: 0
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - run: '[ "$(git -C backend rev-parse --is-shallow-repository)" = false ] || git -C backend fetch --unshallow'
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -398,9 +395,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
       - name: Start isolated MongoDB
         # The backend pins mongodb://localhost:27017 in code, and its transactions need a replica set.
         run: |

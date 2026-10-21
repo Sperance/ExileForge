@@ -5531,6 +5531,7 @@
   "summary.source.PACT": "Сделки алтарей",
   "summary.source.POTION": "Зелье",
   "summary.source.LEVEL": "Сила монстров от уровня героя",
+  "summary.source.FALLOFF": "Разница уровней: герой выше района",
   "summary.source.ATLAS": "Атлас и гильдия",
   "summary.quests_total": "Всего за задания",
   "summary.quests_run": "За эту карту",
@@ -5673,5 +5674,6 @@
   "fold.closed": "Свёрнуто",
   "button.hold": "Подтвердить удержанием",
   "button.hold_progress": "Удержание {0}%",
-  "button.count": "Счётчик: {0}"
+  "button.count": "Счётчик: {0}",
+  "zone.loot_falloff": "Герой выше района на {0} ур. · добыча −{1}%"
 }

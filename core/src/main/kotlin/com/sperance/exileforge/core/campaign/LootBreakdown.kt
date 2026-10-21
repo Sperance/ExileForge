@@ -1,6 +1,9 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.display.shareText
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasStat
+import com.sperance.exileforge.rules.content.LootFalloffRule
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.run.LootOrigin
@@ -8,9 +11,23 @@ import com.sperance.exileforge.rules.run.Run
 
 /**
  * Откуда прибавка к золоту или опыту захода: лист героя, карта-предмет, зона Ваал, сделки алтарей, зелье, сила монстров от уровня героя
- * ([Run.heroScale], только опыт), атлас с гильдией.
+ * ([Run.heroScale], только опыт), срез добычи у героя выше района ([Run.lootFalloff], только золото, доля отрицательная), атлас с гильдией.
  */
-enum class BoostSource { HERO, MAP, VAAL, PACT, POTION, LEVEL, ATLAS }
+enum class BoostSource { HERO, MAP, VAAL, PACT, POTION, LEVEL, FALLOFF, ATLAS }
+
+/**
+ * Срез добычи монстров у героя уровня [heroLevel] выше района уровня [areaLevel] ([LootFalloffRule.share]): на сколько уровней герой
+ * выше ([above]) и доля добычи [share]; в льготе среза нет ([of] - null).
+ */
+data class LootFalloffView(val above: Int, val share: Double) {
+    /** Строка листа стража: «Герой выше района на N ур. · добыча −X%», процент - как в сводке героя ([shareText]). */
+    val text: String get() = ui("zone.loot_falloff", above, shareText((1 - share) * 100))
+
+    companion object {
+        /** Срез по правилу [rule]; null - доля 1. */
+        fun of(rule: LootFalloffRule, heroLevel: Int, areaLevel: Int): LootFalloffView? = rule.share(heroLevel, areaLevel).takeIf { it < 1 }?.let { LootFalloffView(heroLevel - areaLevel, it) }
+    }
+}
 
 /** Доля источника [source] в прибавке: [percent] процентов к стоку. */
 data class BoostPart(val source: BoostSource, val percent: Double)
@@ -36,18 +53,21 @@ data class LootBreakdown(val total: Double, val parts: List<BoostPart>) {
 
         /**
          * Золото [total] захода [run] со сделками алтарей [pacts]: прибавка - [Run.boost] обычного монстра, как её берёт сервер;
-         * [potion] - строки выпитого на входе зелья, они в атласе контекста.
+         * [potion] - строки выпитого на входе зелья, они в атласе контекста. Срез у героя выше района ([LootBoost.share]) множит золото
+         * поверх прибавок: его доля - та же доля в процентах стока, (1 + прибавки) × (доля − 1), отрицательная.
          */
         fun gold(run: Run, pacts: Map<String, Double>, potion: Map<String, Double>, total: Double): LootBreakdown {
             val context = run.context.copy(pacts = pacts)
-            val all = Run(run.index, run.zone, run.seed, context).boost(MonsterRarity.NORMAL, origin = LootOrigin.MONSTER).gold
+            val boost = Run(run.index, run.zone, run.seed, context).boost(MonsterRarity.NORMAL, origin = LootOrigin.MONSTER)
+            val falloff = (100 + boost.gold) * (boost.share - 1)
             return of(
                 total,
-                all,
+                boost.gold + falloff,
                 BoostSource.HERO to context.bonus(MonsterRarity.NORMAL).gold,
                 BoostSource.MAP to (context.active?.effects?.get(MapStat.GOLD.code) ?: 0.0),
                 BoostSource.PACT to (pacts[MapStat.GOLD.code] ?: 0.0) + (pacts[AtlasStat.GOLD.code] ?: 0.0),
                 BoostSource.POTION to (potion[AtlasStat.GOLD.code] ?: 0.0),
+                BoostSource.FALLOFF to falloff,
             )
         }
 

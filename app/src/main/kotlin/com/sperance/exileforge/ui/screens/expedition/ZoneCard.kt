@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.LootFalloffView
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
@@ -119,7 +120,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 return@Column
             }
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                index.monster(zone.boss)?.let { Guardian(game, zone, it, Modifier.weight(1f).fillMaxHeight()) } ?: Spacer(Modifier.weight(1f))
+                index.monster(zone.boss)?.let { Guardian(game, zone, it, maps.picked?.view?.areaLevel ?: zone.level, Modifier.weight(1f).fillMaxHeight()) } ?: Spacer(Modifier.weight(1f))
                 AtlasPips(game.atlasState?.earned.orEmpty(), zone.code.value, Modifier.fillMaxHeight())
             }
             KitRibbon(game, vm, zone, maps, launch)
@@ -279,14 +280,15 @@ private const val SEED_TICK_MS = 1000L
  * The zone's guardian: its bust and name, and whether it waits by the exit or lies slain until its
  * time — the hero's campaign says when it is back; summoning it early is the map's own bar's.
  *
- * Страж открывает свой лист: умения и фазы, каждое своей справкой.
+ * Страж открывает свой лист: умения и фазы, каждое своей справкой; [areaLevel] - уровень района захода, как его считает сервер
+ * (выбранная карта - [ItemView.areaLevel], без карты - уровень зоны).
  */
-@Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster, modifier: Modifier = Modifier) {
+@Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster, areaLevel: Int, modifier: Modifier = Modifier) {
     val campaign = game.hero?.campaign
     val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
     var open by remember { mutableStateOf(false) }
-    if (open) GuardianSheet(game, zone, boss) { open = false }
+    if (open) GuardianSheet(game, zone, boss, areaLevel) { open = false }
     Row(
         modifier.background(Abyss, shape).border(1.dp, PanelRaised, shape).clip(shape).clickable { open = true }.padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -305,13 +307,14 @@ private const val SEED_TICK_MS = 1000L
 }
 
 /**
- * Лист стража зоны: уровень и здоровье, умения и фазы чипами - каждый открывает свою справку.
+ * Лист стража зоны: уровень и здоровье, под ними - срез добычи у героя выше района [areaLevel] ([LootFalloffView], только когда доля
+ * меньше 1), умения и фазы чипами - каждый открывает свою справку.
  *
  * Хаос и яд идут мимо энергощита - лист говорит это до боя.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: () -> Unit) {
+private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, areaLevel: Int, onDismiss: () -> Unit) {
     val index = game.index ?: return
     val rules = index.campaign.combat
     val body = remember(boss, zone) { com.sperance.exileforge.core.campaign.combat.Combatant(com.sperance.exileforge.rules.roll.MonsterRoller(index).stats(boss, zone.level), zone.level, rules) }
@@ -322,6 +325,7 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: ()
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("challenge.subtitle", zone.level, com.sperance.exileforge.core.display.number(body.maxLife)))
+            game.hero?.level?.let { LootFalloffView.of(index.campaign.lootFalloff, it, areaLevel) }?.let { MutedText(it.text) }
             if (boss.skills.isNotEmpty()) {
                 Text(ui("challenge.skills").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

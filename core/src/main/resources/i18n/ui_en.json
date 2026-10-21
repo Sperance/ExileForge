@@ -369,7 +369,7 @@
   "picker.in_bag_short": "{0} in bag",
   "picker.from_level": "from lv. {0}",
   "picker.none_in_bag": "none in bag",
-  "picker.peek_hint": "Hold a row to see its card",
+  "picker.closed": "closed",
   "picker.count_of": "{0} of {1}",
   "picker.more_of": "+{0} more · {1} of {2}",
   "picker.none": "None",

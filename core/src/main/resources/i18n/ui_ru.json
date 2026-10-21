@@ -369,7 +369,7 @@
   "picker.in_bag_short": "в сумке {0}",
   "picker.from_level": "с ур. {0}",
   "picker.none_in_bag": "нет в сумке",
-  "picker.peek_hint": "Удержание строки — карточка",
+  "picker.closed": "закрыто",
   "picker.count_of": "{0} из {1}",
   "picker.more_of": "и ещё {0} · {1} из {2}",
   "picker.none": "Нет",

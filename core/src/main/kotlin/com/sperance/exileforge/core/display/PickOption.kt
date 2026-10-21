@@ -29,8 +29,8 @@ data class PickOption<out K>(
     val chipLine: String? get() = brief ?: subtitle
 }
 
-/** Данные справа от варианта: [value] крупно, [caption] мелко под ним («6» и «в ранге»); [short] - чего-то нет («0 в сумке»), число красным. */
-data class PickData(val value: String, val caption: String? = null, val short: Boolean = false)
+/** Данные справа от варианта: [value] крупно, [caption] мелко под ним («6» и «в ранге»); [lacking] - чего-то нет («0 в сумке»), число красным. */
+data class PickData(val value: String, val caption: String? = null, val lacking: Boolean = false)
 
 /** Знак варианта: значок смысла ([Sign]) или эмблема вида вещи ([Emblem]); рисует их `:app`. */
 sealed interface PickGlyph {

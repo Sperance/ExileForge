@@ -91,8 +91,8 @@ import kotlin.math.roundToInt
  * короткое подназвание ([PickOption.chipLine]), шеврон; ничего не выбрано - «Выбрать». Касание открывает нижнюю шторку ([ForgePickSheet]):
  * шапка - [label], пояснение [hint] и, с [PickList.SEARCH_FROM] вариантов, их число и плотный поиск, закреплённые над списком; список -
  * карточки-строки [options] по группам с заголовками. Выбор варианта закрывает шторку и отдаёт его ключ в [onPick]; [value] - ключ
- * выбранного сейчас; закрытый вариант ([PickOption.locked]) не выбирается. [onPeek] - долгое нажатие на строку (карточка варианта).
- * [empty] - что сказать, когда вариантов нет вовсе. Ключ - типа вызывающего [K]: «любое» - вариант с ключом null; вызывающий строку не
+ * выбранного сейчас; закрытый вариант ([PickOption.locked]) не выбирается. [onPeek] - долгое нажатие на строку (карточка варианта),
+ * [hold] - что оно открывает: шторка говорит это подсказкой «Осмотра» ([HoldHint]) в шапке. [empty] - что сказать, когда вариантов нет вовсе. Ключ - типа вызывающего [K]: «любое» - вариант с ключом null; вызывающий строку не
  * разбирает.
  */
 @Composable fun <K> ForgePicker(
@@ -103,6 +103,7 @@ import kotlin.math.roundToInt
     enabled: Boolean = true,
     hint: String? = null,
     empty: PickEmpty? = null,
+    hold: HoldSubject? = null,
     onPeek: ((K) -> Unit)? = null,
     onPick: (K?) -> Unit,
 ) {
@@ -110,7 +111,7 @@ import kotlin.math.roundToInt
     val current = remember(options, value) { options.firstOrNull { it.key == value } }
     PickChip(label, current, current?.title ?: ui("common.choose"), current?.chipLine, modifier, enabled) { open = true }
     if (open) {
-        ForgePickSheet(label, value, options, hint, empty, onDismiss = { open = false }, onPeek = onPeek) { key ->
+        ForgePickSheet(label, value, options, hint, empty, hold, onDismiss = { open = false }, onPeek = onPeek) { key ->
             open = false
             onPick(key)
         }
@@ -120,7 +121,8 @@ import kotlin.math.roundToInt
 /**
  * Выбор нескольких из списка - тот же облик, что у [ForgePicker]: на чипе первый выбранный и «и ещё N · 2 из 3», ничего - «Нет». В
  * шторке строки с флажками: касание отмечает и снимает, набран предел [max] - неотмеченные гаснут; «Готово · [counted]» в подвале
- * отдаёт отмеченное в [onPick] (в порядке отметки), закрытие шторки мимо подвала выбор не меняет. [values] - выбранные сейчас.
+ * отдаёт отмеченное в [onPick] (в порядке отметки), закрытие шторки мимо подвала выбор не меняет. [values] - выбранные сейчас; вариант
+ * «любое» (ключ null) выбору нескольких не нужен - его нет. [onPeek] и [hold] - как у [ForgePicker].
  */
 @Composable fun <K : Any> ForgeMultiPicker(
     label: String,
@@ -131,11 +133,13 @@ import kotlin.math.roundToInt
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     hint: String? = null,
+    hold: HoldSubject? = null,
     onPeek: ((K) -> Unit)? = null,
     onPick: (List<K>) -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
-    val chosen = remember(options, values) { values.mapNotNull { key -> options.firstOrNull { it.key == key } } }
+    val keyed = remember(options) { options.filter { it.key != null } }
+    val chosen = remember(keyed, values) { values.mapNotNull { key -> keyed.firstOrNull { it.key == key } } }
     val first = chosen.firstOrNull()
     val line = when {
         chosen.size > 1 -> ui("picker.more_of", chosen.size - 1, chosen.size, max)
@@ -144,7 +148,7 @@ import kotlin.math.roundToInt
     }
     PickChip(label, first, first?.title ?: ui("picker.none"), line, modifier, enabled) { open = true }
     if (open) {
-        MultiPickSheet(label, hint, remember(options) { PickList(options) }, values, max, counted, onDismiss = { open = false }, onPeek = onPeek) { picked ->
+        MultiPickSheet(label, hint, hold, remember(keyed) { PickList(keyed) }, values, max, counted, onDismiss = { open = false }, onPeek = onPeek) { picked ->
             open = false
             onPick(picked)
         }
@@ -180,7 +184,7 @@ data class PickEmpty(val title: String, val hint: String? = null)
 /**
  * Шторка выбора одного варианта из [options] - и за чипом [ForgePicker], и сама по себе (смена инструмента профессии): шапка [title] с
  * пояснением [hint] и поиском закреплена, ниже - группы карточек-строк; при открытии список стоит на выбранном [value]. Выбор - [onPick],
- * долгое нажатие на строку - [onPeek]; вариантов нет вовсе - [empty].
+ * долгое нажатие на строку - [onPeek], что оно открывает - [hold]; вариантов нет вовсе - [empty].
  */
 @Composable fun <K> ForgePickSheet(
     title: String,
@@ -188,13 +192,14 @@ data class PickEmpty(val title: String, val hint: String? = null)
     options: List<PickOption<K>>,
     hint: String? = null,
     empty: PickEmpty? = null,
+    hold: HoldSubject? = null,
     onDismiss: () -> Unit,
     onPeek: ((K) -> Unit)? = null,
     onPick: (K?) -> Unit,
 ) {
     val list = remember(options) { PickList(options) }
     val focus = remember(list) { list.row(value) }
-    PickSheetFrame(title, list.options.size.toString().takeIf { list.searchable }, false, hint, list, focus, empty, onDismiss) { option ->
+    PickSheetFrame(title, list.options.size.toString().takeIf { list.searchable }, false, hint, hold.takeIf { onPeek != null }, list, focus, empty, onDismiss) { option ->
         PickRow(option, RowMark.One(option.key == value), onPick = { onPick(option.key) }, onPeek = peekOf(option, onPeek))
     }
 }
@@ -203,6 +208,7 @@ data class PickEmpty(val title: String, val hint: String? = null)
 @Composable private fun <K : Any> MultiPickSheet(
     title: String,
     hint: String?,
+    hold: HoldSubject?,
     list: PickList<K>,
     values: List<K>,
     max: Int,
@@ -218,6 +224,7 @@ data class PickEmpty(val title: String, val hint: String? = null)
         ui("picker.count_of", draft.size, max),
         !room,
         hint,
+        hold.takeIf { onPeek != null },
         list,
         0,
         null,
@@ -241,7 +248,7 @@ private fun <K> peekOf(option: PickOption<K>, onPeek: ((K) -> Unit)?): (() -> Un
 }
 
 /**
- * Рама шторки выбора: шапка - [title], справа [count] (золотом, если [full]), пояснение [hint] и с [PickList.SEARCH_FROM] вариантов общая
+ * Рама шторки выбора: шапка - [title], справа [count] (золотом, если [full]), пояснение [hint], подсказка «Осмотра» [hold] и с [PickList.SEARCH_FROM] вариантов общая
  * строка поиска [SearchBar]; ниже - группы [list] с закреплёнными заголовками, строки рисует [row], список открывается на строке [focus].
  * Пусто - [empty] (вариантов нет вовсе) или «Ничего не найдено»; [footer] - закреплённый подвал.
  */
@@ -252,6 +259,7 @@ private fun <K> PickSheetFrame(
     count: String?,
     full: Boolean,
     hint: String?,
+    hold: HoldSubject?,
     list: PickList<K>,
     focus: Int,
     empty: PickEmpty?,
@@ -271,6 +279,7 @@ private fun <K> PickSheetFrame(
                     count?.let { Text(it, color = if (full) Gold else Muted, style = MaterialTheme.typography.labelMedium, fontWeight = if (full) FontWeight.Bold else null) }
                 }
                 hint?.let { MutedText(it) }
+                hold?.let { HoldHint(it) }
                 if (list.searchable) SearchBar(query, { query = it }, ui("common.find_option"))
             }
         },
@@ -314,7 +323,7 @@ private sealed interface RowMark {
  * Карточка-строка варианта: полоса цвета [PickOption.accent] слева, знак, имя и подназвание (переносятся целиком), данные ровной
  * колонкой справа (нехватка - красным), у выбора нескольких - флажок. Выбранный ([RowMark.lit]) - в золотой рамке на подсвеченном фоне,
  * у выбора одного - с пометкой «Сейчас». Закрытый ([PickOption.locked]) и неотмеченный при набранном пределе - тусклые и не выбираются;
- * у закрытого справа замок и почему. Долгое нажатие - [onPeek], и у закрытого тоже.
+ * у закрытого справа замок и почему. Отмеченный снимается всегда, даже закрытый. Долгое нажатие - [onPeek], и у закрытого тоже.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -322,7 +331,10 @@ private fun PickRow(option: PickOption<*>, mark: RowMark, onPick: () -> Unit, on
     val shape = RoundedCornerShape(12.dp)
     val accent = option.accent.paint()
     val lit = mark.lit
-    val available = option.locked == null && (mark !is RowMark.Many || mark.checked || mark.room)
+    val available = when (mark) {
+        is RowMark.One -> option.locked == null
+        is RowMark.Many -> mark.checked || (option.locked == null && mark.room)
+    }
     Row(
         Modifier.fillMaxWidth()
             .heightIn(min = 52.dp)
@@ -372,7 +384,7 @@ private fun PickRow(option: PickOption<*>, mark: RowMark, onPick: () -> Unit, on
             }
 
             data != null -> Column(Modifier.widthIn(min = 64.dp).padding(start = 8.dp, end = 12.dp), horizontalAlignment = Alignment.End) {
-                Text(data.value, color = if (data.short) LifeRed else Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(data.value, color = if (data.lacking) LifeRed else Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 data.caption?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             }
 

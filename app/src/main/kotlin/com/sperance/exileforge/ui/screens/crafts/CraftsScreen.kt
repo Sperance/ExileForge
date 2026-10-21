@@ -100,7 +100,7 @@ import kotlin.math.ceil
  * Экран с ремёслами спрашивает снова тихо; досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]) и только если прошлый ответ старше срока
  * свежести. Плитки идут одной сеткой в порядке сервера, ряды считаются раз на ответ. Досчёт после отлучки, ещё не показанный,
  * открывается листом «Пока вас не было» ([AwaySheet]) поверх плиток и окна профессии. Окно профессии - уровень цепочки «назад»
- * «Развитие › Ремёсла».
+ * «Развитие › Ремёсла»; экран ушёл со стека - окно закрыто, новый вход - снова плитки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,7 +117,10 @@ fun CraftsScreen() {
     }
     DisposableEffect(Unit) {
         vm.watch(true)
-        onDispose { vm.watch(false) }
+        onDispose {
+            vm.watch(false)
+            vm.openProfession("")
+        }
     }
     val crafts = held.state
     val offset = held.offset

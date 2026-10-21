@@ -132,18 +132,27 @@ object PickOptions {
 
     /**
      * Варианты работы с выбором [work] профессии [profession] - [choices], ключ - выбор варианта (`JobView.choice`). Книги - группами
-     * «Класс · <класс>» и «Общие», прочие работы - без групп; в группе - по уровню открытия, закрытые уровнем профессии - в конце с
-     * замком и «с ур. N». Имя - что выйдет: умение книги и ритуала, стопка, база инструмента; справа - сколько этого в сумке ([bag]; у
+     * «Класс · <класс>» и «Общие», прочие работы - без групп; в группе - по уровню открытия, закрытые для профессии
+     * ([ProfessionView.opens]: уровень и открытость варианта по ответу сервера) - в конце с замком и «с ур. N» (уровень не тот) или
+     * «закрыто». Имя - что выйдет: умение книги и ритуала, стопка, база инструмента; справа - сколько этого в сумке ([bag]; у
      * ритуала - книг его умения), у базы инструмента - её уровень.
      */
     fun jobChoices(work: JobView, choices: List<JobView>, profession: ProfessionView, index: ContentIndex?, bag: (String) -> Long): List<PickOption<String>> {
         val common = { option: JobView -> work.kind == JobKind.BOOK && index?.skills?.byBook(option.choice)?.common == true }
-        return choices.sortedWith(compareBy<JobView>({ common(it) }, { it.level > profession.level }, { it.level }))
-            .map { option -> jobChoice(work.kind, option, option.level <= profession.level, index, bag) }
+        return choices.sortedWith(compareBy<JobView>({ common(it) }, { !profession.opens(it) }, { it.level }))
+            .map { option -> jobChoice(work.kind, option, lockOf(profession, option), index, bag) }
     }
 
-    /** Вариант [option] работы вида [kind]; [open] - профессия доросла до него. */
-    private fun jobChoice(kind: JobKind, option: JobView, open: Boolean, index: ContentIndex?, bag: (String) -> Long): PickOption<String> {
+    /** Почему вариант [option] закрыт для профессии [profession]: уровень не тот - «с ур. N», иначе «закрыто»; открыт - null. */
+    private fun lockOf(profession: ProfessionView, option: JobView): String? = when {
+        profession.opens(option) -> null
+        option.level > profession.level -> ui("picker.from_level", option.level)
+        else -> ui("picker.closed")
+    }
+
+    /** Вариант [option] работы вида [kind]; [locked] - почему он закрыт, открыт - null. */
+    private fun jobChoice(kind: JobKind, option: JobView, locked: String?, index: ContentIndex?, bag: (String) -> Long): PickOption<String> {
+        val open = locked == null
         val code = option.choice
         val skill = when (kind) {
             JobKind.BOOK -> index?.skills?.byBook(code)
@@ -162,9 +171,9 @@ object PickOptions {
             brief = listOfNotNull(kindLine, held?.let { ui("picker.in_bag_short", it) }).joinToString(" · ").ifEmpty { null },
             glyph = item?.let { PickGlyph.Emblem(bagVisualKind(it)) } ?: template?.let { PickGlyph.Emblem(itemVisualKind(it)) } ?: PickGlyph.Sign(Glyph.LEVEL),
             accent = template?.let { PickAccent.OfRarity(it.rarity) } ?: skill?.takeIf { kind == JobKind.BOOK }?.let { PickAccent.Band(if (it.common) 1 else 0) },
-            data = template?.let { PickData(it.level.toString(), ui("picker.level")) } ?: held?.let { PickData(it.toString(), ui("picker.in_bag"), short = it == 0L) },
+            data = template?.let { PickData(it.level.toString(), ui("picker.level")) } ?: held?.let { PickData(it.toString(), ui("picker.in_bag"), lacking = it == 0L) },
             group = skill?.takeIf { kind == JobKind.BOOK }?.let { if (it.common) ui("crafts.books_common") else ui("crafts.books_class", classTitle(it.heroClass)) },
-            locked = ui("picker.from_level", option.level).takeIf { !open },
+            locked = locked,
         )
     }
 
@@ -187,13 +196,16 @@ object PickOptions {
                 null -> PickGlyph.Sign(Glyph.CRAFT)
             },
             accent = choice.attribute?.let { PickAccent.OfAttribute(it) },
-            data = gem?.let { PickData(bag(it).toString(), itemTitle(it), short = bag(it) == 0L) },
+            data = gem?.let { PickData(bag(it).toString(), itemTitle(it), lacking = bag(it) == 0L) },
             group = category?.takeIf { it.attributed }?.let { ui("merchant.group.${it.name}") } ?: ui("crafts.smith_group_other"),
         )
     }
 
-    /** Вещи [views] - цель работы над вещью, инструменты профессии; ключ - id копии, полоса - цвет редкости, справа - уровень. */
-    fun copies(views: List<ItemView>): List<PickOption<String>> = views.map { view ->
+    /**
+     * Вещи [views] - цель работы над вещью, инструменты профессии; ключ - id копии, полоса - цвет редкости, справа - уровень. Вещь с
+     * невыполненными требованиями [unmet] (причины правил, как у строки вещи) закрыта первой из них и стоит в конце.
+     */
+    fun copies(views: List<ItemView>, unmet: (ItemView) -> List<String> = { emptyList() }): List<PickOption<String>> = views.map { it to unmet(it) }.sortedBy { it.second.isNotEmpty() }.map { (view, needs) ->
         PickOption(
             key = view.id,
             title = view.title,
@@ -202,6 +214,7 @@ object PickOptions {
             glyph = PickGlyph.Emblem(view.visualKind),
             accent = PickAccent.OfRarity(view.rarity),
             data = PickData(view.level.toString(), ui("picker.level")),
+            locked = needs.firstOrNull()?.let(::requirementReason),
         )
     }
 

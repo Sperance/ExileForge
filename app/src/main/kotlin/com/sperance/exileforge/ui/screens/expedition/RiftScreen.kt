@@ -907,7 +907,7 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
 
                 is RiftOffer.Forge -> ForgeCards(rules, engine, run, offer, pick, idle)
 
-                is RiftOffer.Coffers -> CofferCards(game, rules, run, offer, coffers, idle, onAct)
+                is RiftOffer.Coffers -> CofferCards(game, offer, coffers, idle, onAct)
 
                 RiftOffer.Contract -> {
                     PlateTitle(
@@ -1031,54 +1031,58 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
 }
 
 /**
- * Сундуки Владыки: ряд крупных карточек по металлу - число ключей, что внутри, и кнопка «Открыть ключом»; без ключа карточка закрыта
- * («Нет ключа»), золотой открывается удержанием. Под рядом - что лежало в открытых ([coffers]) и что неоткрытые пропадут.
+ * Сундуки Владыки: по сундуку на каждый ключ героя ([RiftOffer.Coffers.row]), сгруппированы по металлу ([CofferGroup]). Под рядом -
+ * что неоткрытые пропадут; [coffers] - что лежало в открытых, по номеру в ряду.
  */
-@Composable private fun CofferCards(game: GameUi, rules: RiftRules, run: RiftRun, offer: RiftOffer.Coffers, coffers: Map<Int, Reward>, idle: Boolean, onAct: (RiftAct) -> Unit) {
+@Composable private fun CofferCards(game: GameUi, offer: RiftOffer.Coffers, coffers: Map<Int, Reward>, idle: Boolean, onAct: (RiftAct) -> Unit) {
     PlateTitle(ui("rift.coffers_title"), RiftColors.Hot, listOf(ui("rift.coffers_hint"), ui("rift.coffers_note")))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        rules.keys.coffers.forEachIndexed { i, coffer ->
-            CofferCard(coffer.metal, run.keys[coffer.metal] ?: 0, i in offer.opened, idle, Modifier.weight(1f)) { onAct(RiftAct.Open(i)) }
-        }
-    }
-    offer.opened.forEach { i ->
-        val metal = rules.keys.coffers.getOrNull(i)?.metal ?: return@forEach
-        coffers[i]?.let { reward ->
-            Text(ui("rift.metal.${metal.name}"), color = metal.color(), style = MaterialTheme.typography.labelLarge)
-            RewardLines(game, reward)
+    val groups = remember(offer.row) { offer.row.withIndex().groupBy({ it.value }, { it.index }) }
+    groups.forEach { (metal, slots) ->
+        key(metal) {
+            val opened = slots.filter { it in offer.opened }
+            CofferGroup(game, metal, opened.size, slots.size, slots.firstOrNull { it !in offer.opened }, opened.mapNotNull(coffers::get).reduceOrNull(Reward::plus), idle) {
+                onAct(RiftAct.Open(it))
+            }
         }
     }
     Text(ui("rift.coffers_note"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
 }
 
-/** Карточка сундука металла [metal]: рамка цвета металла, [keys] ключей, суть; открыт - подпись вместо кнопки. */
-@Composable private fun CofferCard(metal: RiftMetal, keys: Int, opened: Boolean, idle: Boolean, modifier: Modifier, onOpen: () -> Unit) {
+/**
+ * Сундуки металла [metal] одной карточкой: рамка цвета металла, их число [total] и отметки открытых [opened], суть содержимого и
+ * кнопка «Открыть ключом» - открывает следующий неоткрытый [next] (золотой - удержанием); [found] - что лежало в открытых.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable private fun CofferGroup(game: GameUi, metal: RiftMetal, opened: Int, total: Int, next: Int?, found: Reward?, idle: Boolean, onOpen: (Int) -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     val tint = metal.color()
     Column(
-        modifier.background(RiftColors.Panel, shape).border(if (opened) 1.dp else 1.5.dp, tint.copy(alpha = if (opened || keys > 0) .9f else .35f), shape).padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        Modifier.fillMaxWidth().background(RiftColors.Panel, shape).border(if (next == null) 1.dp else 1.5.dp, tint.copy(alpha = .9f), shape).padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            KeyMark(metal, Modifier.size(12.dp))
-            Text("×$keys", color = tint, style = relicName(12))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(ui("rift.metal.${metal.name}"), color = tint, style = MaterialTheme.typography.titleSmall)
+            Text("×$total", color = tint, style = relicName(12), modifier = Modifier.weight(1f))
+            Text(ui("rift.coffer_tally", opened, total), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
         }
-        Text(ui("rift.metal.${metal.name}"), color = tint, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
-        Text(ui("rift.coffer.${metal.name}"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, minLines = 3)
-        when {
-            opened -> Text(ui("rift.coffer_opened"), color = RiftColors.Soft, style = MaterialTheme.typography.labelMedium)
-
-            keys < 1 -> Text(ui("rift.coffer_no_key"), color = RiftColors.Dim, style = MaterialTheme.typography.labelMedium)
-
-            else -> ForgeButton(
-                onClick = onOpen,
+        Text(ui("rift.coffer.${metal.name}"), color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            repeat(total) { i ->
+                if (i < opened) Box(Modifier.size(12.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) else KeyMark(metal, Modifier.size(12.dp))
+            }
+        }
+        if (next == null) {
+            Text(ui("rift.coffers_all_opened"), color = RiftColors.Soft, style = MaterialTheme.typography.labelMedium)
+        } else {
+            ForgeButton(
+                onClick = { onOpen(next) },
                 modifier = Modifier.fillMaxWidth(),
                 state = ButtonState.of(idle),
                 accent = tint,
                 hold = if (metal == RiftMetal.GOLD) Hold(tone = HoldTone.Fate) else null,
-            ) { Text(ui("rift.coffer_open"), maxLines = 2, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium) }
+            ) { Text(ui("rift.coffer_open"), maxLines = 1, style = MaterialTheme.typography.labelMedium) }
         }
+        found?.let { RewardLines(game, it) }
     }
 }
 

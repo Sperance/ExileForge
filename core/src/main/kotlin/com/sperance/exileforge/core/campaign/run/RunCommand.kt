@@ -53,7 +53,7 @@ sealed interface RunCommand {
     data object Leave : RunCommand
 
     /** Настройка «ускорение после босса» сменилась: [on] - включено; ускоренный шаг пересчитывается на месте. */
-    data class Swift(val on: Boolean) : RunCommand
+    data class SwiftAllowed(val on: Boolean) : RunCommand
 
     /** The fight begins: until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand

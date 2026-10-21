@@ -35,6 +35,8 @@ import com.sperance.exileforge.core.campaign.combat.StrikeView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
+import com.sperance.exileforge.core.display.shareText
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -445,7 +447,7 @@ data class RunHud(
     val summon: SummonView? = null,
     /** Босс карты убит в этом заходе: «×N» в метке стража; шаг ускорен, только если [hastened]. */
     val swift: Boolean = false,
-    /** Множитель шага героя под холодом ([ExpeditionRun.stride]); 1 - холода нет, подписи под жетоном нет. */
+    /** Множитель шага героя под холодом ([ExpeditionRun.stride]); 1 - холода нет, подписи под жетоном ([strideText]) нет. */
     val stride: Double = 1.0,
     /** Шаг героя ускорен сейчас: босс пал и ускорение включено настройкой - след за героем и живая «×N». */
     val hastened: Boolean = false,
@@ -583,3 +585,6 @@ enum class MapSection(val title: String, val empty: String? = null) {
         }
     }
 }
+
+/** Подпись холода под жетоном героя на карте: «−X%» шага по множителю [RunHud.stride], процент - как в сводке героя ([shareText]). */
+fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))

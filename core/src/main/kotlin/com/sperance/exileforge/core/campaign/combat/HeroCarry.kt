@@ -93,28 +93,6 @@ data class CarriedDelay(val rate: Double, val left: Double) {
     fun over(dt: Double): Double = rate * minOf(dt, left)
 }
 
-/** Стак недуга на бойце - в бою ([ActiveAilment]) или вне его ([CarriedAilment]): какой недуг и какой силы. */
-interface AilmentStack {
-    val ailment: Ailment
-    val magnitude: Double
-}
-
-/** Сильнейший холод среди стаков в процентах; нет - 0. Читается каждый тик боя и каждый шаг по карте - без аллокаций. */
-internal fun List<AilmentStack>.strongestChill(): Double {
-    var most = 0.0
-    for (i in indices) {
-        val stack = this[i]
-        if (stack.ailment == Ailment.CHILLED && stack.magnitude > most) most = stack.magnitude
-    }
-    return most
-}
-
-/**
- * Во сколько раз холод силой [chill] процентов растягивает время: 1 + chill/100. Одна формула боя (`Battle.Fighter.slow` -
- * замах, применение и перезарядка) и карты (`ExpeditionRun.stride` - шаг героя делится на неё).
- */
-internal fun chillStretch(chill: Double): Double = 1 + chill / 100
-
 /**
  * Сила недуга [ailment]: сильнейший экземпляр [strongest], усиленный приёмом недуга на бойце [body]
  * (`STOCK_<слово>_TAKEN`), под потолком правила [rule]. Одна формула боя ([Battle.Fighter.held]) и карты ([AilmentLaw]).

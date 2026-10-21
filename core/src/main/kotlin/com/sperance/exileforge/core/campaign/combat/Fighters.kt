@@ -11,6 +11,28 @@ import com.sperance.exileforge.rules.content.MonsterTrait
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.sheet.FlaskKind
 
+/** Стак недуга на бойце - в бою ([ActiveAilment]) или вне его ([CarriedAilment]): какой недуг и какой силы. */
+interface AilmentStack {
+    val ailment: Ailment
+    val magnitude: Double
+}
+
+/** Сильнейший холод среди стаков в процентах; нет - 0. Читается каждый тик боя и каждый шаг по карте - без аллокаций. */
+internal fun List<AilmentStack>.strongestChill(): Double {
+    var most = 0.0
+    for (i in indices) {
+        val stack = this[i]
+        if (stack.ailment == Ailment.CHILLED && stack.magnitude > most) most = stack.magnitude
+    }
+    return most
+}
+
+/**
+ * Во сколько раз холод силой [chill] процентов растягивает время: 1 + chill/100. Одна формула боя (`Battle.Fighter.slow` -
+ * замах, применение и перезарядка) и карты (`ExpeditionRun.stride` - шаг героя делится на неё).
+ */
+internal fun chillStretch(chill: Double): Double = 1 + chill / 100
+
 /**
  * An ailment on a fighter: what, until when, how hard, and who put it there — the side and, for a
  * monster's, which foe of the pack ([foe]).

@@ -29,8 +29,11 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
     /** Правка настроек от записанного на устройстве, атомарно в хранилище: на старте поток ещё может держать умолчания, а параллельные правки не затирают друг друга. */
     suspend fun editSettings(edit: GameSettings.() -> GameSettings) = store.editGameSettings { it.edit() }
 
-    /** Скорость начала любого боя (поход, испытания, Разлом): [GameSettings.fightSpeed] среди скоростей [rules]; незнакомая - первая из них. */
-    fun fightSpeed(rules: FightRules): Int = settings.value.fightSpeed.takeIf { it in rules.speeds } ?: rules.speeds.first()
+    /** Скорость начала любого боя (поход, испытания, Разлом) по нынешним настройкам ([GameSettings.startSpeed]). */
+    fun fightSpeed(rules: FightRules): Int = settings.value.startSpeed(rules)
+
+    /** С чем начинается заход по нынешним настройкам ([RunPrefs.of]). */
+    fun runPrefs(rules: FightRules): RunPrefs = RunPrefs.of(settings.value, rules)
 
     suspend fun saveItemFilter(shelf: ItemShelf, value: ItemFilter) = store.saveItemFilters(itemFilters.value.with(shelf, value))
 

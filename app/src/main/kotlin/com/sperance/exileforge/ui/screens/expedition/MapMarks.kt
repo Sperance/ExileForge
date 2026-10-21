@@ -83,7 +83,7 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
 
 /**
  * Метка стража: жив, отдыхает или повержен; шаг после его гибели - «×N» внутри неё, слова - в подсказке. «×N» серая, пока ускорение
- * выключено настройкой; касание метки с «×N» переключает настройку ([LocalSettingsEdit]).
+ * выключено настройкой; касание самой «×N» переключает настройку ([LocalSettingsEdit]), касание метки открывает подсказку о нынешнем шаге.
  */
 @Composable private fun GuardianMark(run: ExpeditionRun, hud: RunHud, zone: Boolean) {
     val guardian = GuardianLine.of(hud, zone)
@@ -106,7 +106,7 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
         { Tip(guardian.text, swift, tint = guardian.color) },
         extra = ui("expedition.mark.swift", number(factor)).takeIf { hud.swift },
         extraTint = if (hud.hastened) Rune else Muted,
-        onOpen = edit?.let { change -> { change { copy(swiftAfterBoss = !swiftAfterBoss) } } }.takeIf { hud.swift },
+        onExtra = edit?.let { change -> { change { copy(swiftAfterBoss = !swiftAfterBoss) } } }.takeIf { hud.swift },
     )
 }
 
@@ -147,11 +147,20 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
 }
 
 /**
- * Метка над картой: значок и короткое [label] цветом [tint] в окантовке того же цвета, [extra] - светлая вставка справа («×2»).
+ * Метка над картой: значок и короткое [label] цветом [tint] в окантовке того же цвета, [extra] - вставка справа («×2») тоном [extraTint].
  * Касание раскрывает подсказку [tip] (читается в миг открытия) и зовёт [onOpen]; для чтения с экрана - полный текст подсказки.
+ * [onExtra] - своё касание вставки: подсказку не открывает.
  */
-/** Метка: слово или счёт тоном [tint], приписка [extra] тоном [extraTint]; касание открывает подсказку [tip] и зовёт [onOpen]. */
-@Composable private fun Mark(label: String, tint: Color, icon: ImageVector, tip: () -> Tip, extra: String? = null, extraTint: Color = Rune, onOpen: (() -> Unit)? = null) {
+@Composable private fun Mark(
+    label: String,
+    tint: Color,
+    icon: ImageVector,
+    tip: () -> Tip,
+    extra: String? = null,
+    extraTint: Color = Rune,
+    onOpen: (() -> Unit)? = null,
+    onExtra: (() -> Unit)? = null,
+) {
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(7.dp)
     Row(
@@ -176,7 +185,10 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.background(extraTint.copy(alpha = .14f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier
+                    .then(if (onExtra != null) Modifier.clickable(onClick = onExtra).touchZone() else Modifier)
+                    .background(extraTint.copy(alpha = .14f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
             )
         }
         if (open) TipCallout(tip()) { open = false }

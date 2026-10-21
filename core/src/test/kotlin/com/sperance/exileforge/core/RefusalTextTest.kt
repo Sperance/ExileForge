@@ -1,13 +1,28 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.expedition.refusedKey
+import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.serverLocale
+import com.sperance.exileforge.rules.content.TrialEventKind
+import com.sperance.exileforge.rules.run.RunEventKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
-/** Отказ без id: аргумент-id и id в собственном тексте сервера игроку не печатаются. */
+/** Отказ без id: аргумент-id и id в собственном тексте сервера игроку не печатаются; у каждого вида события есть имя в тосте отказа. */
 class RefusalTextTest {
+    /** Ключ [refusedKey] каждого вида события захода и испытания есть в словаре: вид, что сервер добавил без строки, ловится здесь. */
+    @Test
+    fun everyEventKindIsNamedInTheRefusalToast() {
+        val known = UiStrings.keys(Lang.RU)
+        val keys = RunEventKind.entries.map { it.refusedKey() } + TrialEventKind.entries.map { it.refusedKey() }
+        assertEquals(emptyList(), keys.filterNot { it in known }, "нет в словаре")
+        assertTrue(keys.isNotEmpty())
+    }
+
     @Test
     fun aRefusalPrintsNoId() {
         val was = serverLocale

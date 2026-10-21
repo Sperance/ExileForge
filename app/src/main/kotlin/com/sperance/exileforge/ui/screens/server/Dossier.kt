@@ -182,6 +182,7 @@ private enum class DossierFold(val title: String) {
     var open by remember(dossier.account.userId, dossier.hero?.heroId) { mutableStateOf<DossierFold?>(null) }
     var redrawing by remember { mutableStateOf(false) }
     val runFlags = dossier.hero?.runFlags.orEmpty()
+    val refuseWeight = account.index?.rules?.run?.plausibility?.refuseWeight
     val folds = DossierFold.entries.filter {
         when (it) {
             DossierFold.ECONOMY -> dossier.economy != null
@@ -193,7 +194,7 @@ private enum class DossierFold(val title: String) {
     Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape)) {
         folds.forEachIndexed { i, fold ->
             if (i > 0) HorizontalDivider(color = Bronze)
-            val (summary, tint) = summary(fold, dossier)
+            val (summary, tint) = summary(fold, dossier, refuseWeight)
             Row(
                 Modifier.fillMaxWidth().clickable { open = if (open == fold) null else fold }.padding(horizontal = 12.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -218,7 +219,7 @@ private enum class DossierFold(val title: String) {
                             MutedText(ui("moderation.reports", dossier.appeals, dossier.reports))
                         }
 
-                        DossierFold.PACE -> runFlags.asReversed().forEach { flag -> RunFlagLine(flag) }
+                        DossierFold.PACE -> runFlags.asReversed().forEach { flag -> RunFlagLine(flag, refuseWeight) }
 
                         DossierFold.FATE -> {
                             val fate = dossier.account.fate
@@ -242,10 +243,10 @@ private enum class DossierFold(val title: String) {
 }
 
 /**
- * Итог свёрнутой строки [fold] справа и его цвет: «снаряж. 41K · 5 уник.», «2 устр. · общих нет», «чисто», «меток: 3» (есть вес
- * отказа - [Ember]), дата выбора дара.
+ * Итог свёрнутой строки [fold] справа и его цвет: «снаряж. 41K · 5 уник.», «2 устр. · общих нет», «чисто», «меток: 3» (есть метка
+ * с весом отказа [refuseWeight] - [Ember]), дата выбора дара.
  */
-private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = when (fold) {
+private fun summary(fold: DossierFold, dossier: Dossier, refuseWeight: Int?): Pair<String, Color> = when (fold) {
     DossierFold.ECONOMY -> dossier.economy?.let { ui("dossier.economy_sum", compactNumber(it.gearValue.toDouble()), it.uniques) to Muted } ?: (DASH to Muted)
 
     DossierFold.LINKS -> {
@@ -260,21 +261,21 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 
     DossierFold.PACE -> {
         val flags = dossier.hero?.runFlags.orEmpty()
-        ui("dossier.run_flags", flags.size) to if (flags.any { it.weight >= REFUSE_WEIGHT }) Ember else Caution
+        ui("dossier.run_flags", flags.size) to flags.maxOf { it.weight }.let { weightTint(it, refuseWeight) }
     }
 
     DossierFold.FATE -> (dossier.account.fateAt?.let(::dayOf) ?: DASH) to Muted
 }
 
 /**
- * Метка темпа героя: «14.10 21:03 · зона» и вес справа (вес отказа [REFUSE_WEIGHT] и выше - [Ember]), причина и значение строкой
- * [Line], слагаемые стены ([RunFlag.trace]) одной приглушённой строкой - у меток без стены её нет.
+ * Метка темпа героя: «14.10 21:03 · зона» и вес справа (вес отказа [refuseWeight] и выше - [Ember], [weightTint]), причина и значение
+ * строкой [Line], слагаемые стены ([RunFlag.trace]) одной приглушённой строкой - у меток без стены её нет.
  */
-@Composable private fun RunFlagLine(flag: RunFlag) {
+@Composable private fun RunFlagLine(flag: RunFlag, refuseWeight: Int?) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             MutedText("${momentOf(flag.at)} · ${placeTitle(flag.zone)}", style = MaterialTheme.typography.labelSmall)
-            Text(ui("moderation.run_flag.weight", flag.weight), color = if (flag.weight >= REFUSE_WEIGHT) Ember else Caution, style = MaterialTheme.typography.labelSmall)
+            Text(ui("moderation.run_flag.weight", flag.weight), color = weightTint(flag.weight, refuseWeight), style = MaterialTheme.typography.labelSmall)
         }
         Line(ui("moderation.run_flag.reason.${flag.reason}"), fineNumber(flag.value))
         flag.trace?.let { trace ->
@@ -285,6 +286,12 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
         }
     }
 }
+
+/**
+ * Цвет веса метки темпа: с веса, с которого сервер отказывает событию ([refuseWeight] - правило `run.plausibility.refuseWeight`
+ * контента), - [Ember], легче - [Caution]; правила ещё не пришли - [Caution].
+ */
+private fun weightTint(weight: Int, refuseWeight: Int?): Color = if (refuseWeight != null && weight >= refuseWeight) Ember else Caution
 
 /** Место метки темпа словарём: зона похода, регион раша, Разлом или башня - как сервер пишет [RunFlag.zone]. */
 private fun placeTitle(zone: String): String = when {
@@ -612,9 +619,6 @@ private const val SERVER_NAME = 32
 /** Подозрения досье, что подсвечивают свою строку. */
 private const val LEVEL_RATE = "LEVEL_RATE"
 private const val TRADES = "TRADES"
-
-/** Вес метки темпа, с которого сервер отказывает событию, а не только помечает заход. */
-private const val REFUSE_WEIGHT = 2
 
 /** Места меток темпа вне зон похода, как их пишет сервер: Разлом, башня и префикс кодов регионов раша. */
 private const val RIFT = "rift"

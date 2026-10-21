@@ -111,7 +111,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
     when (command) {
         RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
-        is RunCommand.Swift -> if (swiftAllowed != command.on) {
+        is RunCommand.SwiftAllowed -> if (swiftAllowed != command.on) {
             swiftAllowed = command.on
             if (swift) repace()
         }

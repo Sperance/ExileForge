@@ -183,7 +183,7 @@ private fun curseLore(view: EffectView): Lore = when (val origin = view.origin) 
             FlaskBottle(flask, if (view.halted) 0f else 1f, true, Modifier.fillMaxSize().padding(horizontal = side / 4, vertical = side / 8))
         } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
-        } else if (view.source == PROVOKED) {
+        } else if (view.source == INTIMIDATED) {
             com.sperance.exileforge.ui.icons.StatIcon(CoreStat.INTIMIDATE.code, tint, Modifier.fillMaxSize().padding(side / 6))
         } else {
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)

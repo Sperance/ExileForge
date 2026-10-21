@@ -267,7 +267,7 @@ data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<F
  * Устрашение героя для подсказки: шанс [chance]%, на [seconds] секунд, урон устрашённого по герою
  * меньше на [cut]% (боссов - [bossCut]%), повторно - через [immunity] секунд (боссов - [bossImmunity]).
  */
-data class ProvokeView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
+data class IntimidateView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
 
 data class FightHud(
     val leader: RolledMonster,
@@ -289,7 +289,7 @@ data class FightHud(
     val target: Int? = null,
     val focus: Int? = null,
     /** Устрашение героя: его числа для подсказки; null - героя без устрашения. */
-    val heroProvoke: ProvokeView? = null,
+    val heroIntimidate: IntimidateView? = null,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
     val heroMana: Int = 0,
     val heroMaxMana: Int = 0,

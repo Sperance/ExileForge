@@ -12,7 +12,7 @@ import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.passiveViews
-import com.sperance.exileforge.core.campaign.combat.provokeView
+import com.sperance.exileforge.core.campaign.combat.intimidateView
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.combat.wanted
@@ -96,7 +96,7 @@ internal fun Battle.hud(
         events = newestFirst(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
-        heroProvoke = provokeView(),
+        heroIntimidate = intimidateView(),
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(), heroFate = fateGlows(),
         heroBarrier = h.barrier.roundToInt(),
@@ -217,7 +217,7 @@ private fun Battle.bossHud(): BossHud? {
 private fun Battle.readiness(me: Battle.Fighter, skill: MonsterSkill): CastState = when {
     me.ailments.any { it.ailment == Ailment.FROZEN && it.until > time } -> CastState.FROZEN
     me.held -> CastState.STUNNED
-    me.provoked && !me.chief -> CastState.SILENCED
+    me.intimidated && !me.chief -> CastState.SILENCED
     !wanted(me, skill) -> CastState.WAITING
     else -> CastState.COUNTDOWN
 }

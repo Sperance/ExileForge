@@ -193,7 +193,7 @@ enum class NoteKind {
     CAST_NO_MANA,
 
     /** Устрашение героя: враг устрашён на value секунд. */
-    PROVOKED,
+    INTIMIDATED,
 
     /** Подрыв метки героя: ref - умение, value - урон подрыва по каждой цели. */
     MARK_BURST,

@@ -219,13 +219,13 @@ class Battle(
         internal val recouping = mutableListOf<Recovery>()
 
         /**
-         * Устрашение героя на этом враге: до [provokedUntil] устрашён силой [provoke], повторно - не
-         * раньше [provokeFree].
+         * Устрашение героя на этом враге: до [intimidatedUntil] устрашён силой [intimidation], повторно - не
+         * раньше [intimidateFree].
          */
-        internal var provokedUntil = -1.0
-        internal var provokeFree = -1.0
-        internal var provoke = 0.0
-        val provoked: Boolean get() = provokedUntil > time
+        internal var intimidatedUntil = -1.0
+        internal var intimidateFree = -1.0
+        internal var intimidation = 0.0
+        val intimidated: Boolean get() = intimidatedUntil > time
 
         /** Its low-life lines are on. */
         var low = false

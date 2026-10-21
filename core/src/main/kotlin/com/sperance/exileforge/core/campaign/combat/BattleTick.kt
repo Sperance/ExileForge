@@ -70,7 +70,7 @@ internal fun Battle.step(dt: Double) {
     foeFighters.forEach { foe ->
         if (!foe.alive || foe.still || outcome != null) return@forEach
         castTick(foe)
-        val silenced = provokedSkills(foe, dt)
+        val silenced = intimidatedSkills(foe, dt)
         burnedSkills(foe, dt)
         if (!foe.held && !silenced) monsterCast(foe)
     }

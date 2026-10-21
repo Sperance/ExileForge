@@ -17,9 +17,9 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.castTick
 import com.sperance.exileforge.core.campaign.combat.monsterCast
 import com.sperance.exileforge.core.campaign.combat.place
-import com.sperance.exileforge.core.campaign.combat.provoke
-import com.sperance.exileforge.core.campaign.combat.provokedSkills
-import com.sperance.exileforge.core.campaign.combat.provokedTaken
+import com.sperance.exileforge.core.campaign.combat.intimidate
+import com.sperance.exileforge.core.campaign.combat.intimidatedSkills
+import com.sperance.exileforge.core.campaign.combat.intimidatedTaken
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -209,15 +209,15 @@ class ClientCombatTest {
 
     /** Устрашённый бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
     @Test
-    fun a_provoked_foe_hits_softer_and_waits() {
-        val provoke = rules.caps.provoke
-        val b = battle(body(mapOf(CoreStat.INTIMIDATE.code to provoke * 2)), Foe(body(life = 1e9)))
+    fun an_intimidated_foe_hits_softer_and_waits() {
+        val chance = rules.caps.intimidate
+        val b = battle(body(mapOf(CoreStat.INTIMIDATE.code to chance * 2)), Foe(body(life = 1e9)))
         val foe = b.foe(0)
-        repeat(1000) { if (!foe.provoked) b.provoke(foe) }
-        assertTrue(foe.provoked)
-        assertEquals(1 - rules.provoke.cut(provoke, false) / 100, b.provokedTaken(foe, b.heroFighter), 1e-9)
+        repeat(1000) { if (!foe.intimidated) b.intimidate(foe) }
+        assertTrue(foe.intimidated)
+        assertEquals(1 - rules.intimidate.cut(chance, false) / 100, b.intimidatedTaken(foe, b.heroFighter), 1e-9)
         foe.readyAt["X"] = 5.0
-        assertTrue(b.provokedSkills(foe, 1.0))
+        assertTrue(b.intimidatedSkills(foe, 1.0))
         assertEquals(6.0, foe.readyAt.getValue("X"), 1e-9)
     }
 

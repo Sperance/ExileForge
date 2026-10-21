@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -32,13 +33,14 @@ import com.sperance.exileforge.ui.theme.Parchment
 
 /** A loot chest just opened: its name and everything it gave — gold, stacks, things — then «Забрать». */
 @Composable fun ChestOpenedSheet(game: GameUi, opening: ChestOpening, onDismiss: () -> Unit) {
+    val gear = remember(opening.equipment, game.index) { opening.equipment.mapNotNull { item -> game.view(item)?.let { item to it } } }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(itemTitle(opening.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Engraved(ui("chest.inside"))
             if (opening.gold > 0) Line(game, null, ui("chest.gold", opening.gold))
             opening.items.forEach { (code, amount) -> Line(game, code, "${itemTitle(code)} ×$amount") }
-            opening.equipment.forEach { item -> game.view(item)?.let { ItemCard(it, enabled = false, detailed = true, seals = game.itemSeals(item)) } }
+            gear.forEach { (item, piece) -> ItemCard(piece, enabled = false, detailed = true, seals = game.itemSeals(item)) }
             if (opening.gold <= 0 && opening.items.isEmpty() && opening.equipment.isEmpty()) MutedText(ui("chest.empty"))
             ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("chest.take")) }
         }

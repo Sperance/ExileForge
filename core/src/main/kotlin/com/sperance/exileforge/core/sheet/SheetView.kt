@@ -36,8 +36,11 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
  * Герой над контентом: что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
  */
 internal object HeroLens {
+    /** Память видов копий: одна на приложение, сбрасывается сама с новым контентом. */
+    private val views = ItemViews()
+
     /** The view of an item over the content on screen, or null before the content has been read. */
-    fun view(index: ContentIndex?, item: ItemInstance): ItemView? = index?.let { ItemView.of(item, it) }
+    fun view(index: ContentIndex?, item: ItemInstance): ItemView? = index?.let { views.of(item, it) }
 
     /** What the merchant pays for [item], by the rules' price; null until the content has arrived. */
     fun sellPrice(index: ContentIndex?, item: ItemInstance): Long? = view(index, item)?.sellPrice()
@@ -203,6 +206,33 @@ private class LastOf<R>(private val compute: (ContentIndex) -> R) {
     fun of(index: ContentIndex): R {
         last?.takeIf { it.first === index }?.let { return it.second }
         return compute(index).also { last = index to it }
+    }
+}
+
+/**
+ * Память видов копий ([ItemView]) по содержимому копии: та же копия ([ItemInstance] - данные, ключ - её поля) над тем же
+ * контентом даёт тот же вид, и его ленивые строки считаются раз, а не при каждой перерисовке списка. Вид одной копии и одного
+ * контента одинаков - память не меняет отображение. Держит не больше [LIMIT] видов, давно не спрошенные уходят первыми; новый
+ * контент сбрасывает всё. Потокобезопасна: виды спрашивают и вне главного потока (фильтр вещей, примерка, ремёсла).
+ */
+private class ItemViews(private val limit: Int = LIMIT) {
+    private var index: ContentIndex? = null
+    private val known = object : LinkedHashMap<ItemInstance, ItemView>(limit * 4 / 3 + 1, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ItemInstance, ItemView>): Boolean = size > limit
+    }
+
+    /** Вид копии [item] над контентом [index] из памяти или заново; null - шаблона копии в контенте нет. */
+    fun of(item: ItemInstance, index: ContentIndex): ItemView? = synchronized(this) {
+        if (this.index !== index) {
+            this.index = index
+            known.clear()
+        }
+        known[item] ?: ItemView.of(item, index)?.also { known[item] = it }
+    }
+
+    private companion object {
+        /** Сколько видов держит память: с запасом на тайник, лут похода и витрину разом. */
+        const val LIMIT = 512
     }
 }
 

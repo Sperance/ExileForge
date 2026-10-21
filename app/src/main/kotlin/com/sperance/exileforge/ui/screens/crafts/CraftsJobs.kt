@@ -452,8 +452,10 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
 @Composable
 internal fun ToolPicker(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val slot = Slot.of(profession.tool)
-    val tools = game.hero?.stash.orEmpty().filter { !it.socketed }
-        .mapNotNull { instance -> game.view(instance)?.takeIf { slot != null && it.slot == slot }?.let { instance to it } }
+    val tools = remember(game.hero?.items, game.index, slot) {
+        game.hero?.stash.orEmpty().filter { !it.socketed }
+            .mapNotNull { instance -> game.view(instance)?.takeIf { slot != null && it.slot == slot }?.let { instance to it } }
+    }
     val inspect = rememberInspect()
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.7f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

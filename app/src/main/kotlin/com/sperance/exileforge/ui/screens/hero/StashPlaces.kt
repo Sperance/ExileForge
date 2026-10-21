@@ -16,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -85,15 +84,14 @@ import com.sperance.exileforge.ui.theme.*
             MutedText(ui("stash.overflow_hint"), Modifier.weight(1f))
             ForgeButton(onClick = { vm.claimOverflow() }, state = ButtonState.of(!full && !game.busy), kind = ButtonKind.Text) { Text(ui("stash.claim_all")) }
         }
-        hero.overflow.forEach { item ->
-            game.view(item)?.let { piece ->
-                ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
-                    RowActions(Modifier.fillMaxWidth()) {
-                        RowButton(ui("hero.sell_do"), onClick = { vm.sellOverflow(item.id) }, kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && !item.locked))
-                        RowButton(ui("stash.claim"), onClick = { vm.claimOverflow(item.id) }, state = ButtonState.of(!full && !game.busy))
-                    }
-                }) { inspect(Inspect.Copy(item)) }
-            }
+        val pieces = remember(hero.overflow, game.index) { hero.overflow.mapNotNull { item -> game.view(item)?.let { item to it } } }
+        pieces.forEach { (item, piece) ->
+            ItemRow(piece, price = piece.sellPrice(), verdict = rememberGearVerdict(game, item), footer = {
+                RowActions(Modifier.fillMaxWidth()) {
+                    RowButton(ui("hero.sell_do"), onClick = { vm.sellOverflow(item.id) }, kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && !item.locked))
+                    RowButton(ui("stash.claim"), onClick = { vm.claimOverflow(item.id) }, state = ButtonState.of(!full && !game.busy))
+                }
+            }) { inspect(Inspect.Copy(item)) }
         }
     }
 }

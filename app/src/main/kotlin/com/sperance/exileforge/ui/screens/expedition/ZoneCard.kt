@@ -83,7 +83,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
-    val maps = zoneMaps(game, zone, launch)
+    val maps = remember(game.hero?.items, index, zone.code, launch.picked) { zoneMaps(game, zone, launch) }
     var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
     val launchGuarded: (() -> Unit) -> Unit = { go -> if (maps.picked?.item?.locked == true) askLocked = go else go() }
     askLocked?.let { go ->

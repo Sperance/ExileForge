@@ -89,9 +89,11 @@ private const val HERO_CARD = -1
     var hint by remember { mutableStateOf<FocusHint?>(null) }
 
     fun focusOn(index: Int) {
-        val taunter = fight.foes.firstOrNull { it.alive && it.taunt }
         val foe = fight.foes.firstOrNull { it.index == index }
-        if (taunter != null && foe != null && !foe.taunt && fight.focus != index) hint = FocusHint.TauntFirst(names[index].orEmpty(), names[taunter.index].orEmpty())
+        if (foe != null && foe.alive && !foe.reachable && fight.focus != index) {
+            val taunter = fight.foes.firstOrNull { it.alive && it.taunt }?.index
+            hint = FocusHint.TauntFirst(names[index].orEmpty(), taunter?.let(names::get).orEmpty())
+        }
         onCommand(RunCommand.Focus(index))
     }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }

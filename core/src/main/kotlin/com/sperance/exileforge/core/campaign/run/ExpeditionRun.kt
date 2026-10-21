@@ -279,11 +279,17 @@ class ExpeditionRun(
         }
 
     /**
-     * Босс основной карты убит в этом заходе: шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]). Не у зоны
-     * Ваал - её страж не босс карты; Бездна по карте не ходит.
+     * Босс основной карты убит в этом заходе: право на шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]) до конца
+     * захода. Не у зоны Ваал - её страж не босс карты; Бездна по карте не ходит. Ускорен ли шаг сейчас - [hastened].
      */
     var swift = false
         private set
+
+    /** Ускорение после босса включено настройкой устройства (`GameSettings.swiftAfterBoss`); смена - командой [RunCommand.Swift]. */
+    internal var swiftAllowed = true
+
+    /** Шаг героя ускорен сейчас: босс пал ([swift]) и ускорение включено ([swiftAllowed]). */
+    val hastened: Boolean get() = swift && swiftAllowed
 
     /** Босс карты пал в этом заходе: герой ускоряется до конца захода. */
     internal fun bossSlain() {
@@ -479,8 +485,11 @@ class ExpeditionRun(
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
         shield = shield.coerceIn(0.0, hero.maxShield)
-        world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats, swift), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
+        repace()
     }
+
+    /** Шаг и свет героя по карте от текущего листа: ускорение после босса ([hastened]) поверх предела скорости листа. */
+    internal fun repace() = world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats, hastened), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
 
     var fight: Battle? = null
         internal set
@@ -673,6 +682,7 @@ class ExpeditionRun(
             bossSlain: Boolean = false,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
             speed: Int = 1,
+            swiftAllowed: Boolean = true,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
@@ -703,6 +713,7 @@ class ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, callbacks, fateRun,
             ).also {
+                it.swiftAllowed = swiftAllowed
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()
                 if (bossSlain) it.bossSlain()

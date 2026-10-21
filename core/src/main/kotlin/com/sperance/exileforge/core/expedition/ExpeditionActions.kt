@@ -198,6 +198,9 @@ class ExpeditionActions(
             }
         }
         scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { heroChanged(it) } }
+        scope.launch {
+            prefs.settings.map { it.swiftAfterBoss }.distinctUntilChanged().collect { on -> listOfNotNull(parent, mutableRun.value).forEach { it.send(RunCommand.Swift(on)) } }
+        }
     }
 
     private fun expedition(transform: (Expedition) -> Expedition) = repository.update(transform)
@@ -350,6 +353,7 @@ class ExpeditionActions(
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
             speed = prefs.fightSpeed(i.rules.fight),
+            swiftAllowed = prefs.settings.value.swiftAfterBoss,
         ).also { r -> if (toBoss) r.send(RunCommand.ToBoss) }
         vaalKilled = started.vaalKilled
         persist()

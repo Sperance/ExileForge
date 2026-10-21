@@ -267,7 +267,7 @@ internal class ScenePainter {
         val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
         val x = isoX(world.heroX, world.heroY)
         val y = isoY(world.heroX, world.heroY)
-        if (run.swift && world.moving && motion) swiftTrail(x, y + unit * HERO_TOKEN * TOKEN_MID + bob, world.facingX, world.facingY)
+        if (run.hastened && world.moving && motion) swiftTrail(x, y + unit * HERO_TOKEN * TOKEN_MID + bob, world.facingX, world.facingY)
         val centre = Offset(x, -y - unit * HERO_TOKEN * TOKEN_MID - bob)
         ailmentHalo(centre, run.hud.value.heroAilments)
         val code = classCode

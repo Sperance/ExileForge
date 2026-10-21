@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.campaign.run.arenaGate
 import com.sperance.exileforge.core.campaign.run.seal
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.LocalSettingsEdit
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.components.touchZone
@@ -51,13 +52,15 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.BlightTint
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.LossText
+import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Quiet
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlinx.coroutines.delay
 
 /**
- * Метки состояния карты под её именем: страж (с «×N», пока шаг героя ускорен его гибелью), печать стража, ворота арены,
+ * Метки состояния карты под её именем: страж (с «×N» после его гибели: живая, пока шаг ускорен, серая - ускорение выключено;
+ * касание переключает ускорение), печать стража, ворота арены,
  * очаг Скверны и журнал, что сервер давно не берёт или отклонил. Метка - короткое слово или счёт «3/5» цветом своего
  * смысла; полный текст - в подсказке по касанию ([TipCallout]), а касание метки журнала ещё и отправляет его сейчас ([onRetry]).
  * Чего нет - метки нет.
@@ -78,10 +81,19 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
     }
 }
 
-/** Метка стража: жив, отдыхает или повержен; ускоренный шаг после его гибели - «×N» внутри неё, слова - в подсказке. */
+/**
+ * Метка стража: жив, отдыхает или повержен; шаг после его гибели - «×N» внутри неё, слова - в подсказке. «×N» серая, пока ускорение
+ * выключено настройкой; касание метки с «×N» переключает настройку ([LocalSettingsEdit]).
+ */
 @Composable private fun GuardianMark(run: ExpeditionRun, hud: RunHud, zone: Boolean) {
     val guardian = GuardianLine.of(hud, zone)
     val factor = run.index.campaign.expedition.bossSlainSpeed
+    val edit = LocalSettingsEdit.current
+    val swift = when {
+        !hud.swift -> ""
+        hud.hastened -> ui("run.swift", number(factor))
+        else -> ui("run.swift_off")
+    }
     val (tint, icon) = when (guardian.state) {
         GuardianState.ALIVE -> LossText to ForgeGlyphs.Skull
         GuardianState.RESTING -> guardian.color to Icons.Outlined.Schedule
@@ -91,8 +103,10 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
         guardian.mark,
         tint,
         icon,
-        { Tip(guardian.text, ui("run.swift", number(factor)).takeIf { hud.swift }.orEmpty(), tint = guardian.color) },
+        { Tip(guardian.text, swift, tint = guardian.color) },
         extra = ui("expedition.mark.swift", number(factor)).takeIf { hud.swift },
+        extraTint = if (hud.hastened) Rune else Muted,
+        onOpen = edit?.let { change -> { change { copy(swiftAfterBoss = !swiftAfterBoss) } } }.takeIf { hud.swift },
     )
 }
 
@@ -136,7 +150,8 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
  * Метка над картой: значок и короткое [label] цветом [tint] в окантовке того же цвета, [extra] - светлая вставка справа («×2»).
  * Касание раскрывает подсказку [tip] (читается в миг открытия) и зовёт [onOpen]; для чтения с экрана - полный текст подсказки.
  */
-@Composable private fun Mark(label: String, tint: Color, icon: ImageVector, tip: () -> Tip, extra: String? = null, onOpen: (() -> Unit)? = null) {
+/** Метка: слово или счёт тоном [tint], приписка [extra] тоном [extraTint]; касание открывает подсказку [tip] и зовёт [onOpen]. */
+@Composable private fun Mark(label: String, tint: Color, icon: ImageVector, tip: () -> Tip, extra: String? = null, extraTint: Color = Rune, onOpen: (() -> Unit)? = null) {
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(7.dp)
     Row(
@@ -157,11 +172,11 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
         extra?.let {
             Text(
                 it,
-                color = Rune,
+                color = extraTint,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.background(Rune.copy(alpha = .14f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 1.dp),
+                modifier = Modifier.background(extraTint.copy(alpha = .14f), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp, vertical = 1.dp),
             )
         }
         if (open) TipCallout(tip()) { open = false }

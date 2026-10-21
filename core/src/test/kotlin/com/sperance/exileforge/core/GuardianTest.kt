@@ -8,6 +8,8 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.campaign.run.handle
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -22,7 +24,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Страж, что отдыхает и возвращается посреди захода, и общее правило энергощита. */
+/** Страж, что отдыхает и возвращается посреди захода, ускорение после его гибели и общее правило энергощита. */
 class GuardianTest {
     private val index get() = TestContent.index
     private val zone get() = index.campaign.zones.first()
@@ -52,6 +54,18 @@ class GuardianTest {
         run.update(0.0)
         assertTrue(run.hud.value.sealed, "the guardian is back on its post")
         assertNull(run.hud.value.guardianRest)
+    }
+
+    @Test
+    fun haste_after_the_boss_waits_for_the_setting() {
+        val run = expedition(CampaignState(chests = chests))
+        val plain = run.world.heroSpeed
+        run.handle(RunCommand.Swift(false))
+        run.bossSlain()
+        assertTrue(run.swift)
+        assertEquals(plain, run.world.heroSpeed, 1e-9, "the setting off keeps the plain pace")
+        run.handle(RunCommand.Swift(true))
+        assertEquals(plain * index.campaign.expedition.bossSlainSpeed, run.world.heroSpeed, 1e-9, "the setting on applies the boss factor at once")
     }
 
     @Test

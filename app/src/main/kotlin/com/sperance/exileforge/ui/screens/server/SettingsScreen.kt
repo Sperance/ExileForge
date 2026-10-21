@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.Animation
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.DirectionsRun
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
@@ -170,6 +171,7 @@ internal enum class SettingsPage(val title: String) {
             { ui("settings.speed.option", it) },
             note = ui("settings.speed_note"),
         ) { change { copy(fightSpeed = it) } }
+        SwitchRow(Icons.Outlined.DirectionsRun, ui("settings.swift"), ui("settings.swift_note"), set.swiftAfterBoss) { change { copy(swiftAfterBoss = it) } }
         ChoiceRow(Icons.Outlined.Whatshot, ui("settings.damage"), DamageNumbers.entries, set.damageNumbers, { ui("settings.damage.${it.name}") }) {
             change { copy(damageNumbers = it) }
         }

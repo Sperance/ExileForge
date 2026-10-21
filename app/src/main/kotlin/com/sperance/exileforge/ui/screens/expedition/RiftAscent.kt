@@ -325,7 +325,7 @@ private val MistTones = listOf(RiftColors.Deep.copy(alpha = .55f), RiftColors.Ri
         Spacer(
             Modifier.fillMaxSize().drawWithCache {
                 val ground = Offset(size.width / 2, size.height - box.foot.dp.toPx())
-                val ring = Offset((if (gate) 50 else 23).dp.toPx(), (if (gate) 22 else 11.5f).dp.toPx())
+                val ring = Offset((if (gate) 50 else 23).dp.toPx(), (if (gate) 22f else 11.5f).dp.toPx())
                 val shape = if (gate) gateShape(ground, silhouette) else plinthShape(spot.node.kind, ground, tint)
                 onDrawBehind {
                     val phase = breath.value
@@ -449,9 +449,11 @@ private class MarkShape(private val faces: List<Pair<Path, Color>>, private val 
 private fun isoBox(c: Offset, w: Float, h: Float, top: Color, left: Color, right: Color): List<Pair<Path, Color>> {
     val a = w / 2
     val b = w / 4
-    fun face(vararg p: Offset) = Path().apply {
-        moveTo(p[0].x, p[0].y)
-        p.drop(1).forEach { lineTo(it.x, it.y) }
+    fun face(p0: Offset, p1: Offset, p2: Offset, p3: Offset) = Path().apply {
+        moveTo(p0.x, p0.y)
+        lineTo(p1.x, p1.y)
+        lineTo(p2.x, p2.y)
+        lineTo(p3.x, p3.y)
         close()
     }
     return listOf(

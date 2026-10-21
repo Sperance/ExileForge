@@ -920,6 +920,7 @@ class ExpeditionActions(
         /** Первый повтор после неудачной отправки и сколько раз пауза удваивается до часовой. */
         const val RETRY_FIRST = 2_000L
         const val RETRY_DOUBLINGS = 3
+
         /** Не чаще этого журнал пишется на диск между отправками. */
         const val SAVE_EVERY = 5_000L
     }

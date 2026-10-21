@@ -174,8 +174,7 @@ class WorldLoader(
      * серверные) и с отпечатками файлов из манифеста [manifest] - теми же SHA-256 текстов, что считает сервер, так что
      * `ContentIndex.hash` сходится с серверным без хеширования на устройстве.
      */
-    private suspend fun parsedContent(manifest: ContentManifest, read: (String) -> String): ContentIndex =
-        withContext(Dispatchers.Default) { ContentLoader.loadAsync(WireJson, verify = false, hashes = manifest.chunks, read = read) }
+    private suspend fun parsedContent(manifest: ContentManifest, read: (String) -> String): ContentIndex = withContext(Dispatchers.Default) { ContentLoader.loadAsync(WireJson, verify = false, hashes = manifest.chunks, read = read) }
 
     suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { flights.run(PORTRAITS) { readPortraits() } }
 

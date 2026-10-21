@@ -125,7 +125,8 @@ internal fun ExpeditionRun.carriedEffects(): List<EffectView> {
     effectShelf.of(effects, hero)?.let { return it }
     if (effects.isEmpty()) return effectShelf.keep(effects, hero, emptyList())
     return effectShelf.keep(
-        effects, hero,
+        effects,
+        hero,
         effects.map { EffectView(it.source, it.kind, (it.left / it.duration).toFloat().coerceIn(0f, 1f), tenths(it.left), it.icon, BuffKind.of(it.source), it.lines) },
     )
 }

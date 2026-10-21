@@ -32,12 +32,16 @@ data class HeroCarry(
     val bare: Boolean get() = ailments.isEmpty() && effects.isEmpty() && charges.isEmpty() && delayed.isEmpty()
 
     /** Прошло [dt] секунд вне боя: всё тает, истёкшее уходит; нечему таять - то же несомое. */
-    fun after(dt: Double): HeroCarry = if (bare) this else copy(
-        ailments = ailments.mapNotNull { it.copy(left = it.left - dt).takeIf { a -> a.left > 0 } },
-        effects = effects.mapNotNull { it.copy(left = it.left - dt).takeIf { e -> e.left > 0 } },
-        charges = charges.mapNotNull { it.copy(left = it.left - dt).takeIf { c -> c.left > 0 } },
-        delayed = delayed.mapNotNull { it.copy(left = it.left - dt).takeIf { d -> d.left > 0 } },
-    )
+    fun after(dt: Double): HeroCarry = if (bare) {
+        this
+    } else {
+        copy(
+            ailments = ailments.mapNotNull { it.copy(left = it.left - dt).takeIf { a -> a.left > 0 } },
+            effects = effects.mapNotNull { it.copy(left = it.left - dt).takeIf { e -> e.left > 0 } },
+            charges = charges.mapNotNull { it.copy(left = it.left - dt).takeIf { c -> c.left > 0 } },
+            delayed = delayed.mapNotNull { it.copy(left = it.left - dt).takeIf { d -> d.left > 0 } },
+        )
+    }
 
     /** Строки, что несомое кладёт на героя вне боя: эффекты (условные - без условий боя) и заряды по правилам [rules] (null - без зарядов). */
     fun lines(rules: ChargeRules?): List<StatLine> = effects.flatMap { it.lines } +

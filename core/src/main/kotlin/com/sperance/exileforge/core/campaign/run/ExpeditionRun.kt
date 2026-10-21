@@ -213,6 +213,10 @@ class ExpeditionRun(
 
     /** Темп похода из контента: паузы боя. */
     internal val pace: ExpeditionRules get() = index.campaign.expedition
+
+    /** Резервы запасов тела героя вне боя ([ReserveMemo]). */
+    private val reserves = ReserveMemo()
+
     internal var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
     internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
@@ -239,9 +243,6 @@ class ExpeditionRun(
 
     /** Плитки [hazards] последнего снимка: пока ловушки те же, список не собирается заново. */
     internal var hazardsShown: List<HazardView> = emptyList()
-
-    /** Резервы запасов тела героя вне боя ([ReserveMemo]). */
-    private val reserves = ReserveMemo()
 
     /** Выборы объектов карты по номеру события: отклонённый сервером объект становится прежним. */
     internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()

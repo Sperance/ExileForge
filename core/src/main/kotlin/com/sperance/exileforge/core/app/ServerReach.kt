@@ -126,29 +126,22 @@ class ServerReach(
     /** Провода сошлись после ожидания: сессия, что не вошла с чужим сервером, входит снова. */
     val fitted = Channel<Unit>(Channel.CONFLATED)
 
-    /** Сервер сейчас: провод и версия его манифеста (`StaticManifest.version`); [version] null - манифест не ответил. */
-    class LiveServer(val wire: Wire?, val version: String?)
-
     /**
      * Провод сервера сейчас: манифест спрашивается заново - сервер мог смениться, пока игра была в фоне, и провод старта
      * устарел. Ответ обновляет [state] (после старта); не ответил за [FRESH_MS] - прежний провод, null - сервер ни разу не
      * ответил.
      */
-    suspend fun freshWire(): Wire? = freshServer().wire
-
-    /** То же, что [freshWire], и версия сервера из ответившего манифеста: проверка сборки пропускается, пока она та же. */
-    suspend fun freshServer(): LiveServer {
-        val api = connection.current.value ?: return LiveServer(state.value.wire, null)
-        val manifest = try {
-            withTimeoutOrNull(FRESH_MS) { api.liveManifest() }
+    suspend fun freshWire(): Wire? {
+        val api = connection.current.value ?: return state.value.wire
+        val wire = try {
+            withTimeoutOrNull(FRESH_MS) { api.liveManifest() }?.let { Wire(it.revision, it.rules) }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
             null
         }
-        val wire = manifest?.let { Wire(it.revision, it.rules) }
         if (wire != null) mutable.update { if (it.reach == Reach.ANSWERED) it.copy(wire = wire) else it }
-        return LiveServer(wire ?: state.value.wire, manifest?.version?.takeIf { it.isNotBlank() })
+        return wire ?: state.value.wire
     }
 
     /** Провод сервера, как только он ответит; null - не ответил за [wait]. */

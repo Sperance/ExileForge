@@ -178,8 +178,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 ) {
                     com.sperance.exileforge.ui.components.FateSightHost(game) {
                         com.sperance.exileforge.ui.components.LoreHost(game) {
-                            com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                                com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                            com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                                com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
                                     com.sperance.exileforge.ui.components.PlayerCardHost(game) {
                                         Box(Modifier.fillMaxSize()) {
                                             val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }

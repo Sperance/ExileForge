@@ -74,6 +74,7 @@ import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.ItemCode
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -89,6 +90,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -424,9 +427,15 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
     }
 }
 
-/** Что получится: имя выхода, сведения (в сумке или уровень) и описание стопки; касание - [onOpen] с его карточкой, если она есть. */
+/**
+ * Что получится: имя выхода, сведения (в сумке или уровень) и описание стопки; касание - [onOpen] с его карточкой, если она есть, у
+ * ритуала тира - карточка умения.
+ */
 @Composable private fun ResultLine(game: GameUi, job: JobView, onOpen: (Inspect?) -> Unit) {
     val card = resultCard(game, job)
+    val skill = (job.job as? Job.Evolve)?.skill?.takeIf { it.isNotEmpty() }
+    val inspectSkill = rememberSkillInspect()
+    val open: (() -> Unit)? = card?.let { { onOpen(it) } } ?: skill?.let { { inspectSkill(SkillPeek(it)) } }
     val output = job.output
     val meta = when (card) {
         is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble()))
@@ -435,7 +444,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
     }
     val description = if (card is Inspect.Stack) itemDescription(output, game.index) else ""
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = card != null, role = Role.Button) { onOpen(card) }.padding(vertical = 2.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = open != null, role = Role.Button) { open?.invoke() }.padding(vertical = 2.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -443,7 +452,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
             if (meta.isNotEmpty()) Text(meta, color = Muted, style = MaterialTheme.typography.labelSmall)
             if (description.isNotEmpty()) Text(description, color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
-        if (card != null) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+        if (open != null) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
 }
 

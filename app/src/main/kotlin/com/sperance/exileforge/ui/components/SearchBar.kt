@@ -71,6 +71,10 @@ import com.sperance.exileforge.ui.theme.Vital
     maxLength: Int = DefaultInputs.search,
     action: (@Composable RowScope.() -> Unit)? = null,
 ) {
+    val clear: () -> Unit = {
+        onQuery("")
+        onSearch?.invoke()
+    }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             CompactSearchField(
@@ -80,10 +84,7 @@ import com.sperance.exileforge.ui.theme.Vital
                 Modifier.weight(1f),
                 onSearch = onSearch,
                 found = found,
-                onClear = {
-                    onQuery("")
-                    onSearch?.invoke()
-                }.takeIf { query.isNotEmpty() },
+                onClear = clear.takeIf { query.isNotEmpty() },
             )
             filter?.let { FilterButton(it.chips.size, it.enabled, it.onOpen) }
             action?.invoke(this)

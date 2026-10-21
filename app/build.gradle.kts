@@ -90,7 +90,8 @@ dependencies {
 
 /**
  * Сторож исходников `:app`: проходит файлы Kotlin [sources] и падает, если [offenses] нашёл нарушения; пути в отчёте - от корня
- * модуля [root]. Наследник задаёт проверку файла и текст падения.
+ * модуля [root]. Наследник задаёт проверку файла и текст падения. Пройденная проверка пишет маркер [marker]: пока исходники
+ * не менялись, задача UP-TO-DATE.
  */
 abstract class SourceGuard : DefaultTask() {
     /** Исходники Kotlin приложения. */
@@ -101,6 +102,10 @@ abstract class SourceGuard : DefaultTask() {
     /** Корень модуля: пути в отчёте и проверке - от него. */
     @get:Internal
     abstract val root: DirectoryProperty
+
+    /** Маркер пройденной проверки: единственный выход задачи. */
+    @get:OutputFile
+    abstract val marker: RegularFileProperty
 
     /** Нарушения файла [text] по пути [path] от корня модуля; пусто - файл чист. */
     protected abstract fun offenses(path: String, text: String): List<String>
@@ -115,7 +120,17 @@ abstract class SourceGuard : DefaultTask() {
             .mapNotNull { (path, file) -> offenses(path, file.readText()).takeIf { it.isNotEmpty() }?.let { "$path: ${it.joinToString()}" } }
             .sorted()
         if (offenders.isNotEmpty()) throw GradleException(failure(offenders.size) + "\n" + offenders.joinToString("\n"))
+        marker.get().asFile.apply { parentFile.mkdirs() }.writeText("ok\n")
     }
+}
+
+/** Сторож [T] по имени задачи: исходники `src/main`, корень модуля и маркер `build/<задача>.ok`. */
+inline fun <reified T : SourceGuard> guard(name: String, crossinline configure: T.() -> Unit) = tasks.register<T>(name) {
+    group = "verification"
+    sources.from(fileTree("src/main") { include("**/*.kt") })
+    root.set(layout.projectDirectory)
+    marker.set(layout.buildDirectory.file("$name.ok"))
+    configure()
 }
 
 /**
@@ -132,11 +147,8 @@ abstract class AndroidOnlyCheck : SourceGuard() {
 }
 
 /** Сторож `:app` рядом с `:app:ktlintCheck` в job `app` CI. */
-val androidOnly by tasks.registering(AndroidOnlyCheck::class) {
-    group = "verification"
+val androidOnly = guard<AndroidOnlyCheck>("androidOnly") {
     description = "Fails if a Kotlin file of :app has neither an Android import nor @Composable."
-    sources.from(fileTree("src/main") { include("**/*.kt") })
-    root.set(layout.projectDirectory)
 }
 
 /**
@@ -177,11 +189,8 @@ abstract class ForgeButtonsCheck : SourceGuard() {
 }
 
 /** Сторож кнопок рядом с `:app:androidOnly` в job `app` CI. */
-val forgeButtonsOnly by tasks.registering(ForgeButtonsCheck::class) {
-    group = "verification"
+val forgeButtonsOnly = guard<ForgeButtonsCheck>("forgeButtonsOnly") {
     description = "Fails if a file outside ui/components uses Material buttons, toggles or chips."
-    sources.from(fileTree("src/main") { include("**/*.kt") })
-    root.set(layout.projectDirectory)
 }
 
 tasks.named("check") { dependsOn(androidOnly, forgeButtonsOnly) }

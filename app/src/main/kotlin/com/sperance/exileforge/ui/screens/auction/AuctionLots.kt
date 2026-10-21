@@ -208,8 +208,8 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
 
 /**
  * The hero's deals of the last days: what they sold and to whom, what they bought and from whom, the copy as it
- * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger]), сколько хранятся сделки - в ⓘ
- * у отбора.
+ * changed hands a tap away; on top - подпись, что здесь только сделки между игроками (торговец сюда не входит), и две свёрнутые таблички
+ * «Получено» и «Потрачено» ([DealLedger]), сколько хранятся сделки - в ⓘ у отбора и в подсказке пустой истории (`auction.historyDays`).
  *
  * Стопку и сферу открывает общая карточка, товар - карточка лота.
  */
@@ -235,23 +235,23 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
             DealFilter.BOUGHT -> !deal.belongsTo(heroId)
         }
     }
+    val rules = game.index?.rules?.auction
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
+                MutedText(ui("auction.history_scope"))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DealFilter.entries.forEach { f ->
                         ForgeChip(ui("auction.history_${f.name.lowercase()}"), filter == f, { filter = f }, mode = ChipMode.Choice)
                     }
                     Spacer(Modifier.weight(1f))
-                    game.index?.rules?.auction?.let { rules ->
-                        InfoMark(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", rules.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) }
-                    }
+                    rules?.let { InfoMark(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", it.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) } }
                 }
                 DealTable(game, ui("auction.history_earned"), ledger.received, open)
                 DealTable(game, ui("auction.history_spent"), ledger.spent, open)
             }
         }
-        if (shown.isEmpty()) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint")) }
+        if (shown.isEmpty() && rules != null) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint", rules.historyDays)) }
         items(shown, key = { it.id }) { deal ->
             LotRow(game, deal, marks = listOf(TradeMark(dealMark(deal, heroId))), withSeller = false) { openLot = deal.id }
         }

@@ -44,10 +44,14 @@ class MarketActions(
 
     private fun market(transform: (Market) -> Market) = repository.update(transform)
 
-    /** Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром. */
+    /**
+     * Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром, свой рынок («Мои лоты»,
+     * «История») - если прочитан дольше полуминуты назад.
+     */
     fun tab(tab: MarketTab) {
         market { it.copy(tab = tab) }
         if (tab.mode != null && market.readUnder[tab] != showcaseFilter()) loadShowcase()
+        if (tab.ownMarket) loadMyLots(fresh = true)
     }
 
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
@@ -164,11 +168,12 @@ class MarketActions(
         notices.toast(ui("fate.trophy_traded", equipmentTitle(bought.item.template)), NoticeKind.LOOT)
     }
 
-    /** Купленный лот уходит с витрины; страницы под ним остаются. */
+    /** Купленный лот уходит с витрины; страницы под ним остаются, сделка - в истории ([settled]). */
     fun buy(lotId: String) = trade(writing = true) {
         val lot = api.auction.buy(heroes.heroId, lotId)
         notices.toast(ui("toast.bought", lot.title))
         market { it.copy(showcase = it.showcase.without(lotId)) }
+        settled()
     }
 
     /** Выставляет копию за цену в сферах - [priceOrb] код предмета-валюты; торгами - [terms], цена - выкуп. */
@@ -183,19 +188,29 @@ class MarketActions(
 
     /**
      * Ставка [amount] сфер в торгах [lotId]: лот в торгах и в своих ставках - как ответил сервер; ставка от выкупа - выкуп, лот уходит из
-     * торгов. Тост - «ставка принята» или «выкуплено».
+     * торгов. Тост - «ставка принята» или «выкуплено»; свой рынок - заново ([settled]).
      */
     fun bid(lotId: String, amount: Long) = trade(writing = true) {
         val lot = api.auction.bid(heroes.heroId, lotId, amount)
         notices.toast(ui(if (lot.onSale) "toast.bid_placed" else "toast.bought", lot.title))
         traded(lot)
+        settled()
     }
 
-    /** Выкуп торгов [lotId] за цену выкупа: лот уходит из торгов и своих ставок. */
+    /** Выкуп торгов [lotId] за цену выкупа: лот уходит из торгов и своих ставок, сделка - в истории ([settled]). */
     fun buyout(lotId: String) = trade(writing = true) {
         val lot = api.auction.buyout(heroes.heroId, lotId)
         notices.toast(ui("toast.bought", lot.title))
         traded(lot)
+        settled()
+    }
+
+    /**
+     * Сделка или ставка прошла: свой рынок (сделки, ставки, места) читается заново внутри команды - её ответ несёт только лот. Сбой чтения
+     * прошедшую команду не заслоняет.
+     */
+    private suspend fun settled() {
+        quietly { api.auction.mine(heroes.heroId) }?.let { mine(it) }
     }
 
     /** Продажа своих торгов [lotId] лучшей ставке досрочно: ответ - свой рынок. */
@@ -222,13 +237,7 @@ class MarketActions(
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? {
         val key = "$itemCode/${rarity?.name}/$itemLevel"
         hints[key]?.let { return it.value }
-        return try {
-            api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            null
-        }
+        return quietly { api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) } }
     }
 
     /** Подсказки цен сеанса: сделки копятся медленно, а лист выставления открывают часто. */
@@ -290,8 +299,11 @@ class MarketActions(
     }
 
     /** Страница активной вкладки и свой рынок, прочитанные заново; не прочитались - null. */
-    private suspend fun fresh(): Pair<(Market) -> Market, AuctionMine>? = try {
-        page(market.tab) to api.auction.mine(heroes.heroId)
+    private suspend fun fresh(): Pair<(Market) -> Market, AuctionMine>? = quietly { page(market.tab) to api.auction.mine(heroes.heroId) }
+
+    /** Тихое чтение [read]: сбой - null, отмена идёт дальше. */
+    private suspend fun <T> quietly(read: suspend () -> T): T? = try {
+        read()
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
@@ -329,5 +341,8 @@ class MarketActions(
                 MarketTab.AUCTION -> LotMode.BID
                 MarketTab.LOTS, MarketTab.HISTORY -> null
             }
+
+        /** Вкладка своего рынка - читает `auction/mine`: свои лоты и ставки, сделки. */
+        val MarketTab.ownMarket: Boolean get() = this == MarketTab.LOTS || this == MarketTab.HISTORY
     }
 }

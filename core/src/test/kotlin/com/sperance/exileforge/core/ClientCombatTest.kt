@@ -207,11 +207,11 @@ class ClientCombatTest {
         assertTrue(!hero.alive, "a second revival in one fight")
     }
 
-    /** Спровоцированный бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
+    /** Устрашённый бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
     @Test
     fun a_provoked_foe_hits_softer_and_waits() {
         val provoke = rules.caps.provoke
-        val b = battle(body(mapOf(CoreStat.PROVOKE.code to provoke * 2)), Foe(body(life = 1e9)))
+        val b = battle(body(mapOf(CoreStat.INTIMIDATE.code to provoke * 2)), Foe(body(life = 1e9)))
         val foe = b.foe(0)
         repeat(1000) { if (!foe.provoked) b.provoke(foe) }
         assertTrue(foe.provoked)

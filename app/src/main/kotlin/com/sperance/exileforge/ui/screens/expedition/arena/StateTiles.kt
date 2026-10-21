@@ -178,7 +178,7 @@ private const val FATE_GLYPH = "✦"
         } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
         } else if (view.source == PROVOKED) {
-            com.sperance.exileforge.ui.icons.StatIcon(CoreStat.PROVOKE.code, tint, Modifier.fillMaxSize().padding(side / 6))
+            com.sperance.exileforge.ui.icons.StatIcon(CoreStat.INTIMIDATE.code, tint, Modifier.fillMaxSize().padding(side / 6))
         } else {
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
         }

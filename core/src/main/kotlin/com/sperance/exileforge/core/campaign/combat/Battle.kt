@@ -125,7 +125,7 @@ class Battle(
             attackInterval = 1 / next.attackSpeed
         }
 
-        /** Босс боя: уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, провокация, силы). */
+        /** Босс боя: уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, устрашение, силы). */
         val chief: Boolean get() = side == Side.MONSTER && index >= 0 && foes[index].rarity >= MonsterRarity.UNIQUE
 
         /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment, so lifting it frees at once. */
@@ -213,7 +213,7 @@ class Battle(
         internal val recouping = mutableListOf<Recovery>()
 
         /**
-         * Провокация героя на этом враге: до [provokedUntil] спровоцирован силой [provoke], повторно - не
+         * Устрашение героя на этом враге: до [provokedUntil] устрашён силой [provoke], повторно - не
          * раньше [provokeFree].
          */
         internal var provokedUntil = -1.0

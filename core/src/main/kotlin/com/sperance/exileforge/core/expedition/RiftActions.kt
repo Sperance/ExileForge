@@ -19,7 +19,9 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.RiftMetal
+import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
@@ -49,7 +51,7 @@ import kotlin.time.TimeSource
  * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
  * боя узла («Журнал боя»); [toll] - итог последнего выигранного боя для шапки; [coffers] - что лежало в открытых сундуках Владыки
  * по номеру сундука (только пока забег стоит у сундуков); [chart] - карта доски: что можно выбрать и почему нельзя; [walk] - шаг героя
- * к выбранному узлу, пока доска с ответом не легла.
+ * к выбранному узлу, пока доска с ответом не легла; [recap] - итог боя с павшим стражем (лист «Страж повержен»), до следующего боя.
  */
 data class RiftState(
     val open: Boolean = false,
@@ -62,7 +64,35 @@ data class RiftState(
     val lastFight: FightReport? = null,
     val toll: RiftToll? = null,
     val coffers: Map<Int, Reward> = emptyMap(),
+    val recap: RiftRecap? = null,
 )
+
+/**
+ * Итог боя с павшим стражем Разлома: страж [guardian] акта [act] ([final] - Владыка), сам бой [fight] (разбор и журнал), Честь до
+ * [honorBefore] и после [honorAfter] из [honorMax], взятый ключ [key], ключи к сундукам по металлам [keys] (после Владыки - сколько их
+ * ждёт), счёт забега до [scoreBefore] и после [scoreAfter]. [shown] - лист открыт: он открывается сам после принятого сервером итога,
+ * закрытый ждёт плашкой «Итог боя» на карте до следующего боя.
+ */
+data class RiftRecap(
+    val guardian: MonsterCode,
+    val act: Int,
+    val final: Boolean,
+    val fight: FightReport,
+    val honorBefore: Double,
+    val honorAfter: Double,
+    val honorMax: Double,
+    val key: RiftMetal?,
+    val keys: Map<RiftMetal, Int>,
+    val scoreBefore: Long,
+    val scoreAfter: Long,
+    val shown: Boolean = true,
+) {
+    /** Сколько Чести снял бой, в целых, как её показывает свиток. */
+    val honorLost: Int get() = (honorBefore.roundToInt() - honorAfter.roundToInt()).coerceAtLeast(0)
+
+    /** Очки, что принёс бой. */
+    val points: Long get() = (scoreAfter - scoreBefore).coerceAtLeast(0)
+}
 
 /** Итог выигранного боя узла для шапки забега: Честь до [before] и после [after], взятый ключ [key]. */
 data class RiftToll(val before: Double, val after: Double, val key: RiftMetal?) {
@@ -170,6 +200,12 @@ class RiftActions(
     /** Итог боя в шапке прочитан. */
     fun dismissToll() = mutable.update { it.copy(toll = null) }
 
+    /** Лист «Страж повержен» снова открыт с карты. */
+    fun openRecap() = mutable.update { state -> state.copy(recap = state.recap?.copy(shown = true)) }
+
+    /** Лист «Страж повержен» закрыт: итог ждёт плашкой на карте до следующего боя. */
+    fun closeRecap() = mutable.update { state -> state.copy(recap = state.recap?.copy(shown = false)) }
+
     /**
      * Итог боя: не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
      * сам, под одним ключом, с повтором при сбое сети; отказ сервера - на экран, с выходом к карте.
@@ -189,7 +225,8 @@ class RiftActions(
                 try {
                     val report = api.trials.riftAct(heroId, run.id, end, key)
                     val after = report.board.progress.run?.takeIf { it.id == run.id && end.won }
-                    mutable.update { it.copy(delivery = null, toll = after?.let { next -> RiftToll.of(run, next) }) }
+                    val recap = recap(run, end, report)
+                    mutable.update { it.copy(delivery = null, toll = after?.let { next -> RiftToll.of(run, next) }, recap = recap ?: it.recap) }
                     land(report)
                     return@launch
                 } catch (e: CancellationException) {
@@ -205,6 +242,32 @@ class RiftActions(
                 attempt++
             }
         }
+    }
+
+    /**
+     * Итог боя [end] забега [before], принятый ответом [report], если пал страж: бой - журнал арены, Честь, ключ и счёт - до и после
+     * (кончился ли забег с ним - из итога забега). Не страж, проигрыш или нет журнала и контента - null.
+     */
+    private fun recap(before: RiftRun, end: RiftAct.Fight, report: RiftReport): RiftRecap? {
+        val board = mutable.value.board ?: return null
+        val node = before.at?.let(board.plan::node)?.takeIf { end.won && it.kind == RiftNodeKind.GUARDIAN } ?: return null
+        val fight = mutable.value.lastFight ?: return null
+        val rules = world.state.value.content?.campaign?.trials?.rift ?: return null
+        val engine = engine(board) ?: return null
+        val after = report.board.progress.run?.takeIf { it.id == before.id }
+        return RiftRecap(
+            guardian = rules.guardians.monsters[node.act.coerceAtMost(rules.guardians.monsters.lastIndex)],
+            act = node.act,
+            final = node.act >= rules.acts - 1,
+            fight = fight,
+            honorBefore = before.honor,
+            honorAfter = after?.honor ?: report.result?.honor?.toDouble() ?: 0.0,
+            honorMax = engine.maxHonor(after ?: before),
+            key = after?.let { RiftToll.of(before, it).key },
+            keys = after?.keys.orEmpty(),
+            scoreBefore = engine.score(before),
+            scoreAfter = after?.let(engine::score) ?: report.result?.score ?: engine.score(before),
+        )
     }
 
     /** «К карте» после отказа: арена снимается, доска перечитывается - сервер скажет, где стоит забег. */
@@ -235,7 +298,8 @@ class RiftActions(
     /**
      * Доска легла: стоит бой - встаёт его арена (одна на узел), нет - арены нет.
      *
-     * Итог ещё в пути - доска стоит на том же бою, арена с итогом остаётся.
+     * Итог ещё в пути - доска стоит на том же бою, арена с итогом остаётся. Новая арена - следующий бой: итог прошлого стража ([RiftState.recap])
+     * снимается.
      */
     private fun show(board: RiftBoard) {
         val fight = board.fight
@@ -249,7 +313,8 @@ class RiftActions(
         }
         val coffers = run?.offer is RiftOffer.Coffers
         val chart = engine(board)?.let { RiftChart.of(it, run) }
-        mutable.update { it.copy(board = board, chart = chart, arena = arena, coffers = if (coffers) it.coffers else emptyMap()) }
+        val fresh = arena != null && arena !== current
+        mutable.update { it.copy(board = board, chart = chart, arena = arena, coffers = if (coffers) it.coffers else emptyMap(), recap = if (fresh) null else it.recap) }
     }
 
     private var sending: Job? = null

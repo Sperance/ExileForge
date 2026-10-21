@@ -12,7 +12,7 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 
-/** Голоса, отчёты и почта: модель ядра [model] в области экрана. */
+/** Отчёты и почта: модель ядра [model] в области экрана. */
 class FeedbackViewModel(
     repository: FeedbackRepository,
     connection: ServerConnection,

@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.model.auction.LotTerms
-import com.sperance.exileforge.core.model.command.AUCTION_PAGE_SIZE
 import com.sperance.exileforge.rules.trade.LotMode
 
 private const val AUCTION = "api/v1/auctionlot"
@@ -15,13 +14,13 @@ private const val AUCTION = "api/v1/auctionlot"
 /** Рынок игроков: витрина лотов за цену и торгов, свои лоты и ставки, выставление, покупка, ставка, выкуп и снятие. */
 class AuctionClient internal constructor(private val http: Transport) {
     /**
-     * Страница витрины по курсору, суженная фильтром [filter] на сервере (каждое сравниваемое поле - снимок, что несёт лот): после
+     * Страница витрины по курсору (размер - `rules.pageSize` сервера), суженная фильтром [filter] на сервере (каждое сравниваемое поле - снимок, что несёт лот): после
      * последнего курсора следа [cursors] ("" - с начала), след хранится для «назад». [mode] - лоты за цену (витрина) или торги
      * (вкладка «Аукцион»).
      */
     suspend fun search(heroId: String, filter: AuctionFilter, cursors: List<String>, mode: LotMode = LotMode.FIXED): AuctionPage {
         val after = cursors.lastOrNull().orEmpty()
-        val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "size" to AUCTION_PAGE_SIZE.toString(), "mode" to mode.name) + filter.query())
+        val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "mode" to mode.name) + filter.query())
         return page.copy(page = cursors.size - 1, cursors = cursors.ifEmpty { listOf("") })
     }
 

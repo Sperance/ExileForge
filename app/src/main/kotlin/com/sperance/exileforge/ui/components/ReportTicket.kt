@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Balance
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.FlashOn
@@ -17,13 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -32,14 +32,20 @@ import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.ReportTopic
 import com.sperance.exileforge.ui.theme.*
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 /**
- * Карточка отчёта - тикет, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
- * логин, герой ссылкой на его карточку и место); текст до трёх строк; переписка цитатами;
- * поле ответа автора ([answer]; null - поля нет); [version] - версия клиента плашкой в шапке (у модерации), пусто - нет; [extra] - своё место (у модерации - «Дополнение модерации», слово модерации, ведение Issue); подвал - голоса и действия
- * места, а с [issueLink] (по умолчанию - [LocalIssueLinks]) перед ними - «Issue #N ↗» ([IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] -
- * приглушена; [focused] - отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки
- * (у модерации сворачивает тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
+ * Карточка отчёта - тикет-чат, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
+ * логин, герой ссылкой на его карточку и место); текст до трёх строк; [extra] - своё место под текстом (у модерации - обстоятельства
+ * дела и «Дополнение модерации»); переписка пузырями ([ThreadChat]: модерация и разработчик слева, автор справа - у игрока «Вы», у
+ * модерации его логин [authorName]; [newReply] - последний ответ автора помечен «новый ответ»); [below] - место под перепиской (у игрока
+ * поле ответа и «Закрыть отчёт», у модерации - поле комментария и решения); [version] - версия клиента плашкой в шапке (у модерации),
+ * пусто - нет; подвал - действия места, а с [issueLink] (по умолчанию - [LocalIssueLinks]) перед ними - «Issue #N ↗»
+ * ([IssueLink]). Свой отчёт, известная проблема и отчёт модерации - одна карточка, разное - в слотах. [dim] - приглушена; [focused] -
+ * отчёт, ради которого открыт лист (у модерации - раскрытый): рамка `GoldBright`; [onHeader] - касание шапки (у модерации сворачивает
+ * тикет в строку); [topic] - тема ошибки: у улучшения в шапке подпись «Идея».
  */
 @Composable internal fun ReportTicket(
     kind: FeedbackKind,
@@ -52,10 +58,12 @@ import com.sperance.exileforge.ui.theme.*
     version: String = "",
     fresh: Boolean = false,
     focused: Boolean = false,
-    answer: AnswerSlot? = null,
+    authorName: String? = null,
+    newReply: Boolean = false,
     onHeader: (() -> Unit)? = null,
     author: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
+    below: (@Composable ColumnScope.() -> Unit)? = null,
     topic: ReportTopic = ReportTopic.ERROR,
     issueLink: Boolean = LocalIssueLinks.current,
     footer: @Composable RowScope.() -> Unit,
@@ -77,9 +85,9 @@ import com.sperance.exileforge.ui.theme.*
         }
         author?.let { Box(Modifier.padding(horizontal = 12.dp).padding(top = 4.dp)) { it() } }
         ExpandableText(text, Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = ui("feedback.read_all"))
-        thread.forEach { ThreadNote(it.author, it.text) }
-        answer?.let { AnswerField(it) }
         extra?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
+        if (thread.isNotEmpty()) ThreadChat(thread, authorName, newReply)
+        below?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
         Row(
             Modifier.fillMaxWidth().background(PanelRaised).padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -107,24 +115,74 @@ import com.sperance.exileforge.ui.theme.*
 /** День и месяц отчёта из ISO-времени сервера («2026-10-15T13:06:30» → «15.10»); не разобралось - пусто. */
 internal fun reportDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
 
-/** Запись переписки цитатой: разработчик - руной слева, модерация - золотом слева, автор - пергаментом справа. */
-@Composable private fun ThreadNote(who: NoteAuthor, words: String) {
-    val tint = when (who) {
-        NoteAuthor.DEVELOPER -> Rune
-        NoteAuthor.MODERATION -> Gold
-        NoteAuthor.AUTHOR -> Parchment
-    }
-    val mine = who == NoteAuthor.AUTHOR
-    Column(
-        Modifier.padding(start = if (mine) 36.dp else 12.dp, end = if (mine) 12.dp else 36.dp).padding(bottom = 8.dp).fillMaxWidth()
-            .background(tint.copy(alpha = .08f), RoundedCornerShape(8.dp))
-            .drawBehind { drawRect(tint, topLeft = Offset(if (mine) size.width - 3.dp.toPx() else 0f, 0f), size = Size(3.dp.toPx(), size.height)) }
-            .padding(horizontal = 11.dp, vertical = 6.dp),
-    ) {
-        Text(ui("feedback.who.${who.name.lowercase()}"), color = tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
+/**
+ * Переписка пузырями, как в мессенджере: модерация и разработчик - слева, автор - справа; пузырь не шире [BUBBLE_SHARE] тикета,
+ * подпись - кто (у автора - [authorName], без него «Вы»), время записи - мелко внизу справа. [newReply] - последний ответ автора
+ * обведён руной и подписан «новый ответ» (модерации ждёт его ответ).
+ */
+@Composable private fun ThreadChat(thread: List<IssueNote>, authorName: String?, newReply: Boolean) {
+    val last = if (newReply) thread.indexOfLast { it.author == NoteAuthor.AUTHOR } else NO_REPLY
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        thread.forEachIndexed { i, note -> Bubble(note, authorName, fresh = i == last) }
     }
 }
+
+/**
+ * Пузырь записи [note]: цвет и сторона - по автору, [fresh] - новый ответ автора. Полоса своей стороны - [BUBBLE_SHARE] ширины
+ * тикета, пузырь в ней - по тексту, прижат к своему краю.
+ */
+@Composable private fun Bubble(note: IssueNote, authorName: String?, fresh: Boolean) {
+    val mine = note.author == NoteAuthor.AUTHOR
+    val tint = when (note.author) {
+        NoteAuthor.DEVELOPER -> Rune
+        NoteAuthor.MODERATION -> Gold
+        NoteAuthor.AUTHOR -> if (fresh) Rune else Seam
+    }
+    val shape = if (mine) MineShape else TheirsShape
+    val who = when {
+        !mine -> ui("feedback.who.${note.author.name.lowercase()}")
+        authorName == null -> ui("feedback.who.author")
+        else -> authorName
+    }
+    val side = if (mine) Alignment.CenterEnd else Alignment.CenterStart
+    Box(Modifier.fillMaxWidth(), contentAlignment = side) {
+        Box(Modifier.fillMaxWidth(BUBBLE_SHARE), contentAlignment = side) { BubbleBody(note, who, mine, fresh, tint, shape) }
+    }
+}
+
+/** Тело пузыря: подпись [who], текст и время записи; рамка и подложка - цветом [tint] по стороне [mine]. */
+@Composable private fun BubbleBody(note: IssueNote, who: String, mine: Boolean, fresh: Boolean, tint: Color, shape: Shape) {
+    Column(
+        Modifier.clip(shape).background(if (mine) PanelRaised else tint.copy(alpha = .10f)).border(1.dp, tint.copy(alpha = if (mine && !fresh) 1f else .45f), shape)
+            .padding(start = 11.dp, end = 11.dp, top = 7.dp, bottom = 5.dp),
+    ) {
+        Text(
+            if (fresh) ui("feedback.who.fresh", who) else who,
+            color = if (mine && !fresh) Parchment else if (note.author == NoteAuthor.MODERATION) Vital else tint,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(note.text, color = Parchment, style = MaterialTheme.typography.bodySmall)
+        remember(note.at) { noteTime(note.at) }.takeIf { it.isNotEmpty() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), modifier = Modifier.align(Alignment.End)) }
+    }
+}
+
+/** Время записи переписки из ISO-мгновения сервера или GitHub по часам устройства («17.10 21:18»); не разобралось - пусто. */
+private fun noteTime(at: String): String = if (at.isBlank()) "" else runCatching { Instant.parse(at).atZone(ZoneId.systemDefault()).format(NOTE_TIME) }.getOrDefault("")
+
+private val NOTE_TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM HH:mm")
+
+/** Пузыри: хвост - уголок к своей стороне. */
+private val MineShape = RoundedCornerShape(14.dp, 14.dp, 4.dp, 14.dp)
+private val TheirsShape = RoundedCornerShape(14.dp, 14.dp, 14.dp, 4.dp)
+
+/** Доля ширины тикета, шире которой пузырь не растёт. */
+private const val BUBBLE_SHARE = .86f
+
+/** В переписке нет нового ответа автора. */
+private const val NO_REPLY = -1
 
 /** Видна ли в тикетах игрока ссылка «Issue #N ↗»: лист отчётов задаёт её по [com.sperance.exileforge.core.app.GameUi.seesIssues]. */
 internal val LocalIssueLinks = staticCompositionLocalOf { false }
@@ -138,24 +196,23 @@ internal val LocalIssueLinks = staticCompositionLocalOf { false }
 }
 
 /**
- * Поле ответа автора в тикете: [onSend] отправляет текст ответа; [enabled] - нет, пока идёт загрузка: поле гаснет, но остаётся на месте.
+ * Поле ответа автора под перепиской - не длиннее [limit] (`inputs.report` правил): поле и кнопка «Отправить» - [onSend] получает текст; с Issue он уходит его комментарием,
+ * до Issue копится в отчёте - и встаёт в переписку. [enabled] - нет, пока идёт загрузка: поле гаснет, но остаётся на месте.
  */
-internal class AnswerSlot(val enabled: Boolean, val onSend: (String) -> Unit)
-
-/** Ответ автора: поле и «Отправить» ([slot]); с Issue уходит его комментарием, до Issue копится в отчёте - и встаёт в переписку. */
-@Composable private fun AnswerField(slot: AnswerSlot) {
-    val enabled = slot.enabled
+@Composable internal fun AnswerField(enabled: Boolean, limit: Int, onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
-    Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, enabled = enabled, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
-        ForgeButton(
-            state = ButtonState.of(enabled && text.isNotBlank()),
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(text, { text = it.take(limit) }, enabled = enabled, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f))
+        ForgeIconButton(
+            Icons.AutoMirrored.Outlined.Send,
+            ui("feedback.answer_send"),
             onClick = {
-                slot.onSend(text.trim())
+                onSend(text.trim())
                 text = ""
             },
-            kind = ButtonKind.Text,
-        ) { Text(ui("feedback.answer_send"), style = MaterialTheme.typography.labelMedium) }
+            kind = ButtonKind.Primary,
+            state = ButtonState.of(enabled && text.isNotBlank()),
+        )
     }
 }
 
@@ -174,9 +231,6 @@ private val FeedbackKind.icon: ImageVector
         FeedbackKind.COMPLAINT -> Icons.Outlined.MailOutline
         FeedbackKind.APPEAL -> Icons.Outlined.Balance
     }
-
-/** Длина ответа автора в Issue из игры: сервер всё равно режет по `inputs.report`. */
-private const val ANSWER_MAX = 1000
 
 /** Сколько строк текста отчёта видно свёрнутым: касание раскрывает его на месте. */
 private const val TEXT_LINES = 3

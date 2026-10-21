@@ -20,7 +20,7 @@ val AccountUi.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 val DefaultInputs = Int.MAX_VALUE.let { open ->
     InputLimits(
         heroName = open, heroNameMin = 0, heroDescription = open, login = open, loginMin = 0, accountLogin = open, password = open,
-        passwordMin = 0, search = open, server = open, code = open, number = open, report = open, mailSubject = open,
+        passwordMin = 0, search = open, server = open, code = open, number = open, report = open, reason = open, mailSubject = open,
         mailBody = open, sanctionComment = open, appeal = open, gameServerCode = open, gameServerName = open,
     )
 }

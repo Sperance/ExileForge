@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.model.guild.GuildView
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.session.CommandRunner
@@ -42,7 +43,7 @@ class GuildActions(
     /** Сужает список до одной фракции, пустой код - до всех, и читает его снова с первой страницы. */
     fun filterFaction(code: String) {
         guild { it.copy(faction = code) }
-        search(0)
+        search()
     }
 
     /** Гильдия героя; контент прежде - числа экрана берутся из `guilds.json`. [fresh] - экран открылся. */
@@ -57,10 +58,24 @@ class GuildActions(
         if (heroes.onScreen(id)) guild { it.copy(mine = mine) }
     }
 
-    fun search(page: Int = 0) = commands.read(Reads.GUILD_SEARCH, restart = true) {
+    /** Первая страница списка гильдий под набранным поиском и фракцией; новый вызов сменяет идущий. */
+    fun search() = commands.read(Reads.GUILD_SEARCH, restart = true) {
         val id = hero()
-        val found = guilds.let { api.guild.search(id, it.query, page, it.faction) }
-        if (heroes.onScreen(id)) guild { it.copy(search = found) }
+        val asked = guilds
+        val found = api.guild.search(id, asked.query, 0, asked.faction)
+        if (heroes.onScreen(id)) guild { if (it.faction == asked.faction) it.copy(search = found, searched = asked.query) else it }
+    }
+
+    /**
+     * Следующая страница списка гильдий под прочитанными (листание до края): чтение не перезапускается, страница ложится, только пока
+     * поиск, фракция и прочитанные страницы те же.
+     */
+    fun moreSearch() = commands.read(Reads.GUILD_SEARCH) {
+        val id = hero()
+        val asked = guilds
+        if (!asked.search.more) return@read
+        val next = api.guild.search(id, asked.searched, asked.search.page + 1, asked.faction)
+        if (heroes.onScreen(id)) guild { if (it.faction == asked.faction && it.searched == asked.searched && it.search.page == asked.search.page) it.copy(search = it.search.followedBy(next) { card -> card.id }) else it }
     }
 
     fun create(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) = moving(ui("guild.toast.created", name.trim())) { api.guild.create(it, name, tag, faction, emblem, color, mode, minLevel) }
@@ -159,9 +174,10 @@ class GuildActions(
     /** Журнал с новейшей страницы или следующая за показанными; конец - когда сервер говорит, что старше нет. */
     fun loadLog(more: Boolean = false) = commands.read(Reads.GUILD_LOG, restart = !more) {
         val id = hero()
-        val page = if (more) guilds.logPage + 1 else 0
-        val read = api.guild.log(id, page)
-        if (heroes.onScreen(id)) guild { it.copy(log = if (more) it.log + read.entries else read.entries, logPage = page, logEnd = !read.more) }
+        val shown = guilds.log
+        if (more && !shown.more) return@read
+        val read = api.guild.log(id, if (more) shown.page + 1 else 0)
+        if (heroes.onScreen(id)) guild { if (more && it.log.page != shown.page) it else it.copy(log = if (more) Page(it.log.items + read.items, read.page, read.total, read.more) else read) }
     }
 
     private fun inviteName(guildId: String): String = guilds.mine?.invites?.firstOrNull { it.guild.id == guildId }?.guild?.name.orEmpty()

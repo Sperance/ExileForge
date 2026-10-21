@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.model.paging.followedBy
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -206,7 +207,7 @@ enum class FilterField { KIND, SLOT, RARITY, LEVEL, ORB, MAX_PRICE, SELLER, OWN_
 
 /**
  * The showcase by cursor: [next] opens the following page, `null` — nothing further. [page] and [cursors] are the
- * client's own: the cursor each page read began at (the first — ""). «Показать ещё» adds each next page under the lots shown.
+ * client's own: the cursor each page read began at (the first — ""). Листание до края списка дописывает следующую страницу под показанными.
  */
 @Serializable data class AuctionPage(
     val items: List<AuctionLot> = emptyList(),
@@ -219,10 +220,7 @@ enum class FilterField { KIND, SLOT, RARITY, LEVEL, ORB, MAX_PRICE, SELLER, OWN_
     val nextTrail: List<String>? get() = next?.let { cursors + it }
 
     /** [more], the page after this one, under the lots already shown — a lot listed twice across the seam kept once. */
-    fun followedBy(more: AuctionPage): AuctionPage {
-        val shown = items.mapTo(HashSet()) { it.id }
-        return more.copy(items = items + more.items.filterNot { it.id in shown })
-    }
+    fun followedBy(more: AuctionPage): AuctionPage = more.copy(items = items.followedBy(more.items) { it.id })
 
     /** The showcase without a lot that left it — bought — the count down by one. */
     fun without(lotId: String): AuctionPage = if (items.none { it.id == lotId }) this else copy(items = items.filterNot { it.id == lotId }, totalItems = (totalItems - 1).coerceAtLeast(0))

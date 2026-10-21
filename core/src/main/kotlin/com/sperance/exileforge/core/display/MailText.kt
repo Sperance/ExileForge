@@ -101,6 +101,7 @@ object MailSchemas {
         SystemMail.FEEDBACK_STATUS to feedback(status),
         SystemMail.FEEDBACK_ISSUE to feedback(issueState(ISSUE_VERSION)),
         SystemMail.FEEDBACK_REPLY to feedback(status),
+        SystemMail.FEEDBACK_COMMENT to feedback(status),
         SystemMail.AUCTION_EXPIRED to auction,
         SystemMail.AUCTION_RECALLED to auction,
         SystemMail.AUCTION_EXPIRING to auction,

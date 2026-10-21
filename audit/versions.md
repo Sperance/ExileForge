@@ -4,7 +4,6 @@
 
 ## API_REVISION (сервер `Constants.kt`, клиент `core/model/sync/Sync.kt`)
 
-- 89 - 0.16.0 - тайник в `HeroItem`, `ItemInstance.og`, снят автопробег (`auto*`), `atlas.json` с `layout`, `guild/log` - `{entries, more}`, `Mail.link`, `POST admin/feedback/note`.
 - 90 - 0.16.2 - стек падения с версией сборки, отчёты модерации без системных данных, место на доске Мощи, раздел `CHARGES`, `{r:…}` по пути правил.
 - 91 - 0.16.3 - `RunStart.chestStock`, `EventReward.chestStock`, `ActiveMap.sources`, `AuctionLot.returned`, `WorkGains/WorkTally.missed`, `FountainRule.flasks`.
 - 92 - 0.16.5 - `Received.overflowSold|autoSold` (`Sale`) вместо `sold/gold/shards`, `ProfessionView.layers` вместо `bonus`, `POST admin/fate?user=&reason=`, `GET admin/feedback/detail`.
@@ -14,6 +13,7 @@
 - 96 - 0.16.10 - `Job.additives` - код группы, `CraftingRules.additives` - группы с эффектами `AdditiveEffect` (`MODIFIER`/`YIELD`), `CraftsState.additives`; `hero/orb?count` (пачка сферы качества), снят `hero/merchant/buyOrb` и `rules.merchant.orbs`; поля контента `room` (семейство) и `cost` (вариант верстака); `Job.Chart.band` вместо `region`, счётчик `MAP_RUNS`; почта без частотных лимитов и уровня (из `rules.mail` сняты `perDay`/`perRecipient`/`guildPerDay`/`cooldownSeconds`/`windowHours`, из `unlocks` - `MAIL`; `mail/quota` без `to` и полей счёта; `MailGate` - `OPEN`/`MUTED`).
 - 97 - 0.16.11 - `HeroView.freeProgress` (замки прогресса - только тестировщику со свободным прогрессом) и `POST hero/tester/freeProgress?on=`, `RunReport|TrialReport.refusals` (только причины темпа), `run.plausibility.rushBossSeconds`, `TrialRun.nextBoss|wall`; Разлом: `RiftRun.honor|keys|burned` вместо `life`, `RiftAct.Fight.taken` вместо `life`/`hurt`, `RiftAct.Chalice|Open`, `RiftOffer.Coffers`, `RiftOffer.Forge.chalice`, `RiftNode.key`, `RiftResult.honor|honorScore|burned`, `RiftReport.coffer`, `rift.honor|keys`, `RiftScore.honor` вместо `flawless`, снят `RiftNodes.restHeal`.
 - 98 - 0.16.11 - `POST guild/stash/deposit?tab=` - пакетный вклад: тело - посылки `GuildDepositParcel` (копия `itemId` или стопка `code`+`amount`), ответ `GuildDeposited` (`stash`, `placed`, `refused` по `DepositBar`); правило `GuildDeposit`, событие журнала `STASH_IN_MANY`; торги рынка: `AuctionLot.mode|bidding|standing` (`LotMode`, `BidState`), `POST auctionlot/bid|buyout|accept`, `sell/*?mode=BID&minPrice=`, `search?mode=`, `AuctionMine.bids`, `AuctionSlots.bids|bidLimit`, `rules.auction.bidStep|bidStepMin|bidTailHours|bidsMax`, `slots` 100, письма `mail.auction_outbid|bid_returned|sold|won`, отказы `AU_018`-`AU_024`.
+- 99 - 0.17.0 - часть снимка `campaign` разделена на `campaign` и `run` (`RunState?`, null - заход закрыт), новый `POST hero/town` (`TownVisit`: доска заданий, ремёсла, гильдия, свой рынок одним ответом).
 
 ## RULES_VERSION (`rules/.../content/Content.kt`)
 
@@ -30,7 +30,6 @@
 
 ## Формы коллекций и миграции (`config/CollectionSchemas.kt`)
 
-- `task.atlasRebuild` 1 - 0.16.0 - узлы нового дерева Атласа сняты бесплатно, очки целы, герою письмо.
 - `task.looseJewels` 1 - 0.16.2 - самоцветы из невзятых гнёзд дерева - в тайник.
 - `task.itemLevelFloor` 1 - 0.16.2 - уровень предмета старых копий поднят до требования шаблона.
 - части `BugReport.traces` 1, `Hero`/`HeroRun.mapExperience` 1 - 0.16.2 - поля сняты, документы целы.
@@ -40,3 +39,4 @@
 - `task.chartBands` 1 - 0.16.10 - идущая работа картографа `CHART_REGION_N` - в `CHART_BAND_*` своих уровней.
 - `MailStamp`, `MailCounter` - 0.16.10 - сняты (`CollectionSchemas.RETIRED`): журнал и счётчик пределов почты не нужны, старт сносит их и их записи `Schema`.
 - часть `Hero.riftRun` 1 - 0.16.11 - сняты незаконченные забеги Разлома (`campaign.trials.rift.run`: Честь и ключи вместо здоровья), документы целы.
+- `HeroUnique` 1, `task.heroUniques` 1 - 0.17.0 - находки героев из карты `Hero.uniques` в коллекцию `HeroUnique` (документ на шаблон у героя), поле `uniques` снято, `uniquesFound` и номера копий целы.

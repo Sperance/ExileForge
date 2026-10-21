@@ -10,4 +10,10 @@
 
 ## План и коммиты
 - [ ] сервер p4-srv
-- [ ] клиент p4-cli (без LocaleAudit в UiStringsTest - после закрепления сервера)
+- [x] клиент p4-cli (без LocaleAudit в UiStringsTest - после закрепления сервера):
+  - c6164253 `ci: declare the inputs core tests read outside the classpath` - `core/build.gradle.kts`: `:core:test` знает исходники app, контент и локаль сабмодуля.
+  - d04aad81 `ci: let the :app source guards be UP-TO-DATE` - `app/build.gradle.kts`: маркер `build/<task>.ok` у `androidOnly`/`forgeButtonsOnly`, общий `guard<T>()`.
+  - b5f2227c `ci: shallow checkouts, no setup-android, app gate, shots on demand` - `android.yml`: без `setup-android` и `fetch-depth: 0` (сабмодуль дотягивается `fetch --unshallow`), гейт job `app`, `KeyScreensShotTest` и превью в логе только при `shots: true`, версия эмулятора в ключе кэша AVD.
+  - 0f731e17 `ci: one check script for the workflow and the pre-push check` - `scripts/check.sh core|app|all [--no-compile]`, job `core`/`app` зовут его; RULES.md «CI».
+  - a68ba2bf `test: rename the client CombatRulesTest to ClientCombatTest`.
+  - 05db1ca5 `test: merge the hero sheet guards into HeroSheetTest` - пять классов в один на общих фикстурах; RULES.md. В `backend/RULES.md`:10 остались имена `SheetCompletenessTest`/`EquippedModifiersTest` клиента - поправить на сервере.

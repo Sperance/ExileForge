@@ -114,8 +114,19 @@ tasks.withType<Test>().configureEach {
     }
 }
 
+/**
+ * Что тесты читают мимо classpath, - входы задачи: иначе с кэшем сборки правка исходников `:app` (`UiStringsTest` читает ключи
+ * `ui("…")`), контента или локали закреплённого сервера (`TestContent`) вернула бы тест из кэша без прогона.
+ */
 tasks.test {
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    mapOf(
+        "appSources" to "app/src/main/kotlin",
+        "serverContent" to "backend/src/main/resources/content",
+        "serverLocale" to "backend/src/main/resources/locale",
+    ).forEach { (name, path) ->
+        inputs.dir(rootProject.layout.projectDirectory.dir(path)).withPropertyName(name).withPathSensitivity(PathSensitivity.RELATIVE)
+    }
 }
 
 /**

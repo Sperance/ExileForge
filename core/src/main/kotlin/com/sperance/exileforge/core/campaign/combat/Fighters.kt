@@ -254,9 +254,22 @@ data class EffectView(
     val flask: FlaskKind? = null,
     /** Глоток погас на полном здоровье: плитка «прервано: здоровье полное», срока у неё нет. */
     val halted: Boolean = false,
+    /** Чей это эффект, когда его источник - не умение: тотем, ярость боя; null - имя по коду источника. */
+    val origin: EffectOrigin? = null,
 ) {
     /** Лежит весь бой: носимый с начала бафф ([Battle.wear]) или пассивное умение - полка «на весь бой», не таймер. */
     val lasting: Boolean get() = passive || seconds >= Battle.FOREVER / 2
+}
+
+/**
+ * Чей эффект, у которого нет своего умения: его имя и справка берутся отсюда, а не из кода источника (`totem#3` - не умение).
+ */
+sealed interface EffectOrigin {
+    /** Строки или проклятие стоящего тотема [code]. */
+    data class Totem(val code: String) : EffectOrigin
+
+    /** Ступень ярости боя на враге. */
+    data object Rage : EffectOrigin
 }
 
 /**

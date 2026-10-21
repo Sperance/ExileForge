@@ -4387,6 +4387,7 @@
   "fight.rage": "Ярость {0} · +{1}% · {2} с",
   "fight.rage_full": "Ярость {0} · +{1}%",
   "fight.rage_in": "Ярость через {0} с",
+  "fight.rage_buff": "Ярость боя",
   "fight.surrender": "Сдаться",
   "fight.surrender_q": "Сдаться в этом бою?",
   "fight.surrender_note": "Сдача — то же поражение: заход закончится, цена смерти спишется.",

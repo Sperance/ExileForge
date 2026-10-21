@@ -4387,6 +4387,7 @@
   "fight.rage": "Rage {0} · +{1}% · {2} s",
   "fight.rage_full": "Rage {0} · +{1}%",
   "fight.rage_in": "Rage in {0} s",
+  "fight.rage_buff": "Fight rage",
   "fight.surrender": "Surrender",
   "fight.surrender_q": "Surrender this fight?",
   "fight.surrender_note": "It is a defeat like a death: the run ends at the price of dying.",

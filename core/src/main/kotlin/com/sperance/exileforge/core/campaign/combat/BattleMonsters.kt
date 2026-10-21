@@ -43,7 +43,7 @@ internal fun Battle.calm() {
 }
 
 /** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
-private const val RAGE = "GUARDIAN_RAGE"
+internal const val RAGE = "GUARDIAN_RAGE"
 
 /**
  * A monster's skills, the first ready one it has a reason to use: a heal when hurt, a buff or a curse not already on.

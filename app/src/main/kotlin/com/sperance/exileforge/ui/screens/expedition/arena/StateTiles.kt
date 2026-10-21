@@ -155,6 +155,12 @@ private const val FATE_GLYPH = "✦"
     }
 }
 
+/** Справка проклятия на плитке: проклятие тотема - справка тотема, умения - его строки. */
+private fun curseLore(view: EffectView): Lore = when (val origin = view.origin) {
+    is EffectOrigin.Totem -> Lore.Totem(origin.code, null, view.seconds)
+    else -> Lore.Curse(view.source, null, view.seconds)
+}
+
 /**
  * A buff or a curse as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. Глоток, прерванный
  * полным здоровьем, - погасшая бутыль под знаком «стоп».
@@ -169,7 +175,7 @@ private const val FATE_GLYPH = "✦"
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
         tip.takeIf { lore == null },
-        Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).shelfTile(tint, bearing, side)
+        Modifier.then(if (lore != null) Modifier.clickable { lore(curseLore(view)) } else Modifier).shelfTile(tint, bearing, side)
             .semantics { contentDescription = title },
     ) {
         val flask = view.flask

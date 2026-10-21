@@ -97,8 +97,16 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.f
         it.buff?.kind,
         it.lines,
         flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
+        origin = effectOrigin(it.source),
     )
 } + if (fighter === heroFighter) haltViews() else emptyList()
+
+/** Чей эффект источника [source], если он не умение: тотем, что стоит, или ярость боя. */
+private fun Battle.effectOrigin(source: String): EffectOrigin? = when {
+    source == RAGE -> EffectOrigin.Rage
+    source.startsWith(TOTEM_SOURCE) -> standingTotems.firstOrNull { it.source == source }?.let { EffectOrigin.Totem(it.totem.totem.code) }
+    else -> null
+}
 
 /** Плитки глотков, что погасли на полном здоровье за последние [Halt.SHOWN] секунд. */
 private fun Battle.haltViews(): List<EffectView> = halts.filter { time - it.at < Halt.SHOWN }.map {

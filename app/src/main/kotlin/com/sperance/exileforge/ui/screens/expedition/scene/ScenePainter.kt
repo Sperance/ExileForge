@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.run.AbyssSpot
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.AilmentView
@@ -295,13 +296,14 @@ internal class ScenePainter {
     }
 
     /**
-     * Ореол ранящих недугов [ailments] вокруг жетона героя с серединой [centre] в мере холста: по кольцу на недуг, его цветом
-     * ([ailmentTint]), мягкое свечение снаружи. Декор: дышит на часах декора, без `LocalMotion` стоит в покое.
+     * Ореол ранящих недугов и холода [ailments] вокруг жетона героя с серединой [centre] в мере холста: по кольцу на недуг,
+     * его цветом ([ailmentTint]), мягкое свечение снаружи; у холода под жетоном - подпись «−X%» шага (`ChillMark`). Декор:
+     * дышит на часах декора, без `LocalMotion` стоит в покое.
      */
     private fun ailmentHalo(centre: Offset, ailments: List<AilmentView>) {
         var ring = 0
         for (view in ailments) {
-            if (!view.ailment.hurts) continue
+            if (!view.ailment.hurts && view.ailment != Ailment.CHILLED) continue
             val tint = ailmentTint(view.ailment)
             val breath = if (motion) .5f + .5f * sin(decor * HALO_BREATH + ring) else .5f
             val radius = unit * HERO_TOKEN * (HALO_SPAN + ring * HALO_STEP)

@@ -388,16 +388,17 @@ class ExpeditionWorld(
 
     /**
      * Шаг героя за [dt] секунд по шагу стика в осях карты ([paceX], [paceY] - доли скорости героя, [IsoGrid.pace]): длина шага
-     * больше 1 не срезается - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках.
+     * больше 1 не срезается - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках. [stride] - множитель шага
+     * сверх скорости листа и ускорения после босса: холод на герое (`ExpeditionRun.stride`); 1 - шаг полный.
      *
      * Каждый объект карты слышит шаг (ловушка бьёт своим ритмом, трещина считает простой); отвечает первый, кому есть что сказать.
      */
-    fun step(dt: Double, paceX: Double, paceY: Double): WorldEvent? {
+    fun step(dt: Double, paceX: Double, paceY: Double, stride: Double = 1.0): WorldEvent? {
         clock += dt
         val length = hypot(paceX, paceY)
         moving = length > 0.1
         if (moving) {
-            val speed = heroSpeed * length
+            val speed = heroSpeed * length * stride
             facingX = paceX / length
             facingY = paceY / length
             val (nx, ny) = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
@@ -498,6 +499,12 @@ class ExpeditionWorld(
             val grain = WallGrain.of(zone.biome, MapGenerator.styleOf(rules.shapeOf(zone.biome).shape))
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal, grain)
         }
+
+        /**
+         * Пол шага под холодом: множитель шага ([step] `stride`) не ниже этой доли, как бы силён ни был холод, - поверх пределов
+         * скорости листа (`expedition.minSpeed`/`maxSpeed`) и ускорения после босса. Кандидат в контент (`expedition.chillFloor`).
+         */
+        const val CHILL_FLOOR = 0.5
 
         /**
          * The hero's pace, sped up by movement speed from the sheet; [bossSlain] - босс основной карты убит в этом заходе:

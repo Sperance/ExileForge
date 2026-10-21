@@ -36,11 +36,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.TrapSpot
+import com.sperance.exileforge.core.campaign.run.strideText
 import com.sperance.exileforge.core.campaign.run.trapThreat
 import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -77,6 +79,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
 import com.sperance.exileforge.ui.screens.expedition.arena.tickTint
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
+import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -311,6 +314,26 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
         hazards.forEach { hazard -> androidx.compose.runtime.key(hazard.id) { HazardNumber(hazard, feet) } }
     }
 }
+
+/**
+ * Подпись холода под жетоном героя: «−X%» шага по множителю [stride] ([RunHud.stride]) цветом холода, под ореолом холода
+ * сцены; холода нет ([stride] 1) - подписи нет.
+ */
+@Composable internal fun ChillMark(stride: Double) {
+    if (stride >= 1.0) return
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Text(
+            strideText(stride),
+            Modifier.align(Alignment.TopCenter).offset(y = maxHeight * SceneCamera.HERO_DOWN + SCENE_UNIT * CHILL_MARK_DOWN),
+            color = ailmentTint(Ailment.CHILLED),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+        )
+    }
+}
+
+/** На сколько единиц сцены ниже точки героя ([SceneCamera.hero]) стоит подпись холода: под кольцами ореола. */
+private const val CHILL_MARK_DOWN = 2.1f
 
 /** Тик чуть в стороне от удара: оба читаются, пока удар висит; тик недуга - «−34» и знак недуга его цветом. */
 @Composable private fun BoxWithConstraintsScope.HazardNumber(hazard: HazardView, feet: Dp) {

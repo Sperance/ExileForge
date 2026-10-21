@@ -1922,6 +1922,7 @@
   "expedition.refused.PACE": "Сервер не засчитал событий: {0} - бой прошёл быстрее честного темпа",
   "expedition.refused.RULE": "Сервер не засчитал событий: {0} - не по правилам",
   "expedition.gather_broken": "Сбор прерван",
+  "expedition.chill.stride": "−{0}%",
   "expedition.pending": "Итоги захода ещё в пути: {0}",
   "fight.mana": "Мана {0}/{1}",
   "nav.skills": "Гримуар",

@@ -182,7 +182,7 @@ fun factorChange(factor: Double): String {
 }
 
 /** Доля в процентах: целое без дробной части, иначе одна цифра после точки. */
-private fun shareText(value: Double): String {
+fun shareText(value: Double): String {
     val rounded = Math.round(value * 10) / 10.0
     return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else String.format(java.util.Locale.ROOT, "%.1f", rounded)
 }

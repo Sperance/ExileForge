@@ -253,11 +253,11 @@ class Battle(
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 
         /**
-         * Chill slows every action; the strongest chill counts. Единая скорость действий: холод, замедление аур
-         * врагов ([Combatant.pace]) и темп боя правил (`combat.tempo`) одним множителем растягивают и замах, и применение, и
-         * перезарядку всех умений - героя и монстров.
+         * Chill slows every action; the strongest chill counts. Единая скорость действий: холод ([chillStretch] - та же формула,
+         * что замедляет шаг по карте), замедление аур врагов ([Combatant.pace]) и темп боя правил (`combat.tempo`) одним
+         * множителем растягивают и замах, и применение, и перезарядку всех умений - героя и монстров.
          */
-        fun slow() = (1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100) / (body.pace * rules.tempo)
+        fun slow() = chillStretch(ailments.strongestChill()) / (body.pace * rules.tempo)
 
         /** Shock makes every hit heavier; a curse can make it heavier still. */
         fun weakness() = 1 + held(Ailment.SHOCKED) / 100

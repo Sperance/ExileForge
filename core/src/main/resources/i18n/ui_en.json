@@ -1922,6 +1922,7 @@
   "expedition.refused.PACE": "The server did not count {0} event(s): the fight went faster than an honest pace allows",
   "expedition.refused.RULE": "The server did not count {0} event(s): against the rules",
   "expedition.gather_broken": "Gathering interrupted",
+  "expedition.chill.stride": "−{0}%",
   "expedition.pending": "The run's results are still on their way: {0}",
   "fight.mana": "Mana {0}/{1}",
   "nav.skills": "Grimoire",

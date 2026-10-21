@@ -16,9 +16,9 @@ import com.sperance.exileforge.rules.sheet.FlaskKind
  * monster's, which foe of the pack ([foe]).
  */
 data class ActiveAilment(
-    val ailment: Ailment,
+    override val ailment: Ailment,
     val until: Double,
-    val magnitude: Double,
+    override val magnitude: Double,
     val duration: Double,
     val source: Side,
     val foe: Int = 0,
@@ -33,7 +33,7 @@ data class ActiveAilment(
     val limit: Int? = null,
     /** Умение, чей урон во времени это: тик идёт в разбор боя этим умением; null - недуг удара. */
     val skill: String? = null,
-)
+) : AilmentStack
 
 /** Строка тика: недуг и умение, чей это урон во времени (null - недуг удара), - отдельной строкой журнала и разбора. */
 data class Ticking(val ailment: Ailment, val skill: String?)

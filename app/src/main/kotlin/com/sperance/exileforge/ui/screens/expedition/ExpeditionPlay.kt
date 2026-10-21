@@ -112,7 +112,10 @@ import kotlin.math.roundToInt
         Box(Modifier.fillMaxSize().background(Ink)) {
             ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
             BlightWatch(hud.blight, shell::announce)
-            if (hud.phase == RunPhase.MAP) LiveHazards(live)
+            if (hud.phase == RunPhase.MAP) {
+                LiveHazards(live)
+                LiveChill(live)
+            }
             when (hud.phase) {
                 RunPhase.MAP -> {
                     val flight = rememberBagFlight(hud.drops)
@@ -210,7 +213,7 @@ import kotlin.math.roundToInt
  * Снимок захода для тела экрана похода: в бою - без того, что бой меняет каждый кадр (сам бой, пулы и пояс героя,
  * опасности), - их читает только арена ([RunFight]). На карте - без тикающего: здоровья, щита и маны, долей пояса, несомого,
  * урона ловушек и доли действия у объекта; их читают свои листовые элементы из живого снимка ([MapVitals], [RoadEffects],
- * [LiveFlasks], [LiveHazards], [ObjectActionPanel]), и экран не перекомпонуется на каждом их шаге. Прочие фазы - как есть.
+ * [LiveFlasks], [LiveHazards], [LiveChill], [ObjectActionPanel]), и экран не перекомпонуется на каждом их шаге. Прочие фазы - как есть.
  */
 private fun RunHud.screenOnly(): RunHud = when (phase) {
     RunPhase.FIGHT -> copy(
@@ -251,6 +254,12 @@ private val BELT_FLASK = 40.dp
 @Composable private fun LiveHazards(live: State<RunHud>) {
     val hazards by remember(live) { derivedStateOf { live.value.hazards } }
     HazardFloat(hazards)
+}
+
+/** Подпись холода под героем из живого снимка: «−X%» шага, пока холод замедляет. */
+@Composable private fun LiveChill(live: State<RunHud>) {
+    val stride by remember(live) { derivedStateOf { live.value.stride } }
+    ChillMark(stride)
 }
 
 /** Арена захода по живому снимку [live]: кадр боя перекомпонует только её. */

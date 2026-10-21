@@ -51,6 +51,7 @@ import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.FlaskBonuses
+import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -66,16 +67,27 @@ import com.sperance.exileforge.ui.theme.*
  *
  * Замена значения - цена узла, не бонус: строка цветом потери.
  */
-@Composable fun ModifierLine(index: ContentIndex, line: Line) {
+@Composable fun ModifierLine(index: ContentIndex, line: Line, tap: NoteTap = NoteTap.LINE) {
     val penalty = index.modifier(line.code)?.let { modifierText(index).penalty(it) } == true
-    ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue)
+    ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue, StatDetail.stats(index, line.code), index, tap)
 }
 
-/** A modifier's sentence already worded, under the glyph of what it changes; [tint] - цвет текста (штраф - потерей). */
-@Composable fun ModifierLine(text: String, glyph: Glyph = Glyph.INFO, tint: Color = ModBlue) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(glyph.vector, null, tint = if (tint == ModBlue) Rune else tint, modifier = Modifier.size(16.dp))
-        Text(text, color = tint, style = MaterialTheme.typography.bodyMedium)
+/**
+ * A modifier's sentence already worded, under the glyph of what it changes; [tint] - цвет текста (штраф - потерей). Строка объясняет
+ * характеристики [stats], что она двигает ([StatNoted]: касание - окно с их описанием, [tap] - что ловит касание).
+ */
+@Composable fun ModifierLine(
+    text: String,
+    glyph: Glyph = Glyph.INFO,
+    tint: Color = ModBlue,
+    stats: List<String> = emptyList(),
+    index: ContentIndex? = null,
+    tap: NoteTap = NoteTap.LINE,
+) {
+    val ink = if (tint == ModBlue) Rune else tint
+    StatNoted(stats, index, Modifier.fillMaxWidth(), ink, tap) {
+        Icon(glyph.vector, null, tint = ink, modifier = Modifier.padding(end = 10.dp).size(16.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }
 
@@ -206,7 +218,7 @@ fun ItemCard(
             }
         }
     }
-    opened?.let { ModifierInfoSheet(it) { opened = null } }
+    opened?.let { ModifierInfoSheet(it, item.index) { opened = null } }
 }
 
 /** Значки состояний копии, замок и «ждёт отправки»; у полной карточки ([tipped]) касание значка - подсказка, что он значит. */

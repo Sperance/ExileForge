@@ -2834,6 +2834,7 @@
   "stat.src.reserve": "reserves {0}% of mana",
   "stat.fight.note": "the fight adds it to the figure",
   "stat.fold.more": "More",
+  "stat.note.open": "What this means",
   "stat.fold.what": "What it does",
   "stat.flow.LIFE_OF_MAX": "Share of maximum life",
   "stat.flow.LIFE_RULE": "Regeneration in fights",

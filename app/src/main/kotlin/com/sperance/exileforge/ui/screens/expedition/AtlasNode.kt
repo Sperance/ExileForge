@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.GoldBill
+import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -90,7 +91,9 @@ import kotlin.math.sin
         val isTaken = node.code in taken
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
-            effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
+            StatNoted(StatDetail.stats(index, line.code), index, Modifier.fillMaxWidth(), Sky.text) {
+                effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)) }
+            }
             lineNote(index, line)?.let { note ->
                 Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
             }

@@ -166,7 +166,7 @@ import kotlin.math.sin
                 else -> false
             }
             OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = at }) {
-                option.forEach { line -> ModifierLine(index, line) }
+                option.forEach { line -> ModifierLine(index, line, NoteTap.MARK) }
             }
         }
         if (rechoosable) {

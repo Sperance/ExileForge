@@ -42,6 +42,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.fate.BoonState
 import com.sperance.exileforge.core.fate.FateSight
 import com.sperance.exileforge.core.fate.FatedLine
+import com.sperance.exileforge.core.fate.boonStats
 import com.sperance.exileforge.core.fate.boonText
 import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -159,7 +160,7 @@ private fun caption(line: FatedLine): String = when (line.state) {
     BoonState.OUTDONE -> ui("fate.boon_outdone", line.rival?.let { slotTitle(it) }.orEmpty())
 }
 
-/** Раскрытая строка: ✦, текст словами сервера, плашка тира и подпись состояния. */
+/** Раскрытая строка: ✦, текст словами сервера, плашка тира и подпись состояния; строка листа объясняет свои характеристики ([StatNoted]). */
 @Composable private fun FatedRow(sight: FateSight, line: FatedLine, modifier: Modifier) {
     val look = look(line.state)
     val shape = RoundedCornerShape(10.dp)
@@ -173,7 +174,8 @@ private fun caption(line: FatedLine): String = when (line.state) {
             }
             .padding(start = 12.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        val stats = remember(sight.index, line.boon) { boonStats(sight.index, line.boon) }
+        StatNoted(stats, sight.index, tint = look.ink) {
             Text("$SIGIL ${boonText(sight.index, line.boon)}", color = look.ink, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             TierChip(line.boon.tier, look.ink)
         }

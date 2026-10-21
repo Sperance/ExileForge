@@ -2834,6 +2834,7 @@
   "stat.src.reserve": "резерв {0}% маны",
   "stat.fight.note": "бой читает вместе с цифрой",
   "stat.fold.more": "Подробнее",
+  "stat.note.open": "Что это значит",
   "stat.fold.what": "Что даёт",
   "stat.flow.LIFE_OF_MAX": "Доля максимума здоровья",
   "stat.flow.LIFE_RULE": "Регенерация в бою",

@@ -46,11 +46,12 @@ import kotlin.math.roundToInt
  * Разлом на экране: доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
  * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
  * боя узла («Журнал боя»); [toll] - итог последнего выигранного боя для шапки; [coffers] - что лежало в открытых сундуках Владыки
- * по номеру сундука (только пока забег стоит у сундуков).
+ * по номеру сундука (только пока забег стоит у сундуков); [chart] - карта доски: что можно выбрать и почему нельзя.
  */
 data class RiftState(
     val open: Boolean = false,
     val board: RiftBoard? = null,
+    val chart: RiftChart? = null,
     val arena: RiftArena? = null,
     val result: RiftResult? = null,
     val delivery: RiftDelivery? = null,
@@ -138,6 +139,12 @@ class RiftActions(
         }
     }
 
+    /** Шаг на узел [node], выбранный на карте: только если карта его пускает ([RiftSpot.bar]). */
+    fun go(node: Int) {
+        if (mutable.value.chart?.spot(node)?.let { it.bar == null } != true) return
+        act(RiftAct.Move(node))
+    }
+
     /** Итог боя в шапке прочитан. */
     fun dismissToll() = mutable.update { it.copy(toll = null) }
 
@@ -219,13 +226,21 @@ class RiftActions(
             else -> arena(board)
         }
         val coffers = run?.offer is RiftOffer.Coffers
-        mutable.update { it.copy(board = board, arena = arena, coffers = if (coffers) it.coffers else emptyMap()) }
+        val chart = engine(board)?.let { RiftChart.of(it, run) }
+        mutable.update { it.copy(board = board, chart = chart, arena = arena, coffers = if (coffers) it.coffers else emptyMap()) }
     }
 
     private var sending: Job? = null
 
     /** Счёт Предначертания забега по id забега: арены одного забега делят «Второе дыхание». */
     private var fateRun: Pair<String, com.sperance.exileforge.core.campaign.combat.FateRun>? = null
+
+    /** Правила схемы доски [board]; без загруженного контента - null. */
+    private fun engine(board: RiftBoard): RiftEngine? {
+        val index = world.state.value.content ?: return null
+        val rules = index.campaign.trials?.rift ?: return null
+        return RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
+    }
 
     private fun arena(board: RiftBoard): RiftArena? {
         val index = world.state.value.content ?: return null
@@ -234,7 +249,7 @@ class RiftActions(
         val gear = expedition.gear() ?: return null
         val run = board.progress.run ?: return null
         val fight = board.fight ?: return null
-        val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
+        val engine = engine(board) ?: return null
         val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
         return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate, prefs.fightSpeed(index.rules.fight)) { end -> deliver(end) }
     }

@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,14 +36,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.expedition.RiftChart
+import com.sperance.exileforge.core.expedition.RiftSpot
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftEngine
 import com.sperance.exileforge.rules.rift.RiftNode
-import com.sperance.exileforge.rules.rift.RiftRun
-import com.sperance.exileforge.rules.rift.RiftStage
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -54,7 +53,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Карта Разлома «Восхождение»: все акты одной лентой снизу вверх, страж ведёт дальше
+ * Карта Разлома «Восхождение» по карте забега [chart]: все акты одной лентой снизу вверх, страж ведёт дальше
  * без разрывов. Узлы - шестигранники-руны, путь - жила с текущей энергией, доступные узлы дышат и пускают кольцо. Дальше
  * обзора ([RiftEngine.seen]) клубится туман, в нём видны только силуэты стражей; ключ захода на видимом непройденном узле - знак его
  * металла у руны. Лента сама держит героя в нижней трети.
@@ -66,21 +65,16 @@ import kotlin.math.sin
 @Composable internal fun RiftAscent(
     rules: RiftRules,
     engine: RiftEngine,
-    run: RiftRun?,
+    chart: RiftChart,
     idle: Boolean,
     modifier: Modifier = Modifier,
     top: Dp = 0.dp,
     bottom: Dp = 0.dp,
-    onNode: (RiftNode) -> Unit,
+    onNode: (RiftSpot) -> Unit,
 ) {
     val plan = engine.plan
     val depths = rules.acts * (rules.layout.rows + 1)
-    val here = run?.at?.let(plan::node)
-    val reachable = remember(run) { if (run != null && run.stage == RiftStage.MOVE) engine.next(run).toSet() else emptySet() }
-    val walked = run?.path.orEmpty().toSet()
-    val seen = remember(run, plan) { plan.nodes.filter { engine.seen(run, it) }.map { it.id }.toSet() }
-    val sight = engine.sight(run)
-    val reach = here?.let(engine::depth) ?: -1
+    val here = chart.here
     val flow = motionPhase(FLOW_MS)
     val breath = motionPhase(BREATH_MS)
     val drift = motionPhase(DRIFT_MS)
@@ -92,7 +86,7 @@ import kotlin.math.sin
         fun y(node: RiftNode): Dp = top + ROW * (depths - 1 - engine.depth(node)) + ROW / 2
         fun x(node: RiftNode): Dp = SIDE + (width - SIDE * 2) * ((node.lane + .5f) / node.width)
         val density = LocalDensity.current
-        LaunchedEffect(run?.at, viewport) {
+        LaunchedEffect(here, viewport) {
             snapshotFlow { scroll.maxValue }.first { it > 0 }
             val anchor = here?.let(::y) ?: (top + ROW * (depths - 1))
             scroll.animateScrollTo(with(density) { (anchor - viewport * .66f).toPx() }.toInt().coerceIn(0, scroll.maxValue))
@@ -105,23 +99,18 @@ import kotlin.math.sin
                         val ground = Brush.verticalGradient(listOf(RiftColors.Ground, RiftColors.Ground2, RiftColors.Ground))
                         val glow = here?.let { Offset(px(x(it)), px(y(it))) }
                         val halo = glow?.let { Brush.radialGradient(listOf(RiftColors.Rift.copy(alpha = .16f), Color.Transparent), it, px(ROW * 3)) }
-                        val veins = buildList {
-                            plan.nodes.forEach { node ->
-                                node.links.mapNotNull(plan::node).forEach { next ->
-                                    if (node.id !in seen || next.id !in seen) return@forEach
-                                    add(
-                                        Vein.of(
-                                            Offset(px(x(node)), px(y(node))),
-                                            Offset(px(x(next)), px(y(next))),
-                                            bend = if (node.lane % 2 == 0) -8.dp.toPx() else 8.dp.toPx(),
-                                            walked = node.id in walked && next.id in walked,
-                                            open = node == here && next.id in reachable,
-                                        ),
-                                    )
-                                }
-                            }
+                        val veins = chart.trails.map { trail ->
+                            val from = plan.nodes[trail.from]
+                            val to = plan.nodes[trail.to]
+                            Vein.of(
+                                Offset(px(x(from)), px(y(from))),
+                                Offset(px(x(to)), px(y(to))),
+                                bend = if (from.lane % 2 == 0) -8.dp.toPx() else 8.dp.toPx(),
+                                walked = trail.walked,
+                                open = trail.open,
+                            )
                         }
-                        val fogEdge = px(top + ROW * (depths - 1 - (reach + sight)))
+                        val fogEdge = px(top + ROW * (depths - 1 - chart.edge))
                         onDrawBehind {
                             drawRect(ground)
                             if (glow != null && halo != null) drawCircle(halo, px(ROW * 3), glow)
@@ -131,22 +120,20 @@ import kotlin.math.sin
                         }
                     },
                 )
-                plan.nodes.forEach { node ->
-                    val visible = node.id in seen
-                    val guardian = node.kind == RiftNodeKind.GUARDIAN
-                    if (!visible && !guardian) return@forEach
-                    val open = node.id in reachable && idle
+                chart.spots.forEach { spot ->
+                    if (!spot.shown) return@forEach
+                    val node = spot.node
                     NodeRune(
                         node,
-                        open = open,
-                        walked = node.id in walked,
-                        hero = node == here,
-                        silhouette = !visible,
-                        key = node.key?.takeIf { visible && node.id !in walked },
+                        open = spot.open && idle,
+                        walked = spot.walked,
+                        hero = spot.hero,
+                        silhouette = spot.silhouette,
+                        key = spot.key,
                         breath = breath,
-                        name = if (guardian && !visible) rules.guardians.monsters.getOrNull(node.act)?.let { loc("monster.${it.value}.name") } else null,
+                        name = if (spot.silhouette) rules.guardians.monsters.getOrNull(node.act)?.let { loc("monster.${it.value}.name") } else null,
                         modifier = Modifier.offset(x(node) - NODE_BOX / 2, y(node) - NODE_BOX / 2),
-                    ) { onNode(node) }
+                    ) { onNode(spot) }
                 }
             }
         }

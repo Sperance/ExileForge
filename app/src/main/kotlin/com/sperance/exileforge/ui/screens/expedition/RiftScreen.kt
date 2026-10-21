@@ -53,7 +53,9 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
+import com.sperance.exileforge.core.expedition.RiftChart
 import com.sperance.exileforge.core.expedition.RiftDelivery
+import com.sperance.exileforge.core.expedition.RiftSpot
 import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.expedition.RiftToll
 import com.sperance.exileforge.core.i18n.loc
@@ -163,13 +165,14 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     val rules = index.campaign.trials?.rift ?: return
     Box(Modifier.fillMaxSize().background(RiftColors.Ground)) {
         val board = state.board
-        if (board == null) {
+        val chart = state.chart
+        if (board == null || chart == null) {
             BackHandler { model.closeRift() }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift) }
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(game, model, rules, board, engine, run, state, idle = !game.busy)
+            if (run == null) RiftGate(game, model, rules, board, engine, chart) else RiftRunView(game, model, rules, board, engine, chart, run, state, idle = !game.busy)
         }
         state.result?.let { RiftResultSheet(game, model, it) }
     }
@@ -184,13 +187,13 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
  * ([GateVein]), вход ([GateEnter]) и «Схема недели» - следующий уровень цепочки ([WeekScheme]). Вход и схема закреплены внизу,
  * над ними листается жила.
  */
-@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine) {
+@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart) {
     val hero = game.hero ?: return
     var preview by remember { mutableStateOf(false) }
     BackTrailHost(ui("trials.title"), Modifier.statusBarsPadding(), RiftTrail) {
         TrailLevel(ui("rift.title"), onBack = model::closeRift) {
             if (preview) {
-                TrailLevel(ui("rift.preview"), onBack = { preview = false }) { WeekScheme(rules, engine) }
+                TrailLevel(ui("rift.preview"), onBack = { preview = false }) { WeekScheme(rules, engine, chart) }
             } else {
                 GateTrail(rules, board, hero.level)
                 Column(Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 16.dp)) {
@@ -384,10 +387,10 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 }
 
 /** Схема недели в тумане - уровень цепочки над Вратами: касание узла - его лист, без кнопки. */
-@Composable private fun WeekScheme(rules: RiftRules, engine: RiftEngine) {
-    var looking by remember { mutableStateOf<RiftNode?>(null) }
-    RiftAscent(rules, engine, null, idle = false, top = 24.dp, bottom = 40.dp) { looking = it }
-    looking?.let { node -> NodeSheet(rules, engine, null, node, idle = false, onDismiss = { looking = null }) }
+@Composable private fun WeekScheme(rules: RiftRules, engine: RiftEngine, chart: RiftChart) {
+    var looking by remember { mutableStateOf<RiftSpot?>(null) }
+    RiftAscent(rules, engine, chart, idle = false, top = 24.dp, bottom = 40.dp) { looking = it }
+    looking?.let { spot -> NodeSheet(rules, engine, spot, idle = false, onDismiss = { looking = null }) }
 }
 
 /**
@@ -439,13 +442,13 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 private enum class RunSheet { BOONS, CURSES }
 
 /** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу; [state] - итог последнего боя и открытые сундуки. */
-@Composable private fun RiftRunView(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, state: RiftState, idle: Boolean) {
-    var looking by remember { mutableStateOf<RiftNode?>(null) }
+@Composable private fun RiftRunView(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart, run: RiftRun, state: RiftState, idle: Boolean) {
+    var looking by remember { mutableStateOf<Int?>(null) }
     var sheet by remember { mutableStateOf<RunSheet?>(null) }
     BackHandler { model.closeRift() }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
-        RiftAscent(rules, engine, run, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it }
+        RiftAscent(rules, engine, chart, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
         RiftHud(model, rules, board, engine, run, state.toll, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
@@ -458,10 +461,10 @@ private enum class RunSheet { BOONS, CURSES }
             ) { offer?.let { OfferPlate(game, rules, engine, run, it, state.coffers, idle, model::riftAct) } }
         }
     }
-    looking?.let { node ->
-        NodeSheet(rules, engine, run, node, idle, onDismiss = { looking = null }) {
+    looking?.let(chart::spot)?.let { spot ->
+        NodeSheet(rules, engine, spot, idle, onDismiss = { looking = null }) {
             looking = null
-            model.riftAct(RiftAct.Move(node.id))
+            model.riftGo(spot.node.id)
         }
     }
     when (sheet) {
@@ -691,28 +694,14 @@ private fun boonName(code: String, grade: Int): String = loc("rift.boon.$code.na
 }
 
 /**
- * Почему на узел [node] не шагнуть - ключ словаря; null - можно идти. До забега - сперва войти; пройденный - уже был;
- * пока открыт выбор или идёт бой - сперва его закончить; дальше следующего ряда - дорога приведёт позже; иначе тропа позади.
- */
-private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
-    val here = run?.at?.let(plan::node)
-    return when {
-        run == null -> "rift.node_why.no_run"
-        node.id in run.path -> "rift.node_why.walked"
-        run.stage != RiftStage.MOVE -> "rift.node_why.busy"
-        node.id in next(run) -> null
-        depth(node) > (here?.let(::depth) ?: -1) + 1 -> "rift.node_why.later"
-        else -> "rift.node_why.behind"
-    }
-}
-
-/**
  * Лист узла: знак и имя вида, его суть, страж акта; за обзором - награды ([RiftEngine.rewards], ключ - с металлом), проклятие, черты
  * Вождя и условие Чемпиона (скрыто до боя). В забеге
- * ([onGo]) - «Идти» касанием, к стражу - удержанием; недоступный узел гасит кнопку, касание говорит причину. На схеме недели кнопки нет.
+ * ([onGo]) - «Идти» касанием, к стражу - удержанием; недоступный узел ([RiftSpot.bar]) гасит кнопку, касание говорит причину. На схеме недели
+ * кнопки нет.
  */
-@Composable private fun NodeSheet(rules: RiftRules, engine: RiftEngine, run: RiftRun?, node: RiftNode, idle: Boolean, onDismiss: () -> Unit, onGo: (() -> Unit)? = null) {
-    val seen = engine.seen(run, node)
+@Composable private fun NodeSheet(rules: RiftRules, engine: RiftEngine, spot: RiftSpot, idle: Boolean, onDismiss: () -> Unit, onGo: (() -> Unit)? = null) {
+    val node = spot.node
+    val seen = spot.seen
     val facts = buildList {
         if (node.kind == RiftNodeKind.GUARDIAN) rules.guardians.monsters.getOrNull(node.act)?.let { add(loc("monster.${it.value}.name") + ": " + loc("rift.guardian.${it.value}.description")) }
         if (seen) {
@@ -730,7 +719,7 @@ private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
             }
             Text(loc("rift.node.${node.kind.name}.description"), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
             facts.forEach { Text(it, color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall) }
-            onGo?.let { NodeGo(engine.blocked(run, node), idle, hold = node.kind == RiftNodeKind.GUARDIAN, it) }
+            onGo?.let { NodeGo(spot.bar?.key, idle, hold = spot.guardian, it) }
         }
     }
 }

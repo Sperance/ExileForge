@@ -15,9 +15,11 @@ private const val AUCTION = "api/v1/auctionlot"
 
 /** Рынок игроков: витрина лотов за цену и торгов, свои лоты и ставки, выставление, покупка, ставка, выкуп и снятие. */
 class AuctionClient internal constructor(private val http: Transport) {
-    /** The showcase, narrowed and paged by the server: every field the filter compares is a snapshot the lot carries. */
-    /** The showcase page after the lot [after] ("" — from the start), by cursor: [cursors] are the trail kept for «back». */
-    /** [mode] - лоты за цену (витрина) или торги (вкладка «Аукцион»). */
+    /**
+     * Страница витрины по курсору, суженная фильтром [filter] на сервере (каждое сравниваемое поле - снимок, что несёт лот): после
+     * последнего курсора следа [cursors] ("" - с начала), след хранится для «назад». [mode] - лоты за цену (витрина) или торги
+     * (вкладка «Аукцион»).
+     */
     suspend fun search(heroId: String, filter: AuctionFilter, cursors: List<String>, mode: LotMode = LotMode.FIXED): AuctionPage {
         val after = cursors.lastOrNull().orEmpty()
         val page: AuctionPage = http.get("$AUCTION/search", heroQuery(heroId, "after" to after, "size" to AUCTION_PAGE_SIZE.toString(), "mode" to mode.name) + filter.query())

@@ -122,6 +122,7 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val overflow: List<ItemInstance> get() = decode(OVERFLOW, ListSerializer(ItemInstance.serializer()))
     val bag: Map<String, Long> get() = decode(BAG, MapSerializer(String.serializer(), Long.serializer()))
     val tree: List<TakenNode> get() = decode(TREE, ListSerializer(TakenNode.serializer()))
+
     /**
      * Кампания с открытым заходом: часть [CAMPAIGN] без захода и часть [RUN] - заход (null - закрыт) - сложены в одно состояние.
      * Копия без части [RUN] (снимок прежнего набора частей) читается как без захода, а не падает: её неполноту решает [complete].

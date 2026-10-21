@@ -240,6 +240,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun serverFile(kind: String, name: String) = File(context.filesDir, "$kind/" + UUID.nameUUIDFromBytes(name.toByteArray()) + ".json")
 
     /** Written beside and moved over: a process killed mid-write leaves the old file, not half of the new one. */
+
     /** Файл [target] - текстом [text] целиком: пишется рядом и встаёт на место одним переименованием, читатель не видит половины. */
     private fun replace(target: File, text: String) {
         target.parentFile?.mkdirs()

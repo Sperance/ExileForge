@@ -389,7 +389,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 /** Схема недели в тумане - уровень цепочки над Вратами: касание узла - его лист, без кнопки. */
 @Composable private fun WeekScheme(rules: RiftRules, engine: RiftEngine, chart: RiftChart) {
     var looking by remember { mutableStateOf<RiftSpot?>(null) }
-    RiftAscent(rules, engine, chart, idle = false, top = 24.dp, bottom = 40.dp) { looking = it }
+    RiftAscent(rules, engine, chart, walk = null, idle = false, top = 24.dp, bottom = 40.dp, hero = false) { looking = it }
     looking?.let { spot -> NodeSheet(rules, engine, spot, idle = false, onDismiss = { looking = null }) }
 }
 
@@ -448,7 +448,7 @@ private enum class RunSheet { BOONS, CURSES }
     BackHandler { model.closeRift() }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
-        RiftAscent(rules, engine, chart, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
+        RiftAscent(rules, engine, chart, state.walk, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
         RiftHud(model, rules, board, engine, run, state.toll, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,

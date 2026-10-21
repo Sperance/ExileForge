@@ -41,17 +41,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 /**
  * Разлом на экране: доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
  * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
  * боя узла («Журнал боя»); [toll] - итог последнего выигранного боя для шапки; [coffers] - что лежало в открытых сундуках Владыки
- * по номеру сундука (только пока забег стоит у сундуков); [chart] - карта доски: что можно выбрать и почему нельзя.
+ * по номеру сундука (только пока забег стоит у сундуков); [chart] - карта доски: что можно выбрать и почему нельзя; [walk] - шаг героя
+ * к выбранному узлу, пока доска с ответом не легла.
  */
 data class RiftState(
     val open: Boolean = false,
     val board: RiftBoard? = null,
     val chart: RiftChart? = null,
+    val walk: RiftWalk? = null,
     val arena: RiftArena? = null,
     val result: RiftResult? = null,
     val delivery: RiftDelivery? = null,
@@ -139,10 +143,27 @@ class RiftActions(
         }
     }
 
-    /** Шаг на узел [node], выбранный на карте: только если карта его пускает ([RiftSpot.bar]). */
+    /**
+     * Шаг на узел [node], выбранный на карте: только если карта его пускает ([RiftSpot.bar]). Герой сразу идёт по тропе ([RiftState.walk]),
+     * доска с ответом ложится, когда шаг дойдёт ([RiftWalk.STEP_MS]); отказ или сбой - герой остаётся на месте.
+     */
     fun go(node: Int) {
-        if (mutable.value.chart?.spot(node)?.let { it.bar == null } != true) return
-        act(RiftAct.Move(node))
+        val state = mutable.value
+        val chart = state.chart ?: return
+        val run = state.board?.progress?.run ?: return
+        if (chart.spot(node)?.let { it.bar == null } != true) return
+        val started = TimeSource.Monotonic.markNow()
+        mutable.update { it.copy(walk = RiftWalk(chart.here?.id, node)) }
+        val sent = commands.task(writing = true, touches = setOf(Reads.HERO)) {
+            try {
+                val report = api.trials.riftAct(heroes.heroId, run.id, RiftAct.Move(node))
+                delay(RiftWalk.STEP_MS.milliseconds - started.elapsedNow())
+                land(report)
+            } finally {
+                mutable.update { it.copy(walk = null) }
+            }
+        }
+        if (!sent) mutable.update { it.copy(walk = null) }
     }
 
     /** Итог боя в шапке прочитан. */

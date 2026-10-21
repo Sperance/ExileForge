@@ -220,13 +220,20 @@ class HeroBuild(
     /** The body between fights: the passives on, the lines of a flask still running on top. */
     val body: Combatant by lazy { body(emptyList()) }
 
-    override fun body(lines: List<StatLine>): Combatant = Combatant(MapEffects.hero(sheet(passives + lines), mapEffects), gear.level, rules)
+    /** Тела и рост урона по строкам боя: наборы строк в бою повторяются (эффект лёг, истёк, лёг снова) - лист на них сводится один раз. */
+    private val bodies = LineMemo<Combatant>()
+    private val growths = LineMemo<DamageGrowth>()
+
+    override fun body(lines: List<StatLine>): Combatant = bodies.get(lines) ?: Combatant(MapEffects.hero(sheet(passives + lines), mapEffects), gear.level, rules).also { bodies.put(lines, it) }
 
     /** The passives' lines that wait for low life; the fight lays them on while it lasts. */
     override val lowLife: List<StatLine> by lazy { gear.kit.lowLifeLines(bare) }
 
     /** Рост урона листа с пассивами и [lines]: увеличения и «больше» вида, на них растут чары и урон во времени. */
-    override fun growth(lines: List<StatLine>): DamageGrowth = gear.model?.growth(passives + lines) ?: DamageGrowth.NONE
+    override fun growth(lines: List<StatLine>): DamageGrowth {
+        val model = gear.model ?: return DamageGrowth.NONE
+        return growths.get(lines) ?: TypedGrowth(model.growth(passives + lines)).also { growths.put(lines, it) }
+    }
 
     override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
     override fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = gear.model?.conditionalSourced(active).orEmpty()
@@ -234,6 +241,37 @@ class HeroBuild(
     override val passiveLines: List<StatLine> get() = passives
     override fun shifts(): Map<String, List<Shift>> = MapEffects.heroShifts(sheet(passives), mapEffects, origins)
     override fun against(states: Set<Condition>): Double = gear.model?.against(states) ?: 0.0
+}
+
+/**
+ * Память листа по строкам боя: последние [capacity] наборов строк и что на них сведено. Ключ - сами строки по порядку: свод
+ * зависит от него (замена «последняя держит», порядок сложения), а бой собирает строки героя всегда в одном порядке.
+ */
+internal class LineMemo<V : Any>(private val capacity: Int = CAPACITY) {
+    private val kept = object : LinkedHashMap<List<StatLine>, V>(capacity * 2, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<List<StatLine>, V>?): Boolean = size > capacity
+    }
+
+    fun get(lines: List<StatLine>): V? = kept[lines]
+
+    /** Кладёт [value] под копией [lines]: ключ не меняется вслед за списком, который передал бой. */
+    fun put(lines: List<StatLine>, value: V) {
+        kept[ArrayList(lines)] = value
+    }
+
+    private companion object {
+        const val CAPACITY = 16
+    }
+}
+
+/** Рост урона [inner] с памятью по виду: удар читает увеличение каждого своего вида, лист раскладывает строки один раз на вид. */
+private class TypedGrowth(private val inner: DamageGrowth) : DamageGrowth {
+    private val increases = HashMap<String, Double>()
+    private val mores = HashMap<String, Double>()
+
+    override fun increased(type: String): Double = increases[type] ?: inner.increased(type).also { increases[type] = it }
+
+    override fun more(type: String): Double = mores[type] ?: inner.more(type).also { mores[type] = it }
 }
 
 /**

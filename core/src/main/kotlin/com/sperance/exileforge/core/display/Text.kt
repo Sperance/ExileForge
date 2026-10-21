@@ -27,7 +27,6 @@ import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
-import com.sperance.exileforge.rules.text.numbered
 
 /** A code made readable when no dictionary names it: `IRON_HAT` → «IRON HAT». */
 fun displayName(value: String, lang: Lang = uiLanguage): String = value.substringAfterLast('/').substringAfterLast('.').replace('_', ' ')
@@ -56,7 +55,7 @@ fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else
  * Описание стопки [code] (сфера, материал, оттиск): числа правил `{r:…}` подставляет [index] ([com.sperance.exileforge.rules.text.numbered]);
  * без контента или без числа - пусто, сырой плейсхолдер не печатается.
  */
-fun itemDescription(code: String, index: ContentIndex?): String = index.numbered(locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))).orEmpty()
+fun itemDescription(code: String, index: ContentIndex?): String = index.numberedText(locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))).orEmpty()
 
 /** Действие сферы или оттиска [code] одной фразой (`enum.orb.<код>.rule`) - итог рецепта кузницы; у прочих стопок пусто. */
 fun itemRule(code: String): String = uiOr(uiLanguage, "enum.orb.$code.rule", "")
@@ -65,7 +64,7 @@ fun itemRule(code: String): String = uiOr(uiLanguage, "enum.orb.$code.rule", "")
  * Что делает дар Предначертания [card], словами сервера: числа записи дара `{r:fates.<код>.…}` подставляет [index]
  * ([com.sperance.exileforge.rules.text.numbered]); без контента или без числа - пусто.
  */
-fun fateDescription(card: FateCard, index: ContentIndex?): String = index.numbered(locOr(card.description, "")).orEmpty()
+fun fateDescription(card: FateCard, index: ContentIndex?): String = index.numberedText(locOr(card.description, "")).orEmpty()
 
 /** The English trade name, one in every language, for a full card only; null when the dictionary has none or it is the shown name already. */
 fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
@@ -208,7 +207,7 @@ fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code
  */
 fun lineNote(index: ContentIndex, def: ModifierDef?): String? = def?.effectOf(0)?.stat
     ?.takeIf { index.stats[it]?.group?.described == true }
-    ?.let { index.numbered(loc(LocaleKey.statDescription(it))) }
+    ?.let { index.numberedText(loc(LocaleKey.statDescription(it))) }
 
 /** Пояснение строки [line] узла Атласа ([lineNote] её модификатора). */
 fun lineNote(index: ContentIndex, line: Line): String? = lineNote(index, index.modifier(line.code))

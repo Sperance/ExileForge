@@ -93,8 +93,8 @@ private const val AHEAD_CAP = .5
 
 /**
  * Когда выпускать снимок экрана забега или испытания: сразу - по команде, со сменой фазы или боя, с новой строкой журнала боя, когда
- * строка журнала дошла до своего мига (удар лёг, выпад начался) или бой кончился; иначе - не чаще [EVERY] секунд. Снимок - только
- * для экрана: частота его выпуска на бой и заход не влияет.
+ * строка журнала дошла до своего мига (удар лёг, выпад начался) или бой кончился; иначе - не чаще [EVERY] секунд в бою и [MAP_EVERY]
+ * без него: на карте меняются только полосы и часы. Снимок - только для экрана: частота его выпуска на бой и заход не влияет.
  */
 class HudCadence {
     private var since = Double.MAX_VALUE
@@ -107,7 +107,7 @@ class HudCadence {
     fun due(dt: Double, forced: Boolean, state: Long, battle: Battle?): Boolean {
         since += dt
         val now = keyOf(state, battle)
-        if (!forced && now == key && since < EVERY) return false
+        if (!forced && now == key && since < (if (battle == null) MAP_EVERY else EVERY)) return false
         key = now
         since = 0.0
         return true
@@ -131,8 +131,11 @@ class HudCadence {
     }
 
     companion object {
-        /** Снимок не реже двадцати раз в секунду. */
+        /** Снимок боя не реже двадцати раз в секунду. */
         private const val EVERY = .05
+
+        /** Снимок вне боя - десяти. */
+        private const val MAP_EVERY = .1
         private const val PRIME = 1_000_003L
 
         /** Ключ скачков хозяина из чисел [parts]. */

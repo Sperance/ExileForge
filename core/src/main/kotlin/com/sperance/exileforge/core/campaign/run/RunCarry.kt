@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.AilmentLaw
 import com.sperance.exileforge.core.campaign.combat.CarriedAilment
+import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
@@ -79,25 +80,63 @@ internal fun ExpeditionRun.roadFlow(): LifeFlow {
         .copy(ailments = total, delayed = carry.delayed.sumOf { it.rate }, shielded = EnergyShield.absorbed(shield, rates.map { (active, rate) -> law.type(active) to rate }))
 }
 
+/**
+ * Полка снимка по несомому: прежние плитки, пока несомое и тело героя те же (несомое неизменяемо - списки сравниваются по
+ * содержимому), - снимок не собирает их заново десять раз в секунду, пока на герое ничего нет.
+ */
+internal class CarriedShelf<T, V> {
+    private var carried: List<T>? = null
+    private var body: Combatant? = null
+    private var shown: List<V> = emptyList()
+
+    /** Прежние плитки для [carried] на теле [hero]; null - несомое или тело сменились. */
+    fun of(carried: List<T>, hero: Combatant): List<V>? = shown.takeIf { hero === body && carried == this.carried }
+
+    /** Запоминает плитки [views] для [carried] на теле [hero]. */
+    fun keep(carried: List<T>, hero: Combatant, views: List<V>): List<V> {
+        this.carried = carried
+        body = hero
+        shown = views
+        return views
+    }
+}
+
 /** Недуги на герое вне боя - плитками полки, как в бою: по недугу - доля времени, стаки, секунды (до десятой) и сила. */
-internal fun ExpeditionRun.carriedAilments(): List<AilmentView> = carry.ailments.groupBy { it.ailment }.map { (ailment, same) ->
-    val left = same.maxOf { it.left }
-    AilmentView(
-        ailment,
-        (left / same.maxOf { it.duration }).toFloat().coerceIn(0f, 1f),
-        same.size,
-        tenths(left),
-        if (ailment.hurts) same.sumOf { it.magnitude } else law.held(hero, carry.ailments, ailment),
-    )
+internal fun ExpeditionRun.carriedAilments(): List<AilmentView> {
+    val ailments = carry.ailments
+    ailmentShelf.of(ailments, hero)?.let { return it }
+    if (ailments.isEmpty()) return ailmentShelf.keep(ailments, hero, emptyList())
+    val views = ailments.groupBy { it.ailment }.map { (ailment, same) ->
+        val left = same.maxOf { it.left }
+        AilmentView(
+            ailment,
+            (left / same.maxOf { it.duration }).toFloat().coerceIn(0f, 1f),
+            same.size,
+            tenths(left),
+            if (ailment.hurts) same.sumOf { it.magnitude } else law.held(hero, ailments, ailment),
+        )
+    }
+    return ailmentShelf.keep(ailments, hero, views)
 }
 
 /** Баффы и проклятия на герое вне боя - плитками полки, как в бою. */
-internal fun ExpeditionRun.carriedEffects(): List<EffectView> = carry.effects.map {
-    EffectView(it.source, it.kind, (it.left / it.duration).toFloat().coerceIn(0f, 1f), tenths(it.left), it.icon, BuffKind.of(it.source), it.lines)
+internal fun ExpeditionRun.carriedEffects(): List<EffectView> {
+    val effects = carry.effects
+    effectShelf.of(effects, hero)?.let { return it }
+    if (effects.isEmpty()) return effectShelf.keep(effects, hero, emptyList())
+    return effectShelf.keep(
+        effects, hero,
+        effects.map { EffectView(it.source, it.kind, (it.left / it.duration).toFloat().coerceIn(0f, 1f), tenths(it.left), it.icon, BuffKind.of(it.source), it.lines) },
+    )
 }
 
 /** Заряды героя вне боя - плитками полки, как в бою. */
-internal fun ExpeditionRun.carriedCharges(): List<ChargeView> = carry.charges.map { ChargeView(it.kind, it.count, kit.charges?.max(it.kind, hero.stats) ?: 0, tenths(it.left)) }
+internal fun ExpeditionRun.carriedCharges(): List<ChargeView> {
+    val charges = carry.charges
+    chargeShelf.of(charges, hero)?.let { return it }
+    if (charges.isEmpty()) return chargeShelf.keep(charges, hero, emptyList())
+    return chargeShelf.keep(charges, hero, charges.map { ChargeView(it.kind, it.count, kit.charges?.max(it.kind, hero.stats) ?: 0, tenths(it.left)) })
+}
 
 /** Секунды до десятой вверх: снимок экрана не меняется каждый кадр. */
 private fun tenths(seconds: Double): Double = ceil(seconds * 10) / 10

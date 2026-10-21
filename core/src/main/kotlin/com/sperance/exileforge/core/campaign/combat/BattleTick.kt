@@ -259,12 +259,6 @@ private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.low
     powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.actingEffects.flatMap { it.holding(conditions) }
 
 /**
- * The increases of [type] a hero's blow is grown by now, in percent: the sheet's own, the damage in
- * general among them, and those of the lines on the hero and [extra] — the conditions', the charges', a flask's.
- */
-internal fun Battle.heroIncrease(type: DamageType, extra: List<StatLine> = emptyList()): Double = heroGrowth(extra).increased(type.attack)
-
-/**
  * Рост урона героя сейчас: увеличения и «больше» каждого вида листа со строками на герое и [extra]. Удар оружием несёт
  * «больше» в числе листа; чары и урон во времени растут на него отдельно.
  */
@@ -274,7 +268,8 @@ internal fun Battle.heroGrowth(extra: List<StatLine> = emptyList()): DamageGrowt
 internal fun Battle.versus(blow: Blow, facing: Double): Double {
     val total = blow.damage.values.sum()
     if (facing == 0.0 || total <= 0) return 1.0
-    return blow.damage.entries.sumOf { (type, value) -> regrow(value, blow.increase?.get(type) ?: heroIncrease(type), facing) } / total
+    var growth: DamageGrowth? = null
+    return blow.damage.entries.sumOf { (type, value) -> regrow(value, blow.increase?.get(type) ?: (growth ?: heroGrowth().also { growth = it }).increased(type.attack), facing) } / total
 }
 
 /** The hero's damage for the charges held: so many percent increased for each of a kind, by the sheet — beside the other increases. */

@@ -44,7 +44,7 @@ class ServerIntegrationTest {
     /**
      * Манифест называет ревизию клиента и каждый чанк с отпечатком; маршруты - по сессии. Каждый POST героя приносит сдвинутые части. Без
      * Предначертания герой не создаётся. Выдачи - администратором любому герою; выданная вещь метки не несёт. Заход - семя сервера, награды
-     * катит только он; Ваал-зона живёт только в своём заходе; новое семя не чаще `run.newSeedSeconds`; закрытый заход отвергает журнал
+     * катит только он; насильная механика - только тестировщику со свободным прогрессом (`CP_028`); Ваал-зона живёт только в своём заходе; новое семя не чаще `run.newSeedSeconds`; закрытый заход отвергает журнал
      * `CP_018`. Аукцион забирает вещь и возвращает при снятии; плата за место - золотом; герою-тестировщику аукцион закрыт (`GR_001`); лот
      * героя под баном не продаётся, без места в тайнике - `CH_020`. Код погашается один раз на аккаунт и устройство. Чужое и
      * только-администраторское - отказ.
@@ -107,9 +107,12 @@ class ServerIntegrationTest {
 
             val zoneCode = index.world.unlocked(emptyList()).first()
             if (index.zone(zoneCode)!!.corrupted.value.isNotBlank()) {
+                assertEquals("CP_028", (runCatching { api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL)) }.exceptionOrNull() as? ApiFailure)?.code)
+                api.hero.freeProgress(heroId, true)
                 val vaal = api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL))
                 assertEquals(1, assertNotNull(api.campaign.events(heroId, vaal.id, listOf(RunEvent.VaalOpen(0)))).applied)
                 assertEquals(zoneCode, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).campaign.vaalZone?.mapCode)
+                api.hero.freeProgress(heroId, false)
             }
             var entered = runCatching { api.campaign.start(heroId, zoneCode) }
             while ((entered.exceptionOrNull() as? ApiFailure)?.code == "CP_021") {

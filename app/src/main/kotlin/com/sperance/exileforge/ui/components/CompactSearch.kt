@@ -35,12 +35,12 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Vital
 
 /**
- * Плотное поле поиска (40dp): лупа, ввод одной строкой и подсказка [placeholder], пока
- * пусто; басальт в нити `Bronze`. Для списков, где поиск не должен занимать полэкрана. [onSearch] - поиск с клавиатуры (поиск у
+ * Плотное поле поиска (40dp) строки поиска [SearchBar]: лупа, ввод одной строкой и подсказка [placeholder], пока
+ * пусто; басальт в нити `Bronze`. Экраны берут [SearchBar], а не это поле. [onSearch] - поиск с клавиатуры (поиск у
  * сервера); null - список сужается на месте по [onValue]. [found] - сколько нашлось, мелко справа; null - не пишется. [onClear] -
  * крестик очистки справа; null - крестика нет.
  */
-@Composable fun CompactSearchField(
+@Composable internal fun CompactSearchField(
     value: String,
     onValue: (String) -> Unit,
     placeholder: String,

@@ -215,6 +215,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val socket: String? get() = item.socket
     val equipped: Boolean get() = item.equipped
     val socketed: Boolean get() = item.socketed
+
+    /** Надета ли копия героем - на теле или в гнезде. */
+    val isWorn: Boolean get() = equipped || socketed
     val corrupted: Boolean get() = item.corrupted
     val mirrored: Boolean get() = item.mirrored
     val influence: Influence? get() = item.influence

@@ -52,7 +52,7 @@ data class StashFilter(
         StashField.KIND -> kind?.title.orEmpty()
         StashField.SLOT -> slotTitle(slot, lang)
         StashField.RARITY -> rarityTitle(rarity, lang)
-        StashField.LEVEL -> level.title().orEmpty()
+        StashField.LEVEL -> level.title(lang).orEmpty()
     }
 
     /** Заданные поля сужениями под строкой поиска, каждое - с отбором без него. */

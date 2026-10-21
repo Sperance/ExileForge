@@ -168,12 +168,12 @@ internal fun Modifier.forgeSurface(
 private val TouchZone = 44.dp
 
 /**
- * Явная зона касания 44 dp: меньшее содержимое встаёт по центру, разметка отводит ему 44 dp. Стоит в цепочке после обработчика
- * касания и до поверхности - касается вся зона, рисуется только содержимое.
+ * Явная зона касания [zone] (обычно 44 dp): меньшее содержимое встаёт по центру, разметка отводит ему всю зону. Стоит в цепочке после
+ * обработчика касания и до поверхности - касается вся зона, рисуется только содержимое.
  */
-internal fun Modifier.touchZone(): Modifier = layout { measurable, constraints ->
+internal fun Modifier.touchZone(zone: Dp = TouchZone): Modifier = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
-    val side = TouchZone.roundToPx()
+    val side = zone.roundToPx()
     val width = maxOf(placeable.width, side).coerceAtMost(constraints.maxWidth)
     val height = maxOf(placeable.height, side).coerceAtMost(constraints.maxHeight)
     layout(width, height) { placeable.place((width - placeable.width) / 2, (height - placeable.height) / 2) }

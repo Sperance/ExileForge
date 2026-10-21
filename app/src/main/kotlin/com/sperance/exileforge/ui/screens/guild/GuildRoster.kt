@@ -39,6 +39,7 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PresenceDot
 import com.sperance.exileforge.ui.components.SearchBar
 import com.sperance.exileforge.ui.components.SortButton
+import com.sperance.exileforge.ui.components.SortLabel
 import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.ring
@@ -100,7 +101,7 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
     onOrder: (RosterOrder?) -> Unit,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
-    SearchBar(query, { onQuery(it.take(game.inputs.heroName)) }, ui("guild.roster_search")) {
+    SearchBar(query, onQuery, ui("guild.roster_search"), maxLength = game.inputs.heroName) {
         RosterSort(order, onOrder)
         trailing?.invoke(this)
     }
@@ -120,7 +121,7 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
         }
         SortOption(ui(column.title) + mark, order?.column == column) { onOrder(order.next(column)) }
     }
-    SortButton(null, listOf(byRole) + columns, marked = order != null)
+    SortButton(SortLabel.Mark(order != null), listOf(byRole) + columns)
 }
 
 /** Плотные чипы отбора: у каждого - сколько участников [members] под ним проходит; выбранный - в нити `Gold`. */

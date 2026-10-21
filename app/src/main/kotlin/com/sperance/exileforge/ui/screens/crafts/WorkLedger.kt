@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -215,12 +212,12 @@ internal fun WorkLedger(
         (if (open) made else made.take(MADE_SHOWN)).forEach { item -> MadeRow(game, item) { onOpen(item) } }
         if (made.size > MADE_SHOWN) {
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button) { open = !open }.heightIn(min = 40.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).foldToggle(open) { open = !open }.heightIn(min = 40.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(if (open) ui("crafts.less") else ui("crafts.more", made.size - MADE_SHOWN), color = Gold, style = MaterialTheme.typography.labelLarge)
-                Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Gold, modifier = Modifier.size(18.dp))
+                FoldChevron(open, Gold)
             }
         }
     }

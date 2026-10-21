@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.admin
 
+import com.sperance.exileforge.core.display.PickOption
 import com.sperance.exileforge.core.filter.Narrowing
+import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
@@ -35,21 +37,34 @@ enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
  */
 data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY, val fate: ModerationFate = ModerationFate.All) {
     /**
-     * Не обычные порядок и дар сужениями под строкой поиска, каждое - с отбором без него; их число - на кнопке фильтров. Дар
-     * называется по контенту [index], без контента - кодом.
+     * Не обычные порядок и дар сужениями под строкой поиска, каждое - с отбором без него, подписи - на языке [lang]; их число - на
+     * кнопке фильтров. Дар называется по контенту [index], без контента - кодом.
      */
-    fun narrowings(index: ContentIndex?): List<Narrowing<ModerationFilters>> = buildList {
-        if (sort != DEFAULT.sort) add(Narrowing(ui("moderation.sort.${sort.name}"), copy(sort = DEFAULT.sort)))
+    fun narrowings(lang: Lang, index: ContentIndex?): List<Narrowing<ModerationFilters>> = buildList {
+        if (sort != DEFAULT.sort) add(Narrowing(ui(lang, "moderation.sort.${sort.name}"), copy(sort = DEFAULT.sort)))
         val fateTitle = when (val chosen = fate) {
             ModerationFate.All -> null
-            ModerationFate.Fateless -> ui("moderation.fate.none")
-            is ModerationFate.Chosen -> "✦ " + (index?.fates?.all?.firstOrNull { it.code == chosen.code }?.let(FateCard::of)?.title ?: chosen.code)
+            ModerationFate.Fateless -> ui(lang, "moderation.fate.none")
+            is ModerationFate.Chosen -> FATE_MARK + (index?.fates?.all?.firstOrNull { it.code == chosen.code }?.let(FateCard::of)?.title ?: chosen.code)
         }
         fateTitle?.let { add(Narrowing(it, copy(fate = DEFAULT.fate))) }
     }
 
     companion object {
         val DEFAULT = ModerationFilters()
+
+        /** Знак дара контента перед его именем. */
+        private const val FATE_MARK = "✦ "
+
+        /** Варианты дара, что не ищутся, а стоят первыми всегда: «Все дары» и «Без дара». */
+        fun fixedFates(lang: Lang): List<PickOption<ModerationFate>> = listOf(
+            PickOption(ModerationFate.All, ui(lang, "moderation.fate.all")),
+            PickOption(ModerationFate.Fateless, ui(lang, "moderation.fate.none")),
+        )
+
+        /** Дары контента [index] по имени - варианты дара с поиском; контента нет - пусто. */
+        fun fates(index: ContentIndex?): List<PickOption<ModerationFate>> = index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title }
+            .map { PickOption(ModerationFate.Chosen(it.code), FATE_MARK + it.title) }
     }
 }
 

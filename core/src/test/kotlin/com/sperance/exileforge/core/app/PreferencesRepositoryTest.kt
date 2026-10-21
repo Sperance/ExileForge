@@ -60,16 +60,16 @@ class PreferencesRepositoryTest {
         assertEquals(1, store.settingsWrites)
     }
 
-    /** Фильтр списка (без строки поиска) и журнала боя пишутся своими записями и читаются обратно. */
+    /** Фильтр списка и журнала боя пишутся своими записями и читаются обратно. */
     @Test
     fun item_and_log_filters_round_trip() = runTest {
         val store = MemoryStore()
         val prefs = PreferencesRepository(store, backgroundScope)
-        val filter = ItemShelf.STASH.defaults.copy(query = "ring")
+        val filter = ItemShelf.STASH.defaults.copy(crafted = true)
         prefs.saveItemFilter(ItemShelf.STASH, filter)
         prefs.saveLogFilter(setOf(LogKind.entries.first()))
         runCurrent()
-        assertEquals(filter.copy(query = ""), prefs.itemFilters.value[ItemShelf.STASH])
+        assertEquals(filter, prefs.itemFilters.value[ItemShelf.STASH])
         assertEquals(setOf(LogKind.entries.first()), prefs.logFilter.value)
     }
 }

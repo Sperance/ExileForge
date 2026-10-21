@@ -157,7 +157,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Шапка витрины - строка поиска ([SearchBar]): имя, кнопка ко всем прочим фильтрам и заданные фильтры чипами под ней
- * ([AuctionFilter.narrowings], «Мои лоты» - своим чипом).
+ * ([AuctionFilter.narrowings], «Мои лоты» - тоже сужение фильтра).
  *
  * Сам по себе здесь ничего не спрашивает сервер: спрашивают клавиша поиска клавиатуры, очистка поля, «Показать» в шторке и
  * снятие чипа - чип есть фильтр, что понимает сервер, и его крестик снимает его и спрашивает снова: самый короткий путь назад от
@@ -170,31 +170,23 @@ import org.koin.compose.viewmodel.koinViewModel
         vm.filter(next)
         vm.loadShowcase()
     }
-    val own = SearchChip(ui("auction.show_mine")) {
-        vm.showOwnLots(false)
-        vm.loadShowcase()
-    }.takeIf { market.showOwnLots }
     SearchBar(
         f.title,
-        { vm.filter(f.copy(title = it.take(game.inputs.search))) },
+        { vm.filter(f.copy(title = it)) },
         ui("auction.search"),
         onSearch = vm::loadShowcase,
         filter = SearchFilter(
-            f.narrowings(game.lang).chips(narrow) + listOfNotNull(own),
+            rememberChips(f.narrowings(game.lang), narrow),
             onOpen = { sheet = true },
-            onReset = {
-                vm.showOwnLots(false)
-                narrow(f.cleared())
-            },
+            onReset = { narrow(f.cleared()) },
             enabled = !game.busy,
         ),
+        maxLength = game.inputs.search,
     )
     if (sheet) {
-        AuctionFilterSheet(game, market, onDismiss = { sheet = false }) { filter, mine ->
+        AuctionFilterSheet(game, market, onDismiss = { sheet = false }) { filter ->
             sheet = false
-            vm.filter(filter)
-            vm.showOwnLots(mine)
-            vm.loadShowcase()
+            narrow(filter)
         }
     }
 }
@@ -204,7 +196,8 @@ internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2
 
 /**
  * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet: each filter a row with its value that opens
- * on a tap, own lots as a switch; the name is typed in the search bar above the showcase. Nothing reaches the showcase until
+ * on a tap, own lots as a switch, the item level range in the sheet's head ([LevelRangeHeader]); the name is typed in the search bar
+ * above the showcase. Nothing reaches the showcase until
  * «Показать», so trying a combination costs no request, and «Сбросить» clears all but the typed name.
  *
  * Сервер ищет по одной редкости: плитка выбирает её, повторное нажатие снимает. Валюта цены - код предмета. Продавец - по id героя. Свои
@@ -212,14 +205,12 @@ internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2
  * не трогает; «Сбросить» применяет сброс сразу и закрывает шторку.
  */
 @Composable
-internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter) -> Unit) {
     var draft by remember { mutableStateOf(market.filter) }
-    var mine by remember { mutableStateOf(market.showOwnLots) }
     val settings = koinViewModel<SettingsViewModel>()
     val legendsOpen = settings.settings.collectAsStateWithLifecycle().value.legendsOpen
     val any = ui("filter.any")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    val levels = listOfNotNull(draft.minItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_from", it) }, draft.maxItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_to", it) })
     val groups = listOf(
         AccordionGroup("kind", ui("auction.what_sold"), draft.kind.takeIf { it.isNotBlank() }?.let { draft.fieldTitle(FilterField.KIND, game.lang) } ?: any) {
             ChoiceChips(listOf<LotKind?>(null) + LotKind.entries, { (it?.name ?: "") == draft.kind }, { it?.let { kind -> lotKindTitle(kind, game.lang) } ?: any }) { draft = draft.copy(kind = it?.name.orEmpty()) }
@@ -228,27 +219,7 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
             ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
         },
         AccordionGroup("rarity", ui("filter.rarity"), draft.rarity.takeIf { it.isNotBlank() }?.let { rarityTitle(it, game.lang) } ?: any) {
-            RarityTiles(Rarity.entries, { it.name == draft.rarity }) { draft = draft.copy(rarity = if (draft.rarity == it.name) "" else it.name) }
-        },
-        AccordionGroup("level", ui("auction.item_level"), levels.joinToString(" · ").ifBlank { any }) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    draft.minItemLevel,
-                    { draft = draft.copy(minItemLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_from")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    draft.maxItemLevel,
-                    { draft = draft.copy(maxItemLevel = it.filter(Char::isDigit).take(3)) },
-                    label = { Text(ui("auction.ilvl_to")) },
-                    singleLine = true,
-                    keyboardOptions = digits,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            RarityChoice(Rarity.entries, { it?.name == draft.rarity }, { picked -> draft = draft.copy(rarity = picked?.name?.takeIf { it != draft.rarity }.orEmpty()) }, mode = ChipMode.Filter, size = ChipSize.Dense)
         },
         AccordionGroup("price", ui("auction.price"), listOfNotNull(draft.priceOrb.takeIf { it.isNotBlank() }?.let(::itemTitle), draft.maxPrice.takeIf { it.isNotBlank() }?.let { ui("auction.chip_max_price", it) }).joinToString(" · ").ifBlank { any }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -276,13 +247,14 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
     FilterAccordionSheet(
         groups = groups,
         switches = listOf(
-            FilterSwitch(ui("auction.show_mine"), mine) { mine = it },
+            FilterSwitch(ui("auction.show_mine"), draft.showOwnLots) { draft = draft.copy(showOwnLots = it) },
             FilterSwitch(ui("auction.legends_open"), legendsOpen) { open -> settings.change { copy(legendsOpen = open) } },
         ),
         show = ui("filter.show_all"),
-        resettable = draft != draft.cleared() || mine,
-        onReset = { if (!game.busy) onApply(draft.cleared(), false) },
-        onShow = { if (!game.busy) onApply(draft, mine) },
+        resettable = draft != draft.cleared(),
+        onReset = { if (!game.busy) onApply(draft.cleared()) },
+        onShow = { if (!game.busy) onApply(draft) },
         onDismiss = onDismiss,
+        header = { LevelRangeHeader(draft.level, game.heroLevel) { draft = draft.copy(level = it) } },
     )
 }

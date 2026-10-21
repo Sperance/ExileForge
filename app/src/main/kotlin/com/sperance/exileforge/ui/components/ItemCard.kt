@@ -19,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -467,7 +466,7 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
             FoldRow(title, needs.size.toString(), look.muted, open = open, titleTint = tint) {
                 edit?.invoke { copy(requirementsOpen = !requirementsOpen) } ?: run { held = !held }
             }
-            if (open) {
+            FoldBody(open) {
                 FlowRow(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     needs.forEach { need -> NeedChip(need, unmet?.let { need.kind !in it }, look) }
                 }
@@ -475,7 +474,7 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
         }
         if (terms.isNotEmpty()) {
             FoldRow(ui("term.title"), terms.size.toString(), look.muted, open = termsOpen) { termsOpen = !termsOpen }
-            if (termsOpen) TermsBlock(terms, item.index.campaign.combat, Modifier.padding(bottom = 6.dp))
+            FoldBody(termsOpen) { TermsBlock(terms, item.index.campaign.combat, Modifier.padding(bottom = 6.dp)) }
         }
     }
 }
@@ -499,13 +498,13 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
 @Composable private fun FoldRow(title: String, value: String, tint: Color, open: Boolean?, titleTint: Color = Parchment, onClick: () -> Unit = {}) {
     HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .06f))
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(enabled = open != null, role = Role.Button, onClick = onClick).padding(horizontal = 4.dp),
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).then(if (open != null) Modifier.foldToggle(open, title, onClick) else Modifier).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Text(title, color = titleTint, style = MaterialTheme.typography.labelLarge, fontWeight = if (titleTint == Parchment) null else FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(value, color = tint, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 2)
-        if (open != null) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+        if (open != null) FoldChevron(open)
     }
 }
 
@@ -522,7 +521,7 @@ val LocalFlaskBonuses = compositionLocalOf<FlaskBonuses?> { null }
     var open by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         FoldRow(ui("card.flask_yours"), bonuses.size.toString(), look.muted, open = open) { open = !open }
-        if (open) {
+        FoldBody(open) {
             Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 MutedText(ui("card.flask_yours_hint"), style = MaterialTheme.typography.labelSmall)
                 bonuses.forEach { bonus ->

@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapItemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.filter.LevelRange
 import com.sperance.exileforge.core.filter.Narrowing
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.locOr
@@ -100,33 +101,35 @@ import kotlinx.serialization.Serializable
         }
 }
 
-/** The showcase filter, as `GET /api/v1/auctionlot/search` reads it from the query string. A blank field means "do not filter by it". */
+/**
+ * The showcase filter, as `GET /api/v1/auctionlot/search` reads it from the query string. A blank field means "do not filter by it".
+ * Уровень предмета - та же вилка, что у фильтра предметов ([LevelRange]): на провод уходят её края `minItemLevel`/`maxItemLevel`.
+ * [showOwnLots] - сужение «Мои лоты»: свои лоты видны; без него витрина прячет лоты героя (`excludeSellerId`).
+ */
 @Serializable data class AuctionFilter(
     val kind: String = "",
     val title: String = "",
     val slot: String = "",
     val rarity: String = "",
-    val minItemLevel: String = "",
-    val maxItemLevel: String = "",
+    val level: LevelRange = LevelRange(),
     val priceOrb: String = "",
     val maxPrice: String = "",
     val sellerId: String = "",
     /** Имя продавца [sellerId] для плашки фильтра («Лоты игрока» из карточки); серверу не уходит. */
     val sellerName: String = "",
+    val showOwnLots: Boolean = false,
     /** Hide one hero's own lots; they cannot be bought anyway, so the showcase drops them. */
     val excludeSellerId: String = "",
     /** Which dictionary the server resolves [title] against: lots carry codes, so a search by text is a search by code. */
     val lang: String = "",
 ) {
-    val isEmpty: Boolean get() = query().keys.none { it != "lang" }
-
     fun query(): Map<String, String> = buildMap {
         put("kind", kind)
         put("title", title.trim())
         put("slot", slot)
         put("rarity", rarity)
-        put("minItemLevel", minItemLevel.trim())
-        put("maxItemLevel", maxItemLevel.trim())
+        put("minItemLevel", level.min?.toString().orEmpty())
+        put("maxItemLevel", level.max?.toString().orEmpty())
         put("priceOrb", priceOrb)
         put("maxPrice", maxPrice.trim())
         put("sellerId", sellerId)
@@ -135,52 +138,49 @@ import kotlinx.serialization.Serializable
     }.filterValues { it.isNotBlank() }
 
     /** The filters set besides the name, in the order the showcase shows them as chips. */
-    fun active(): List<FilterField> = FilterField.entries.filter { value(it).isNotBlank() }
+    fun active(): List<FilterField> = FilterField.entries.filter(::isSet)
 
-    fun value(field: FilterField): String = when (field) {
-        FilterField.KIND -> kind
-        FilterField.SLOT -> slot
-        FilterField.RARITY -> rarity
-        FilterField.MIN_LEVEL -> minItemLevel.trim()
-        FilterField.MAX_LEVEL -> maxItemLevel.trim()
-        FilterField.ORB -> priceOrb
-        FilterField.MAX_PRICE -> maxPrice.trim()
-        FilterField.SELLER -> sellerId
+    fun isSet(field: FilterField): Boolean = when (field) {
+        FilterField.KIND -> kind.isNotBlank()
+        FilterField.SLOT -> slot.isNotBlank()
+        FilterField.RARITY -> rarity.isNotBlank()
+        FilterField.LEVEL -> !level.isAny
+        FilterField.ORB -> priceOrb.isNotBlank()
+        FilterField.MAX_PRICE -> maxPrice.isNotBlank()
+        FilterField.SELLER -> sellerId.isNotBlank()
+        FilterField.OWN_LOTS -> showOwnLots
     }
 
     fun without(field: FilterField): AuctionFilter = when (field) {
         FilterField.KIND -> copy(kind = "")
         FilterField.SLOT -> copy(slot = "")
         FilterField.RARITY -> copy(rarity = "")
-        FilterField.MIN_LEVEL -> copy(minItemLevel = "")
-        FilterField.MAX_LEVEL -> copy(maxItemLevel = "")
+        FilterField.LEVEL -> copy(level = LevelRange())
         FilterField.ORB -> copy(priceOrb = "")
         FilterField.MAX_PRICE -> copy(maxPrice = "")
         FilterField.SELLER -> copy(sellerId = "", sellerName = "")
+        FilterField.OWN_LOTS -> copy(showOwnLots = false)
     }
 
     /**
-     * Заданное поле [field] словами для чипа: вид, место, редкость, «Ур. от 27», валюта и предел цены, продавец - по имени, а без
-     * имени - по концу номера.
+     * Заданное поле [field] словами на языке [lang] для чипа и строки шторки: вид, место, редкость, вилка уровня («Ур. 27–37»), валюта
+     * и предел цены, продавец - по имени, а без имени - по концу номера, «Мои лоты».
      */
-    fun fieldTitle(field: FilterField, lang: Lang): String {
-        val value = value(field)
-        return when (field) {
-            FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, lang) } ?: value
-            FilterField.SLOT -> slotTitle(value, lang)
-            FilterField.RARITY -> rarityTitle(value, lang)
-            FilterField.MIN_LEVEL -> ui("auction.chip_ilvl_from", value)
-            FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
-            FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
-            FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
-            FilterField.SELLER -> sellerName.takeIf { it.isNotBlank() }?.let { ui("auction.chip_seller_name", it) } ?: ui("auction.chip_seller", value.takeLast(SELLER_TAIL))
-        }
+    fun fieldTitle(field: FilterField, lang: Lang): String = when (field) {
+        FilterField.KIND -> LotKind.entries.firstOrNull { it.name == kind }?.let { lotKindTitle(it, lang) } ?: kind
+        FilterField.SLOT -> slotTitle(slot, lang)
+        FilterField.RARITY -> rarityTitle(rarity, lang)
+        FilterField.LEVEL -> level.title(lang).orEmpty()
+        FilterField.ORB -> ui(lang, "auction.chip_orb", itemTitle(priceOrb))
+        FilterField.MAX_PRICE -> ui(lang, "auction.chip_max_price", maxPrice.trim())
+        FilterField.SELLER -> sellerName.takeIf { it.isNotBlank() }?.let { ui(lang, "auction.chip_seller_name", it) } ?: ui(lang, "auction.chip_seller", sellerId.takeLast(SELLER_TAIL))
+        FilterField.OWN_LOTS -> ui(lang, "auction.show_mine")
     }
 
     /** Заданные поля сужениями под строкой поиска, каждое - с фильтром без него. */
     fun narrowings(lang: Lang): List<Narrowing<AuctionFilter>> = active().map { Narrowing(fieldTitle(it, lang), without(it)) }
 
-    /** Every filter off, the name kept. */
+    /** Every filter off, «Мои лоты» too; the name kept. */
     fun cleared(): AuctionFilter = AuctionFilter(title = title, lang = lang)
 }
 
@@ -188,7 +188,7 @@ import kotlinx.serialization.Serializable
 private const val SELLER_TAIL = 6
 
 /** A filter of the showcase that is not the name: each one a chip when set. */
-enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRICE, SELLER }
+enum class FilterField { KIND, SLOT, RARITY, LEVEL, ORB, MAX_PRICE, SELLER, OWN_LOTS }
 
 /**
  * The showcase by cursor: [next] opens the following page, `null` — nothing further. [page] and [cursors] are the

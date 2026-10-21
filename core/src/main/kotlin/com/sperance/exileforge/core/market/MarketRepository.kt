@@ -15,7 +15,6 @@ data class Market(
     val tab: Int = 0,
     val showcase: AuctionPage = AuctionPage(),
     val filter: AuctionFilter = AuctionFilter(),
-    val showOwnLots: Boolean = false,
     val myLots: List<AuctionLot> = emptyList(),
     /** Сделки героя за последние дни, новые сверху. */
     val history: List<AuctionLot> = emptyList(),

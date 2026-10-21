@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.PickOption
 import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -120,19 +119,6 @@ private fun rewardLine(reward: RedemptionReward): String {
 }
 
 /**
- * Что может назвать награда вида [kind] из контента на экране: стопки по полкам сумки или шаблоны по месту и уровню, ключ - код.
- * Пусто у видов, что ничего не называют, и пока контент не прочитан.
- */
-private fun rewardOptions(game: GameUi, kind: RedemptionKind): List<PickOption> {
-    val index = game.index ?: return emptyList()
-    return when (kind) {
-        RedemptionKind.ITEM -> PickOptions.items(index)
-        RedemptionKind.EQUIPMENT -> PickOptions.templates(index)
-        RedemptionKind.EXPERIENCE, RedemptionKind.GOLD -> emptyList()
-    }
-}
-
-/**
  * The form that makes a code.
  *
  * The reward is built row by row and held here until the code is sent: a half-written list is not
@@ -144,7 +130,7 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): List<PickOption> 
     var rewards by remember { mutableStateOf(emptyList<RedemptionReward>()) }
 
     var kind by remember { mutableStateOf(RedemptionKind.ITEM) }
-    var item by remember { mutableStateOf("") }
+    var item by remember { mutableStateOf<String?>(null) }
     var amount by rememberSaveable { mutableStateOf("1") }
 
     val needsCode = kind == RedemptionKind.ITEM || kind == RedemptionKind.EQUIPMENT
@@ -169,12 +155,14 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): List<PickOption> 
         OrnateDivider(Gold)
         Engraved(ui("redemption.reward"))
         val kinds = remember(game.lang) { PickOptions.redemptionKinds() }
-        ForgePicker(ui("redemption.kind"), kind.name, kinds, enabled = !game.busy) {
-            kind = RedemptionKind.valueOf(it)
-            item = ""
+        ForgePicker(ui("redemption.kind"), kind, kinds, enabled = !game.busy) { picked ->
+            picked?.let {
+                kind = it
+                item = null
+            }
         }
         if (needsCode) {
-            val options = remember(game.index, game.lang, kind) { rewardOptions(game, kind) }
+            val options = remember(game.index, game.lang, kind) { PickOptions.rewards(game.index, kind) }
             ForgePicker(ui("enum.reward.${kind.name}"), item, options, enabled = !game.busy) { item = it }
         }
         OutlinedTextField(
@@ -187,11 +175,11 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): List<PickOption> 
         )
 
         ForgeButton(
-            state = ButtonState.of(!game.busy && (!needsCode || item.isNotBlank()) && amount.toDoubleOrNull() != null),
+            state = ButtonState.of(!game.busy && (!needsCode || item != null) && amount.toDoubleOrNull() != null),
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                rewards = rewards + redemptionReward(kind, item, amount.toDoubleOrNull() ?: 0.0)
-                item = ""
+                rewards = rewards + redemptionReward(kind, item.orEmpty(), amount.toDoubleOrNull() ?: 0.0)
+                item = null
                 amount = "1"
             },
             kind = ButtonKind.Secondary,

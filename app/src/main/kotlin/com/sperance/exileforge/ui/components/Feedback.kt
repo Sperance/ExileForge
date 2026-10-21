@@ -178,7 +178,7 @@ fun ReportsSheet(start: ReportsView, issueLinks: Boolean, onDismiss: () -> Unit)
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
             PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
-            SearchBar(query, { query = it.take(SEARCH_MAX) }, ui("feedback.search"))
+            SearchBar(query, { query = it }, ui("feedback.search"), maxLength = SEARCH_MAX)
             PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
                 CompositionLocalProvider(LocalIssueLinks provides issueLinks) {
                     ReportsList(tab, feedback, query, shownFresh, start.focus, !activity.busy, model) { deleting = it }

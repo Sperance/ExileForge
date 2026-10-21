@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
@@ -58,52 +59,52 @@ import org.koin.compose.viewmodel.koinViewModel
     if (index == null) return
     ForgePanel {
         Engraved(ui("tester.items"))
-        var item by remember { mutableStateOf("") }
+        var item by remember { mutableStateOf<String?>(null) }
         val items = remember(index, account.lang) { PickOptions.items(index) }
         ForgePicker(ui("tester.item"), item, items, enabled = enabled) { item = it }
-        NumberGrant(ui("tester.amount_cap", index.rules.moderation.grantStack), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
+        NumberGrant(ui("tester.amount_cap", index.rules.moderation.grantStack), "10", account.inputs.number, enabled && item != null) { amount -> item?.let { heroModel.grantItem(it, amount.toLong()) } }
         NumberGrant(ui("tester.rares"), "5", 2, enabled) { heroModel.testerGrant("rares", "count" to it) }
     }
     ForgePanel {
         Engraved(ui("tester.random_item"))
         val any = ui("tester.any")
-        var rarity by remember { mutableStateOf("") }
-        var slot by remember { mutableStateOf("") }
+        var rarity by remember { mutableStateOf<Rarity?>(null) }
+        var slot by remember { mutableStateOf<Slot?>(null) }
         val rarities = remember(account.lang) { PickOptions.rarities(any) }
         val slots = remember(account.lang) { PickOptions.slots(any) }
         ForgePicker(ui("common.rarity"), rarity, rarities, enabled = enabled) { rarity = it }
         ForgePicker(ui("tester.slot"), slot, slots, enabled = enabled) { slot = it }
-        GrantButton(ui("tester.give"), enabled) { heroModel.grantRandom(rarity, slot) }
+        GrantButton(ui("tester.give"), enabled) { heroModel.grantRandom(rarity?.name.orEmpty(), slot?.name.orEmpty()) }
     }
     ForgePanel {
         Engraved(ui("tester.template"))
-        var template by remember { mutableStateOf("") }
+        var template by remember { mutableStateOf<String?>(null) }
         val templates = remember(index, account.lang) { PickOptions.templates(index) }
         ForgePicker(ui("tester.template_item"), template, templates, enabled = enabled) { template = it }
-        val rarities = remember(index, template) { index.template(template)?.let { ItemFactory(index).grantable(it) }.orEmpty() }
+        val rarities = remember(index, template) { template?.let { index.template(it) }?.let { ItemFactory(index).grantable(it) }.orEmpty() }
         var picked by remember(template) { mutableStateOf<Rarity?>(null) }
         val rarity = picked?.takeIf { it in rarities } ?: rarities.lastOrNull()
-        if (rarities.size > 1) RarityChips(rarities, rarity) { picked = it }
-        GrantButton(ui("tester.give"), enabled && rarity != null) { heroModel.grant(template, rarity) }
+        if (rarities.size > 1) RarityChoice(rarities, { it == rarity }, { picked = it })
+        GrantButton(ui("tester.give"), enabled && rarity != null) { template?.let { heroModel.grant(it, rarity) } }
     }
     ForgePanel {
         Engraved(ui("tester.maps"))
-        var zone by remember { mutableStateOf("") }
+        var zone by remember { mutableStateOf<String?>(null) }
         var rarity by remember { mutableStateOf(Rarity.RARE) }
         val rarities = remember(index) { index.template(MAP_TEMPLATE)?.let { ItemFactory(index).grantable(it) }.orEmpty() }
         val zones = remember(index, account.lang) { PickOptions.zones(index) }
         ForgePicker(ui("tester.zone"), zone, zones, enabled = enabled) { zone = it }
-        RarityChips(rarities, rarity) { rarity = it }
-        GrantButton(ui("tester.give_map"), enabled && zone.isNotBlank()) { heroModel.testerGrant("map", "zone" to zone, "rarity" to rarity.name) }
+        RarityChoice(rarities, { it == rarity }, { picked -> picked?.let { rarity = it } })
+        GrantButton(ui("tester.give_map"), enabled && zone != null) { zone?.let { heroModel.testerGrant("map", "zone" to it, "rarity" to rarity.name) } }
     }
     ForgePanel {
         Engraved(ui("tester.crafts"))
-        var profession by remember { mutableStateOf("") }
+        var profession by remember { mutableStateOf<String?>(null) }
         val all = ui("tester.all_professions")
         val professions = remember(index, all) { PickOptions.professions(index, all) }
         ForgePicker(ui("tester.profession"), profession, professions, enabled = enabled) { profession = it }
         NumberGrant(ui("tester.profession_level"), index.professions.rules.maxLevel.toString(), 3, enabled) {
-            heroModel.testerGrant("profession", "code" to profession, "level" to it)
+            heroModel.testerGrant("profession", "code" to profession.orEmpty(), "level" to it)
         }
         GrantButton(ui("tester.recipes"), enabled) { heroModel.testerGrant("recipes") }
     }
@@ -150,12 +151,6 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** Выбор редкости выдачи из [rarities], что даёт шаблон. */
-@Composable private fun RarityChips(rarities: List<Rarity>, selected: Rarity?, onSelect: (Rarity) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        rarities.forEach { r -> ForgeChip(ui("enum.rarity.${r.name}"), selected == r, { onSelect(r) }, mode = ChipMode.Choice) }
-    }
-}
-
 @Composable private fun GrantButton(label: String, enabled: Boolean, danger: Boolean = false, onClick: () -> Unit) {
     if (danger) {
         ForgeButton(state = ButtonState.of(enabled), onClick = onClick, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(label) }

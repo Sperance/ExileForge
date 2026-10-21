@@ -378,7 +378,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
         when (entry) {
             is DealEntry.Stack -> Orb.of(entry.code)?.let { OrbGlyph(it, Modifier.size(20.dp)) } ?: StackIcon(game, entry.code, 20)
             is DealEntry.Gold -> Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(20.dp))
-            is DealEntry.Goods -> LotIcon(game, entry.lot, Modifier.size(20.dp))
+            is DealEntry.Goods -> LotIcon(game, entry.lot, 20.dp)
         }
         Text(
             title,

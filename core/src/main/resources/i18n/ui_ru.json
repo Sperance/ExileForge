@@ -3814,6 +3814,7 @@
   "update.retry": "Повторить",
   "req.short.heroClass": "только {0}",
   "bag.section_chests": "Сундуки",
+  "bag.cell_label": "{0}, {1} шт.",
   "chest.open": "Открыть",
   "chest.inside": "Внутри",
   "chest.gold": "Золото: {0}",

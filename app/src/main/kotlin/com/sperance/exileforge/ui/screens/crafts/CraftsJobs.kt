@@ -382,7 +382,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
                 val have = bagCount(game, code)
                 val enough = have >= amount
                 FormulaSlot(ui("crafts.ratio", compactNumber(have.toDouble()), amount), if (enough) Parchment else LifeRed, frame = if (enough) Bronze else LifeRed, onClick = { onOpen(Inspect.Stack(code)) }) {
-                    BagIcon(code, Modifier.size(28.dp))
+                    StackCell(game.index, code, 1, size = 40.dp)
                 }
             }
         }
@@ -390,7 +390,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         FormulaSlot(JobRates.yieldRange(profession.bonus), Parchment, frame = Bronze, size = 56, onClick = resultCard(game, job)?.let { card -> { onOpen(card) } }) { JobIcon(job, Modifier.size(36.dp)) }
         job.extra.forEach { find ->
             FormulaPlus()
-            FormulaSlot(ui("crafts.percent", number(find.chance)), Brass, frame = Bronze, onClick = { onOpen(Inspect.Stack(find.item)) }) { BagIcon(find.item, Modifier.size(28.dp)) }
+            FormulaSlot(ui("crafts.percent", number(find.chance)), Brass, frame = Bronze, onClick = { onOpen(Inspect.Stack(find.item)) }) { StackCell(game.index, find.item, 1, size = 40.dp) }
         }
     }
 }

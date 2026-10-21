@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
@@ -85,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
             enabled = !game.busy,
             marks = marks,
             onClick = onClick,
-            icon = { LotIcon(game, lot, Modifier.size(28.dp)) },
+            icon = { LotIcon(game, lot, 28.dp) },
             price = price,
         )
     }
@@ -139,7 +140,10 @@ internal const val LOT_TICK_MS = 30_000L
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
-@Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) = LotIcon(lot, lotVisualKind(game, lot), modifier)
+/** Значок лота стороной [size]: стопка - её ячейкой ([StackCell]), копия - рисунком ([LotIcon]). */
+@Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, size: Dp) {
+    if (lot.kind == LotKind.ITEM) StackCell(game.index, lot.itemCode, lot.amount, size = size) else LotIcon(lot, lotVisualKind(game, lot), Modifier.size(size))
+}
 
 /** Рисунок лота: спрайт сервера по коду, иначе эмблема вида [visual] ([lotVisualKind]). */
 @Composable internal fun LotIcon(lot: AuctionLot, visual: ItemVisualKind, modifier: Modifier) {
@@ -199,7 +203,7 @@ internal fun LotSheet(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (view == null) {
-                        LotIcon(game, lot, Modifier.size(28.dp))
+                        LotIcon(game, lot, 28.dp)
                         Text(lot.title, color = lotColor(lot), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                     }
                     LotPrice(lot) { inspect(Inspect.Stack(lot.priceOrb)) }

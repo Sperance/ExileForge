@@ -3814,6 +3814,7 @@
   "update.retry": "Try again",
   "req.short.heroClass": "{0} only",
   "bag.section_chests": "Chests",
+  "bag.cell_label": "{0}, {1} pcs.",
   "chest.open": "Open",
   "chest.inside": "Inside",
   "chest.gold": "Gold: {0}",

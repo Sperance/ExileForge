@@ -125,7 +125,7 @@ import org.koin.compose.viewmodel.koinViewModel
         ConfirmSheet(
             title = ui("auction.buy_q"),
             subtitle = lot.title,
-            icon = { LotIcon(game, lot, Modifier.size(44.dp)) },
+            icon = { LotIcon(game, lot, 44.dp) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
                 fee.takeIf { it > 0 }?.let { LedgerLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },

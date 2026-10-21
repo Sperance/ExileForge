@@ -509,7 +509,7 @@ internal fun percent(value: Double): String = if (value % 1.0 == 0.0) value.toLo
         )
     } else {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LotIcon(game, lot, Modifier.size(28.dp))
+            LotIcon(game, lot, 28.dp)
             Text(lot.title, color = lotColor(lot), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
             if (lot.amount > 1) Text(ui("auction.pieces", lot.amount), color = Muted, style = MaterialTheme.typography.labelMedium)
         }

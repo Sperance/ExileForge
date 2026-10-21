@@ -49,7 +49,11 @@ class GuildActions(
     fun load(fresh: Boolean = false) = commands.read(Reads.GUILD, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
-        val mine = api.guild.mine(id)
+        land(id, api.guild.mine(id))
+    }
+
+    /** Гильдия героя [id] из ответа - своего или входа в Город. */
+    internal fun land(id: String, mine: GuildMine) {
         if (heroes.onScreen(id)) guild { it.copy(mine = mine) }
     }
 

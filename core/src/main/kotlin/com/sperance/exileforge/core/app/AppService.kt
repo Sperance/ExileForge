@@ -37,6 +37,7 @@ abstract class AppService(
     protected val heroSync get() = actions.heroSync
     protected val expedition get() = actions.expedition
     protected val trial get() = actions.trial
+    protected val town get() = actions.town
 
     /** Текущий сервер: заменяется при смене адреса и при входе. */
     protected var api: GameApi

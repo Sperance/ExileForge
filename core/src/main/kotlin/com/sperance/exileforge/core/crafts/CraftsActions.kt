@@ -150,9 +150,9 @@ class CraftsActions(
     /**
      * Ответ сервера: работа как он её пересчитал; сбор с циклами - [Crafts.last] для
      * всплывашки у полосы цикла. Первый ответ после отсутствия игрока, покрывший отлучку, копится в [Crafts.away] до показа листа.
-     * Сумка приходит снимком героя в том же ответе; не пришёл - герой перечитывается.
+     * Сумка приходит снимком героя в том же ответе; не пришёл - герой перечитывается. Вход в Город кладёт сюда свой досчёт.
      */
-    private fun land(id: String, answer: CraftsState) {
+    internal fun land(id: String, answer: CraftsState) {
         if (!heroes.onScreen(id)) return
         val gains = answer.gains
         val returned = absent

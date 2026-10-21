@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The steps of the warm-up, in the order the loading screen lists them. */
-enum class WarmStep { CONTENT, LOCALE, ICONS, HERO, WORLD }
+enum class WarmStep { CONTENT, LOCALE, ICONS, HERO }
 
 /** The warm-up of one hero: which steps are done, and whether it is over (done, failed or timed out alike). */
 data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val finished: Boolean = false) {
@@ -24,8 +24,8 @@ data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val 
 
 /**
  * The warm-up: entering a hero reads, before the game opens, everything the screens would otherwise ask for one
- * by one — the content, the dictionary, the icons, the hero whole, and the boards the tabs open on (quests, crafts, the
- * merchant) — so the play itself sends few requests and short ones. Every step is kept from the device when it can be;
+ * by one — the content, the dictionary, the icons, and the hero with the town (quests, crafts, the guild, the market and
+ * the merchant's shelf) in one request — so the play itself sends few requests and short ones. Every step is kept from the device when it can be;
  * a step that fails does not hold the game back, and after [LIMIT] ms the game opens whatever is left.
  */
 class WarmupActions(
@@ -68,11 +68,12 @@ class WarmupActions(
                                 }
                             }
                         }
-                        launch { step(id, WarmStep.HERO) { if (heroes.state.value.readAt == 0L) heroSync.readHero() } }
-                    }
-                    step(id, WarmStep.WORLD) {
-                        quests.load()
-                        crafts.load(silent = true)
+                        launch {
+                            step(id, WarmStep.HERO) {
+                                runCatching { town.visit() }.onFailure { if (it is CancellationException) throw it }
+                                if (heroes.state.value.readAt == 0L) heroSync.readHero()
+                            }
+                        }
                     }
                 }
                 mutable.update { w -> w?.takeIf { it.heroId == id }?.copy(finished = true) ?: w }

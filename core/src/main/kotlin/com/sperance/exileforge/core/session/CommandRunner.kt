@@ -152,6 +152,12 @@ class CommandRunner(
         mutable.update { it.copy(busy = false) }
     }
 
+    /** Ответ одного чтения принёс и [keys] (Город - доску, ремёсла, гильдию, лоты): их срок свежести для [tag] идёт от сейчас. */
+    fun settled(keys: Set<String>, tag: String) {
+        val now = System.currentTimeMillis()
+        keys.forEach { done[it] = Read(tag, now) }
+    }
+
     /**
      * Чтение под ключом [key]: одно за раз. С [tag] (обычно id героя) удачное чтение запоминается, и вызов с
      * [maxAgeMs] пропускается, пока прошлый ответ для того же [tag] моложе - экран, открытый снова, не спрашивает сервер.

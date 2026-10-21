@@ -47,6 +47,9 @@ object Reads {
     const val GUILD_LOG = "guild_log"
     const val QUESTS = "quests"
     const val GUILD_QUESTS = "guild_quests"
+
+    /** Вход в Город: доска, ремёсла, гильдия и лоты одним ответом (`hero/town`). */
+    const val TOWN = "town"
     const val HALL = "hall"
 
     /** Карточка игрока. */

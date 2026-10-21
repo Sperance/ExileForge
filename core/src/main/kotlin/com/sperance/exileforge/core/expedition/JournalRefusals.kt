@@ -9,19 +9,19 @@ import com.sperance.exileforge.rules.run.RunEventKind
 
 /**
  * Отказ сервера по журналу захода или испытания: отклонённые события [rejected] - строкой на каждую причину из [refusals] (без
- * причины - отказ правила), в строке - виды отклонённых событий ([kinds]: номер → ключ локали вида, [refusedKey]) со счётом
- * повторов; событие, чей вид неизвестен, - числом. Красным «!» ([NoticeKind.FAILED]); ничего не отклонено - тоста нет.
+ * причины - отказ правила), в строке - виды отклонённых событий со счётом повторов; событие, чей вид неизвестен, - числом.
+ * [kindKeys] - по номеру события ключ локали его вида из [refusedKey]. Красным «!» ([NoticeKind.FAILED]); ничего не отклонено - тоста нет.
  */
-internal fun Notices.refused(rejected: Collection<Int>, refusals: Map<Int, Refusal>, kinds: Map<Int, String>) {
+internal fun Notices.refused(rejected: Collection<Int>, refusals: Map<Int, Refusal>, kindKeys: Map<Int, String>) {
     if (rejected.isEmpty()) return
     val byCause = rejected.groupBy { refusals[it] ?: Refusal.RULE }
-    toast(Refusal.entries.mapNotNull { cause -> byCause[cause]?.let { ui("expedition.refused.${cause.name}", refusedKinds(it, kinds)) } }.joinToString("\n"), NoticeKind.FAILED)
+    toast(Refusal.entries.mapNotNull { cause -> byCause[cause]?.let { ui("expedition.refused.${cause.name}", refusedKinds(it, kindKeys)) } }.joinToString("\n"), NoticeKind.FAILED)
 }
 
-/** Виды отклонённых событий [numbers] через запятую: «бой со стаей ×2, сундук»; без вида - «событий: N». */
-private fun refusedKinds(numbers: List<Int>, kinds: Map<Int, String>): String {
-    val named = numbers.mapNotNull { kinds[it] }.groupingBy { it }.eachCount().map { (key, count) -> if (count > 1) ui("expedition.refused.times", ui(key), count) else ui(key) }
-    val nameless = numbers.count { it !in kinds }
+/** Виды отклонённых событий [numbers] через запятую по ключам [kindKeys]: «бой со стаей ×2, сундук»; без вида - «событий: N». */
+private fun refusedKinds(numbers: List<Int>, kindKeys: Map<Int, String>): String {
+    val named = numbers.mapNotNull { kindKeys[it] }.groupingBy { it }.eachCount().map { (key, count) -> if (count > 1) ui("expedition.refused.times", ui(key), count) else ui(key) }
+    val nameless = numbers.count { it !in kindKeys }
     return (named + listOfNotNull(ui("expedition.refused.events", nameless).takeIf { nameless > 0 })).joinToString(", ")
 }
 

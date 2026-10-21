@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
+import com.sperance.exileforge.core.app.RunPrefs
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
@@ -285,7 +286,7 @@ class ExpeditionRun(
     var swift = false
         private set
 
-    /** Ускорение после босса включено настройкой устройства (`GameSettings.swiftAfterBoss`); смена - командой [RunCommand.Swift]. */
+    /** Ускорение после босса включено настройкой устройства (`GameSettings.swiftAfterBoss`); смена - командой [RunCommand.SwiftAllowed]. */
     internal var swiftAllowed = true
 
     /** Шаг героя ускорен сейчас: босс пал ([swift]) и ускорение включено ([swiftAllowed]). */
@@ -658,7 +659,7 @@ class ExpeditionRun(
          * «меньше сопротивлений» карты. Порядок расстановки: объекты карты - после прочих (их места не сдвигают сундуков и кристаллов);
          * сделки алтарей, стражи сокровищ, стаи Следопыта и монстры стоявших объектов - до павших. Принесённое из основной карты в
          * Ваал-зону - на листе героя сразу. [bossSlain] - страж карты уже пал в этом заходе (счёт сервера): ускорение [swift] держится.
-         * [speed] - скорость боёв захода на входе, дальше её меняет кнопка скорости.
+         * [prefs] - настройки устройства на входе: скорость боёв (дальше её меняет кнопка скорости) и ускорение после босса.
          */
         fun start(
             index: ContentIndex,
@@ -681,8 +682,7 @@ class ExpeditionRun(
             summoned: Int = 0,
             bossSlain: Boolean = false,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
-            speed: Int = 1,
-            swiftAllowed: Boolean = true,
+            prefs: RunPrefs = RunPrefs.DEFAULT,
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
@@ -713,7 +713,7 @@ class ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, callbacks, fateRun,
             ).also {
-                it.swiftAllowed = swiftAllowed
+                it.swiftAllowed = prefs.swiftAllowed
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()
                 if (bossSlain) it.bossSlain()
@@ -726,7 +726,7 @@ class ExpeditionRun(
                 if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
                 it.summons = campaign.summons
                 it.summoned = summoned
-                it.speed = speed
+                it.speed = prefs.speed
             }
         }
 

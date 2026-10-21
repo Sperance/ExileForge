@@ -26,8 +26,6 @@ import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.strongestChill
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
-import com.sperance.exileforge.core.display.shareText
-import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -110,9 +108,6 @@ internal fun ExpeditionRun.walk(dt: Double) {
  * каждый тик шага без аллокаций.
  */
 internal fun ExpeditionRun.stride(): Double = (1 / chillStretch(carry.ailments.strongestChill())).coerceAtLeast(pace.chillFloor)
-
-/** Подпись холода под жетоном героя на карте: «−X%» шага по множителю [stride], процент - как в сводке героя ([shareText]). */
-fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))
 
 /** Фонтан выпит: его доля здоровья и маны назад, и каждой фляге - его доля её ёмкости зарядов ([charged]). */
 internal fun ExpeditionRun.drink(spring: Fountain) {

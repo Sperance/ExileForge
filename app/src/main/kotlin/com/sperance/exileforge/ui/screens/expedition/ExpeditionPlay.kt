@@ -224,7 +224,7 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
     RunPhase.MAP -> copy(
         heroLife = 0, heroShield = 0, heroMana = 0, heroReserved = 0,
         flasks = flasks.map { it?.copy(charges = 0, active = 0f) }, hazards = emptyList(), heroAilments = emptyList(), heroEffects = emptyList(),
-        heroCharges = emptyList(), lifeFlow = null, action = action?.let { it.copy(progress = it.progress?.let { 0f }) },
+        heroCharges = emptyList(), lifeFlow = null, action = action?.let { it.copy(progress = it.progress?.let { 0f }) }, stride = 1.0,
     )
 
     else -> this

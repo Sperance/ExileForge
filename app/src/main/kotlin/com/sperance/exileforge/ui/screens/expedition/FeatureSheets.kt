@@ -305,12 +305,12 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
  * щит и здоровье вместе; тики состояния - мелким курсивом, как в бою. Число встаёт над жетоном героя - камера держит его чуть
  * ниже середины - и уплывает вверх, гаснет; без анимаций висит, пока видно.
  *
- * Ноги героя - на 55% высоты и полтайла ниже, жетон над ними - около двух полутайлов.
+ * Ноги героя - на [SceneCamera.HERO_DOWN] высоты и полтайла ниже, жетон над ними - около двух полутайлов.
  */
 @Composable internal fun HazardFloat(hazards: List<HazardView>) {
     if (hazards.isEmpty()) return
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val feet = maxHeight * .55f + SCENE_UNIT - SCENE_UNIT * 2.6f
+        val feet = maxHeight * SceneCamera.HERO_DOWN + SCENE_UNIT - SCENE_UNIT * 2.6f
         hazards.forEach { hazard -> androidx.compose.runtime.key(hazard.id) { HazardNumber(hazard, feet) } }
     }
 }

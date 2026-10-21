@@ -199,7 +199,7 @@ class ExpeditionActions(
         }
         scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { heroChanged(it) } }
         scope.launch {
-            prefs.settings.map { it.swiftAfterBoss }.distinctUntilChanged().collect { on -> listOfNotNull(parent, mutableRun.value).forEach { it.send(RunCommand.Swift(on)) } }
+            prefs.settings.map { it.swiftAfterBoss }.distinctUntilChanged().collect { on -> runs().forEach { it.send(RunCommand.SwiftAllowed(on)) } }
         }
     }
 
@@ -352,8 +352,7 @@ class ExpeditionActions(
             summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
-            speed = prefs.fightSpeed(i.rules.fight),
-            swiftAllowed = prefs.settings.value.swiftAfterBoss,
+            prefs = prefs.runPrefs(i.rules.fight),
         ).also { r -> if (toBoss) r.send(RunCommand.ToBoss) }
         vaalKilled = started.vaalKilled
         persist()
@@ -675,7 +674,7 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, callbacks = callbacks, vaal = true, startPools = outer.pools,
             killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
-            speed = prefs.fightSpeed(i.rules.fight),
+            prefs = prefs.runPrefs(i.rules.fight),
         )
         parent = outer
         mutableRun.value = inner

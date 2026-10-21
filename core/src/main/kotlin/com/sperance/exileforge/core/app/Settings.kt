@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.app
 
+import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.serialization.Serializable
 
@@ -64,3 +65,21 @@ enum class DamageNumbers { ALL, CRITS, OFF }
 
 /** The game's text against the phone's own size. */
 enum class TextSize(val scale: Float) { S(.9f), M(1f), L(1.15f) }
+
+/** Скорость начала любого боя (поход, испытания, Разлом): [GameSettings.fightSpeed] среди скоростей [rules]; незнакомая - первая из них. */
+fun GameSettings.startSpeed(rules: FightRules): Int = fightSpeed.takeIf { it in rules.speeds } ?: rules.speeds.first()
+
+/**
+ * Настройки устройства, с которыми начинается заход (`ExpeditionRun.start`, и зона Ваал тоже): [speed] - скорость боёв на входе,
+ * дальше её меняет кнопка скорости; [swiftAllowed] - ускорение после босса включено ([GameSettings.swiftAfterBoss]), дальше его
+ * ведёт команда `RunCommand.SwiftAllowed`.
+ */
+data class RunPrefs(val speed: Int, val swiftAllowed: Boolean) {
+    companion object {
+        /** Умолчания первого запуска: скорость 1, ускорение включено. */
+        val DEFAULT = RunPrefs(speed = 1, swiftAllowed = true)
+
+        /** Из настроек [settings] под скорости боя [rules]. */
+        fun of(settings: GameSettings, rules: FightRules): RunPrefs = RunPrefs(settings.startSpeed(rules), settings.swiftAfterBoss)
+    }
+}

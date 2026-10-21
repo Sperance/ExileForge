@@ -60,11 +60,11 @@ class GuardianTest {
     fun haste_after_the_boss_waits_for_the_setting() {
         val run = expedition(CampaignState(chests = chests))
         val plain = run.world.heroSpeed
-        run.handle(RunCommand.Swift(false))
+        run.handle(RunCommand.SwiftAllowed(false))
         run.bossSlain()
         assertTrue(run.swift)
         assertEquals(plain, run.world.heroSpeed, 1e-9, "the setting off keeps the plain pace")
-        run.handle(RunCommand.Swift(true))
+        run.handle(RunCommand.SwiftAllowed(true))
         assertEquals(plain * index.campaign.expedition.bossSlainSpeed, run.world.heroSpeed, 1e-9, "the setting on applies the boss factor at once")
     }
 

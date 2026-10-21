@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuffStack
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.MonsterTrait
@@ -95,6 +96,13 @@ data class Foe(
     val round: Int = 0,
     /** Осквернён: несёт печать Скверны - цель условия `VS_BLIGHTED`, а герой со снижением от Скверны получает от него меньше. */
     val tainted: Boolean = false,
+    /**
+     * Не бьёт и не применяет умений - идол стража: свита, что встаёт с началом боя ([summon] с `still`), а не по зову фаз; бить его
+     * можно, как любую свиту.
+     */
+    val still: Boolean = false,
+    /** Строки, что свита кладёт на своего босса, пока стоит: падает - снимаются. */
+    val ward: List<StatLine> = emptyList(),
 ) {
     val summoned: Boolean get() = summonOf != null
 }
@@ -270,6 +278,9 @@ sealed interface EffectOrigin {
 
     /** Ступень ярости боя на враге. */
     data object Rage : EffectOrigin
+
+    /** Строки свиты [monster], что лежат на её боссе, пока она стоит ([Foe.ward]). */
+    data class Ward(val monster: MonsterCode) : EffectOrigin
 }
 
 /**

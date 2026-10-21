@@ -590,7 +590,7 @@ private fun DrawScope.archFrame(glow: Color?) {
     drawPath(gem, Color(0xFF3A2A12), style = Stroke(1.dp.toPx()))
 }
 
-/** Табличка под нишей: имя и полоса - жизни у приспешника, срока у тотема. */
+/** Табличка под нишей: имя и полоса - жизни у приспешника (у идола - с долей здоровья), срока у тотема. */
 @Composable private fun BoxScope.Plaque(text: String, tint: Color, share: Float, bar: Color) {
     Box(
         Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(20.dp).clip(RoundedCornerShape(3.dp))
@@ -614,9 +614,17 @@ private fun DrawScope.archFrame(glow: Color?) {
             if (focused) Box(Modifier.matchParentSize().border(2.dp, FrameGoldBright, ArchShape))
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        Plaque(monsterTitle(foe.monster.code), Parchment, if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f, LifeMid)
+        val share = if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f
+        if (foe.still) {
+            Plaque(ui("fight.idol_plaque", monsterTitle(foe.monster.code), (share * 100).roundToInt()), Parchment, share, IdolLife)
+        } else {
+            Plaque(monsterTitle(foe.monster.code), Parchment, share, LifeMid)
+        }
     }
 }
+
+/** Полоса здоровья идола стража на табличке: камень, не кровь. */
+private val IdolLife = Color(0xFFD9C27A)
 
 @Composable private fun TotemNiche(totem: SlotView.Totem, frame: FightFrame, onTap: () -> Unit) {
     val tint = totemTint(totem)

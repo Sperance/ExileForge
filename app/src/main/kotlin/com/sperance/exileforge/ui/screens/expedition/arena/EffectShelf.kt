@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.display.flowParts
 import com.sperance.exileforge.core.display.flowRate
 import com.sperance.exileforge.core.display.guildLineTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.totemTitle
 import com.sperance.exileforge.core.i18n.locOr
@@ -343,10 +344,11 @@ internal fun effectTitle(view: EffectView): String = when {
     else -> view.origin?.let(::originTitle) ?: SkillText.title(view.source)
 }
 
-/** Имя эффекта без своего умения: тотема - из словаря тотемов, ярости - словом боя. */
+/** Имя эффекта без своего умения: тотема - из словаря тотемов, ярости - словом боя, свиты на боссе - именем монстра. */
 internal fun originTitle(origin: EffectOrigin): String = when (origin) {
     is EffectOrigin.Totem -> totemTitle(origin.code)
     EffectOrigin.Rage -> ui("fight.rage_buff")
+    is EffectOrigin.Ward -> monsterTitle(origin.monster)
 }
 
 /** Цвет эффекта: вред - кровью, глоток - цветом флакона, прочее - золотом. */

@@ -54,20 +54,22 @@ internal fun Battle.phase(foe: Fighter) {
 }
 
 /**
- * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт.
- * Кто встал - номера в стае (тень Поглотителя получает украденный дар).
+ * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт. [still] - зовёт идолов ([Foe.still]), иначе
+ * свиту, что бьётся: зов фаз и кражи идолов не трогает. Кто встал - номера в стае (тень Поглотителя получает украденный дар); строки
+ * вставшей на босса ([Foe.ward]) ложатся сразу.
  *
  * Слоты вокруг босса заняты - приспешник не встаёт.
  */
-internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
+internal fun Battle.summon(boss: Fighter, count: Int, still: Boolean = false): List<Int> {
     val risen = mutableListOf<Int>()
-    foes.indices.filter { foes[it].summonOf == boss.index && it !in called }.take(count).forEach { index ->
+    foes.indices.filter { foes[it].summonOf == boss.index && foes[it].still == still && it !in called }.take(count).forEach { index ->
         val slot = freeSlot() ?: return@forEach
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index
         risen += index
         enterField(index)
         bannerFor(foeFighters[index])
+        foes[index].ward.takeIf { it.isNotEmpty() }?.let { lines -> buff(boss, wardSource(index), lines, FOREVER) }
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
     return risen
@@ -89,7 +91,15 @@ internal fun Battle.dismissRetinue(boss: Fighter) {
     }
 }
 
-/** Приспешник пал: его слот свободен для новой свиты или тотема. */
+/** Приспешник пал: его слот свободен для новой свиты или тотема, его строки на боссе ([Foe.ward]) сняты. */
 internal fun Battle.freeMinionSlot(index: Int) {
     slotHolders.indices.firstOrNull { (slotHolders[it] as? SlotHolder.Minion)?.index == index }?.let { slotHolders[it] = null }
+    val boss = foes[index].summonOf?.let(foeFighters::get) ?: return
+    if (boss.effects.removeAll { it.source == wardSource(index) }) remake(boss)
 }
+
+/** Источник строк свиты [index] на её боссе ([Foe.ward]). */
+internal fun wardSource(index: Int) = "$WARD_SOURCE$index"
+
+/** Префикс источника строк свиты на боссе. */
+internal const val WARD_SOURCE = "ward#"

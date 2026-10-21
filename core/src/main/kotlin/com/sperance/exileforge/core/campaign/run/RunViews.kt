@@ -155,6 +155,8 @@ data class FoeView(
     /** Неуязвим ещё столько секунд (0 - уязвим) из [invulnerableFor] своей неуязвимости: удары по нему - без урона. */
     val invulnerable: Double = 0.0,
     val invulnerableFor: Double = 0.0,
+    /** Не бьёт ([com.sperance.exileforge.core.campaign.combat.Foe.still]): идол стража - его табличка показывает долю здоровья. */
+    val still: Boolean = false,
 ) {
     /** Its card is on the field: it fights there, or fell there. */
     val onField: Boolean get() = place >= 0

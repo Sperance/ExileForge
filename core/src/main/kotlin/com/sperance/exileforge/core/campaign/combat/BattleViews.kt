@@ -101,10 +101,11 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.f
     )
 } + if (fighter === heroFighter) haltViews() else emptyList()
 
-/** Чей эффект источника [source], если он не умение: тотем, что стоит, или ярость боя. */
+/** Чей эффект источника [source], если он не умение: тотем, что стоит, ярость боя или свита со строками на боссе. */
 private fun Battle.effectOrigin(source: String): EffectOrigin? = when {
     source == RAGE -> EffectOrigin.Rage
     source.startsWith(TOTEM_SOURCE) -> standingTotems.firstOrNull { it.source == source }?.let { EffectOrigin.Totem(it.totem.totem.code) }
+    source.startsWith(WARD_SOURCE) -> source.removePrefix(WARD_SOURCE).toIntOrNull()?.let { foes.getOrNull(it)?.origin?.code }?.let(EffectOrigin::Ward)
     else -> null
 }
 

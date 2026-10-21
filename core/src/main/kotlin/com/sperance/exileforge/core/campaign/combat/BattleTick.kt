@@ -68,7 +68,7 @@ internal fun Battle.step(dt: Double) {
     taps.clear()
     drinks.clear()
     foeFighters.forEach { foe ->
-        if (!foe.alive || outcome != null) return@forEach
+        if (!foe.alive || foe.still || outcome != null) return@forEach
         castTick(foe)
         val silenced = provokedSkills(foe, dt)
         burnedSkills(foe, dt)
@@ -78,7 +78,7 @@ internal fun Battle.step(dt: Double) {
     val order = dueOrder()
     for (k in order.indices) {
         val me = order[k]
-        if (!me.alive || me.held || me.casting != null || me.nextAttack > time) continue
+        if (!me.alive || me.still || me.held || me.casting != null || me.nextAttack > time) continue
         val target = if (me.side == Side.HERO) target() else heroFighter
         me.rushed = false
         if (target != null) strike(me, target, swingOf(me))

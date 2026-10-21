@@ -125,6 +125,9 @@ class Battle(
             attackInterval = 1 / next.attackSpeed
         }
 
+        /** Не бьёт и не применяет умений ([Foe.still]): идол стража. */
+        val still: Boolean = side == Side.MONSTER && index >= 0 && foes[index].still
+
         /** Босс боя: уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, устрашение, силы). */
         val chief: Boolean get() = side == Side.MONSTER && index >= 0 && foes[index].rarity >= MonsterRarity.UNIQUE
 
@@ -362,10 +365,10 @@ class Battle(
     }
 
     /**
-     * Слоты вокруг босса: их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
-     * самый старый тотем. У боя без босса с фазами или тотемами слотов нет.
+     * Слоты вокруг босса: их делят свита (и идолы стража) и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
+     * самый старый тотем. У боя без босса с фазами, тотемами или идолами слотов нет.
      */
-    val slotHolders: Array<SlotHolder?> = arrayOfNulls(max(foes.maxOfOrNull { it.slots } ?: 0, rift?.slots ?: 0))
+    val slotHolders: Array<SlotHolder?> = arrayOfNulls(foes.maxOfOrNull { it.slots } ?: 0)
 
     /** Тотемы, что стоят сейчас, по порядку, в котором встали. */
     val totems: List<StandingTotem> get() = standingTotems
@@ -693,7 +696,7 @@ class Battle(
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
-        outcome != null || !fighter.alive -> 0f
+        outcome != null || !fighter.alive || fighter.still -> 0f
         else -> (1 - (fighter.nextAttack - time) / (fighter.attackInterval * fighter.slow())).toFloat().coerceIn(0f, 1f)
     }
 

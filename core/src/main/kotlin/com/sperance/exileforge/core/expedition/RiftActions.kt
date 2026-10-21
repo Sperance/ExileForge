@@ -71,8 +71,7 @@ data class RiftToll(val before: Double, val after: Double, val key: RiftMetal?) 
 
     companion object {
         /** Итог боя по забегу до [before] и после [after]: взятый ключ - металл, которого стало больше. */
-        fun of(before: RiftRun, after: RiftRun): RiftToll =
-            RiftToll(before.honor, after.honor, after.keys.entries.firstOrNull { (metal, count) -> count > (before.keys[metal] ?: 0) }?.key)
+        fun of(before: RiftRun, after: RiftRun): RiftToll = RiftToll(before.honor, after.honor, after.keys.entries.firstOrNull { (metal, count) -> count > (before.keys[metal] ?: 0) }?.key)
     }
 }
 

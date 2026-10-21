@@ -432,7 +432,8 @@ private const val AMOUNT_DIGITS = 12
 
 /** Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по набранному [typed]) и причина запрета; удержание - [onHold]. */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun StackLine(lot: DepositLot, typed: String?, modifier: Modifier, onClick: () -> Unit, onHold: () -> Unit) {
+@Composable
+private fun StackLine(lot: DepositLot, typed: String?, modifier: Modifier, onClick: () -> Unit, onHold: () -> Unit) {
     Row(
         modifier.heightIn(min = 48.dp).combinedClickable(onLongClick = onHold, onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,

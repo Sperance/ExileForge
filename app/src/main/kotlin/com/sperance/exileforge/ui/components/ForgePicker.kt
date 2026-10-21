@@ -127,7 +127,8 @@ import kotlin.math.roundToInt
  * выбранном [value].
  */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun <K> PickSheet(title: String, hint: String?, list: PickList<K>, value: K?, onDismiss: () -> Unit, onPick: (K?) -> Unit) {
+@Composable
+private fun <K> PickSheet(title: String, hint: String?, list: PickList<K>, value: K?, onDismiss: () -> Unit, onPick: (K?) -> Unit) {
     var query by remember { mutableStateOf("") }
     val sections = remember(list, query) { list.sections(query) }
     val state = rememberLazyListState(initialFirstVisibleItemIndex = remember(list, value) { list.row(value) })

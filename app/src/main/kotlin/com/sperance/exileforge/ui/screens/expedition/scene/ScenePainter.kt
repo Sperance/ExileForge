@@ -195,17 +195,26 @@ internal class ScenePainter {
         val ref = standing.ref(i)
         when (standing.kind(i)) {
             Standing.WALLS -> layers.drawWalls(scope, standing.part(i))
+
             Standing.EXIT -> portal(world.map.exit.x + .5, world.map.exit.y + .5, world.sealed)
+
             Standing.VAAL_PORTAL -> (ref as Cell).let { vaalPortal(it.x + .5, it.y + .5, glow(it.x, it.y)) }
+
             Standing.FOUNTAIN -> (ref as Fountain).let { drawFountain(it.cell.x + .5, it.cell.y + .5, it.used, glow(it.cell.x, it.cell.y)) }
+
             Standing.CHEST -> (ref as Chest).let { drawChest(it.cell.x + .5, it.cell.y + .5, it.opened, glow(it.cell.x, it.cell.y), run.waiting(it)) }
+
             Standing.CRYSTAL -> (ref as CrystalSpot).let { drawCrystal(it.cell.x + .5, it.cell.y + .5, it.freed, it.crystal.stronger, glow(it.cell.x, it.cell.y)) }
+
             Standing.CRACK -> (ref as AbyssSpot).let { drawCrack(it.cell.x + .5, it.cell.y + .5, it.opened, it.id, glow(it.cell.x, it.cell.y)) }
+
             Standing.FEATURE -> (ref as FeatureSpot).let { spot ->
                 if (spot === run.pulse.gathering) run.pulse.action?.let { drawGather(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
                 drawFeature(spot, standing.part(i), world)
             }
+
             Standing.AGENT -> agent(ref as MonsterAgent, world, blight)
+
             else -> hero(run, world)
         }
     }

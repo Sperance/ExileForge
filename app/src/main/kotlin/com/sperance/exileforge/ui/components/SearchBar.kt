@@ -138,6 +138,7 @@ sealed interface SortLabel {
     Box {
         when (label) {
             is SortLabel.Mark -> ForgeIconButton(Icons.Outlined.SwapVert, ui("filter.sort"), onClick = { open = true }, kind = ButtonKind.Secondary, size = ButtonSize.Compact, accent = GoldBright.takeIf { label.marked })
+
             is SortLabel.Word -> ForgeButton(onClick = { open = true }, kind = ButtonKind.Secondary, size = ButtonSize.Compact, icon = Icons.Outlined.SwapVert) {
                 Text(label.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

@@ -176,8 +176,7 @@ import kotlinx.serialization.Serializable
  * переписка [issue] ([IssueView.notes]): разработчик, модерация из игры и автор. С Issue слово и ответы - его первые комментарии в том
  * же порядке, дважды они не встают.
  */
-private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> =
-    listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
+private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + answers + issue?.notes.orEmpty()
 
 /**
  * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести по машине состояний сервера,

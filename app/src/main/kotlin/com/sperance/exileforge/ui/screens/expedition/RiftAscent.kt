@@ -338,7 +338,9 @@ private val MistTones = listOf(RiftColors.Deep.copy(alpha = .55f), RiftColors.Ri
                             oval(ground, ring * (.85f + .5f * phase), RiftColors.Rift.copy(alpha = .9f * (1 - phase)), Stroke(2.dp.toPx()))
                             oval(ground, ring, RiftColors.Soft.copy(alpha = .6f), Stroke(2.dp.toPx()))
                         }
+
                         spot.hero -> oval(ground, ring, RiftColors.Rift.copy(alpha = .15f))
+
                         spot.walked -> oval(ground, ring * .82f, RiftColors.Rift.copy(alpha = .6f), Stroke(1.2.dp.toPx()))
                     }
                     shape.draw(this)

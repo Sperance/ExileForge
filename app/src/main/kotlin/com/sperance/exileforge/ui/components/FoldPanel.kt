@@ -108,9 +108,8 @@ import com.sperance.exileforge.ui.theme.Quiet
  * Строка-свёртка: касание - [onToggle]; для чтения с экрана - кнопка с действием [label] и состоянием «Развёрнуто»/«Свёрнуто» по [open].
  * Общая для [FoldPanel] и свёрток внутри панелей, что держат своё раскрытие сами.
  */
-fun Modifier.foldToggle(open: Boolean, label: String? = null, onToggle: () -> Unit): Modifier =
-    clickable(role = Role.Button, onClickLabel = label, onClick = onToggle)
-        .semantics { stateDescription = ui(if (open) "fold.open" else "fold.closed") }
+fun Modifier.foldToggle(open: Boolean, label: String? = null, onToggle: () -> Unit): Modifier = clickable(role = Role.Button, onClickLabel = label, onClick = onToggle)
+    .semantics { stateDescription = ui(if (open) "fold.open" else "fold.closed") }
 
 /** Шеврон свёртки: вниз - свёрнуто, поворотом вверх - раскрыто. */
 @Composable fun FoldChevron(open: Boolean, tint: Color = Muted, size: Dp = 18.dp) {

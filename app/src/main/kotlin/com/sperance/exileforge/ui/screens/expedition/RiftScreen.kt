@@ -725,8 +725,7 @@ private fun boonName(code: String, grade: Int): String = loc("rift.boon.$code.na
 }
 
 /** Имя награды узла [reward]; ключ - с металлом узла. */
-private fun rewardName(node: RiftNode, reward: RiftReward): String =
-    node.key?.takeIf { reward == RiftReward.KEY }?.let { ui("rift.key", ui("rift.metal.${it.name}")) } ?: ui("rift.reward.${reward.name}")
+private fun rewardName(node: RiftNode, reward: RiftReward): String = node.key?.takeIf { reward == RiftReward.KEY }?.let { ui("rift.key", ui("rift.metal.${it.name}")) } ?: ui("rift.reward.${reward.name}")
 
 /** «Идти» листа узла: касанием, с [hold] - удержанием; с причиной [why] (ключ словаря) погашена, касание её говорит. */
 @Composable private fun NodeGo(why: String?, idle: Boolean, hold: Boolean, onGo: () -> Unit) {
@@ -957,7 +956,9 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
     RiftRest.entries.forEach { choice ->
         val (hint, targets) = when (choice) {
             RiftRest.HEAL -> "" to emptyList<PickTarget>()
+
             RiftRest.UPGRADE -> ui("rift.rest_pick_boon") to heldTargets(rules, run) { run.boons[it].grade < rules.nodes.maxGrade }
+
             RiftRest.CLEANSE -> ui("rift.rest_pick_curse") to run.curses.map { curse ->
                 PickTarget(loc("rift.curse.${curse.code}.name") + if (curse.altar) " · ${ui("rift.altar_mark")}" else "", RiftColors.Warn, enabled = true)
             }
@@ -1050,7 +1051,8 @@ private class CofferMetal(val metal: RiftMetal, val opened: Int, val total: Int,
  * кнопка «Открыть ключом» - открывает следующий неоткрытый [next] (золотой - удержанием); [found] - что лежало в открытых.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun CofferGroup(game: GameUi, metal: RiftMetal, opened: Int, total: Int, next: Int?, found: Reward?, idle: Boolean, onOpen: (Int) -> Unit) {
+@Composable
+private fun CofferGroup(game: GameUi, metal: RiftMetal, opened: Int, total: Int, next: Int?, found: Reward?, idle: Boolean, onOpen: (Int) -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     val tint = metal.color()
     Column(
@@ -1093,7 +1095,8 @@ private fun heldTargets(rules: RiftRules, run: RiftRun, enabled: (Int) -> Boolea
 
 /** Цели второго шага у выделенного варианта: строка [hint] и чипы [items]; отметить - не больше [limit]. */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, limit: Int = 1) {
+@Composable
+private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, limit: Int = 1) {
     Text(hint, color = RiftColors.Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items.forEachIndexed { i, item ->

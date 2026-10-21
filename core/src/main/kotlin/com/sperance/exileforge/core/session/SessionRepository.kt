@@ -53,8 +53,7 @@ data class Session(
     fun freeProgress(holding: HeroHolding): Boolean = hero(holding, { it.freeProgress }, { it.freeProgress })
 
     /** Признак героя [holding]: из живого снимка ([live]), пока он того же героя, иначе из строки списка героев ([listed]); нет героя - нет. */
-    private fun hero(holding: HeroHolding, live: (HeroInfo) -> Boolean, listed: (HeroSummary) -> Boolean): Boolean =
-        holding.hero?.takeIf { it.id == holding.heroId }?.info?.let(live) ?: (characters.firstOrNull { it.id == holding.heroId }?.let(listed) == true)
+    private fun hero(holding: HeroHolding, live: (HeroInfo) -> Boolean, listed: (HeroSummary) -> Boolean): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.let(live) ?: (characters.firstOrNull { it.id == holding.heroId }?.let(listed) == true)
 
     /** Откроет ли сервер выдачи окна тестирования герою [holding]: администратор - любому, иначе - тестировщику. */
     fun grants(holding: HeroHolding): Boolean = isAdmin || tester(holding)

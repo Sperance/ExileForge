@@ -11,7 +11,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
-import okhttp3.CacheControl
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
@@ -100,16 +99,26 @@ class Updates(link: HttpLink = ForgeHttp.link) {
     // Описание сборки маленькое: вызов, который тянется, обрывается - проверка всегда возвращается.
     private val small = http.newBuilder().callTimeout(SMALL_CALL_S, TimeUnit.SECONDS).build()
 
+    /** Последний ответ `update.json` и его ETag: следующая проверка спрашивает условно (`If-None-Match`), 304 - тот же текст. */
+    private class Fetched(val etag: String, val text: String)
+
+    @Volatile private var fetched: Fetched? = null
+
     /**
      * Обновление сборки [versionCode] для сервера на проводе [server] (null - не ответил; [outdated] - сервер назвал сборку
-     * устаревшей, см. [UpdatePolicy]); null - обновляться не на что. Описание берётся мимо любых кешей (`no-cache`): адрес
-     * последнего релиза постоянный, а ответ на него меняется с каждым релизом.
+     * устаревшей, см. [UpdatePolicy]); null - обновляться не на что. Адрес последнего релиза постоянный, а ответ на него меняется с
+     * каждым релизом: описание спрашивается условно по ETag прошлого ответа - тот же релиз отвечает 304 без тела.
      */
     suspend fun check(versionCode: Int, server: Wire?, outdated: Boolean = false): AvailableUpdate? = withContext(Dispatchers.IO) {
-        val text = small.newCall(Request.Builder().url(LATEST).cacheControl(CacheControl.FORCE_NETWORK).build()).execute().use { response ->
-            if (response.code == 404) return@withContext null
-            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            response.body.string()
+        val held = fetched
+        val request = Request.Builder().url(LATEST).apply { held?.let { header("If-None-Match", it.etag) } }.build()
+        val text = small.newCall(request).execute().use { response ->
+            when {
+                response.code == 404 -> return@withContext null
+                response.code == 304 && held != null -> held.text
+                !response.isSuccessful -> throw IOException("HTTP ${response.code}")
+                else -> response.body.string().also { body -> response.header("ETag")?.let { fetched = Fetched(it, body) } }
+            }
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
         UpdatePolicy.verdict(info, versionCode, Wire.OWN, server, outdated = outdated)?.let { info.available(it) }

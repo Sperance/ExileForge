@@ -60,7 +60,7 @@ data class UpdateState(
  * дочитаны, а не бок о бок с ними. Возвращение в игру (не чаще [RESUME_GAP_MS]) и каждая ошибка сервера (426 - сразу, прочие ошибки и обрыв
  * без ответа - не чаще [FAILED_GAP_MS]) проверяют сборку тут же, и во время похода или испытания ([playing]): найденная
  * сборка закрывает игру по их концу (окно обновления это знает), а сверка ресурсов ([resourcesDue]) ждёт их конца - она
- * перечитывает мир под идущим боем. Провод сервера каждая проверка спрашивает заново ([ServerReach.freshWire]).
+ * перечитывает мир под идущим боем. Провод сервера каждая проверка спрашивает заново ([ServerReach.freshServer]).
  *
  * Ответ сервера может сделать сборку обязательной - проверка идёт снова. Сервер новее сборки - окно запуска ждёт новую, она ищется каждые
  * [AWAIT_POLL_MS]; отказ входа сервером новее - сборка ищется сразу, мимо очереди. Ошибка сервера или молчание - сверка ресурсов и сборки
@@ -220,18 +220,29 @@ class UpdateModel(
         mutable.update { it.copy(askSources = build.selfUpdating && !allowed, needsPermission = it.needsPermission && !allowed) }
     }
 
+    /** Версия сервера ([ServerReach.LiveServer.version]) на последней проверке, что GitHub ответил: та же - плановая проверка не идёт. */
+    private var seenServer: String? = null
+
     /**
-     * One check; whether GitHub answered. Провод сервера - свежий ([ServerReach.freshWire]): провод старта мог устареть, пока
+     * One check; whether GitHub answered. Провод сервера - свежий ([ServerReach.freshServer]): провод старта мог устареть, пока
      * игра лежала в фоне, и тогда сборка под новый сервер отвергалась бы как «не на его проводе». [outdated] - сервер сам
-     * назвал сборку устаревшей.
+     * назвал сборку устаревшей. Версия сервера с прошлой проверки не сдвинулась - GitHub не спрашивается (релиз ставит сервер и сборку
+     * вместе); жёсткие проверки ([outdated]) идут всегда.
      *
      * Скачиваемое обновление сохраняется: новое ждёт следующей проверки.
      */
     private suspend fun check(outdated: Boolean = false): Boolean = checks.withLock {
         mutable.update { it.copy(checking = true) }
         try {
-            val wire: Wire? = reach.freshWire()
+            val live = reach.freshServer()
+            if (!outdated && live.version != null && live.version == seenServer) {
+                mutable.update { it.copy(checking = false, failure = null) }
+                answeredAt = clock()
+                return@withLock true
+            }
+            val wire: Wire? = live.wire
             val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(build.code, wire, outdated = outdated) }
+            seenServer = live.version
             mutable.update { s ->
                 val next = if (s.progress != null || s.installing) s.update else found
                 s.copy(

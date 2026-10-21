@@ -38,6 +38,7 @@ import com.sperance.exileforge.ui.components.LocalHeaderCollapse
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
+import com.sperance.exileforge.ui.components.LocalUpdateHint
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.OrnateDivider
@@ -47,6 +48,7 @@ import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.ToastBelow
 import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
+import com.sperance.exileforge.ui.components.UpdateHintState
 import com.sperance.exileforge.ui.components.UpdateHost
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
@@ -103,8 +105,10 @@ import org.koin.compose.viewmodel.koinViewModel
     val haptics = koinInject<Haptics>()
     LaunchedEffect(buzzes, haptics) { buzzes.flow.collect(haptics::play) }
     val settingsModel = koinViewModel<SettingsViewModel>()
+    val route by koinInject<Navigator>().current.collectAsStateWithLifecycle()
     CompositionLocalProvider(
         LocalUpdates provides updates,
+        LocalUpdateHint provides remember { UpdateHintState() },
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
@@ -130,7 +134,7 @@ import org.koin.compose.viewmodel.koinViewModel
             diagnostics = watchdog::diagnostics,
             launchLine = { settingsModel.launchLine(LaunchLines.keys(uiLanguage)) },
         )
-        UpdateHost(updates, busy = expedition != null || trial != null || rift.arena != null)
+        UpdateHost(updates, busy = expedition != null || trial != null || rift.arena != null, barShown = route.bars)
     }
 }
 

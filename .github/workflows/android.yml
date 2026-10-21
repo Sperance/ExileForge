@@ -485,13 +485,16 @@ jobs:
           [ -n "$code" ] && [ -n "$api" ] && [ -n "$rules" ] || { echo "::error::update.json: versionCode '$code', API '$api' or rules '$rules' not found"; exit 1; }
           sha=$(sha256sum "$apk" | cut -d' ' -f1)
           size=$(stat -c %s "$apk")
+          # Обязательность релиза (#400): трейлер «Update-Mandatory: yes» в сообщении коммита релиза делает сборку обязательной и на том же
+          # проводе; без него релиз на том же проводе - мягкое обновление (тост, не диалог).
+          if git log -1 --format=%B | grep -i '^Update-Mandatory: yes' >/dev/null; then mandatory=true; else mandatory=false; fi
           # Заметки релиза (3.86.0) - тело RELEASE_NOTES.md под заголовком: сборки берутся с GitHub, сервер их больше не дописывает.
-          CODE="$code" NAME="${tag#v}" API="$api" RULES="$rules" APK="$apk" SIZE="$size" SHA="$sha" python3 -c '
+          CODE="$code" NAME="${tag#v}" API="$api" RULES="$rules" APK="$apk" SIZE="$size" SHA="$sha" MANDATORY="$mandatory" python3 -c '
           import json, os
           notes = open("RELEASE_NOTES.md", encoding="utf-8").read().split("\n", 1)[1].strip()
           e = os.environ
           print(json.dumps({"versionCode": int(e["CODE"]), "versionName": e["NAME"], "apiRevision": int(e["API"]), "rules": int(e["RULES"]),
-                            "apk": e["APK"], "size": int(e["SIZE"]), "sha256": e["SHA"], "notes": notes}, ensure_ascii=False))
+                            "apk": e["APK"], "size": int(e["SIZE"]), "sha256": e["SHA"], "notes": notes, "mandatory": e["MANDATORY"] == "true"}, ensure_ascii=False))
           ' > update.json
           cat update.json
           gh release create "$tag" "$apk" update.json mapping.txt --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest

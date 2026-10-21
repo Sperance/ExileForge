@@ -16,6 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,18 +38,27 @@ import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.update.UpdateInstaller
 
 /**
- * Хозяин обязательного обновления - своё окно поверх игры, не состояние заставки запуска: найдена сборка ([UpdateState.mandatory]) -
+ * Хозяин обновления - своё окно поверх игры, не состояние заставки запуска. Жёсткое ([AvailableUpdate.hard], [UpdateState.mandatory]) -
  * диалог по центру ([UpdateDialog]), игра под ним видна, но не нажимается; закрыть его нельзя ни «назад», ни касанием мимо. [busy] - идёт
- * поход, испытание или Разлом: пока бой, о сборке говорит плашка сверху ([UpdateHint]), диалог - по его концу.
+ * поход, испытание или Разлом: пока бой, о жёстком говорит плашка у низа экрана ([RunUpdateHint]), диалог - по его концу. Мягкое -
+ * тост снизу над панелью вкладок ([SoftUpdateToast], [barShown] - панель на виду), только вне боя и пока его не отложили
+ * ([UpdateState.offered]). «Обновить» плашки и тоста открывает тот же диалог, но закрываемый: игра под ним играет.
  */
-@Composable fun UpdateHost(updates: UpdateModel, busy: Boolean) {
+@Composable fun UpdateHost(updates: UpdateModel, busy: Boolean, barShown: Boolean) {
     val s by updates.state.collectAsState()
     val update = s.update ?: return
-    if (busy) {
-        UpdateHint(update.info.versionName)
-        return
+    var opened by remember(update.info.versionCode) { mutableStateOf(false) }
+    val locked = update.hard && !busy
+    when {
+        update.hard && busy -> RunUpdateHint(update, onInstall = { opened = true })
+        !update.hard && !busy -> s.offered?.let { SoftUpdateToast(it, barShown, onLater = updates::later, onInstall = { opened = true }) }
     }
-    Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
+    if (!locked && !opened) return
+    val dismiss: () -> Unit = { opened = false }
+    Dialog(
+        onDismissRequest = if (locked) ({}) else dismiss,
+        properties = DialogProperties(dismissOnBackPress = !locked, dismissOnClickOutside = !locked, usePlatformDefaultWidth = false),
+    ) {
         ChordOverWindow()
         Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
             UpdateDialog(update, s, onInstall = updates::install, onPermissionAsked = updates::permissionAsked)
@@ -150,7 +162,7 @@ private fun downloaded(progress: Float, size: Long): String {
 }
 
 /** Мегабайты сборки одной цифрой после точки: «38.4». */
-private fun megabytes(bytes: Long): String = "%.1f".format(bytes / BYTES_IN_MB)
+internal fun megabytes(bytes: Long): String = "%.1f".format(bytes / BYTES_IN_MB)
 
 private const val BYTES_IN_MB = 1_048_576.0
 
@@ -162,15 +174,3 @@ private val NOTES_HEIGHT = 220.dp
 
 /** Толщина полосы загрузки: тонкая, не во всю высоту кнопки. */
 private val BAR = 5.dp
-
-/** Плашка сверху над боем: найдено обновление, оно встанет по концу похода или испытания; касания идут мимо неё. */
-@Composable private fun UpdateHint(version: String) {
-    Box(Modifier.fillMaxSize().statusBarsPadding().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) {
-        Text(
-            ui("update.after_fight", version),
-            color = GoldBright,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.background(PanelRaised.copy(alpha = .92f), MaterialTheme.shapes.small).padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
-}

@@ -331,7 +331,7 @@ class KeyScreensShotTest {
     /** Окно обязательного обновления: найдено (версии чипами, заметки с прокруткой, «Обновить», размер) и загрузка (тонкая полоса и «64% · 24 из 38 МБ»). */
     @Test fun update() = shot("update", scroll = false) {
         val notes = (1..9).joinToString("\n") { "• Строки предмета сгруппированы по источникам, пункт $it" }
-        val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com")
+        val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com", hard = true)
         Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update), {}, {}) }
         Box(Modifier.weight(1f)) { UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {}) }
     }

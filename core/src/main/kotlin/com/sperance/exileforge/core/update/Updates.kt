@@ -26,7 +26,8 @@ data class Wire(val api: Int, val rules: Int) {
 }
 
 /**
- * Сборка из релиза GitHub: `update.json` релиза - версия, провод, имя APK, размер, SHA-256 и заметки.
+ * Сборка из релиза GitHub: `update.json` релиза - версия, провод, имя APK, размер, SHA-256, заметки и объявлена ли сборка обязательной
+ * ([mandatory]: трейлер `Update-Mandatory: yes` коммита релиза; старые `update.json` поля не несут - не обязательна).
  */
 @Serializable data class AppBuild(
     val versionCode: Int,
@@ -37,8 +38,15 @@ data class Wire(val api: Int, val rules: Int) {
     val size: Long = 0,
     val sha256: String,
     val notes: String = "",
+    val mandatory: Boolean = false,
 ) {
     val wire: Wire get() = Wire(apiRevision, rules)
+
+    /** Первая строка заметок без разметки (маркер списка, жирный, код) - для тоста в одну строку; заметок нет - пусто. */
+    val headline: String
+        get() = notes.lineSequence()
+            .map { it.trim().trimStart('-', '*', '•', '#', ' ').replace("**", "").replace("`", "").trim() }
+            .firstOrNull { it.isNotEmpty() }.orEmpty()
 }
 
 /** Заметки релиза: версия, дата публикации (ISO) и текст `RELEASE_NOTES.md` той версии. */
@@ -50,17 +58,25 @@ data class Wire(val api: Int, val rules: Int) {
     val version: String get() = tag.removePrefix("v")
 }
 
-/** Найденная сборка: что это, откуда качать APK и страница релиза для браузера. Любая найденная обязательна. */
-data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String)
+/**
+ * Найденная сборка: что это, откуда качать APK и страница релиза для браузера. [hard] - обновление жёсткое: игра без него не играет
+ * ([UpdatePolicy.hard]); иначе мягкое - предлагается, но не держит.
+ */
+data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String, val hard: Boolean)
 
 /**
- * Нужна ли сборка. Обязательна любая новее этой, что говорит на проводе сервера (или этой сборки, пока сервер не
- * ответил): сервер на другом проводе - старая играть не может, на том же - всё равно ставится до входа. Сборка на
- * проводе, которого сервер ещё не знает, не предлагается: она не войдёт. Исключение - [outdated]: сервер сам назвал эту
- * сборку устаревшей (426 `CL_001`), значит, его провод уже не её, даже если узнать его не вышло, - нужна любая новее.
+ * Нужна ли сборка и жёсткое ли это обновление. Предлагается любая новее этой, что говорит на проводе сервера (или этой сборки, пока
+ * сервер не ответил): сервер на другом проводе - старая играть не может. Сборка на проводе, которого сервер ещё не знает, не
+ * предлагается: она не войдёт. Исключение - [outdated]: сервер сам назвал эту сборку устаревшей (426 `CL_001`), значит, его провод уже
+ * не её, даже если узнать его не вышло, - нужна любая новее.
+ *
+ * Жёсткое ([hard]) - сервер назвал сборку устаревшей, провод найденной сборки не свой (сервер ушёл на него) или релиз объявлен
+ * обязательным ([AppBuild.mandatory]); сборка на своём проводе без объявления - мягкое: тост и карточка в настройках, без диалога.
  */
 object UpdatePolicy {
     fun required(build: AppBuild, versionCode: Int, own: Wire, server: Wire?, outdated: Boolean = false): Boolean = build.versionCode > versionCode && (outdated || build.wire == (server ?: own))
+
+    fun hard(build: AppBuild, own: Wire, outdated: Boolean = false): Boolean = outdated || build.mandatory || build.wire != own
 }
 
 /**
@@ -87,7 +103,7 @@ class Updates(link: HttpLink = ForgeHttp.link) {
             response.body.string()
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server, outdated) }?.available()
+        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server, outdated) }?.available(UpdatePolicy.hard(info, Wire.OWN, outdated))
     }
 
     /** Заметки [count] последних релизов, новые первыми; GitHub не ответил - ошибка. */
@@ -99,7 +115,7 @@ class Updates(link: HttpLink = ForgeHttp.link) {
         NOTES_JSON.decodeFromString(ListSerializer(ReleaseNotes.serializer()), text).take(count)
     }
 
-    private fun AppBuild.available() = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName")
+    private fun AppBuild.available(hard: Boolean) = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName", hard)
 
     /**
      * APK [update] в [target], [progress] - прочитано байт из всех. Начатый файл докачивается с места обрыва (`Range`);

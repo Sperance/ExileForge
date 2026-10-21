@@ -511,6 +511,7 @@ private enum class RunSheet { BOONS, CURSES }
             RiftChip(ui("rift.sight", engine.sight(run)), RiftColors.Muted)
             Spacer(Modifier.weight(1f))
             RiftMenu(model, rules, board, idle)
+            UpdateMark()
         }
     }
 }

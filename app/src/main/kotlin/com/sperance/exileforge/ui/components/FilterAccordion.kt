@@ -80,7 +80,7 @@ fun FilterAccordionSheet(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Switch(checked = switch.checked, onCheckedChange = null, modifier = Modifier.scale(SwitchScale))
+                Switch(checked = switch.checked, onCheckedChange = null, modifier = Modifier.scale(SWITCH_SCALE))
             }
         }
     }
@@ -186,4 +186,4 @@ fun LevelRangeHeader(range: LevelRange, heroLevel: Int, onChange: (LevelRange) -
 private val FilterTouch = 40.dp
 
 /** Масштаб переключателя шторки: строка переключателя - 40dp, касание - вся строка. */
-private const val SwitchScale = .8f
+private const val SWITCH_SCALE = .8f

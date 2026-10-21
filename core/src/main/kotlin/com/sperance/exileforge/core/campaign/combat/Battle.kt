@@ -633,48 +633,88 @@ class Battle(
         if (was != null && focus != null && foeFighters[was].alive) trial.focusChanges++
     }
 
-    /** Foes taunting right now: while any stands, only they can be struck. */
-    private fun taunters() = foeFighters.filter { it.alive && it.body.taunt }
+    /** A taunter stands right now: while one does, only taunters can be struck. Один проход без списка. */
+    private fun taunting(): Boolean {
+        for (i in foeFighters.indices) if (foeFighters[i].alive && foeFighters[i].body.taunt) return true
+        return false
+    }
+
+    /** [foe] can be struck while a taunter stands ([taunting]) or not: alive, and a taunter itself if one does. */
+    private fun reachable(foe: Fighter, taunting: Boolean): Boolean = foe.alive && (!taunting || foe.body.taunt)
 
     /**
      * Whether the hero can strike foe [index] right now: any foe on screen, by any weapon; a taunter
      * always, and while one stands nobody else.
      */
     fun reachable(index: Int): Boolean {
-        val foe = foeFighters.getOrNull(index)?.takeIf { it.alive } ?: return false
-        return taunters().isEmpty() || foe.body.taunt
+        val foe = foeFighters.getOrNull(index) ?: return false
+        return reachable(foe, taunting())
     }
 
     /**
      * The foe the hero's next swing goes to: the focus while it can be struck, else the class's
      * pick among those that can. A focus behind a taunter waits its turn.
      *
-     * Неуязвимого обходят - и фокус, и выбор класса, - пока есть другой досягаемый враг; один неуязвимый остаётся целью.
+     * Неуязвимого обходят - и фокус, и выбор класса, - пока есть другой досягаемый враг; один неуязвимый остаётся целью. Один проход по
+     * врагам без списков: по ходу держатся фокус, последний ударивший и лучший по правилу класса - отдельно среди уязвимых и неуязвимых.
      */
     fun target(): Fighter? {
-        val reachable = foeFighters.filter { reachable(it.index) }
-        if (reachable.isEmpty()) return null
-        val reach = if (reachable.any { it.invulnerable } && reachable.any { !it.invulnerable }) reachable.filter { !it.invulnerable } else reachable
-        focus?.let { f -> reach.firstOrNull { it.index == f }?.let { return it } }
-        fun weakest() = reach.minBy { it.life + it.shield }
-        fun threat() = reach.maxBy { it.body.threat }
-        fun avenge() = lastStriker?.let { s -> reach.firstOrNull { it.index == s } } ?: threat()
-        return when (stance.rule) {
-            TargetRule.THREAT -> threat()
-            TargetRule.WEAKEST -> weakest()
-            TargetRule.EXPOSED -> hero.leading.let { type -> reach.minWith(compareBy<Fighter> { it.body.resist(type) }.thenBy { it.life + it.shield }) }
-            TargetRule.AVENGE -> avenge()
-            TargetRule.ADAPTIVE -> if (heroFighter.life >= heroFighter.body.maxLife / 2) weakest() else avenge()
+        val taunting = taunting()
+        val healthy = heroFighter.life >= heroFighter.body.maxLife / 2
+        val rule = when (stance.rule) {
+            TargetRule.ADAPTIVE -> if (healthy) TargetRule.WEAKEST else TargetRule.AVENGE
+            else -> stance.rule
         }
+        val type = if (rule == TargetRule.EXPOSED) hero.leading else DamageType.PHYSICAL
+        var focusOpen: Fighter? = null
+        var focusShut: Fighter? = null
+        var strikerOpen: Fighter? = null
+        var strikerShut: Fighter? = null
+        var bestOpen: Fighter? = null
+        var bestShut: Fighter? = null
+        for (i in foeFighters.indices) {
+            val foe = foeFighters[i]
+            if (!reachable(foe, taunting)) continue
+            if (foe.invulnerable) {
+                if (foe.index == focus) focusShut = foe
+                if (foe.index == lastStriker) strikerShut = foe
+                if (bestShut == null || preferred(foe, bestShut, rule, type)) bestShut = foe
+            } else {
+                if (foe.index == focus) focusOpen = foe
+                if (foe.index == lastStriker) strikerOpen = foe
+                if (bestOpen == null || preferred(foe, bestOpen, rule, type)) bestOpen = foe
+            }
+        }
+        if (bestOpen != null) return focusOpen ?: strikerOpen.takeIf { rule == TargetRule.AVENGE } ?: bestOpen
+        return focusShut ?: strikerShut.takeIf { rule == TargetRule.AVENGE } ?: bestShut
     }
 
-    /** Whom a skill of [count] targets strikes: the hero's target first, then the others on screen; zero is all of them. */
+    /**
+     * [foe] лучше прежнего лучшего [best] по правилу класса [rule]: слабейший - меньше здоровья и щита; угроза и месть без ударившего -
+     * сильнее бьёт; открытый - меньше сопротивления ведущей стихии героя [type], затем слабее. Равный не лучше - первый по месту остаётся.
+     */
+    private fun preferred(foe: Fighter, best: Fighter, rule: TargetRule, type: DamageType): Boolean = when (rule) {
+        TargetRule.WEAKEST -> foe.life + foe.shield < best.life + best.shield
+        TargetRule.EXPOSED -> {
+            val resist = foe.body.resist(type)
+            val other = best.body.resist(type)
+            resist < other || resist == other && foe.life + foe.shield < best.life + best.shield
+        }
+        else -> foe.body.threat > best.body.threat
+    }
+
+    /**
+     * Whom a skill of [count] targets strikes: the hero's target first, then the others on screen - уязвимые раньше неуязвимых, каждые
+     * по месту; zero is all of them.
+     */
     internal fun targets(count: Int): List<Fighter> {
-        val reach = foeFighters.filter { reachable(it.index) }
-        if (reach.isEmpty()) return emptyList()
-        val first = target()?.takeIf { it in reach } ?: reach.first()
-        val order = listOf(first) + (reach - first)
-        return if (count <= 0) order else order.take(count)
+        val first = target() ?: return emptyList()
+        val taunting = taunting()
+        val order = ArrayList<Fighter>(foeFighters.size)
+        order += first
+        for (i in foeFighters.indices) foeFighters[i].let { if (it !== first && !it.invulnerable && reachable(it, taunting)) order += it }
+        for (i in foeFighters.indices) foeFighters[i].let { if (it !== first && it.invulnerable && reachable(it, taunting)) order += it }
+        return if (count <= 0 || count >= order.size) order else order.subList(0, count).toList()
     }
 
     /**

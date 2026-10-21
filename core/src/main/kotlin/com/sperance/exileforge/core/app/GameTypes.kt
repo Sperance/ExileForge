@@ -29,9 +29,10 @@ enum class ForgeSection(val omens: Boolean = false) {
 
 /**
  * The City's buildings: each one a screen of its own behind the square; «История» - прошлое героя,
- * «Летопись» (прежде страница «Развития») - его деяния и титулы, «Доска славы» - таблицы сервера.
+ * «Летопись» (прежде страница «Развития») - его деяния и титулы, «Доска славы» - таблицы сервера. Гильдия - не здание, а своя
+ * вкладка панели ([TAB_GUILD]).
  */
-enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY, HALL }
+enum class Building { QUESTS, MERCHANT, AUCTION, HISTORY, HALL }
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3
@@ -41,20 +42,25 @@ const val TAB_ACCOUNT = 3
 const val TAB_HERO = 4
 const val TAB_TREE = 5
 
-/** The City: the merchant, the auction and the guild. */
+/** Город: доска заданий, торговец, рынок, история и доска славы. */
 const val TAB_CITY = 6
 const val TAB_CRAFT = 7
 const val TAB_REDEMPTION = 9
 const val TAB_EXPEDITION = 10
+
+/** Ремёсла: экран над хабом «Развития» ([TAB_PROGRESS]). */
 const val TAB_CRAFTS = 11
 const val TAB_SKILLS = 12
 
-/** «Развитие»: кузня ([TAB_CRAFT]), дерево и гримуар; испытания и атлас - страницы «Похода». */
+/** «Развитие»: кузня ([TAB_CRAFT]), дерево, гримуар и ремёсла ([TAB_CRAFTS]); испытания и атлас - страницы «Похода». */
 const val TAB_PROGRESS = 13
 const val TAB_TRIALS = 15
 
 /** «Настройки»: from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17
 
-/** Кнопки нижней панели слева направо: Герой, Развитие, Поход, Город, Ремёсла - по ним считается сторона перехода. */
-val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_CRAFTS)
+/** «Гильдия»: своя вкладка панели; до уровня открытия гильдий - экран замка. */
+const val TAB_GUILD = 18
+
+/** Кнопки нижней панели слева направо: Герой, Развитие, Поход, Город, Гильдия - по ним считается сторона перехода. */
+val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_GUILD)

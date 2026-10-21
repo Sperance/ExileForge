@@ -47,8 +47,8 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.TAB_CITY
-import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
 import com.sperance.exileforge.core.app.unlocked
@@ -70,7 +70,7 @@ private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector
     PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil),
     EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
-    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil),
+    GUILD(TAB_GUILD, "nav.guild", ForgeGlyphs.Banner),
     ;
 
     companion object {
@@ -84,15 +84,16 @@ private const val CAPSULE_GROW = 2.4f
 /**
  * Нижняя панель: парящая плита «Глубины»; у выбранной вкладки
  * кнопка раскрывается в капсулу - иконка заливается и растёт, рядом выезжает подпись; прочие - одни значки. Всё за 220 мс
- * той же кривой, что и сдвиг экрана. Пять вкладок у всех. Вкладка, нажатая снова
- * изнутри, возвращает к своему корню.
+ * той же кривой, что и сдвиг экрана. Пять вкладок у всех; закрытая уровнем героя - с замком, касание открывает её экран замка. Вкладка,
+ * нажатая снова изнутри, возвращает к своему корню.
  *
- * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие»; досчёт ремёсел после отлучки, ещё не показанный
- * листом, - точкой на «Ремёслах».
+ * Число в углу - что ждёт там решения: свободные очки там, откуда их тратят (атлас - «Поход», дерево - «Развитие»), приглашения в
+ * гильдию - «Гильдия». Досчёт ремёсел после отлучки, ещё не показанный листом, - точка на «Развитии»; есть число - точка ждёт.
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
     val craftsAway by shell.craftsAway.collectAsStateWithLifecycle()
+    val invites by shell.guildInvites.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
     Row(
         Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(plate, elevation = 16.dp).clip(plate)
@@ -104,6 +105,7 @@ private const val CAPSULE_GROW = 2.4f
             val free = when (index) {
                 TAB_EXPEDITION -> game.freeAtlasPoints
                 TAB_PROGRESS -> game.freeTreePoints
+                TAB_GUILD -> invites
                 else -> 0
             }
             BarCapsule(
@@ -111,21 +113,21 @@ private const val CAPSULE_GROW = 2.4f
                 selected = route.root?.tab == index,
                 locked = !game.unlocked(Feature.ofTab(index)),
                 free = free,
-                alert = index == TAB_CRAFTS && craftsAway,
+                alert = index == TAB_PROGRESS && craftsAway,
             ) { shell.tab(index) }
         }
     }
 }
 
-/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число очков или точка [alert]. */
+/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число [free] или точка [alert]. */
 @Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, onClick: () -> Unit) {
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
     val tint by animateColorAsState(if (selected) Gold else Muted, tween(TAB_SHIFT_MS, easing = TabShiftEasing), label = "capsuleTint")
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(24.dp)
     val label = ui(tab.title)
     Row(
-        Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(44.dp).clip(shape)
+        Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(48.dp).clip(shape)
             .background(PanelRaised.copy(alpha = grow))
             .border(1.dp, Gold.copy(alpha = .4f * grow), shape)
             .selectable(selected, role = Role.Tab, onClick = onClick),

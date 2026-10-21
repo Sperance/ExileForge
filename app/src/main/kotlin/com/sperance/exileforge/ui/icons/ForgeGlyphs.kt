@@ -248,6 +248,9 @@ object ForgeGlyphs {
         },
     )
 
+    /** A hammer on a slanted haft — the crafts. */
+    val Hammer = glyph("Hammer", { line(4f, 20f, 13.6f, 10.4f) }, { poly(12.9f to 4f, 20f to 11.1f, 17.1f to 14f, 10f to 6.9f) })
+
     /** A banner on its pole, swallow-tailed — the guild. */
     val Banner = glyph("Banner", { line(5f, 2f, 5f, 22f) }, { poly(5f to 4f, 19f to 4f, 19f to 16f, 12f to 13f, 5f to 16f) }, { ring(12f, 9f, 2f) })
 }

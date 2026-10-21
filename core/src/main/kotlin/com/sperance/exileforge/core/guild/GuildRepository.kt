@@ -46,7 +46,10 @@ data class Guilds(
     val stash: GuildStashView? = null,
     /** Превью приглашения: кого позовёт введённый номер или имя; null - не искали или поле сменилось. */
     val recruit: com.sperance.exileforge.core.model.guild.GuildRecruit? = null,
-)
+) {
+    /** Приглашения, что ждут героя вне гильдии: число на вкладке «Гильдия»; в гильдии или до ответа сервера - ноль. */
+    val invitesWaiting: Int get() = mine?.takeIf { it.guild == null }?.invites?.size ?: 0
+}
 
 /** Единственный источник правды о гильдии. */
 class GuildRepository {

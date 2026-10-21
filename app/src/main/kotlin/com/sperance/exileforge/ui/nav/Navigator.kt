@@ -20,7 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Стек экранов: один на приложение, его рисует `NavDisplay`, а меняют только фичи - через этот класс.
  * Вкладка нижней панели сбрасывает стек до своего корня; экран с корнем ложится над ним; аккаунт и настройки -
  * поверх чего угодно. Системный «назад» снимает верх, пока в стеке больше одного экрана. Экран, закрытый уровнем
- * героя, не открывается: тост говорит, с какого уровня; тестеры и администраторы проходят.
+ * героя, не открывается: тост говорит, с какого уровня; тестеры и администраторы проходят. Корень вкладки панели открывается и
+ * закрытым - его экран сам показывает замок («Гильдия» до уровня гильдий).
  */
 class Navigator(
     private val heroes: HeroRepository,
@@ -60,8 +61,9 @@ class Navigator(
         replace(if (route == root) listOf(root) else listOf(root, route))
     }
 
-    /** Открыт ли экран уровню героя; закрытый отвечает тостом. */
+    /** Открыт ли экран уровню героя; закрытый отвечает тостом. Корень вкладки панели открыт всегда - замок рисует его экран. */
     fun gate(route: Route): Boolean {
+        if (route.root == route && route.barSlot != null) return true
         val feature = Feature.ofBuilding(route.building) ?: Feature.ofTab(route.tab) ?: return true
         val holding = heroes.state.value
         if (sessions.state.value.freeProgress(holding)) return true

@@ -189,8 +189,8 @@ class ConnectionActions(
 
     /**
      * What the player looks at, read again quietly: the hero (unless [hero] is off - the queue's answers already brought it), and
-     * the tab's own data where it has any. В здании Города - один вход в Город: доска, ремёсла, гильдия, лоты и герой одним ответом,
-     * не чаще срока свежести; площадь без здания и свежий Город - только герой.
+     * the tab's own data where it has any. В здании Города и на вкладке «Гильдия» - один вход в Город: доска, ремёсла, гильдия, лоты и
+     * герой одним ответом, не чаще срока свежести; площадь без здания и свежий Город - только герой.
      */
     fun refreshScreen(hero: Boolean = true) {
         run {
@@ -201,7 +201,7 @@ class ConnectionActions(
                 AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
 
                 AppPhase.GAME -> when {
-                    now.tab == TAB_CITY && now.building in TOWN_HALLS && glance.reachable(Feature.ofBuilding(now.building)) -> {
+                    (now.building in TOWN_HALLS || now.tab in TOWN_TABS) && glance.reachable(now.feature) -> {
                         if (!town.enter(silent = true, fresh = true) && hero) read(Reads.HERO, silent = true) { heroSync.readHero() }
                         if (now.building == Building.AUCTION) market.loadShowcase()
                     }
@@ -232,6 +232,9 @@ class ConnectionActions(
         const val ANSWER_FRESH_MS = 10_000L
 
         /** Здания, чей экран входит в Город одним запросом; площадь, торговец, история и зал читают только героя. */
-        val TOWN_HALLS = setOf(Building.QUESTS, Building.AUCTION, Building.GUILD)
+        val TOWN_HALLS = setOf(Building.QUESTS, Building.AUCTION)
+
+        /** Вкладки, чей экран входит в Город тем же запросом: гильдия - его часть. */
+        val TOWN_TABS = setOf(TAB_GUILD)
     }
 }

@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.Harvest
 import com.sperance.exileforge.core.crafts.HourYield
@@ -93,15 +92,15 @@ import kotlin.math.ceil
 
 /** Экран ремёсел: плашка работы, итоги и плитки профессий; окно профессии и работы - в соседних файлах. */
 /**
- * The crafts tab: the work under way on a plaque over the tiles, one
+ * The crafts screen over the «Развитие» hub: the work under way on a plaque over the tiles, one
  * tile per profession, and a profession's window behind each. The work runs on the server by time;
  * this screen asks when it opens, throws each cycle here the moment it ends and asks the
  * server behind it, and runs the cycle's bar smoothly on the device's clock set by the server's.
  *
  * Экран с ремёслами спрашивает снова тихо; досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]) и только если прошлый ответ старше срока
- * свежести. Плитки идут одной сеткой в порядке сервера, ряды считаются раз на ответ. Вкладка нажата снова - окно профессии
- * закрывается, плитки наверх. Досчёт после отлучки, ещё не показанный, открывается листом «Пока вас не было» ([AwaySheet]) поверх
- * плиток и окна профессии.
+ * свежести. Плитки идут одной сеткой в порядке сервера, ряды считаются раз на ответ. Досчёт после отлучки, ещё не показанный,
+ * открывается листом «Пока вас не было» ([AwaySheet]) поверх плиток и окна профессии. Окно профессии - уровень цепочки «назад»
+ * «Развитие › Ремёсла».
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,10 +123,6 @@ fun CraftsScreen() {
     val offset = held.offset
     val list = rememberLazyListState()
     val rows = remember(crafts?.professions) { crafts?.professions.orEmpty().chunked(TILES) }
-    OnReselect(TAB_CRAFTS) {
-        vm.openProfession("")
-        list.animateScrollToItem(0)
-    }
     held.away?.let { away -> AwaySheet(game, away, onSeen = vm::seen) }
     val open = crafts?.professions?.firstOrNull { it.code == openCode }
     if (open != null) {
@@ -158,7 +153,7 @@ fun CraftsScreen() {
  * начала работы ([WorkLedger]) - касание итогов раскрывает стопки и сделанное с начала работы - вещи героя с меткой происхождения этой
  * работы ([CraftsViewModel.made], вне главного потока), кнопка под ними открывает тайник с фильтром «Сделано ремеслом».
  * [help] - значок справки в строке «Сейчас» на главном экране: там над именем работы «Сейчас», под ним - профессия; в окне профессии
- * [help] нет, профессию и справку называет его шапка. Нет работы - строка «Сейчас» и что герой не работает.
+ * [help] нет, профессию называет цепочка «назад», справку - его шапка. Нет работы - строка «Сейчас» и что герой не работает.
  *
  * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт. Работа, что встала по отлучке, вместо полосы цикла, часов и
  * срока уровня печатает «остановлено» и «Продолжить» ([StoppedWork]).

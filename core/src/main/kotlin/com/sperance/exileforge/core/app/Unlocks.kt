@@ -9,6 +9,8 @@ import com.sperance.exileforge.rules.content.EngineRules
  */
 enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null) {
     GRIMOIRE("nav.skills", tab = TAB_SKILLS),
+
+    /** Ремёсла: плитка «Развития», до уровня открытия - с замком. */
     CRAFTS("nav.crafts", tab = TAB_CRAFTS),
 
     /** Летопись: своего входа нет - вторая плитка «Истории», до уровня открытия она закрыта замком. */
@@ -18,7 +20,9 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     QUESTS("quest.title", building = Building.QUESTS),
     AUCTION("nav.auction", building = Building.AUCTION),
     TRIALS("trials.title", tab = TAB_TRIALS),
-    GUILD("guild.title", building = Building.GUILD),
+
+    /** Гильдия: вкладка панели [TAB_GUILD]; до уровня открытия на вкладке замок, касание открывает экран замка. */
+    GUILD("guild.title", tab = TAB_GUILD),
 
     /** Разлом недели: своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */
     RIFT("rift.title"),

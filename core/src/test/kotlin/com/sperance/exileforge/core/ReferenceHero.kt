@@ -22,7 +22,7 @@ import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
 import com.sperance.exileforge.rules.sheet.sourcedLines
 
-/** Общее сторожей сводки героя ([SheetCompletenessTest], [EquippedModifiersTest]): эталон, пробы и строки сводки, что двигает строка. */
+/** Общее сторожей сводки героя ([HeroSheetTest]): эталон, пробы и строки сводки, что двигает строка. */
 internal object SummaryProbe {
     const val LEVEL = 60
 

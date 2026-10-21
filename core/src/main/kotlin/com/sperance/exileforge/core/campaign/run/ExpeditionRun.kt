@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.app.RunPrefs
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
+import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.Draughts
 import com.sperance.exileforge.core.campaign.EffectOrigins
@@ -15,6 +16,7 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
+import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.SimWake
@@ -27,6 +29,8 @@ import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.AilmentLaw
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
+import com.sperance.exileforge.core.campaign.combat.CarriedAilment
+import com.sperance.exileforge.core.campaign.combat.CarriedCharge
 import com.sperance.exileforge.core.campaign.combat.CarriedEffect
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Combatant
@@ -189,6 +193,11 @@ class ExpeditionRun(
      */
     internal var carry: HeroCarry = startPools?.carry?.copy(shield = null) ?: HeroCarry.NONE
 
+    /** Полки несомого на снимке ([CarriedShelf]): недуги, эффекты и заряды. */
+    internal val ailmentShelf = CarriedShelf<CarriedAilment, AilmentView>()
+    internal val effectShelf = CarriedShelf<CarriedEffect, EffectView>()
+    internal val chargeShelf = CarriedShelf<CarriedCharge, ChargeView>()
+
     /** Законы недугов вне боя - те же, что в бою ([AilmentLaw]). */
     internal val law = AilmentLaw(rules)
 
@@ -227,6 +236,12 @@ class ExpeditionRun(
     /** Числа урона карты на экране (удары и тики эффектов, каждое своё) и номер следующего. */
     internal val hazards = mutableListOf<ShownHazard>()
     internal var nextHazard = 0
+
+    /** Плитки [hazards] последнего снимка: пока ловушки те же, список не собирается заново. */
+    internal var hazardsShown: List<HazardView> = emptyList()
+
+    /** Резервы запасов тела героя вне боя ([ReserveMemo]). */
+    private val reserves = ReserveMemo()
 
     /** Выборы объектов карты по номеру события: отклонённый сервером объект становится прежним. */
     internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()
@@ -401,7 +416,10 @@ class ExpeditionRun(
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
 
-    internal fun manaCap(): Double = kit.reserve(ReservePool.MANA, hero).free
+    /** Резерв запаса [pool] тела героя сейчас: на одно тело считается раз. */
+    internal fun reserve(pool: ReservePool): PoolReserve = reserves.of(pool, hero, kit)
+
+    internal fun manaCap(): Double = reserve(ReservePool.MANA).free
 
     /** Полосы героя на карте: по ним глоток фляги меряет, впустую ли он. */
     internal fun bars(): HeroBars = HeroBars(life, hero.maxLife, mana, manaCap(), shield, hero.maxShield)

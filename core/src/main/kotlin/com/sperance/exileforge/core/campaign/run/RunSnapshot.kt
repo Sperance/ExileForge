@@ -1,7 +1,9 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapTally
+import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
@@ -44,6 +46,7 @@ import com.sperance.exileforge.rules.run.RunEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.EnumMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -77,12 +80,12 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         featuresLeft = world.untouched,
         gate = gate, vaal = vaal,
         heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
-        heroReserved = (battle?.manaReserved() ?: kit.reserve(ReservePool.MANA, hero).held).roundToInt(),
-        heroLifeReserved = (battle?.lifeReserved() ?: kit.reserve(ReservePool.LIFE, hero).held).roundToInt(),
+        heroReserved = (battle?.manaReserved() ?: reserve(ReservePool.MANA).held).roundToInt(),
+        heroLifeReserved = (battle?.lifeReserved() ?: reserve(ReservePool.LIFE).held).roundToInt(),
         flasks = battle?.flaskViews() ?: mapFlasks(),
         crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome, vaaling(it)) },
-        crystalsLeft = world.standingCrystals.size,
-        abyss = abyssView(), cracksLeft = world.standingCracks.size,
+        crystalsLeft = world.crystals.count { !it.freed },
+        abyss = abyssView(), cracksLeft = world.cracks.count { !it.opened },
         bossDown = bossDown, swift = swift, hastened = hastened, stride = stride(), guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
         summon = summonView(),
         questTally = questTallyShown, fateWon = fateRun.won,
@@ -90,7 +93,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         summary = figures, recap = recap,
         tally = MapTally(end, shownSeconds(), kills, bosses, deaths, granted, figures, awaiting),
         feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), world.guarded(spot.id)) },
-        hazards = hazards.map { it.view },
+        hazards = hazardViews(),
         heroAilments = if (battle == null) carriedAilments() else emptyList(),
         heroEffects = if (battle == null) carriedEffects() else emptyList(),
         heroCharges = if (battle == null) carriedCharges() else emptyList(),
@@ -101,6 +104,35 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         gearLock = gearLock,
         worn = build.gear.worn,
     )
+}
+
+/** Плитки ловушек снимка: прежний список, пока ловушки те же ([ExpeditionRun.hazardsShown]), - без нового списка на снимок. */
+private fun ExpeditionRun.hazardViews(): List<HazardView> {
+    val shown = hazardsShown
+    if (shown.size == hazards.size) {
+        var same = true
+        for (i in hazards.indices) {
+            if (shown[i] === hazards[i].view) continue
+            same = false
+            break
+        }
+        if (same) return shown
+    }
+    return hazards.map { it.view }.also { hazardsShown = it }
+}
+
+/** Резервы запасов тела героя вне боя: тело меняется редко, снимок читает их десять раз в секунду - на одно тело считаются раз. */
+internal class ReserveMemo {
+    private var body: Combatant? = null
+    private val held = EnumMap<ReservePool, PoolReserve>(ReservePool::class.java)
+
+    fun of(pool: ReservePool, hero: Combatant, kit: Loadout): PoolReserve {
+        if (hero !== body) {
+            body = hero
+            held.clear()
+        }
+        return held.getOrPut(pool) { kit.reserve(pool, hero) }
+    }
 }
 
 /**

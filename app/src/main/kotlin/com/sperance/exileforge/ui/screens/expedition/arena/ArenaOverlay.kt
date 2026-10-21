@@ -46,7 +46,8 @@ private const val HERO_CARD = -1
  * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра; [top] - полоса режима над врагами (Честь Разлома). Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
  * раз при падении здоровья через свою черту, вибрация - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
  * бой. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
- * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление.
+ * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление. Касание врага за
+ * живым провокатором ставит фокус в очередь и говорит об этом подсказкой ([FocusHint]); касание тотема в бою - что он неуязвим.
  */
 @Composable internal fun ArenaOverlay(
     game: GameUi,
@@ -85,6 +86,14 @@ private const val HERO_CARD = -1
     val large = fight.scouting
     var info by remember { mutableStateOf<SkillView?>(null) }
     var inspect by remember { mutableStateOf<Int?>(null) }
+    var hint by remember { mutableStateOf<FocusHint?>(null) }
+
+    fun focusOn(index: Int) {
+        val taunter = fight.foes.firstOrNull { it.alive && it.taunt }
+        val foe = fight.foes.firstOrNull { it.index == index }
+        if (taunter != null && foe != null && !foe.taunt && fight.focus != index) hint = FocusHint.TauntFirst(names[index].orEmpty(), names[taunter.index].orEmpty())
+        onCommand(RunCommand.Focus(index))
+    }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     val mods = remember(mapEffects, origins, game.hero, game.index) {
         if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
@@ -106,7 +115,7 @@ private const val HERO_CARD = -1
                 top?.invoke()
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }, onIntroFrame) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, ::track, ::focusOn, onIntroFrame, { hint = FocusHint.Totem(it.left) }) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -123,7 +132,7 @@ private const val HERO_CARD = -1
                                         traits[foe.index].orEmpty(),
                                         narrow = fight.field.size >= 3,
                                     ) {
-                                        onCommand(RunCommand.Focus(foe.index))
+                                        focusOn(foe.index)
                                     }
                                 }
                             }
@@ -162,8 +171,13 @@ private const val HERO_CARD = -1
                     traits[foe.index].orEmpty(),
                     fight.boss,
                     remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
+                    onFocus = {
+                        focusOn(foe.index)
+                        inspect = null
+                    }.takeIf { foe.alive && fight.outcome == null && fight.focus != foe.index },
                 ) { inspect = null }
             }
+            hint?.let { FocusHintCard(it, { hint = null }, Modifier.align(Alignment.Center).padding(horizontal = 12.dp)) }
             info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
             fight.outcome?.takeIf { it != Outcome.WIN }?.let {
                 Text(

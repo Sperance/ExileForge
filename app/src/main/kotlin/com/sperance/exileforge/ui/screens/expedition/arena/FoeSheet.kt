@@ -57,7 +57,8 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 
 /**
  * Лист врага на паузе: босс или приспешник целиком - защита с тем, что от неё остаётся против героя, урон, умения и
- * свойства с сутью, фазы и тотемы босса, его строки с источниками - монстр, карта, атлас, сделки алтаря.
+ * свойства с сутью, фазы и тотемы босса, его строки с источниками - монстр, карта, атлас, сделки алтаря. Внизу - «Бить первым»
+ * ([onFocus]: ставит фокус на него); null - кнопки нет (он уже цель, пал или бой кончен).
  */
 @Composable internal fun FoeSheet(
     foe: FoeView,
@@ -67,6 +68,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     traits: List<TraitView>,
     boss: BossHud?,
     shares: List<BuffShare>,
+    onFocus: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val index = LocalContentIndex.current
@@ -77,8 +79,15 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     val tabs = FoeTab.entries.filter { it != FoeTab.PHASES || (ownBoss != null && (ownBoss.phase != null || totems.isNotEmpty())) }
     var tab by rememberSaveable(foe.index) { mutableStateOf(FoeTab.STATS) }
     val name = monsterTitle(foe.monster.code)
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 12.dp)) {
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        footer = if (onFocus != null) {
+            { ForgeButton(onClick = onFocus, modifier = Modifier.weight(1f), accent = FrameGoldBright) { Text(ui("fight.strike_first")) } }
+        } else {
+            null
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(name, color = rarityTint(foe.monster.rarity), fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 MutedText(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
@@ -132,7 +141,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
 /** Характеристики: запасы, скорость, урон, защита - и что от защиты остаётся против героя. */
 @Composable private fun StatsTab(foe: FoeView, body: Combatant, hero: Combatant?, rules: CombatRules) {
     Head(ui("fight.sheet_pools"))
-    Row2(ui("fight.stat_life"), "${number(foe.life.toDouble())} / ${number(body.maxLife)}", LifeRed)
+    Row2(ui("fight.stat_life"), "${number(foe.life.toDouble())} / ${number(foe.maxLife.toDouble())}", LifeRed)
     if (body.maxShield > 0) Row2(ui("fight.stat_shield"), "${number(foe.shield.toDouble())} / ${number(body.maxShield)}", ShieldCyan)
     if (foe.barrier > 0) Row2(ui("fight.stat_barrier"), number(foe.barrier.toDouble()), FrameGoldBright)
     if (body.maxMana > 0) Row2(ui("fight.stat_mana"), "${number(foe.mana.toDouble())} / ${number(body.maxMana)}", ManaBlue)

@@ -126,7 +126,7 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 /**
  * Бой с боссом «Кино»: сверху - кованая рамка в три ряда ([BossFrame]); ниже - крупный портрет в ауре фазы с лентой эффектов над
  * головой и по три ниши склепа с каждой стороны: в них встаёт свита из портала и тотемы со своим сроком. Касание приспешника
- * выбирает его целью, а на паузе открывает его лист; касание тотема - его справку.
+ * выбирает его целью, а на паузе открывает его лист; касание тотема в бою - подсказка [onTotem] (он неуязвим), на паузе - его справка.
  *
  * Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам.
  */
@@ -140,6 +140,7 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     track: (Int) -> Modifier,
     onFocus: (Int) -> Unit,
     onFrame: (LayoutCoordinates) -> Unit,
+    onTotem: (SlotView.Totem) -> Unit,
     onInspect: (Int) -> Unit,
 ) {
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
@@ -154,7 +155,7 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
                 others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
             }
         } else {
-            NicheArena(foe, boss, fight, frame, chosen, track, name) { tap(fight, it, onFocus, onInspect) }
+            NicheArena(foe, boss, fight, frame, chosen, track, name, onTotem) { tap(fight, it, onFocus, onInspect) }
         }
     }
 }
@@ -444,14 +445,24 @@ private val LevelInk = Color(0xFFE8D9C8)
  * Портрет босса между двумя колоннами ниш: слева слоты первой половины, справа - второй. Нити тянутся от тотемов: к боссу -
  * у силы и знамени, вниз к герою - у проклятия и стихии.
  */
-@Composable private fun NicheArena(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
+@Composable private fun NicheArena(
+    foe: FoeView,
+    boss: BossHud,
+    fight: FightHud,
+    frame: FightFrame,
+    chosen: Int?,
+    track: (Int) -> Modifier,
+    name: String,
+    onTotem: (SlotView.Totem) -> Unit,
+    onTap: (Int) -> Unit,
+) {
     val half = (boss.slots.size + 1) / 2
     val centres = remember { mutableStateMapOf<Int, Offset>() }
     var portrait by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(Modifier.fillMaxWidth().height(242.dp).onGloballyPositioned { origin = it.positionInRoot() }) {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NicheColumn(0 until half, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
+            NicheColumn(0 until half, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTotem, onTap)
             PortraitStage(
                 foe,
                 name,
@@ -461,7 +472,7 @@ private val LevelInk = Color(0xFFE8D9C8)
                 chosen == foe.index,
                 track(foe.index).weight(1f).fillMaxHeight().padding(vertical = 10.dp).onGloballyPositioned { portrait = it.boundsInRoot().translate(-origin) },
             ) { onTap(foe.index) }
-            NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
+            NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTotem, onTap)
         }
         Canvas(Modifier.fillMaxSize()) {
             val time = frame.time
@@ -495,12 +506,13 @@ private val LevelInk = Color(0xFFE8D9C8)
     track: (Int) -> Modifier,
     name: String,
     place: (Int, Offset) -> Unit,
+    onTotem: (SlotView.Totem) -> Unit,
     onTap: (Int) -> Unit,
 ) {
     Column(Modifier.width(76.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
         range.forEach { i ->
             Box(Modifier.fillMaxWidth().height(74.dp).onGloballyPositioned { place(i, it.boundsInRoot().center) }) {
-                NicheSlot(boss.slots.getOrNull(i), fight, frame, chosen, track, name, onTap)
+                NicheSlot(boss.slots.getOrNull(i), fight, frame, chosen, track, name, onTotem, onTap)
             }
         }
     }
@@ -519,7 +531,16 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
  *
  * Последний вид каждого жильца: уходящий рисуется таким, каким был.
  */
-@Composable private fun NicheSlot(slot: SlotView?, fight: FightHud, frame: FightFrame, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
+@Composable private fun NicheSlot(
+    slot: SlotView?,
+    fight: FightHud,
+    frame: FightFrame,
+    chosen: Int?,
+    track: (Int) -> Modifier,
+    name: String,
+    onTotem: (SlotView.Totem) -> Unit,
+    onTap: (Int) -> Unit,
+) {
     val seen = remember { mutableMapOf<String, Pair<SlotView, FoeView?>>() }
     val key = slotKey(slot)
     if (slot != null) seen[key] = slot to (slot as? SlotView.Minion)?.let { m -> fight.foes.firstOrNull { it.index == m.index } }
@@ -544,7 +565,7 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
 
                 is SlotView.Totem -> {
                     val now = (slot as? SlotView.Totem)?.takeIf { it.serial == view.serial } ?: view
-                    TotemNiche(now, frame) { lore?.invoke(Lore.Totem(now.code, name, now.left)) }
+                    TotemNiche(now, frame) { if (fight.scouting) lore?.invoke(Lore.Totem(now.code, name, now.left)) else onTotem(now) }
                 }
             }
             if (view != null) PortalBurst(if (view is SlotView.Totem) totemTint(view) else PortalTint)
@@ -603,17 +624,26 @@ private fun DrawScope.archFrame(glow: Color?) {
     }
 }
 
+/**
+ * Приспешник в нише: фокус игрока - золотые уголки и ярлык «Цель», фокус за провокатором - голубая рамка и «Следом», провокатор -
+ * красная рамка и ярлык; цель, что выбрал класс, - тонкая золотая рамка.
+ */
 @Composable private fun MinionNiche(foe: FoeView, fight: FightHud, frame: FightFrame, focused: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
+    val mark = focusMark(foe, fight)
     Box(modifier.fillMaxSize().clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
-        Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
+        Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight().focusCorners(mark)) {
             Canvas(Modifier.fillMaxSize()) { archFrame(null) }
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape)) {
                 Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.breath, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index))
             }
-            if (focused) Box(Modifier.matchParentSize().border(2.dp, FrameGoldBright, ArchShape))
+            when {
+                mark != null -> Box(Modifier.matchParentSize().border(2.dp, mark.edge, ArchShape))
+                focused -> Box(Modifier.matchParentSize().border(1.5.dp, FrameGoldBright.copy(alpha = .7f), ArchShape))
+            }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
+        mark?.let { FocusBadge(it, Modifier.align(Alignment.TopCenter).offset(y = (-6).dp)) }
         val share = if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f
         if (foe.still) {
             Plaque(ui("fight.idol_plaque", monsterTitle(foe.monster.code), (share * 100).roundToInt()), Parchment, share, IdolLife)
@@ -758,6 +788,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         boss.cast?.takeIf { foe.alive && it.state == CastState.CASTING }?.let { cast -> Telegraph(cast.progress, frame) }
+        focusMark(foe, fight, taunt = false)?.let { FocusBadge(it, Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
         if (foe.alive) EffectRibbon(shelves, { effectsOpen = true }, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))

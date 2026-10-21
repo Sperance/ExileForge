@@ -129,7 +129,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
  *
  * [narrow] - три и больше на поле: узкая плитка. Замах (последние 30% - рамка наливается кровью), выпады и тряска - в рисовании кадра
  * ([FightFrame]): карточка не перекомпонуется на каждом шаге боя. Свой уровень врага - на карте он бывает выше или ниже карты. Полка
- * эффектов одна, не влезло - «+N». Фокус за провокатором держится, удары идут провокатору. Плашка намерения проступает по доле замаха.
+ * эффектов одна, не влезло - «+N». Фокус за провокатором держится (отметка «Следом»), удары идут провокатору. Плашка намерения проступает по доле замаха.
  */
 @Composable internal fun FoeCard(
     foe: FoeView,
@@ -264,15 +264,8 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             if (foe.taunt && foe.alive) TauntSeal(frame, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(null) }
             if (!foe.alive) {
                 Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-            } else if (focused && !foe.reachable) {
-                Text(
-                    ui("fight.out_of_reach_short"),
-                    color = Muted,
-                    fontSize = 9.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp),
-                )
+            } else {
+                focusMark(foe, fight, taunt = false)?.takeIf { it == FocusMark.QUEUED }?.let { FocusBadge(it, Modifier.align(Alignment.BottomCenter)) }
             }
             if (foe.alive) foe.buildup?.let { BuildupMark(it, frame) }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })

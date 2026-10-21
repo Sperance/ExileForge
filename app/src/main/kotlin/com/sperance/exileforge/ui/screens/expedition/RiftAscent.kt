@@ -85,7 +85,8 @@ import kotlin.math.sin
  * в нижней трети, свободной камеры нет. Декор стоит при выключенном `LocalMotion`.
  *
  * Раскладка собирается раз на схему и ширину, земля ([IsleArt]) - вне главного потока и пишется в неподвижный слой ([IsleGround]);
- * фазы декора и шаг героя читаются в рисовании и в слое - кадр не перекомпонует экран и не перерисовывает землю.
+ * жилы, пути и перья - раз на свои входы. Фазы декора и шаг героя читаются в рисовании и в слоях - кадр не перекомпонует экран и не
+ * перерисовывает землю.
  */
 @Composable internal fun RiftAscent(
     rules: RiftRules,
@@ -121,7 +122,9 @@ import kotlin.math.sin
             value = null
             value = withContext(Dispatchers.Default) { IsleArt.of(isle, scale) }
         }
+        val veins = remember(isle, chart.trails, scale) { chart.trails.map { Vein(isle.trail(it.from, it.to).path(scale), it) } }
         val route = remember(isle, walk) { walk?.let { isle.trail(it.from, it.to) } }
+        val stride = remember(route, scale) { route?.let { Stride(it.path(scale)) } }
         val here = chart.here?.id
         val anchor = walk?.to ?: here
         LaunchedEffect(anchor, viewport, isle) {
@@ -134,29 +137,20 @@ import kotlin.math.sin
             Box(Modifier.width(width).height(isle.height.dp + bottom)) {
                 IsleGround(art, Modifier.fillMaxSize())
                 Spacer(
-                    Modifier.fillMaxSize().drawWithCache {
-                        val veins = chart.trails.map { Vein(isle.trail(it.from, it.to).path(scale), it) }
-                        val walking = route?.path(scale)
-                        val measure = walking?.let { PathMeasure().apply { setPath(it, false) } }
-                        val walked = Path()
-                        val dash = PathEffect.dashPathEffect(floatArrayOf(5.dp.toPx(), 5.dp.toPx()))
+                    Modifier.fillMaxSize().graphicsLayer().drawWithCache {
+                        val pen = VeinPen(scale)
                         val reach = HALO * scale
                         val halo = Brush.radialGradient(listOf(RiftColors.Rift.copy(alpha = .16f), Color.Transparent), Offset.Zero, reach)
                         val entry = isle.entry * scale
-                        val fogEdge = if (chart.edge >= depths - 1) 0f else (isle.rowY(chart.edge) - FOG_LIFT) * scale
+                        val fog = if (chart.edge >= depths - 1) null else Fog((isle.rowY(chart.edge) - FOG_LIFT) * scale, size.width, scale)
                         onDrawBehind {
-                            val phase = flow.value
                             val at = (route?.at(step.value) ?: isle.at(here)) * scale
                             if (hero) translate(at.x, at.y) { drawCircle(halo, reach, Offset.Zero) }
                             portal(entry, breath.value)
-                            veins.forEach { vein(it, phase) }
-                            if (walking != null && measure != null) {
-                                walked.reset()
-                                measure.getSegment(0f, measure.length * step.value, walked, true)
-                                drawPath(walking, RiftColors.Pick.copy(alpha = .85f), style = Stroke(2.4.dp.toPx(), cap = StrokeCap.Round, pathEffect = dash))
-                                drawPath(walked, RiftColors.Pick, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
-                            }
-                            if (fogEdge > 0f) fog(fogEdge, drift.value)
+                            val current = pen.flow(flow.value)
+                            veins.forEach { vein(it, pen, current) }
+                            stride?.let { pace(it, step.value, pen) }
+                            fog?.draw(this, drift.value)
                         }
                     },
                 )
@@ -206,30 +200,54 @@ import kotlin.math.sin
 /** Жила тропы [trail], собранная раз на раскладку: путь [path] в пикселях. */
 private class Vein(val path: Path, val trail: RiftTrail)
 
-/** Жила тропы: под ней тёмная колея; пройденная горит и течёт, доступная течёт мягче, позади - тусклая, прочие - нить. */
-private fun DrawScope.vein(vein: Vein, flow: Float) {
+/** Путь шага героя [path] в пикселях, собранный раз на шаг: мера пути и пройденный кусок, что кадр переписывает на месте. */
+private class Stride(val path: Path) {
+    private val measure = PathMeasure().apply { setPath(path, false) }
+    private val done = Path()
+
+    /** Пройденная доля [t] пути. */
+    fun walked(t: Float): Path = done.apply {
+        reset()
+        measure.getSegment(0f, measure.length * t, this, true)
+    }
+}
+
+/** Перья жил и шага героя при [scale] пикселей на dp, собранные раз на кэш рисования; течение - одно на кадр ([flow]). */
+private class VeinPen(scale: Float) {
+    val rut = Stroke(9 * scale, cap = StrokeCap.Round)
+    val walked = Stroke(3.2f * scale, cap = StrokeCap.Round)
+    val open = Stroke(2 * scale, cap = StrokeCap.Round)
+    val behind = Stroke(1.4f * scale, cap = StrokeCap.Round)
+    val dim = Stroke(1.8f * scale, cap = StrokeCap.Round)
+    val route = Stroke(2.4f * scale, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5 * scale, 5 * scale)))
+    val stride = Stroke(3 * scale, cap = StrokeCap.Round)
+    private val flowWidth = 1.6f * scale
+    private val dash = floatArrayOf(4 * scale, 8 * scale)
+    private val travel = 24 * scale
+
+    /** Течение жил на фазе [phase]. */
+    fun flow(phase: Float): Stroke = Stroke(flowWidth, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(dash, -phase * travel))
+}
+
+/** Жила тропы: под ней тёмная колея; пройденная горит и течёт ([flow]), доступная течёт мягче, позади - тусклая, прочие - нить. */
+private fun DrawScope.vein(vein: Vein, pen: VeinPen, flow: Stroke) {
     val path = vein.path
-    val walked = vein.trail.walked
-    val open = vein.trail.open
-    drawPath(path, Rut, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
-    if (walked) drawPath(path, VeinGlow, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
-    val color = when {
-        walked -> RiftColors.Rift
-        open -> RiftColors.Soft
-        vein.trail.behind -> VeinBehind
-        else -> VeinDim
+    val trail = vein.trail
+    drawPath(path, Rut, style = pen.rut)
+    if (trail.walked) drawPath(path, VeinGlow, style = pen.rut)
+    when {
+        trail.walked -> drawPath(path, RiftColors.Rift, style = pen.walked)
+        trail.open -> drawPath(path, RiftColors.Soft, style = pen.open)
+        trail.behind -> drawPath(path, VeinBehind, style = pen.behind)
+        else -> drawPath(path, VeinDim, style = pen.dim)
     }
-    val stroke = when {
-        walked -> 3.2.dp
-        open -> 2.dp
-        vein.trail.behind -> 1.4.dp
-        else -> 1.8.dp
-    }
-    drawPath(path, color, style = Stroke(stroke.toPx(), cap = StrokeCap.Round))
-    if (walked || open) {
-        val dash = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 8.dp.toPx()), -flow * 24.dp.toPx())
-        drawPath(path, if (walked) RiftColors.Hot else RiftColors.Rift, style = Stroke(1.6.dp.toPx(), pathEffect = dash, cap = StrokeCap.Round))
-    }
+    if (trail.walked || trail.open) drawPath(path, if (trail.walked) RiftColors.Hot else RiftColors.Rift, style = flow)
+}
+
+/** Шаг героя [stride] на доле [t]: весь путь - пунктир золотом, пройденное - сплошным. */
+private fun DrawScope.pace(stride: Stride, t: Float, pen: VeinPen) {
+    drawPath(stride.path, RiftColors.Pick.copy(alpha = .85f), style = pen.route)
+    drawPath(stride.walked(t), RiftColors.Pick, style = pen.stride)
 }
 
 /** Вход в Разлом под первым рядом: кольцо портала на земле, ядро дышит. */
@@ -246,27 +264,45 @@ private val VeinBehind = RiftColors.Line.copy(alpha = .6f)
 private val VeinGlow = RiftColors.Rift.copy(alpha = .25f)
 private val Rut = RiftColors.Ground.copy(alpha = .75f)
 
-/** Туман над краем [edge]: почти чёрная толща, в ней дрейфуют зелёные клубы, нижняя кромка тает. */
-private fun DrawScope.fog(edge: Float, drift: Float) {
-    drawRect(RiftColors.Ground.copy(alpha = .97f), size = size.copy(height = edge))
-    val turn = drift * 2 * PI
-    repeat(MIST) { k ->
-        val phase = turn + k * 1.7
-        val cx = size.width * (.15f + .7f * ((k * 37 % 100) / 100f)) + (sin(phase) * 30.dp.toPx()).toFloat()
-        val cy = edge - (k * 61 % 100) / 100f * edge.coerceAtMost(900.dp.toPx()) + (cos(phase * .7) * 12.dp.toPx()).toFloat()
-        val r = (90 + k * 23 % 70).dp.toPx()
-        drawCircle(Brush.radialGradient(listOf(RiftColors.Deep.copy(alpha = .55f), RiftColors.Rift.copy(alpha = .05f), Color.Transparent), Offset(cx, cy), r), r, Offset(cx, cy))
+/**
+ * Туман над краем [edge] (px) холста шириной [width] при [scale] пикселей на dp: почти чёрная толща, в ней дрейфуют зелёные клубы,
+ * нижняя кромка тает. Клубы и кромка собраны раз на кэш рисования, кадр только двигает клубы.
+ */
+private class Fog(private val edge: Float, width: Float, scale: Float) {
+    private val fade = 56 * scale
+    private val sway = 30 * scale
+    private val bob = 12 * scale
+    private val rim = Brush.verticalGradient(listOf(Color.Transparent, RiftColors.Ground.copy(alpha = .9f), Color.Transparent), edge - fade, edge + fade / 2)
+    private val clubs = List(MIST) { k ->
+        val r = (90 + k * 23 % 70) * scale
+        val y = edge - (k * 61 % 100) / 100f * edge.coerceAtMost(900 * scale)
+        Club(width * (.15f + .7f * ((k * 37 % 100) / 100f)), y, r, Brush.radialGradient(MistTones, Offset.Zero, r))
     }
-    val fade = 56.dp.toPx()
-    drawRect(Brush.verticalGradient(listOf(Color.Transparent, RiftColors.Ground.copy(alpha = .9f), Color.Transparent), edge - fade, edge + fade / 2), Offset(0f, edge - fade), size.copy(height = fade * 1.5f))
+
+    /** Туман на фазе дрейфа [drift]. */
+    fun draw(scope: DrawScope, drift: Float) = with(scope) {
+        drawRect(FogBody, size = size.copy(height = edge))
+        val turn = drift * 2 * PI
+        clubs.forEachIndexed { k, club ->
+            val phase = turn + k * 1.7
+            translate(club.x + (sin(phase) * sway).toFloat(), club.y + (cos(phase * .7) * bob).toFloat()) { drawCircle(club.brush, club.r, Offset.Zero) }
+        }
+        drawRect(rim, Offset(0f, edge - fade), size.copy(height = fade * 1.5f))
+    }
+
+    /** Клуб тумана: покой в ([x], [y]), радиус [r], заливка [brush] вокруг начала. */
+    private class Club(val x: Float, val y: Float, val r: Float, val brush: Brush)
 }
+
+private val FogBody = RiftColors.Ground.copy(alpha = .97f)
+private val MistTones = listOf(RiftColors.Deep.copy(alpha = .55f), RiftColors.Rift.copy(alpha = .05f), Color.Transparent)
 
 /**
  * Узел на земле в точке [at] (dp холста): плита цвета вида и объект вида - постамент со знаком; страж - ворота поперёк тропы. Доступный
  * ([open]) дышит и пускает кольцо, узел героя подсвечен, пройденный и оставшийся позади притушены; над узлом впереди - значок главной
  * награды ([RiftSpot.reward]); страж в тумане - тёмный силуэт ворот с именем.
  *
- * Дыхание читается в рисовании и в слое: силуэт - слоем, прочие без перекомпоновки.
+ * Узел - свой слой: дыхание читается в его рисовании и слое, без перекомпоновки и без перерисовки соседей.
  */
 @Composable private fun NodeMark(spot: RiftSpot, open: Boolean, breath: State<Float>, name: String?, at: Offset, onClick: () -> Unit) {
     val gate = spot.guardian
@@ -282,13 +318,9 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
 
     fun pulse() = (1 - cos(breath.value * 2 * PI).toFloat()) / 2
     Box(
-        Modifier.offset((at.x - box.width / 2).dp, (at.y - box.height + box.foot).dp).size(box.width.dp, box.height.dp).then(
-            when {
-                silhouette -> Modifier.graphicsLayer { alpha = .45f + .2f * pulse() }
-                fade < 1f -> Modifier.graphicsLayer { alpha = fade }
-                else -> Modifier
-            },
-        ),
+        Modifier.offset((at.x - box.width / 2).dp, (at.y - box.height + box.foot).dp).size(box.width.dp, box.height.dp).graphicsLayer {
+            alpha = if (silhouette) .45f + .2f * pulse() else fade
+        },
     ) {
         Spacer(
             Modifier.fillMaxSize().drawWithCache {

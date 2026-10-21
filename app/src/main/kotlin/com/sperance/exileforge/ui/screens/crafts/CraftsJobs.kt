@@ -270,7 +270,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     val inspectSkill = rememberSkillInspect()
     val index = game.index
     return remember(index, kind, inspect, inspectSkill) {
-        { code ->
+        { code: String ->
             val skill = when (kind) {
                 JobKind.BOOK -> index?.skills?.byBook(code)?.code
                 JobKind.EVOLVE -> code

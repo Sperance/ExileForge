@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.CarriedAilment
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
-import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.FeatureAction
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.core.campaign.run.afflict
@@ -124,8 +123,10 @@ class TrapCarryTest {
         assertTrue(chilled < plain, "the chilled step is shorter")
         assertEquals(plain * run.stride(), chilled, 1e-6, "shorter by the stride")
         run.afflict(CarriedAilment(Ailment.CHILLED, 10.0, 1_000.0, 10.0))
-        assertEquals(ExpeditionWorld.CHILL_FLOOR, run.stride(), 1e-9, "the strongest chill stops at the floor")
-        assertEquals(plain * ExpeditionWorld.CHILL_FLOOR, run.stepLength(), 1e-6, "and so does the step")
+        val floor = index.campaign.expedition.chillFloor
+        assertTrue(floor < 1.0, "the content floor leaves room for the chill to slow the step")
+        assertEquals(floor, run.stride(), 1e-9, "the strongest chill stops at the content floor")
+        assertEquals(plain * floor, run.stepLength(), 1e-6, "and so does the step")
     }
 
     /** Длина одного кадра шага героя с клетки посреди пола, вдали от стен и монстров: ни стена, ни встреча шаг не режут. */

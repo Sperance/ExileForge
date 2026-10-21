@@ -105,10 +105,11 @@ internal fun ExpeditionRun.walk(dt: Double) {
 
 /**
  * Множитель шага героя под холодом: шаг делится на то же растяжение, что замедляет действия в бою ([chillStretch] по
- * сильнейшему из носимых холодов - из боя и морозной ловушки, не сумме), но не ниже пола [ExpeditionWorld.CHILL_FLOOR];
- * 1 - холода нет. Множится с ускорением после босса ([ExpeditionWorld.heroSpeed]). Считается каждый тик шага без аллокаций.
+ * сильнейшему из носимых холодов - из боя и морозной ловушки, не сумме), но не ниже пола контента (`expedition.chillFloor`,
+ * `ExpeditionRules.chillFloor`); 1 - холода нет. Множится с ускорением после босса ([ExpeditionWorld.heroSpeed]). Считается
+ * каждый тик шага без аллокаций.
  */
-internal fun ExpeditionRun.stride(): Double = (1 / chillStretch(carry.ailments.strongestChill())).coerceAtLeast(ExpeditionWorld.CHILL_FLOOR)
+internal fun ExpeditionRun.stride(): Double = (1 / chillStretch(carry.ailments.strongestChill())).coerceAtLeast(pace.chillFloor)
 
 /** Подпись холода под жетоном героя на карте: «−X%» шага по множителю [stride], процент - как в сводке героя ([shareText]). */
 fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))

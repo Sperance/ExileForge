@@ -501,12 +501,6 @@ class ExpeditionWorld(
         }
 
         /**
-         * Пол шага под холодом: множитель шага ([step] `stride`) не ниже этой доли, как бы силён ни был холод, - поверх пределов
-         * скорости листа (`expedition.minSpeed`/`maxSpeed`) и ускорения после босса. Кандидат в контент (`expedition.chillFloor`).
-         */
-        const val CHILL_FLOOR = 0.5
-
-        /**
          * The hero's pace, sped up by movement speed from the sheet; [bossSlain] - босс основной карты убит в этом заходе:
          * шаг ещё × `bossSlainSpeed`, поверх предела скорости листа.
          */

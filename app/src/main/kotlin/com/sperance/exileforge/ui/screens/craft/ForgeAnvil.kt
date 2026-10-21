@@ -180,7 +180,7 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
             listOfNotNull(
                 slotTitle(item.slot),
                 ui("row.level", item.level),
-                item.sides?.let(::sidesText),
+                item.sides?.let { sidesText(it, item.influenceSlots) },
             ).joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,
         )

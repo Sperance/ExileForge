@@ -144,8 +144,9 @@ class RiftActions(
     }
 
     /**
-     * Шаг на узел [node], выбранный на карте: только если карта его пускает ([RiftSpot.bar]). Герой сразу идёт по тропе ([RiftState.walk]),
-     * доска с ответом ложится, когда шаг дойдёт ([RiftWalk.STEP_MS]); отказ или сбой - герой остаётся на месте.
+     * Шаг на узел [node], выбранный на карте: только если карта его пускает ([RiftSpot.bar]). С анимациями герой сразу идёт по тропе
+     * ([RiftState.walk]), доска с ответом ложится, когда шаг дойдёт ([RiftWalk.STEP_MS]); без анимаций шага нет - герой встаёт на узел с
+     * доской ответа, без ожидания. Отказ или сбой - герой остаётся на месте.
      */
     fun go(node: Int) {
         val state = mutable.value
@@ -153,11 +154,12 @@ class RiftActions(
         val run = state.board?.progress?.run ?: return
         if (chart.spot(node)?.let { it.bar == null } != true) return
         val started = TimeSource.Monotonic.markNow()
-        mutable.update { it.copy(walk = RiftWalk(chart.here?.id, node)) }
+        val walk = RiftWalk(chart.here?.id, node).takeIf { prefs.settings.value.animations }
+        walk?.let { step -> mutable.update { it.copy(walk = step) } }
         val sent = commands.task(writing = true, touches = setOf(Reads.HERO)) {
             try {
                 val report = api.trials.riftAct(heroes.heroId, run.id, RiftAct.Move(node))
-                delay(RiftWalk.STEP_MS.milliseconds - started.elapsedNow())
+                if (walk != null) delay(RiftWalk.STEP_MS.milliseconds - started.elapsedNow())
                 land(report)
             } finally {
                 mutable.update { it.copy(walk = null) }

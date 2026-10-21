@@ -1,8 +1,8 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -43,24 +43,21 @@ internal class IsleTrail(val from: Offset, val to: Offset) {
     }
 }
 
-/**
- * Клетка земли острова: середина ромба [centre] (dp), ярус-акт [act], стенки обрыва слева [left] и справа [right] - там, где
- * соседа по изометрии нет, руна-искра [rune].
- */
-internal class IsleTile(val centre: Offset, val act: Int, val left: Boolean, val right: Boolean, val rune: Boolean)
+/** Круг земли под узлом или точкой тропы: середина [at], радиус [r] (dp), ярус-акт [act]. */
+internal class IsleDisc(val at: Offset, val r: Float, val act: Int)
 
 /**
  * Раскладка карты Разлома по схеме недели, в dp холста шириной [width] и высотой [height]: узлы - вдоль извилистой тропы снизу вверх
- * (глубина - ряд, место в ряду - вбок), вход [entry] под первым рядом; земля - клетки изометрии Похода ([MapProjection]) под тропами и
- * узлами ([tiles]), обрыв - стенки клеток без соседа. Считается раз на схему и ширину.
+ * (глубина - ряд, место в ряду - вбок), вход [entry] под первым рядом; под узлами и тропами - круги земли [discs], по ним
+ * [IsleArt] кладёт клетки изометрии Похода. Сид недели [seed] - звёзды изнанки. Считается раз на схему и ширину, без клеток - дёшево.
  */
 internal class RiftIsle private constructor(
     val width: Float,
     val height: Float,
     private val points: Array<Offset>,
     val entry: Offset,
-    val tiles: List<IsleTile>,
-    val stars: List<Offset>,
+    val discs: List<IsleDisc>,
+    val seed: Long,
 ) {
     /** Место узла [id] на земле; null - вход. */
     fun at(id: Int?): Offset = id?.let(points::get) ?: entry
@@ -74,12 +71,6 @@ internal class RiftIsle private constructor(
     companion object {
         /** Шаг ряда по высоте, dp. */
         const val STEP = 86f
-
-        /** Полуширина клетки земли, dp. */
-        const val UNIT = 14f
-
-        /** Высота стенки обрыва, dp. */
-        const val WALL = 16f
 
         /**
          * Раскладка схемы [plan] глубиной [depths] рядов ([depth] - ряд узла) на ширину [width] dp с запасом [top] dp сверху;
@@ -97,28 +88,56 @@ internal class RiftIsle private constructor(
 
             fun at(id: Int?) = id?.let(points::get) ?: entry
             val discs = buildList {
-                add(Disc(entry, NODE_LAND, 0))
+                add(IsleDisc(entry, NODE_LAND, 0))
                 plan.nodes.forEach { node ->
-                    add(Disc(points[node.id], if (node.kind == RiftNodeKind.GUARDIAN) GATE_LAND else NODE_LAND, node.act))
+                    add(IsleDisc(points[node.id], if (node.kind == RiftNodeKind.GUARDIAN) GATE_LAND else NODE_LAND, node.act))
                     node.links.forEach { link -> trailDiscs(IsleTrail(points[node.id], points[link]), plan.nodes[link].act) }
                 }
                 plan.entries.forEach { trailDiscs(IsleTrail(entry, at(it)), 0) }
             }
-            return RiftIsle(width, height, points, entry, land(discs, width, height), stars(plan.seed, width, height))
+            return RiftIsle(width, height, points, entry, discs, plan.seed)
         }
 
-        private fun MutableList<Disc>.trailDiscs(trail: IsleTrail, act: Int) {
-            repeat(SAMPLES + 1) { k -> add(Disc(trail.at(k / SAMPLES.toFloat()), PATH_LAND, act)) }
+        private fun MutableList<IsleDisc>.trailDiscs(trail: IsleTrail, act: Int) {
+            repeat(SAMPLES + 1) { k -> add(IsleDisc(trail.at(k / SAMPLES.toFloat()), PATH_LAND, act)) }
         }
 
         private fun middle(width: Float, row: Int): Float = width / 2 + WIGGLE * sin(row * .62f + .4f)
 
-        /**
-         * Клетки изометрии, чья середина - на земле: под кругом узла или тропы (по высоте круг сжат - земля лежит плоско). Начало карты
-         * выше холста на полширины - все клетки холста с неотрицательными номерами.
-         */
-        private fun land(discs: List<Disc>, width: Float, height: Float): List<IsleTile> {
-            val bands = discs.groupBy { (it.at.y / BAND).toInt() }
+        private const val GATE_RISE = 96f
+        private const val ENTRY_PAD = 56f
+        private const val PITCH = 84f
+        private const val SIDE = 30f
+        private const val WIGGLE = 22f
+        private const val NODE_LAND = 27f
+        private const val GATE_LAND = 62f
+        private const val PATH_LAND = 14f
+        private const val SAMPLES = 10
+    }
+}
+
+/**
+ * Земля острова в пикселях ([scale] пикселей на dp): звёзды изнанки и клетки изометрии Похода ([MapProjection]), чья середина - на
+ * круге земли ([RiftIsle.discs]; по высоте круг сжат - земля лежит плоско). Клетки собраны рядами глубины ([IsleRow]) спереди назад
+ * по порядку рисования: ряд ближе рисуется позже и ложится на стенки рядов за ним, как земля Похода. Сборка тяжёлая (десятки тысяч
+ * клеток) - [of] зовут вне главного потока, раз на раскладку и плотность; рисунок не меняется и пишется в неподвижный слой.
+ */
+@Immutable internal class IsleArt private constructor(private val rows: List<IsleRow>, private val stars: List<Offset>, private val runes: List<Offset>, private val scale: Float) {
+    private val rim = Stroke(1.2f * scale)
+    private val line = Stroke(.6f * scale)
+
+    fun draw(scope: DrawScope) = with(scope) {
+        stars.forEachIndexed { k, at -> drawCircle(if (k % 3 == 0) RiftColors.Rift else RiftColors.Soft, (.4f + k % 4 * .3f) * scale, at, alpha = .12f + k % 5 * .08f) }
+        rows.forEach { it.draw(this, rim, line) }
+        runes.forEach { drawCircle(RiftColors.Rift, 1.3f * scale, it, alpha = .5f) }
+    }
+
+    companion object {
+        /** Земля раскладки [isle] при [scale] пикселей на dp. Тяжёлая - не на главном потоке. */
+        fun of(isle: RiftIsle, scale: Float): IsleArt {
+            val width = isle.width
+            val height = isle.height
+            val bands = isle.discs.groupBy { (it.at.y / BAND).toInt() }
             val projection = MapProjection(Offset(0f, -width / 2), UNIT)
             val span = ceil((width + height) / UNIT).toInt() + 2
             val (xs, ys) = projection.cells(Size(width, height), span, span)
@@ -139,15 +158,20 @@ internal class RiftIsle private constructor(
                     if (hit != null) acts[y * span + x] = hit.act
                 }
             }
-            return buildList {
-                for (x in xs) {
-                    for (y in ys) {
-                        val act = act(x, y)
-                        if (act < 0) continue
-                        add(IsleTile(projection.at(x + .5, y + .5), act, left = act(x, y + 1) < 0, right = act(x + 1, y) < 0, rune = (x * 73 + y * 37) % 29 == 0))
-                    }
+            val rows = arrayOfNulls<IsleRow>(2 * span)
+            val runes = ArrayList<Offset>()
+            val pen = IsleRow.Pen(UNIT * scale, WALL * scale)
+            for (x in xs) {
+                for (y in ys) {
+                    val act = act(x, y)
+                    if (act < 0) continue
+                    val c = projection.at(x + .5, y + .5) * scale
+                    val row = rows[x + y] ?: IsleRow().also { rows[x + y] = it }
+                    row.add(pen, c, act, left = act(x, y + 1) < 0, right = act(x + 1, y) < 0)
+                    if ((x * 73 + y * 37) % 29 == 0) runes += c
                 }
             }
+            return IsleArt(rows.filterNotNull(), stars(isle.seed, width, height).map { it * scale }, runes, scale)
         }
 
         /** Звёзды изнанки по сиду недели: одни и те же у всех. */
@@ -156,18 +180,12 @@ internal class RiftIsle private constructor(
             return List((height / STAR_GAP).toInt()) { Offset(random.nextFloat() * width, random.nextFloat() * height) }
         }
 
-        /** Круг земли под узлом или точкой тропы: середина [at], радиус [r] (dp), акт [act]. */
-        private class Disc(val at: Offset, val r: Float, val act: Int)
+        /** Полуширина клетки земли, dp. */
+        private const val UNIT = 14f
 
-        private const val GATE_RISE = 96f
-        private const val ENTRY_PAD = 56f
-        private const val PITCH = 84f
-        private const val SIDE = 30f
-        private const val WIGGLE = 22f
-        private const val NODE_LAND = 27f
-        private const val GATE_LAND = 62f
-        private const val PATH_LAND = 14f
-        private const val SAMPLES = 10
+        /** Высота стенки обрыва, dp. */
+        private const val WALL = 16f
+
         private const val BAND = 48f
         private const val FLAT = 1.6f
         private const val STAR_GAP = 9f
@@ -175,52 +193,42 @@ internal class RiftIsle private constructor(
 }
 
 /**
- * Земля острова в пикселях ([scale] пикселей на dp), собранная раз на раскладку: изнанка со звёздами, стенки обрыва, ромбы клеток в
- * два тона по ярусам-актам, кромка и руны-искры. Рисуется без часов - слой стоит.
+ * Ряд глубины земли: клетки одной диагонали изометрии, что не заслоняют друг друга. Стенки обрыва слева и справа - там, где соседа
+ * спереди нет, кромка по их низу, ромбы в два тона по ярусам-актам с обводкой; в ряду стенки рисуются под ромбами.
  */
-internal class IsleArt(isle: RiftIsle, private val scale: Float) {
-    private val tops = List(2) { Path() }
+private class IsleRow {
     private val walls = Path()
     private val shades = Path()
     private val rims = Path()
-    private val runes = isle.tiles.filter { it.rune }.map { it.centre * scale }
-    private val stars = isle.stars.map { it * scale }
-    private val void = Brush.verticalGradient(listOf(RiftColors.Ground, RiftColors.Ground2, RiftColors.Ground))
+    private val tops = arrayOf(Path(), Path())
 
-    init {
-        val u = RiftIsle.UNIT * scale
+    /** Клетка с серединой [c] (px) яруса [act]; [left] и [right] - стенки обрыва. */
+    fun add(pen: Pen, c: Offset, act: Int, left: Boolean, right: Boolean) {
+        val u = pen.unit
         val h = u / 2
-        val wall = RiftIsle.WALL * scale
-        isle.tiles.forEach { tile ->
-            val c = tile.centre * scale
-            if (tile.left) {
-                quad(walls, Offset(c.x - u, c.y), Offset(c.x, c.y + h), Offset(c.x, c.y + h + wall), Offset(c.x - u, c.y + wall))
-                rims.moveTo(c.x - u, c.y + wall)
-                rims.lineTo(c.x, c.y + h + wall)
-            }
-            if (tile.right) {
-                quad(shades, Offset(c.x, c.y + h), Offset(c.x + u, c.y), Offset(c.x + u, c.y + wall), Offset(c.x, c.y + h + wall))
-                rims.moveTo(c.x, c.y + h + wall)
-                rims.lineTo(c.x + u, c.y + wall)
-            }
+        val wall = pen.wall
+        if (left) {
+            quad(walls, Offset(c.x - u, c.y), Offset(c.x, c.y + h), Offset(c.x, c.y + h + wall), Offset(c.x - u, c.y + wall))
+            rims.moveTo(c.x - u, c.y + wall)
+            rims.lineTo(c.x, c.y + h + wall)
         }
-        isle.tiles.forEach { tile ->
-            val c = tile.centre * scale
-            quad(tops[tile.act % 2], Offset(c.x - u, c.y), Offset(c.x, c.y - h), Offset(c.x + u, c.y), Offset(c.x, c.y + h))
+        if (right) {
+            quad(shades, Offset(c.x, c.y + h), Offset(c.x + u, c.y), Offset(c.x + u, c.y + wall), Offset(c.x, c.y + h + wall))
+            rims.moveTo(c.x, c.y + h + wall)
+            rims.lineTo(c.x + u, c.y + wall)
         }
+        quad(tops[act % 2], Offset(c.x - u, c.y), Offset(c.x, c.y - h), Offset(c.x + u, c.y), Offset(c.x, c.y + h))
     }
 
-    fun draw(scope: DrawScope) = with(scope) {
-        drawRect(void)
-        stars.forEachIndexed { k, at -> drawCircle(if (k % 3 == 0) RiftColors.Rift else RiftColors.Soft, (.4f + k % 4 * .3f) * scale, at, alpha = .12f + k % 5 * .08f) }
-        drawPath(walls, IsleWall)
-        drawPath(shades, IsleShade)
-        drawPath(rims, RiftColors.Rift.copy(alpha = .35f), style = Stroke(1.2f * scale))
-        drawPath(tops[0], IsleTop)
-        drawPath(tops[1], IsleTopAlt)
-        drawPath(tops[0], RiftColors.Line, style = Stroke(.6f * scale))
-        drawPath(tops[1], RiftColors.Line, style = Stroke(.6f * scale))
-        runes.forEach { drawCircle(RiftColors.Rift, 1.3f * scale, it, alpha = .5f) }
+    fun draw(scope: DrawScope, rim: Stroke, line: Stroke) = with(scope) {
+        if (!walls.isEmpty) drawPath(walls, IsleWall)
+        if (!shades.isEmpty) drawPath(shades, IsleShade)
+        if (!rims.isEmpty) drawPath(rims, IsleRim, style = rim)
+        tops.forEachIndexed { k, top ->
+            if (top.isEmpty) return@forEachIndexed
+            drawPath(top, if (k == 0) IsleTop else IsleTopAlt)
+            drawPath(top, RiftColors.Line, style = line)
+        }
     }
 
     private fun quad(path: Path, a: Offset, b: Offset, c: Offset, d: Offset) {
@@ -230,9 +238,13 @@ internal class IsleArt(isle: RiftIsle, private val scale: Float) {
         path.lineTo(d.x, d.y)
         path.close()
     }
+
+    /** Мера клеток в пикселях: полуширина ромба [unit] и высота стенки [wall]. */
+    class Pen(val unit: Float, val wall: Float)
 }
 
 private val IsleTop = Color(0xFF0C1A12)
 private val IsleTopAlt = Color(0xFF0A1510)
 private val IsleWall = Color(0xFF07110B)
 private val IsleShade = Color(0xFF040A06)
+private val IsleRim = RiftColors.Rift.copy(alpha = .35f)

@@ -24,12 +24,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -46,6 +47,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -67,7 +69,9 @@ import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -80,8 +84,8 @@ import kotlin.math.sin
  * силуэты стражей, значков нет. Фигурка героя [hero] стоит на своём узле и идёт по тропе к выбранному ([walk]); лента сама держит героя
  * в нижней трети, свободной камеры нет. Декор стоит при выключенном `LocalMotion`.
  *
- * Раскладка и земля собираются раз на схему и ширину; фазы декора и шаг героя читаются в рисовании и в слое - кадр не перекомпонует
- * экран.
+ * Раскладка собирается раз на схему и ширину, земля ([IsleArt]) - вне главного потока и пишется в неподвижный слой ([IsleGround]);
+ * фазы декора и шаг героя читаются в рисовании и в слое - кадр не перекомпонует экран и не перерисовывает землю.
  */
 @Composable internal fun RiftAscent(
     rules: RiftRules,
@@ -113,7 +117,10 @@ import kotlin.math.sin
         val viewport = maxHeight
         val isle = remember(plan, width, top) { RiftIsle.of(plan, engine::depth, depths, rules.layout.width.max(), width.value, top.value) }
         val scale = LocalDensity.current.density
-        val art = remember(isle, scale) { IsleArt(isle, scale) }
+        val art by produceState<IsleArt?>(null, isle, scale) {
+            value = null
+            value = withContext(Dispatchers.Default) { IsleArt.of(isle, scale) }
+        }
         val route = remember(isle, walk) { walk?.let { isle.trail(it.from, it.to) } }
         val here = chart.here?.id
         val anchor = walk?.to ?: here
@@ -125,7 +132,7 @@ import kotlin.math.sin
         val order = remember(chart, isle) { chart.spots.filter { it.shown }.sortedBy { isle.at(it.node.id).y } }
         Box(Modifier.fillMaxWidth().verticalScroll(scroll)) {
             Box(Modifier.width(width).height(isle.height.dp + bottom)) {
-                Spacer(Modifier.fillMaxSize().drawBehind { art.draw(this) })
+                IsleGround(art, Modifier.fillMaxSize())
                 Spacer(
                     Modifier.fillMaxSize().drawWithCache {
                         val veins = chart.trails.map { Vein(isle.trail(it.from, it.to).path(scale), it) }
@@ -177,6 +184,23 @@ import kotlin.math.sin
             }
         }
     }
+}
+
+/**
+ * Земля острова: пустота и неподвижный слой рисунка [art], записанный раз на рисунок - кадры жил и тумана его только воспроизводят;
+ * до готовности рисунка - одна пустота.
+ */
+@Composable private fun IsleGround(art: IsleArt?, modifier: Modifier) {
+    Spacer(
+        modifier.drawWithCache {
+            val void = Brush.verticalGradient(listOf(RiftColors.Ground, RiftColors.Ground2, RiftColors.Ground))
+            val layer = art?.let { ground -> obtainGraphicsLayer().apply { record { ground.draw(this) } } }
+            onDrawBehind {
+                drawRect(void)
+                layer?.let { drawLayer(it) }
+            }
+        },
+    )
 }
 
 /** Жила тропы [trail], собранная раз на раскладку: путь [path] в пикселях. */

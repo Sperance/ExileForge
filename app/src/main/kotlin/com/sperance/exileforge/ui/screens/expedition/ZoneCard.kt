@@ -143,7 +143,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 state = ButtonState.of(game.hero != null && !game.busy && wait == 0L && !mapless),
                 why = ui("expedition.launch_needs_map").takeIf { mapless },
             ) { launchGuarded { vm.startRun(zone.code.value) } }
-            if (game.freeProgress) TesterMechanics(vm, forced)
+            if (game.freeProgress) TesterMechanics(vm, forced, zone, launch.picked != null)
             if (game.freeProgress) {
                 ForgeButton(
                     state = ButtonState.of(game.hero != null && !game.busy && wait == 0L),
@@ -198,9 +198,10 @@ private const val SEED_TICK_MS = 1000L
 /**
  * Механики тестировщика со свободным прогрессом: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
  * между зонами; открытый заход с другим выбором начинается заново. Панель свёрнута заголовком «Механики · выбрано N»;
- * раскрытость помнит устройство ([com.sperance.exileforge.core.app.GameSettings.testerMechanicsOpen]).
+ * раскрытость помнит устройство ([com.sperance.exileforge.core.app.GameSettings.testerMechanicsOpen]). Механика, что не встанет на заход
+ * в зону [zone] по смыслу ([MapMechanic.bar]; [withMap] - вход с картой), - чип погашен, касание называет причину.
  */
-@Composable private fun TesterMechanics(vm: ExpeditionViewModel, forced: Set<MapMechanic>) {
+@Composable private fun TesterMechanics(vm: ExpeditionViewModel, forced: Set<MapMechanic>, zone: Zone, withMap: Boolean) {
     val settings = koinViewModel<SettingsViewModel>()
     val open = settings.settings.collectAsStateWithLifecycle().value.testerMechanicsOpen
     ForgePanel {
@@ -218,7 +219,10 @@ private const val SEED_TICK_MS = 1000L
                 val all = forced.size == MapMechanic.entries.size
                 ForgeChip(ui("tester.mechanics_all"), all, { vm.forceAll(!all) })
                 MapMechanic.entries.forEach { mechanic ->
-                    ForgeChip(ui("tester.mechanic.${mechanic.name}"), mechanic in forced, { vm.toggleForced(mechanic) })
+                    val bar = mechanic.bar(zone, withMap)
+                    Tipped(bar?.let { { Tip(body = ui("tester.mechanic_bar.${it.name}"), tint = Muted) } }) {
+                        ForgeChip(ui("tester.mechanic.${mechanic.name}"), mechanic in forced, { vm.toggleForced(mechanic) }, state = ButtonState.of(bar == null))
+                    }
                 }
             }
         }

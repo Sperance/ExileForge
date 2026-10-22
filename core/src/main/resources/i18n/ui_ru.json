@@ -36,6 +36,8 @@
   "tester.mechanic.VAULT": "Сокровищница",
   "tester.mechanic.NODES": "Узлы ремёсел",
   "tester.mechanic.BLIGHT": "Скверна",
+  "tester.mechanic_bar.NO_CORRUPTION": "В этой зоне нет порченого монстра — портала Изнанки не будет.",
+  "tester.mechanic_bar.NO_MAP": "Алтари встают только в заходе по карте-предмету.",
   "expedition.log_note_phase": "{0}: фаза «{1}» на {2}%",
   "fight.skills_title": "Умения",
   "lore.altar_note": "Действует до конца карты.",

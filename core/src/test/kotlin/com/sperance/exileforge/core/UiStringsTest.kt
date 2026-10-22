@@ -238,6 +238,7 @@ class UiStringsTest {
             listOf(com.sperance.exileforge.rules.run.FeatureKind.SECRET, com.sperance.exileforge.rules.run.FeatureKind.VAULT).forEach { add("feature.room.${it.name}") }
             listOf(com.sperance.exileforge.rules.run.FeatureKind.SECRET, com.sperance.exileforge.rules.run.FeatureKind.VAULT, com.sperance.exileforge.rules.run.FeatureKind.NODE).forEach { add("feature.action.${it.name}") }
             com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
+            com.sperance.exileforge.rules.run.MechanicBar.entries.forEach { add("tester.mechanic_bar.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
             SkillNodeType.entries.forEach { add("enum.node.${it.name}") }

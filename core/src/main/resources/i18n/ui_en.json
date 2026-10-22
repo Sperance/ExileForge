@@ -36,6 +36,8 @@
   "tester.mechanic.VAULT": "Vault",
   "tester.mechanic.NODES": "Gathering nodes",
   "tester.mechanic.BLIGHT": "Blight",
+  "tester.mechanic_bar.NO_CORRUPTION": "This zone has no corrupted monster — no Underside portal will open.",
+  "tester.mechanic_bar.NO_MAP": "Altars appear only in a run on a map item.",
   "expedition.log_note_phase": "{0}: phase “{1}” at {2}%",
   "fight.skills_title": "Skills",
   "lore.altar_note": "Lasts until the end of the map.",

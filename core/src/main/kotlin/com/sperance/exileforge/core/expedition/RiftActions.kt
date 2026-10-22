@@ -175,11 +175,13 @@ class RiftActions(
         heroSync.ensure()
     }
 
-    /** Новый забег: стиль героя - по его умениям и листу. */
+    /** Новый забег шагом [steps] (ключ Разлома не тратится дважды): стиль героя - по его умениям и листу. */
     fun start() {
         val gear = expedition.gear() ?: return
-        commands.task(writing = true, touches = setOf(Reads.HERO)) {
-            show(api.trials.riftStart(heroes.heroId, RiftStyles.of(gear)))
+        val heroId = heroes.heroId
+        val styles = RiftStyles.of(gear)
+        sendStep(START) { key ->
+            show(api.trials.riftStart(heroId, styles, key))
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
         }
     }
@@ -398,8 +400,11 @@ class RiftActions(
         return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate, prefs.fightSpeed(index.rules.fight)) { end -> deliver(end) }
     }
 
-    private companion object {
-        const val RETRY_FIRST = 2_000L
-        const val RETRY_DOUBLINGS = 3
+    companion object {
+        /** Метка шага «Войти» на Вратах: по ней крутится спиннер кнопки входа. */
+        const val START = "rift.start"
+
+        private const val RETRY_FIRST = 2_000L
+        private const val RETRY_DOUBLINGS = 3
     }
 }

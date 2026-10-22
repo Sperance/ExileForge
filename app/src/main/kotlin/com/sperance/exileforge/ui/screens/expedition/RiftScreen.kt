@@ -54,6 +54,7 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.expedition.RiftChart
+import com.sperance.exileforge.core.expedition.RiftActions
 import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftRecap
 import com.sperance.exileforge.core.expedition.RiftSpot
@@ -179,7 +180,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine, chart) else RiftRunView(game, model, rules, board, engine, chart, run, state, step, idle = !game.busy && !step.holds)
+            if (run == null) RiftGate(game, model, rules, board, engine, chart, step) else RiftRunView(game, model, rules, board, engine, chart, run, state, step, idle = !game.busy && !step.holds)
         }
         val recap = state.recap?.takeIf { it.shown }
         if (recap != null) RiftRecapSheet(game, recap, model::closeRiftRecap) else state.result?.let { RiftResultSheet(game, model, it) }
@@ -193,9 +194,9 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
  * Входное меню «Врата» - уровень цепочки «← Испытания › Разлом недели»: срок недели, уровень Разлома (закреплённый первым забегом
  * недели) и бесплатные забеги - данными цепочки ([GateTrail]). Портал и рядом лучший счёт недели, жила мутаторов и стражей
  * ([GateVein]), вход ([GateEnter]) и «Схема недели» - следующий уровень цепочки ([WeekScheme]). Вход и схема закреплены внизу,
- * над ними листается жила.
+ * над ними листается жила; вход в пути - полоса шага ([RequestStrip]) поверх верха Врат.
  */
-@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart) {
+@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart, step: CallState) {
     val hero = game.hero ?: return
     var preview by remember { mutableStateOf(false) }
     BackTrailHost(ui("trials.title"), Modifier.statusBarsPadding(), RiftTrail) {
@@ -210,12 +211,13 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
                         GateVein(rules, board.plan.mutators.mapNotNull(rules.mutatorsByCode::get))
                     }
                     Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GateEnter(game, rules, board, hero.bag[RiftRules.KEY] ?: 0L, model::startRift)
+                        GateEnter(game, rules, board, hero.bag[RiftRules.KEY] ?: 0L, step, model::startRift)
                         ForgeButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, accent = RiftColors.Soft) { Text(ui("rift.preview")) }
                     }
                 }
             }
         }
+        RequestStrip(step.strip(model::retryRiftStep), RiftStripTones)
     }
 }
 
@@ -360,7 +362,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
  * Закрытый уровнем Разлом или ни бесплатных, ни ключа - кнопка погашена, касание говорит причину (у ключа - и откуда он берётся,
  * описанием предмета).
  */
-@Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, onEnter: () -> Unit) {
+@Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, step: CallState, onEnter: () -> Unit) {
     val free = board.free > 0
     val why = when {
         !game.unlocked(Feature.RIFT) -> listOf(Feature.RIFT.lockedText(game.index?.rules))
@@ -373,7 +375,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
             onClick = onEnter,
             modifier = Modifier.fillMaxWidth(),
             size = ButtonSize.Wide,
-            state = ButtonState.of(!game.busy && why == null),
+            state = ButtonState.of(!game.busy && !step.holds && why == null, busy = step.spins(RiftActions.START)),
             accent = RiftColors.Rift,
             onDisabledClick = why?.let { { explain = true } },
         ) {

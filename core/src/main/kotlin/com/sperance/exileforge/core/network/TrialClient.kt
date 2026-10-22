@@ -26,8 +26,21 @@ class TrialClient internal constructor(private val http: Transport) {
     /** Доска Разлома недели. */
     suspend fun riftBoard(heroId: String): RiftBoard = http.get("$TRIALS/rift/board", heroQuery(heroId))
 
-    /** Забег в Разлом: сверх бесплатных тратит ключ; открытый забег возвращается как есть. [styles] - стиль героя для даров. */
-    suspend fun riftStart(heroId: String, styles: List<RiftStyle>): RiftBoard = http.post("$TRIALS/rift/start", heroQuery(heroId, "styles" to styles.joinToString(",") { it.name }))
+    /**
+     * Забег в Разлом под ключом [key]: сверх бесплатных тратит ключ Разлома; открытый забег возвращается как есть, повтор с тем же
+     * ключом сервер не выполняет второй раз. [styles] - стиль героя для даров.
+     */
+    suspend fun riftStart(heroId: String, styles: List<RiftStyle>, key: String = UUID.randomUUID().toString()): RiftBoard = WireJson.decodeFromJsonElement(
+        RiftBoard.serializer(),
+        http.request(
+            "POST",
+            "$TRIALS/rift/start",
+            heroQuery(heroId, "styles" to styles.joinToString(",") { it.name }),
+            null,
+            authenticated = true,
+            headers = mapOf(IDEMPOTENCY_HEADER to key),
+        ),
+    )
 
     /** Действие забега [runId] под ключом [key]: повтор с тем же ключом сервер не выполняет второй раз. */
     suspend fun riftAct(heroId: String, runId: String, act: RiftAct, key: String = UUID.randomUUID().toString()): RiftReport = WireJson.decodeFromJsonElement(

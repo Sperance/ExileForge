@@ -62,6 +62,12 @@ fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else
  */
 fun itemDescription(code: String, index: ContentIndex?): String = index.numberedText(locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))).orEmpty()
 
+/**
+ * Подробное описание стопки [code] (`item.<код>.details`): правила и оговорки сверх короткого [itemDescription], числа правил
+ * подставляет [index]; у стопки без него, без контента или без числа - пусто.
+ */
+fun itemDetails(code: String, index: ContentIndex?): String = index.numberedText(locOr(LocaleKey.itemDetails(code), "")).orEmpty()
+
 /** Действие сферы или оттиска [code] одной фразой (`enum.orb.<код>.rule`) - итог рецепта кузницы; у прочих стопок пусто. */
 fun itemRule(code: String): String = uiOr(uiLanguage, "enum.orb.$code.rule", "")
 

@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemDescription
+import com.sperance.exileforge.core.display.itemDetails
 import com.sperance.exileforge.core.display.itemRule
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rangedLine
@@ -280,7 +281,8 @@ private fun laidOmen(game: GameUi, code: String): String? = code.takeIf { it.isN
  */
 private fun recipeDetail(index: ContentIndex, effect: String?, omen: String?, vararg parts: String?): String {
     val catalyst = Omen.of(omen.orEmpty())?.catalyst?.let { "${Term.CATALYST.title}: ${Term.CATALYST.text(index.campaign.combat)}" }
-    return (parts.toList() + catalyst).filterNotNull().filter { it.isNotBlank() && it != effect }.distinct().joinToString("\n\n")
+    val omenDetails = omen?.let { itemDetails(it, index) }
+    return (parts.toList() + omenDetails + catalyst).filterNotNull().filter { it.isNotBlank() && it != effect }.distinct().joinToString("\n\n")
 }
 
 /**
@@ -317,7 +319,7 @@ internal fun orbRecipe(
         effect = effect,
         tone = tone,
         omen = omen?.let(::itemTitle),
-        detail = recipeDetail(index, effect, omen, itemDescription(code, index), uniques),
+        detail = recipeDetail(index, effect, omen, itemDescription(code, index), itemDetails(code, index), uniques),
         warnings = listOfNotNull(
             forecast?.lost?.takeIf { it > 0 }?.let { ui("forge.quality_reset", it) },
             scoured.takeIf { it.isNotEmpty() }?.let { strips -> ui("forge.scour_strips", strips.joinToString(", ") { ui("forge.scoured.${it.name}") }) },
@@ -333,7 +335,7 @@ internal fun sealRecipe(game: GameUi, index: ContentIndex, smithy: Smithy, chose
         chosen.needsOmen && smithy.omen.isBlank() -> ui("forge.needs_omen") to Rune
         else -> (omen?.let { itemDescription(it, index) } ?: itemRule(chosen.code)) to Vital
     }
-    return Recipe(itemTitle(chosen.code), effect, tone, omen?.let(::itemTitle), recipeDetail(index, effect, omen, itemDescription(chosen.code, index)))
+    return Recipe(itemTitle(chosen.code), effect, tone, omen?.let(::itemTitle), recipeDetail(index, effect, omen, itemDescription(chosen.code, index), itemDetails(chosen.code, index)))
 }
 
 /**
@@ -356,7 +358,7 @@ internal fun essenceRecipe(game: GameUi, index: ContentIndex, hero: HeroView, ge
         }
     }
     val (effect, tone) = refusal?.let { it to LifeRed } ?: ((gives ?: itemDescription(code, index)) to Elder)
-    return Recipe(itemTitle(code), effect, tone, detail = recipeDetail(index, effect, null, itemDescription(code, index), ui("essence.note")))
+    return Recipe(itemTitle(code), effect, tone, detail = recipeDetail(index, effect, null, itemDescription(code, index), itemDetails(code, index), ui("essence.note")))
 }
 
 /**

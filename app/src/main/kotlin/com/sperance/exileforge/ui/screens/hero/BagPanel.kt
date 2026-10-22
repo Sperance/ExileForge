@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.display.chanceText
 import com.sperance.exileforge.core.display.essenceCondense
 import com.sperance.exileforge.core.display.essenceGuarantees
 import com.sperance.exileforge.core.display.itemDescription
+import com.sperance.exileforge.core.display.itemDetails
 import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemUseIndex
@@ -51,6 +52,7 @@ import com.sperance.exileforge.ui.components.RowActions
 import com.sperance.exileforge.ui.components.RowButton
 import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.StackCellSize
+import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.skills.SkillPeek
 import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
@@ -209,10 +211,18 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
         val inspect = rememberSkillInspect()
         LoreChip(description ?: ui("bag.book_skill", SkillText.title(book.code)), Rune) { inspect(SkillPeek(book.code)) }
     } else {
-        description?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+        description?.let { StackDescription(it, itemDetails(code, game.index)) }
     }
     game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
+}
+
+/** Короткое описание стопки [text]; подробное [details] (правила и оговорки) - под знаком ⓘ «Подробнее» справа, без него знака нет. */
+@Composable private fun StackDescription(text: String, details: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        if (details.isNotBlank()) InfoMark(ui("bag.details"), { Tip(ui("bag.details"), details) })
+    }
 }
 
 /** Руна умения: семейство, действие с силой рун героя [power] и виды умений, куда она встаёт. */

@@ -303,6 +303,7 @@
   "bag.section_materials": "Materials",
   "bag.section_other": "Other",
   "bag.empty_hint": "Orbs come from loot and the market. Pull the list down to refresh.",
+  "bag.details": "Details",
   "bag.owned": "In the bag: {0}",
   "bag.bound": "🔗 Bound to the hero",
   "bag.bound_tip": "A trial item is bound to its hero: it can be neither listed on the market nor deposited in the guild stash.",

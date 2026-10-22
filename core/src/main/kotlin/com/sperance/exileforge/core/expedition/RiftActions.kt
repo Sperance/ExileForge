@@ -194,7 +194,7 @@ class RiftActions(
         val styles = RiftStyles.of(gear)
         sendStep(RiftStep.Start) { key ->
             val board = api.trials.riftStart(heroId, styles, key)
-            {
+            suspend {
                 show(board)
                 if (heroes.state.value.readAt == 0L) heroSync.readHero()
             }
@@ -218,7 +218,7 @@ class RiftActions(
         val heroId = heroes.heroId
         sendStep(RiftStep.Act(act)) { key ->
             val report = api.trials.riftAct(heroId, run.id, act, key)
-            {
+            suspend {
                 val opened = (act as? RiftAct.Open)?.coffer
                 val coffer = report.coffer
                 if (opened != null && coffer != null) mutable.update { it.copy(coffers = it.coffers + (opened to coffer)) }
@@ -308,7 +308,7 @@ class RiftActions(
                 broken = { commands.report(it, writing = true) },
             ) { key ->
                 val report = api.trials.riftAct(heroId, run.id, end, key)
-                {
+                suspend {
                     val after = report.board.progress.run?.takeIf { it.id == run.id && end.won }
                     val recap = recap(run, end, report)
                     mutable.update { it.copy(toll = after?.let { next -> RiftToll.of(run, next) }, recap = recap ?: it.recap) }

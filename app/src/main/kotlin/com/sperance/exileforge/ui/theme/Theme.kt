@@ -93,6 +93,9 @@ val Boon = Color(0xFFE8C15A)
 /** Fire and other burning damage on the arena stage. */
 val Ember = Color(0xFFD9642E)
 
+/** Огонь текстом на тёмной подложке (число урона карточки): светлее [Ember], контраст не ниже 4.5:1. */
+val EmberText = Color(0xFFE9784A)
+
 /** The colours Path of Exile gives a crafted and a fractured modifier, and the two influences. */
 val Crafted = Color(0xFFB4B4FF)
 val Fractured = Color(0xFFA29162)

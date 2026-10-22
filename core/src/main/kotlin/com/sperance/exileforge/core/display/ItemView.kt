@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.BaseVariance
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.ItemTemplate
@@ -207,6 +208,35 @@ data class PropertyValue(
  */
 data class BaseTile(val value: String, val label: String, val range: HitRange?, val wide: Boolean, val ink: TileInk)
 
+/**
+ * Раскладка плиток базы полной карточки ([ItemView.tileLayout]): блок урона [damage] во всю ширину (null - урона у вещи нет) и
+ * прочие плитки [rest] рядами без пустых клеток ([rows]).
+ */
+data class TileLayout(val damage: DamageBlock?, val rest: List<BaseTile>) {
+    /**
+     * Прочие плитки рядами: по [ROW] в ряд, ряд растягивает свои плитки на всю ширину; одинокая плитка последнего ряда
+     * забирает одну у ряда перед ним - 4 плитки встают 2 + 2, 5 - 3 + 2, 7 - 3 + 2 + 2.
+     */
+    val rows: List<List<BaseTile>> by lazy {
+        val rows = rest.chunked(ROW)
+        if (rows.size > 1 && rows.last().size == 1) rows.dropLast(2) + rows.takeLast(2).flatten().chunked(PAIR) else rows
+    }
+
+    private companion object {
+        const val ROW = 3
+        const val PAIR = 2
+    }
+}
+
+/**
+ * Блок урона оружия полной карточки: урон [main] крупно (физический, без него - первый вид), урон прочих видов [elements]
+ * подстроками блока, урон в секунду [dps] - физический, стихийный и итог (пусто - у вещи нет скорости атаки).
+ */
+data class DamageBlock(val main: BaseTile, val elements: List<BaseTile>, val dps: List<DpsFigure>)
+
+/** Урон в секунду блока урона: подпись [label] и число [value]. */
+data class DpsFigure(val label: String, val value: String)
+
 /** Цвет числа плитки базы: [DAMAGE] - цветом вида урона плитки (стихия), [AUGMENTED] - число, сдвинутое строками копии, [PLAIN] - прочее. */
 enum class TileInk { PLAIN, AUGMENTED, DAMAGE }
 
@@ -363,6 +393,29 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         } + listOfNotNull(mapLevel.takeIf { levelTiled }?.let { BaseTile(it.toString(), ui("card.map_level_short").uppercase(), null, wide = false, TileInk.PLAIN) })
     }
 
+    /** Плитки полной карточки ([TileLayout]): виды урона - одним блоком с уроном в секунду ([dps]), прочие - рядами без пустот. */
+    val tileLayout: TileLayout by lazy {
+        val (damage, rest) = tiles.partition { it.range != null }
+        val main = damage.firstOrNull { it.range == HitRange.PHYSICAL } ?: damage.firstOrNull()
+        TileLayout(main?.let { top -> DamageBlock(top, damage.filter { it !== top }, dps) }, rest)
+    }
+
+    /**
+     * Урон в секунду оружия - средний урон вида ([figures]) × скорость атаки копии: физический, стихийный (огонь, холод, молния)
+     * и итог всех видов, когда видов больше одного; нулевые не печатаются, без скорости атаки - пусто.
+     */
+    private val dps: List<DpsFigure> by lazy {
+        val speed = figures.firstOrNull { it.stat == CoreStat.ATTACK_SPEED.code }?.total ?: return@lazy emptyList()
+        val perSecond = figures.mapNotNull { figure -> HitRange.of(figure.stat)?.let { it to figure.total * speed } }.toMap().filterValues { it > 0 }
+        val physical = perSecond[HitRange.PHYSICAL] ?: 0.0
+        val elemental = ELEMENTAL.sumOf { perSecond[it] ?: 0.0 }
+        listOfNotNull(
+            physical.takeIf { it > 0 }?.let { DpsFigure(ui("card.dps_physical"), fineNumber(it)) },
+            elemental.takeIf { it > 0 }?.let { DpsFigure(ui("card.dps_elemental"), fineNumber(it)) },
+            perSecond.takeIf { it.size > 1 }?.let { DpsFigure(ui("card.dps_total"), fineNumber(it.values.sum())) },
+        )
+    }
+
     /** Уровень карты стоит плиткой базы ([tiles]), а не плашкой: карта без тира и без чисел базы. */
     val levelTiled: Boolean get() = mapLevel != null && figures.isEmpty()
 
@@ -433,6 +486,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     companion object {
         private val RANKED = setOf(AffixKind.PREFIX, AffixKind.SUFFIX, AffixKind.FRACTURED, AffixKind.CRAFTED, AffixKind.INFLUENCE)
+
+        /** Стихийные виды урона - урон в секунду «стихии» ([dps]). */
+        private val ELEMENTAL = listOf(HitRange.FIRE, HitRange.COLD, HitRange.LIGHTNING)
 
         /** The view of [item], or null for a copy whose template the content does not hold. */
         fun of(item: ItemInstance, index: ContentIndex): ItemView? = index.template(item.template)?.let { ItemView(item, it, index) }

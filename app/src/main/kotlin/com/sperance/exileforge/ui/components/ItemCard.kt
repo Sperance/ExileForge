@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.TextAutoSize
@@ -35,6 +36,8 @@ import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.BaseTile
 import com.sperance.exileforge.core.display.CardSeal
+import com.sperance.exileforge.core.display.DamageBlock
+import com.sperance.exileforge.core.display.DpsFigure
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemNeed
@@ -341,7 +344,7 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
     }
     SideChips(item)
     RelicChips(item, look, price, noLevel = item.levelTiled, serial = true)
-    BaseTiles(item, look)
+    FullTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
 }
 
@@ -421,8 +424,8 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 }
 
 /**
- * Плитки базы ([ItemView.tiles]) под именем и плашками, до строк - одна сетка полной и короткой карточки: по [TILE_COLUMNS] клетки в ряд,
- * широкая плитка - на две клетки. Свойство без характеристики остаётся фразой.
+ * Плитки базы короткой карточки ([ItemView.tiles]) под именем и плашками, до строк: по [TILE_COLUMNS] клетки в ряд, широкая плитка - на
+ * две клетки. Свойство без характеристики остаётся фразой.
  */
 @Composable private fun BaseTiles(item: ItemView, look: RelicLook) {
     val rows = remember(item) { tileRows(item.tiles) }
@@ -437,7 +440,90 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
             }
         }
     }
+    BasePhrases(item)
+}
+
+/**
+ * Плитки базы полной карточки ([ItemView.tileLayout]): блок урона во всю ширину ([DamageBlockCell]), под ним прочие плитки рядами без
+ * пустых клеток - каждая плитка ряда равной долей ширины. Свойство без характеристики остаётся фразой.
+ */
+@Composable private fun FullTiles(item: ItemView, look: RelicLook) {
+    val layout = item.tileLayout
+    if (layout.damage != null || layout.rows.isNotEmpty()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+            layout.damage?.let { DamageBlockCell(it, look) }
+            layout.rows.forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                    row.forEach { BaseTileCell(it, look, Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+    BasePhrases(item)
+}
+
+/** Свойства базы без характеристики - фразой под плитками. */
+@Composable private fun BasePhrases(item: ItemView) {
     item.base.filter { property -> property.values.all { it.stat.isBlank() } }.forEach { BasePropertyLine(it) }
+}
+
+/**
+ * Блок урона полной карточки: урон [DamageBlock.main] крупно по центру, прочие виды подстроками по две в ряд (один - во всю ширину),
+ * ниже - урон в секунду равными долями.
+ */
+@Composable private fun DamageBlockCell(block: DamageBlock, look: RelicLook) {
+    Column(
+        Modifier.fillMaxWidth().background(TILE_GROUND, TILE_SHAPE).border(1.dp, Bronze, TILE_SHAPE).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            BasicText(
+                block.main.value,
+                style = MaterialTheme.typography.titleLarge.copy(color = tileInk(block.main), fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center),
+                maxLines = 1,
+                softWrap = false,
+                autoSize = MAIN_FIGURE_SIZE,
+            )
+            Text(block.main.label, color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .5.sp, textAlign = TextAlign.Center, maxLines = 2)
+        }
+        val columns = if (block.elements.size > 1) ELEMENT_COLUMNS else 1
+        block.elements.chunked(columns).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                row.forEach { ElementLine(it, look, Modifier.weight(1f)) }
+                if (row.size < columns) Spacer(Modifier.weight((columns - row.size).toFloat()))
+            }
+        }
+        if (block.dps.isNotEmpty()) {
+            HorizontalDivider(thickness = .5.dp, color = Bronze.copy(alpha = .5f))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                block.dps.forEach { DpsCell(it, look, Modifier.weight(1f)) }
+            }
+        }
+    }
+}
+
+/** Подстрока блока урона: точка цвета вида, подпись и диапазон цветом вида. */
+@Composable private fun ElementLine(tile: BaseTile, look: RelicLook, modifier: Modifier) {
+    val ink = tileInk(tile)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(6.dp).background(ink, CircleShape))
+        Text(tile.label, color = look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(tile.value, color = ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
+    }
+}
+
+/** Урон в секунду блока урона: число по центру, под ним подпись. */
+@Composable private fun DpsCell(figure: DpsFigure, look: RelicLook, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        BasicText(
+            figure.value,
+            style = MaterialTheme.typography.titleSmall.copy(color = FigureInk, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = FIGURE_SIZE,
+        )
+        Text(figure.label, color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
+    }
 }
 
 /** Клеток сетки под плиткой [tile]: широкая - две. */
@@ -452,7 +538,7 @@ private fun tileRows(tiles: List<BaseTile>): List<List<BaseTile>> = tiles.fold(m
 
 /** Цвет числа плитки [tile]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
 private fun tileInk(tile: BaseTile): Color = when (tile.ink) {
-    TileInk.DAMAGE -> damageTint(tile.range?.let { DamageType.of(it.hit) })
+    TileInk.DAMAGE -> damageInk(tile.range?.let { DamageType.of(it.hit) })
     TileInk.AUGMENTED -> Rune
     TileInk.PLAIN -> FigureInk
 }
@@ -484,8 +570,11 @@ private val TILE_GROUND = Color.White.copy(alpha = .04f)
 /** Наименьшая высота плитки базы - по плитке с подписью в две строки: плитки ряда одной высоты без замера соседей. */
 private val TILE_MIN_HEIGHT = 62.dp
 
-/** Клеток в ряду сетки плиток базы. */
+/** Клеток в ряду сетки плиток базы короткой карточки. */
 private const val TILE_COLUMNS = 3
+
+/** Подстрок урона в ряду блока урона полной карточки. */
+private const val ELEMENT_COLUMNS = 2
 
 /** Зазор между плитками базы. */
 private val TILE_GAP = 6.dp
@@ -607,3 +696,6 @@ private val LEGEND_CORNER_SIDE = 22.dp
  * обрезается.
  */
 private val FIGURE_SIZE = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 15.sp, stepSize = 0.5.sp)
+
+/** Кегль главного урона блока урона полной карточки: крупнее числа плитки, длинный диапазон ужимается, не режется. */
+private val MAIN_FIGURE_SIZE = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = 22.sp, stepSize = 0.5.sp)

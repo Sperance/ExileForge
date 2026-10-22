@@ -11,3 +11,6 @@ internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = whe
     DamageType.CHAOS -> Elder
     else -> if (onHero) LifeRed else Parchment
 }
+
+/** Цвет вида урона [type] у текста на тёмной подложке карточки: огонь - светлый [EmberText], прочее - как [damageTint]. */
+internal fun damageInk(type: DamageType?): Color = if (type == DamageType.FIRE) EmberText else damageTint(type)

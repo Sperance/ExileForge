@@ -159,7 +159,7 @@ private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Bo
         }
         if (reward.items.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                reward.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize) { onStack(code) } }
+                reward.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) }) }
             }
         }
     }

@@ -349,7 +349,7 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
     if (loot.items.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-                StackCell(game.index, code, amount, size = LootCellSize) { onStack(code) }
+                StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) })
             }
         }
     }

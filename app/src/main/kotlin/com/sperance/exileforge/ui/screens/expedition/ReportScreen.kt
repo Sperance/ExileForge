@@ -316,7 +316,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            reward.items.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize) { onStack(code) } }
+            reward.items.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) }) }
         }
     }
     Caption(ui("expedition.report_reward"))

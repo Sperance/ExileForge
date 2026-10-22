@@ -89,7 +89,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
                     MutedText(ui(category.key), style = MaterialTheme.typography.labelMedium)
                     stacks.chunked(columns).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                            row.forEach { stack -> StackCell(game.index, stack.code, stack.amount, size = CELL) { onOpen(stack.code) } }
+                            row.forEach { stack -> StackCell(game.index, stack.code, stack.amount, size = CELL, onClick = { onOpen(stack.code) }) }
                         }
                     }
                 }

@@ -54,8 +54,8 @@ import com.sperance.exileforge.ui.theme.Rune
     modifier: Modifier = Modifier,
     size: Dp = StackCellSize,
     selected: Boolean = false,
-    onClick: (() -> Unit)? = null,
     badge: (@Composable BoxScope.() -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     val look = remember(index, code) { StackLook.of(index, code) }
     val kind = remember(index, code) { index?.item(ItemCode(code))?.let(::bagVisualKind) }

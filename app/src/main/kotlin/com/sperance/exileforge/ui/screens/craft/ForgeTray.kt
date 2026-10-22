@@ -95,9 +95,9 @@ private const val ONE_ROW = 6
  * стопка ляжет только с ним.
  */
 @Composable private fun TrayCell(game: GameUi, code: String, selected: Boolean, marked: Boolean, onClick: () -> Unit) {
-    StackCell(game.index, code, game.bagAmount(code) ?: 0L, size = CELL, selected = selected, onClick = onClick) {
+    StackCell(game.index, code, game.bagAmount(code) ?: 0L, size = CELL, selected = selected, onClick = onClick, badge = {
         if (marked) Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp).size(11.dp))
-    }
+    })
 }
 
 /**

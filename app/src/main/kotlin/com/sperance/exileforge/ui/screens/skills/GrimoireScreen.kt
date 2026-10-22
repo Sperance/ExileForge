@@ -49,6 +49,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.round
 import kotlin.math.roundToInt
 
 /** The grimoire's two sections (the owner's mockup A «Гримуар»): the class's skills, and the belt. */
@@ -202,23 +203,23 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 
 /**
  * Подсказка данных цепочки Гримуара: что значат знаки строки, уровень героя, открытые активные и пассивные ячейки из всех и уровень
- * следующей ячейки каждого вида (правила `activeSlots`/`passiveSlots`), максимум маны, резерв маны аурами [mana] и здоровья [life] -
- * долей и числом; нулевого резерва нет.
+ * следующей ячейки каждого вида ([SkillRules.nextSlotLevel]), максимум маны, резерв маны аурами [mana] и здоровья [life] - долей и
+ * числом; нулевого резерва нет.
  */
 private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: PoolReserve, life: PoolReserve): Tip {
-    val rules = index.skills.rules
-    fun next(slots: List<Int>): String? = slots.firstOrNull { it > level }?.let { ui("skills.opens_at", it) }
-    fun share(reserve: PoolReserve): String = ui("skills.data_tip.share", number(reserve.percent), number(kotlin.math.round(reserve.held)))
+    val rules = index.skillRules
+    fun next(kind: SkillKind): String? = rules.nextSlotLevel(kind, level)?.let { ui("skills.opens_at", it) }
+    fun share(reserve: PoolReserve): String = ui("skills.data_tip.share", number(reserve.percent), number(round(reserve.held)))
     return Tip(
         ui("skills.data_tip.title"),
         ui("skills.data_tip.body"),
         ManaBlue,
         listOfNotNull(
             ui("skills.data_tip.level") to "$level",
-            ui("skills.data_tip.actives") to ui("skills.data_tip.open", index.skillRules.activeSlots(level), rules.activeSlots.size),
-            ui("skills.data_tip.passives") to ui("skills.data_tip.open", index.skillRules.passiveSlots(level), rules.passiveSlots.size),
-            next(rules.activeSlots)?.let { ui("skills.data_tip.next_active") to it },
-            next(rules.passiveSlots)?.let { ui("skills.data_tip.next_passive") to it },
+            ui("skills.data_tip.actives") to ui("skills.data_tip.open", rules.activeSlots(level), rules.slots(SkillKind.ACTIVE).size),
+            ui("skills.data_tip.passives") to ui("skills.data_tip.open", rules.passiveSlots(level), rules.slots(SkillKind.PASSIVE).size),
+            next(SkillKind.ACTIVE)?.let { ui("skills.data_tip.next_active") to it },
+            next(SkillKind.PASSIVE)?.let { ui("skills.data_tip.next_passive") to it },
             ui("skills.data_tip.mana") to number(maxMana),
             (ui("skills.data_tip.reserve") to share(mana)).takeIf { mana.percent > 0 },
             (ui("skills.data_tip.life") to share(life)).takeIf { life.percent > 0 },
@@ -234,12 +235,13 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
  * подсказка «Осмотра» под панелью.
  */
 @Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
-    val rules = index.skills.rules
+    val rules = index.skillRules
     val inspect = rememberSkillInspect()
     ForgePanel {
-        val actives = rules.activeSlots.indices.map { skills.active.getOrNull(it) }
-        Engraved(ui("skills.actives", actives.count { it != null }, index.skillRules.activeSlots(level)))
-        SlotGrid(rules.activeSlots) { at, opens, modifier ->
+        val activeSlots = rules.slots(SkillKind.ACTIVE)
+        val actives = activeSlots.indices.map { skills.active.getOrNull(it) }
+        Engraved(ui("skills.actives", actives.count { it != null }, rules.activeSlots(level)))
+        SlotGrid(activeSlots) { at, opens, modifier ->
             val slot = actives[at]
             val skill = slot?.let { index.skills.byCode[it.skill] }
             SlotTile(
@@ -254,9 +256,10 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
                 onPeek = slot?.let { { inspect(SkillPeek(it.skill, condition = it.condition)) } },
             )
         }
-        val passives = rules.passiveSlots.indices.map { skills.passive.getOrNull(it) }
-        Engraved(ui("skills.passives", passives.count { it != null }, index.skillRules.passiveSlots(level)))
-        SlotGrid(rules.passiveSlots) { at, opens, modifier ->
+        val passiveSlots = rules.slots(SkillKind.PASSIVE)
+        val passives = passiveSlots.indices.map { skills.passive.getOrNull(it) }
+        Engraved(ui("skills.passives", passives.count { it != null }, rules.passiveSlots(level)))
+        SlotGrid(passiveSlots) { at, opens, modifier ->
             val skill = passives[at]?.let { index.skills.byCode[it] }
             SlotTile(
                 skill,

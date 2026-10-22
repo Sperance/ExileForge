@@ -1839,7 +1839,7 @@
   "enum.stat.STOCK_CURSE_ON_HIT": "Проклятие в ответ",
   "enum.stat.STOCK_WARCRY_SPEED": "Скорость от кличей",
   "enum.stat.STOCK_WARCRY_HEAL": "Лечение кличей",
-  "enum.stat.STOCK_FLASK_CHARGES_GAINED": "Заряды фляг",
+  "enum.stat.STOCK_FLASK_CHARGES_GAINED": "Получение зарядов фляг",
   "enum.stat.STOCK_FLASK_DURATION": "Длительность фляг",
   "enum.stat.STOCK_FLASK_EFFECT": "Эффект фляг",
   "enum.stat.STOCK_FLASK_CHARGES_USED": "Экономия зарядов фляг",

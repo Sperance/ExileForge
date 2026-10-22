@@ -158,6 +158,13 @@ sealed interface Route : NavKey {
         override val building get() = Building.HISTORY
     }
 
+    /** Бестиарий: экран над «Историей», «назад» ведёт в неё. */
+    @Serializable data object Bestiary : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.HISTORY
+    }
+
     /** Аккаунт и настройки ложатся поверх открытой вкладки: «назад» возвращает на неё. */
     @Serializable data object Account : Route {
         override val root: Route? get() = null

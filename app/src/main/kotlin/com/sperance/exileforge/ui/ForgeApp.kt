@@ -276,6 +276,7 @@ private val BANNER_TOAST_TOP = 60.dp
                 entry<Route.Hall> { CityScreen(Building.HALL) }
                 entry<Route.Contests> { CityScreen(Building.CONTESTS) }
                 entry<Route.Uniques> { UniquesScreen() }
+                entry<Route.Bestiary> { com.sperance.exileforge.ui.screens.city.BestiaryScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }
             },
         )

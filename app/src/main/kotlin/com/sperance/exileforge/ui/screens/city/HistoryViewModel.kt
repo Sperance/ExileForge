@@ -16,7 +16,11 @@ class HistoryViewModel(slice: GameSlice, private val reads: HeroReads, private v
     /** Находки уникалок героя [heroId], общие обоим экранам и свежие полминуты; null - чтение не удалось. */
     suspend fun uniques(heroId: String): Map<String, UniqueFind>? = reads.uniques(heroId)
 
+    /** Статистика героя [heroId] для Бестиария (убийства, боссы, убийцы), свежая полминуты; null - чтение не удалось. */
+    suspend fun stats(heroId: String): Map<String, Long>? = reads.stats(heroId)
+
     fun openUniques() = navigator.open(Route.Uniques)
+    fun openBestiary() = navigator.open(Route.Bestiary)
     fun openChronicle() = navigator.open(Route.Chronicle)
     fun back() = navigator.back()
 

@@ -28,6 +28,8 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.unlocked
+import com.sperance.exileforge.core.display.Bestiary
+import com.sperance.exileforge.core.display.BestiaryTally
 import com.sperance.exileforge.core.display.FoundUnique
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.UniqueAlbum
@@ -50,8 +52,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * «История»: здание Города со списком разделов прошлого героя плитками - найденные уникалки и Летопись (деяния и титулы); до уровня
- * открытия Летописи её плитка под замком.
+ * «История»: здание Города со списком разделов прошлого героя плитками - найденные уникалки, Летопись (деяния и титулы) и Бестиарий
+ * (открытые виды монстров и сколько на золотой ступени); до уровня открытия Летописи её плитка под замком.
  */
 @Composable internal fun HistoryScreen() {
     val vm = koinViewModel<HistoryViewModel>()
@@ -61,11 +63,14 @@ import org.koin.compose.viewmodel.koinViewModel
     LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
     val finds by produceState<Map<String, UniqueFind>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.uniques(it) } }
     val album = remember(index) { index?.let { UniqueAlbum(it) } }
+    val stats by produceState<Map<String, Long>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.stats(it) } }
+    val bestiary = remember(index) { index?.let(::Bestiary) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val known = finds
         HistoryTile(ForgeGlyphs.Gem, rarityColor("UNIQUE"), ui("history.uniques"), if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"), onOpen = vm::openUniques)
         val chronicle = Feature.CHRONICLE.takeUnless { game.unlocked(it) }?.level(index?.rules)
         HistoryTile(ForgeGlyphs.Scroll, GoldBright, ui("chronicle.title"), chronicle?.let { ui("unlock.from", it) } ?: chronicleNews(game), onOpen = vm::openChronicle.takeIf { chronicle == null })
+        HistoryTile(ForgeGlyphs.Skull, BestiaryHue, ui("history.bestiary"), bestiaryNews(bestiary, stats), onOpen = vm::openBestiary)
     }
 }
 
@@ -93,6 +98,18 @@ private fun chronicleNews(game: GameUi): String {
     val title = game.hero?.info?.title?.takeIf { it.isNotBlank() } ?: return done
     return "$done · ${titleName(title)}"
 }
+
+/** Бестиарий: сколько видов открыто из всех и, если есть, сколько на золотой ступени. */
+private fun bestiaryNews(bestiary: Bestiary?, stats: Map<String, Long>?): String {
+    if (bestiary == null || stats == null) return ui("history.bestiary_hint")
+    val tally = BestiaryTally(stats)
+    val opened = tally.opened(bestiary.all)
+    val golden = tally.golden(bestiary.all)
+    return if (golden > 0) ui("history.bestiary_gold", opened, bestiary.all.size, golden) else ui("history.bestiary_found", opened, bestiary.all.size)
+}
+
+/** Знак Бестиария - охра охотничьего трофея. */
+private val BestiaryHue = Color(0xFFD9642E)
 
 /** Летопись - экран над «Историей»: «назад» ведёт в неё; героя читает сама. */
 @Composable fun HistoryChronicleScreen() {

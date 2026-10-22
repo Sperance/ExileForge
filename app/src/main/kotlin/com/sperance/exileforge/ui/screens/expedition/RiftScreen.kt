@@ -1307,8 +1307,7 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
  * Полоса связи арены: нет связи (значок связи игры) - «Нет связи», бой продолжится, когда она вернётся; итог боя в пути - ожидание, как
  * у шага на доске (с 8 с - «Сервер долго отвечает» с номером попытки, их счёт не ограничен). Повтора кнопкой нет - итог досылается сам.
  */
-private fun arenaStrip(offline: Boolean, delivery: CallState<RiftAct.Fight>): StripState =
-    if (offline) StripState.Offline(ui("rift.arena_offline"), retry = false) else delivery.strip(ui("rift.arena_offline"), retry = false)
+private fun arenaStrip(offline: Boolean, delivery: CallState<RiftAct.Fight>): StripState = if (offline) StripState.Offline(ui("rift.arena_offline"), retry = false) else delivery.strip(ui("rift.arena_offline"), retry = false)
 
 /**
  * Итог кончившегося боя в пути ([delivery]): «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера

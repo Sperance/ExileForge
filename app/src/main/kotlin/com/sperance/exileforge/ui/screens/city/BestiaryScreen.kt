@@ -11,8 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -150,8 +150,7 @@ private object Shelf {
 }
 
 /** Зона подходит поиску [needle]: своим именем или именем открытого вида. */
-private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean =
-    mapTitle(code).contains(needle, true) || species.any { tally.open(it) && monsterTitle(it).contains(needle, true) }
+private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean = mapTitle(code).contains(needle, true) || species.any { tally.open(it) && monsterTitle(it).contains(needle, true) }
 
 @Composable private fun ChapterHead(text: String) {
     Text(text, color = Brass, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
@@ -330,7 +329,13 @@ private val ROW = 38.dp
                             next -> ui("bestiary.step_left", groupedNumber(step - kills))
                             else -> "—"
                         },
-                        color = if (got) Vital else if (next) Caution else Muted,
+                        color = if (got) {
+                            Vital
+                        } else if (next) {
+                            Caution
+                        } else {
+                            Muted
+                        },
                         style = MaterialTheme.typography.labelMedium,
                     )
                 }

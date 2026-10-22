@@ -237,8 +237,7 @@ class RiftActions(
     }
 
     /** Шаг Разлома [step]: отказ - строка отказа и свежая доска, прошёл после сбоя - свежая доска, ответ не лёг - беда раннера. */
-    private fun request(step: RiftStep, send: suspend (String) -> Landing) =
-        PatientCall.Request(step, refused = ::refused, restored = ::refresh, broken = { commands.report(it, writing = true) }, send = send)
+    private fun request(step: RiftStep, send: suspend (String) -> Landing) = PatientCall.Request(step, refused = ::refused, restored = ::refresh, broken = { commands.report(it, writing = true) }, send = send)
 
     /** Ответ шага [report] - лечь доской ([land]). */
     private fun landing(report: RiftReport): Landing = { land(report) }

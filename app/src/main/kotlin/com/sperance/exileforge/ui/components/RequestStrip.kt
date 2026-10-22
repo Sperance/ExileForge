@@ -108,7 +108,9 @@ fun CallState<*>.strip(offlineNote: String, retry: Boolean = true): StripState =
     AnimatedContent(state, modifier.fillMaxWidth(), transitionSpec = { fadeIn() togetherWith fadeOut() }, contentKey = { it::class }, label = "strip") { shown ->
         when (shown) {
             StripState.None -> Spacer(Modifier.fillMaxWidth())
+
             is StripState.Waiting -> WaitingStrip(shown, tones)
+
             is StripState.Offline -> StatusRow(Alarm, Alarm.copy(alpha = .14f)) {
                 Icon(Icons.Outlined.CloudOff, null, tint = Alarm, modifier = Modifier.size(18.dp))
                 Lines(ui("call.offline"), shown.note, Alarm, tones.muted, Modifier.weight(1f))

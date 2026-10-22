@@ -151,8 +151,13 @@ data class ModerationQuery(
     /** Параметры маршрута. */
     val params: Map<String, String>
         get() = mapOf(
-            "segment" to segment.name, "page" to page.toString(), "q" to text.trim(), "sort" to sort.name, "fate" to fate.param,
-            "deleted" to deleted.toString(), "outdated" to outdated.toString(),
+            "segment" to segment.name,
+            "page" to page.toString(),
+            "q" to text.trim(),
+            "sort" to sort.name,
+            "fate" to fate.param,
+            "deleted" to deleted.toString(),
+            "outdated" to outdated.toString(),
         )
 }
 

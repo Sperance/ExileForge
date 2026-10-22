@@ -137,8 +137,7 @@ class BagShelf private constructor(val sections: List<BagSection>, val counts: M
 
 /** Что сумка знает о стопке [stack], посчитанное раз: полка [category], годность к действию [usable] ([StackUses]), имя [name] и цена [worth]. */
 private class SeenStack(val stack: BagStack, val category: BagCategory, val usable: Boolean, val name: String, val worth: Long) {
-    fun fits(filter: BagFilter, query: String): Boolean =
-        (filter.shelves.isEmpty() || category in filter.shelves) && (!filter.applicable || usable) && ItemSearch.matches(stack.code, query)
+    fun fits(filter: BagFilter, query: String): Boolean = (filter.shelves.isEmpty() || category in filter.shelves) && (!filter.applicable || usable) && ItemSearch.matches(stack.code, query)
 
     companion object {
         fun of(index: ContentIndex?, heroClass: String?, stack: BagStack): SeenStack {

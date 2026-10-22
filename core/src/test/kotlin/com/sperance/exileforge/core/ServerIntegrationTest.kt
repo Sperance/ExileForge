@@ -19,9 +19,9 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.run.MapMechanic
-import com.sperance.exileforge.rules.run.StartOptions
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import com.sperance.exileforge.rules.run.StartOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue

@@ -528,7 +528,6 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
     }
 }
 
-
 /** Цвет числа плитки [tile]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
 private fun tileInk(tile: BaseTile): Color = when (tile.ink) {
     TileInk.DAMAGE -> damageInk(tile.range?.let { DamageType.of(it.hit) })

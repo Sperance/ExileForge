@@ -330,8 +330,7 @@ internal suspend inline fun <reified T> Transport.get(path: String, query: Map<S
 internal suspend inline fun <reified T> Transport.post(path: String, query: Map<String, String> = emptyMap(), body: JsonElement? = null): T = WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true))
 
 /** Команда под ключом идемпотентности [key]: повтор с тем же ключом сервер не выполняет второй раз, а отдаёт прежний ответ. */
-internal suspend inline fun <reified T> Transport.postIdempotent(path: String, query: Map<String, String>, key: String, body: JsonElement? = null): T =
-    WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key)))
+internal suspend inline fun <reified T> Transport.postIdempotent(path: String, query: Map<String, String>, key: String, body: JsonElement? = null): T = WireJson.decodeFromJsonElement(request("POST", path, query, body, authenticated = true, headers = mapOf(IDEMPOTENCY_HEADER to key)))
 
 /** The query of a route about one hero: every such route names it by `heroId`. A `null` value leaves its parameter out. */
 internal fun heroQuery(heroId: String, vararg more: Pair<String, String?>): Map<String, String> {

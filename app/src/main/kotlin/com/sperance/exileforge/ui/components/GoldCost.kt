@@ -133,5 +133,4 @@ fun GoldBill.goldLedger(): List<LedgerLine> = listOf(
  * Строка подтверждения с золотом [gold] под подписью [label]: «150к золота» короткой записью, перед числом - [sign] («+» выручки);
  * сокращённое число касанием показывает полное ([LedgerLine.full]).
  */
-fun goldLine(label: String, gold: Long, tone: Tone = Tone.PLAIN, sign: String = ""): LedgerLine =
-    LedgerLine(label, sign + ui("merchant.gold_amount", compactNumber(gold)), tone, fullIfShortened(gold)?.let { sign + ui("merchant.gold_amount", it) })
+fun goldLine(label: String, gold: Long, tone: Tone = Tone.PLAIN, sign: String = ""): LedgerLine = LedgerLine(label, sign + ui("merchant.gold_amount", compactNumber(gold)), tone, fullIfShortened(gold)?.let { sign + ui("merchant.gold_amount", it) })

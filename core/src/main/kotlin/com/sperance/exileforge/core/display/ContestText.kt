@@ -41,8 +41,7 @@ fun bossTime(millis: Long): String {
 }
 
 /** Разница мер [gap] до цели словами: бой - «на 5,4 с быстрее», прочие меры - «ещё 5». */
-fun contestGap(metric: ContestMetric, gap: Long): String =
-    if (metric == ContestMetric.BOSS) ui("contest.gap.BOSS", fineNumber(gap.coerceAtLeast(0) / 1000.0)) else ui("contest.gap.more", groupedNumber(gap.coerceAtLeast(1)))
+fun contestGap(metric: ContestMetric, gap: Long): String = if (metric == ContestMetric.BOSS) ui("contest.gap.BOSS", fineNumber(gap.coerceAtLeast(0) / 1000.0)) else ui("contest.gap.more", groupedNumber(gap.coerceAtLeast(1)))
 
 /** Награда места: «×5» сфер, у первых мест - ещё «титул и рамка». */
 fun prizeLine(prize: PlacePrize, honoured: Boolean): String = if (honoured) ui("contest.prize_honoured", prize.orbs) else ui("contest.prize_orbs", prize.orbs)

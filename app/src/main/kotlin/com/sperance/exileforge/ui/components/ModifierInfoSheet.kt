@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.statTitle
@@ -29,7 +30,8 @@ import kotlin.math.roundToInt
  * What a modifier line is, behind a tap on it: its name and sentence, where it sits (prefix, suffix,
  * implicit…), its tier out of how many, the tier's range and where the roll landed inside it.
  * The range lives here, not on the line. Под фразой - пояснения характеристик строки ([StatNotes]: имя, фраза и подробное описание,
- * как в разборе сводки героя, числа - контента [index]); имя печатается, когда пояснений больше одного.
+ * как в разборе сводки героя, числа - контента [index]); имя печатается, когда пояснений больше одного. Под строкой уникальной или
+ * мифической вещи - сноска: уровень вещи не влияет на её строки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,6 +68,7 @@ fun ModifierInfoSheet(line: ItemLine, index: ContentIndex, onDismiss: () -> Unit
                     }
                 }
             }
+            if (line.placement == AffixKind.UNIQUE) MutedText(ui("modinfo.unique_level"), style = MaterialTheme.typography.labelMedium)
         }
     }
 }

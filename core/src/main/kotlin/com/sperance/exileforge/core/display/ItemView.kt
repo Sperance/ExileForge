@@ -162,19 +162,6 @@ data class ItemLine(
     /** The tier's every range is a single number: there is nowhere inside it to land. */
     val fixed: Boolean get() = definition?.tier(roll.tier)?.values?.all { it[1] <= it[0] } == true
 
-    /**
-     * Шкала вилки строки: первая вилка тира с разбросом - её края числами и место ролла (доля); null - строке некуда было выпасть
-     * (без тира или все вилки - одно число). Карточка уникалки ставит по ней точку числа на его вилку.
-     */
-    val scale: LineScale? get() {
-        val def = definition ?: return null
-        val tier = def.tier(roll.tier) ?: return null
-        val at = tier.values.indexOfFirst { it.size == 2 && it[1] > it[0] }.takeIf { it >= 0 } ?: return null
-        val stat = def.effectOf(at)?.stat.orEmpty()
-        val (low, high) = tier.values[at]
-        return LineScale(modNumber(stat, low), modNumber(stat, high), roll.share.coerceIn(0.0, 1.0))
-    }
-
     /** The tier's ranges as the card prints them: "70–79", a fixed one as its single number, effects split by " / ". */
     val range: String? get() = definition?.let { def -> def.tier(roll.tier)?.let { rangeText(def, it) } }
 
@@ -189,12 +176,6 @@ data class ItemLine(
 
     /** The characteristics the line moves, each once, in its effects' order ([ModifierDef.stats]). */
     val stats: List<String> get() = definition?.stats().orEmpty()
-}
-
-/** Вилка строки на шкале: края [low] и [high] числами, место ролла [share] - 0 низ вилки, 1 верх. */
-data class LineScale(val low: String, val high: String, val share: Double) {
-    /** Место ролла в процентах, как его печатает метка качества. */
-    val percent: Int get() = Math.round(share * 100).toInt()
 }
 
 /** What the head of a card reads before any line: how well the item rolled on average and its best tier. */
@@ -221,7 +202,7 @@ data class BaseProperty(val code: String, val template: String, val values: List
  * card, a row or a tooltip prints is derived here once, so no screen reads a roll on its own.
  * [ranged] - витрина шаблона ([showcase]): строка печатает вилку своего тира, а не выпавшее число.
  */
-class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, val ranged: Boolean = false) {
+class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, private val ranged: Boolean = false) {
     val id: String get() = item.id
     val code: String get() = template.code
     val rarity: Rarity get() = item.rarity

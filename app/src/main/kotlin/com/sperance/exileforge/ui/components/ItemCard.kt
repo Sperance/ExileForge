@@ -154,8 +154,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить.
  * Строки - в порядке [ItemView.lineGroups]: у полной - строка влияния печатью первой, врождённые над чертой, особые источники и
- * [seals] (`GameUi.itemSeals`: захват и качество карты с Атласом героя) плашками особого блока, основные - списком (у уникалки - каждая
- * со шкалой вилки и качеством строк над ними); стороны аффиксов - чипами под именем; у короткой - тот же порядок без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
+ * [seals] (`GameUi.itemSeals`: захват и качество карты с Атласом героя) плашками особого блока, основные - списком;
+ * стороны аффиксов - чипами под именем; у короткой - тот же порядок без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -410,8 +410,8 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 
 /**
  * Строки полной карточки по группам [ItemView.lineGroups]: строка влияния печатью - первой над всеми, врождённые и черта под ними, особый
- * блок - сначала плашки [seals], затем строки особых источников плашками, - основные списком. Строки уникалки - каждая со шкалой своей
- * вилки ([RollScale]), над ними качество строк с ⓘ ([UniqueQuality]). Касание строки - [onOpen] (тир и место ролла).
+ * блок - сначала плашки [seals], затем строки особых источников плашками, - основные списком. Касание строки - [onOpen] (тир и место
+ * ролла).
  */
 @Composable private fun RelicLines(item: ItemView, seals: List<CardSeal>, onOpen: (ItemLine) -> Unit) {
     val groups = item.lineGroups
@@ -432,19 +432,7 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
                 special.forEach { LinePlaque(it) { onOpen(it) } }
             }
         }
-        val scaled = !item.ranged && main.any { it.marks.kind == AffixKind.UNIQUE }
-        if (scaled) item.summary.quality?.let { UniqueQuality(it) }
-        main.forEach { line ->
-            val scale = line.scale.takeIf { scaled && line.marks.kind == AffixKind.UNIQUE }
-            if (scale == null) {
-                RelicModLine(line, { onOpen(line) })
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    RelicModLine(line, { onOpen(line) })
-                    RollScale(scale, Modifier.padding(start = 30.dp))
-                }
-            }
-        }
+        main.forEach { RelicModLine(it, { onOpen(it) }) }
     }
 }
 

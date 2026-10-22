@@ -645,10 +645,8 @@ class ExpeditionActions(
         val i = index ?: return null
         val sheet = if (items === h.items) h.sheet else Sheets.calculate(i, h.level, h.heroClass, h.tree, items, h.info.laws, h.info.fate)
         val equipped = items.filter { it.equipped && !it.socketed }.associateBy { it.slot!! }
-        val conditions = h.skills.flasks
-        val flasks = Slot.FLASKS.mapIndexed { n, slot -> equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
         val fate = FateKit.of(i, h.info.fate, sheet.stats, equipped.values)
-        val kit = Loadout.of(h.skills, i, h.heroClass, flasks, sheet.stats, i.powers, i.rules.charges, fate)
+        val kit = Loadout.of(h.skills, i, h.heroClass, BeltFlask.belt(i, equipped.values, h.skills.flasks), sheet.stats, i.powers, i.rules.charges, fate)
         return HeroGear(sheet.stats, h.level, sheet.model, stance(), kit, i.stats.percent, equipped.mapValues { it.value.id })
     }
 

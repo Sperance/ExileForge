@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.text.LocaleKey
 
 /**
@@ -44,8 +45,11 @@ object StatDetail {
     /** Есть ли у [stat] фраза ([quote]) или подробное описание на языке [lang]: строка с ней объясняет себя по касанию. */
     fun described(stat: String, lang: Lang = uiLanguage): Boolean = quote(stat, lang).isNotBlank() || uiOr(lang, key(stat), "").isNotBlank()
 
-    /** Пояснения характеристик [stats] на языке [lang] по порядку, без повторов; характеристика без описания пропускается. */
-    fun notes(stats: List<String>, index: ContentIndex?, lang: Lang = uiLanguage): List<StatNote> = stats.distinct().filter { described(it, lang) }.map { stat ->
+    /**
+     * Пояснения характеристик [stats] на языке [lang] по порядку, без повторов; конец диапазона урона ([HitRange]) поясняется своим видом
+     * удара; характеристика без описания пропускается.
+     */
+    fun notes(stats: List<String>, index: ContentIndex?, lang: Lang = uiLanguage): List<StatNote> = stats.map { HitRange.ofEnd(it)?.hit ?: it }.distinct().filter { described(it, lang) }.map { stat ->
         val quote = quote(stat, lang).takeIf { it.isNotBlank() }?.let { index.numberedText(it, stat) }
         StatNote(stat, statTitle(stat, lang), quote, paragraphs(stat, index, lang))
     }

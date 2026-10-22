@@ -10,8 +10,10 @@ import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.character.StatPriority
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
 
@@ -67,7 +69,8 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
          * Сравнение листа героя: каждая сдвинутая характеристика [delta]; к лучшему ли сдвиг - полярность характеристики
          * ([StatPolarity], меньше получаемого урона - лучше, нейтральная - без цвета). С контентом [index] - только
          * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «100% → 60%», разница - «−40%».
-         * С листом героя [sheet] уровня [level] уклонение и броня - процентом защиты, разница - в п.п.
+         * С листом героя [sheet] уровня [level] уклонение и броня - процентом защиты, разница - в п.п.; урон вида удара - диапазоном
+         * «мин–макс», разница - сдвигом каждого конца, и сдвиг одной ширины диапазона (часть строки) пишет строку урона.
          *
          * Флаг не прибавляется: разница - его новая отметка. Строка, чьё «было» и «стало» печатаются одинаково, не пишется.
          * Характеристика из [off] (строка `SET` в ноль) - «отключится»: узел закроет её; закрыть - убавить (у «меньше лучше» -
@@ -78,9 +81,13 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
             val after = sheet?.let { it + delta.associate { change -> change.stat to change.after } }
             val row: (String) -> Boolean = { stat -> index == null || index.stats.section(stat) != null && index.stats[stat]?.partOf == null }
             val partly = index?.let { off.mapNotNullTo(HashSet()) { stat -> it.stats[stat]?.partOf } }.orEmpty()
+            val ranged = if (index != null && sheet != null) widened(delta, sheet) else emptyList()
             return Comparison(
-                delta.filter { row(it.stat) }.map {
-                    if (index != null && sheet != null && after != null) defenceLine(it, index, sheet, after, level)?.let { line -> return@map line }
+                (delta + ranged).filter { row(it.stat) }.map {
+                    if (index != null && sheet != null && after != null) {
+                        defenceLine(it, index, sheet, after, level)?.let { line -> return@map line }
+                        rangeLine(it, index, sheet, after)?.let { line -> return@map line }
+                    }
                     val multiplier = index?.stats?.get(it.stat)?.multiplier == true
                     val shown = statValue(it.stat, it.after, index)
                     val was = statValue(it.stat, it.before, index)
@@ -115,6 +122,30 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
                 StatPriority.rank(change.stat),
                 share(was, will),
             )
+        }
+
+        /** Урон вида удара диапазоном: «12–20 → 15–26», разница - сдвиг концов «+3 / +6» (одинаковый - одним числом); не вид удара - null. */
+        private fun rangeLine(change: StatDelta, index: ContentIndex, sheet: Map<String, Double>, after: Map<String, Double>): ComparisonLine? {
+            val range = HitRange.of(change.stat) ?: return null
+            val was = HitRanges.range(sheet, range, index.stats)
+            val will = HitRanges.range(after, range, index.stats)
+            val low = will.first - was.first
+            val high = will.second - was.second
+            return ComparisonLine(
+                statTitle(change.stat),
+                rangeNumber(change.stat, was),
+                rangeNumber(change.stat, will),
+                if (low == high) signed(low) { number(it) } else ui("compare.range", signed(low) { number(it) }, signed(high) { number(it) }),
+                StatPolarity.better(index, change.stat, change.change),
+                StatPriority.rank(change.stat),
+                share(was.first + was.second, will.first + will.second),
+            )
+        }
+
+        /** Виды удара, у которых сдвинулась лишь ширина или конец диапазона ([HitRange]), а среднее - нет: строкой урона без перемены среднего. */
+        private fun widened(delta: List<StatDelta>, sheet: Map<String, Double>): List<StatDelta> {
+            val moved = delta.mapTo(HashSet()) { it.stat }
+            return HitRange.entries.filter { it.hit !in moved && (it.spread in moved || it.min in moved || it.max in moved) }.map { StatDelta(it.hit, sheet[it.hit] ?: 0.0, sheet[it.hit] ?: 0.0) }
         }
 
         /** Сдвиг защиты меньше сотой п.п. - шум округления, без цвета. */

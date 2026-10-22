@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.BaseVariance
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
@@ -30,6 +31,7 @@ import com.sperance.exileforge.rules.sheet.Amplify
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
+import com.sperance.exileforge.rules.sheet.WeaponDamage
 import kotlin.math.round
 
 /**
@@ -181,11 +183,20 @@ data class ItemLine(
 /** What the head of a card reads before any line: how well the item rolled on average and its best tier. */
 data class RollSummary(val quality: Int?, val bestTier: Int?)
 
-/** One value inside a base line: what the base said, and what the item carries with its local lines folded in. */
-data class PropertyValue(val stat: String, val base: Double, val total: Double) {
-    val augmented: Boolean get() = round(total * 10) != round(base * 10)
-    val text: String get() = statNumber(stat, total)
-    val baseText: String get() = statNumber(stat, base)
+/**
+ * One value inside a base line: what the base said, and what the item carries with its local lines folded in. Урон оружия - диапазоном:
+ * [ends] - концы с локальными строками, [baseEnds] - концы базы (у стихии, что дали только строки, - null); число - «мин–макс».
+ */
+data class PropertyValue(
+    val stat: String,
+    val base: Double,
+    val total: Double,
+    val ends: Pair<Double, Double>? = null,
+    val baseEnds: Pair<Double, Double>? = null,
+) {
+    val augmented: Boolean get() = if (ends != null) ends != baseEnds else round(total * 10) != round(base * 10)
+    val text: String get() = ends?.let { rangeNumber(stat, it) } ?: statNumber(stat, total)
+    val baseText: String get() = baseEnds?.let { rangeNumber(stat, it) } ?: statNumber(stat, base)
 }
 
 /** One line of an item's base, ready to be drawn; [template] is the dictionary's sentence with a `{0}` per value, or empty. */
@@ -297,19 +308,47 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         } else {
             val calc = SheetCalculator(index)
             val baseTotals = calc.compute(emptyMap(), calc.expand(index.rules.loot.baseVariance.base(template, calc.baseScale(template, item))))
-            val totals = calc.itemBase(template, item)
             val flask = if (template.slot.isFlask) FlaskSheet.of(item, template, index) else null
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
                 val values = line.values.mapIndexed { i, own ->
                     val stat = def.effectOf(i)?.stat.orEmpty()
                     val base = baseTotals[stat] ?: own
-                    PropertyValue(stat, base, flask?.shown(stat, base) ?: totals[stat] ?: own)
+                    val range = HitRange.of(stat)?.takeIf { weaponWidth != null }
+                    PropertyValue(stat, base, flask?.shown(stat, base) ?: folded[stat] ?: own, range?.let(::weaponEnds), range?.let { baseEnds(it, base) })
                 }
                 BaseProperty(line.code.value, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }
         }
     }
+
+    /**
+     * Числа базы крупными фигурами - карточка, строка списка: каждое число базы с характеристикой, а у оружия за уроном базы - урон
+     * стихий, что дали его локальные строки («Огонь 31–57»).
+     */
+    val figures: List<PropertyValue> by lazy {
+        val own = base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
+        val shown = own.mapTo(HashSet()) { it.stat }
+        val added = if (weaponWidth == null) {
+            emptyList()
+        } else {
+            HitRange.entries.filter { it.hit !in shown && (folded[it.max] ?: 0.0) > 0 }.map { PropertyValue(it.hit, 0.0, folded[it.hit] ?: 0.0, weaponEnds(it)) }
+        }
+        val after = own.indexOfFirst { HitRange.of(it.stat) != null } + 1
+        own.take(after) + added + own.drop(after)
+    }
+
+    /** База копии с её локальными строками и качеством по характеристике ([SheetCalculator.itemBase]). */
+    private val folded: Map<String, Double> by lazy { SheetCalculator(index).itemBase(template, item) }
+
+    /** Полуширина урона базы оружия долей среднего ([WeaponDamage.width]); не оружие - null. */
+    private val weaponWidth: Double? by lazy { WeaponDamage.width(template, index.rules.weapons) }
+
+    /** Концы урона вида [range] оружия с локальными строками, целые (`StatRegistry.settle`). */
+    private fun weaponEnds(range: HitRange): Pair<Double, Double> = index.stats.settle(range.min, folded[range.min] ?: 0.0) to index.stats.settle(range.max, folded[range.max] ?: 0.0)
+
+    /** Концы урона базы [mean] вида [range] по ширине оружия, целые. */
+    private fun baseEnds(range: HitRange, mean: Double): Pair<Double, Double> = WeaponDamage.ends(mean, weaponWidth ?: 0.0).let { (low, high) -> index.stats.settle(range.min, low) to index.stats.settle(range.max, high) }
 
     /** Качество роллов: только строки с вилкой - фиксированная строка не «идеальна», ей некуда было выпасть. */
     val summary: RollSummary by lazy {
@@ -458,14 +497,31 @@ fun stateTitle(state: String, lang: Lang = uiLanguage): String = ui(lang, "state
 /** Что значит состояние для игрока - текст подсказки значка; состояние без записи в словаре - пустая строка. */
 fun stateHint(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "state.${state}_hint", "")
 
-/** The tier's ranges as text: "70–79" per value, a point as its number, values split by " / ". */
-fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->
-    val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
-    val stat = def.effectOf(index)?.stat.orEmpty()
-    val from = modNumber(stat, low)
-    val to = modNumber(stat, high)
-    if (from == to) from else "$from–$to"
-}.joinToString(" / ").ifBlank { null }
+/**
+ * The tier's ranges as text: "70–79" per value, a point as its number, values split by " / ". Пара концов диапазона урона ([HitRange]) -
+ * одним диапазоном «(26–29)–(52–59)»: вилка минимума, затем вилка максимума.
+ */
+fun rangeText(def: ModifierDef, tier: Tier): String? {
+    val values = tier.values.mapIndexedNotNull { index, range ->
+        val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
+        val stat = def.effectOf(index)?.stat.orEmpty()
+        val from = modNumber(stat, low)
+        val to = modNumber(stat, high)
+        stat to if (from == to) from else "$from–$to"
+    }
+    val parts = mutableListOf<String>()
+    var at = 0
+    while (at < values.size) {
+        val (stat, text) = values[at]
+        val end = values.getOrNull(at + 1)?.takeIf { (next) -> HitRange.ofEnd(stat)?.let { it.min == stat && it.max == next } == true }
+        parts += end?.let { (_, high) -> "${bracketed(text)}–${bracketed(high)}" } ?: text
+        at += if (end != null) 2 else 1
+    }
+    return parts.joinToString(" / ").ifBlank { null }
+}
+
+/** Вилка в скобках, когда она - вилка, а не одно число: «(26–29)», «26». */
+private fun bracketed(span: String): String = if ('–' in span) "($span)" else span
 
 /** Стороны аффиксов одной строкой: «Преф. 2/3 · Суф. 1/3», с занятым местом влияния [influence] - ещё « · Влияние 1/1». */
 fun sidesText(sides: AffixSides, influence: Pair<Int, Int>? = null): String = listOfNotNull(ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit), influence?.let(::influenceSlotText)).joinToString(" · ")

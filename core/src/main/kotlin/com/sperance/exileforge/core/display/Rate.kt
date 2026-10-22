@@ -119,5 +119,10 @@ fun FlowMeasure.text(stat: String, value: Double): String = ui(key, signedNumber
 /** Число [figure] источника строки-потока [stat] с его вкладом [value] в её мере: «+4% увеличения ≈ +0.1/с». */
 fun FlowMeasure.gives(stat: String, figure: String, value: Double): String = ui("stat.flow.gives", figure, text(stat, value))
 
-/** Итог строки сводки [stat]: строка-поток ([FlowMeasure.of]) - со знаком и мерой, прочие - [statValue]. */
-fun rowValue(stat: String, value: Double, index: ContentIndex? = null): String = FlowMeasure.of(stat)?.text(stat, value) ?: statValue(stat, value, index)
+/**
+ * Итог строки сводки [stat]: строка-поток ([FlowMeasure.of]) - со знаком и мерой, урон вида удара с листом [sheet] - диапазоном
+ * «мин–макс» ([hitRangeText], среднее - [value]), прочие - [statValue].
+ */
+fun rowValue(stat: String, value: Double, index: ContentIndex? = null, sheet: Map<String, Double>? = null): String = FlowMeasure.of(stat)?.text(stat, value)
+    ?: index?.let { content -> sheet?.let { hitRangeText(stat, it + (stat to value), content) } }
+    ?: statValue(stat, value, index)

@@ -282,9 +282,9 @@ private object SummaryMetrics {
         val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
         val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
         Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: rowValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.LineThrough) }
+        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: rowValue(key, it, game.index, before), color = Muted, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.LineThrough) }
         Text(
-            defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: rowValue(key, limit?.effective ?: value, game.index),
+            defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: rowValue(key, limit?.effective ?: value, game.index, figures.stats),
             color = when {
                 was != null -> Ember
                 limit?.clamped == true -> Caution

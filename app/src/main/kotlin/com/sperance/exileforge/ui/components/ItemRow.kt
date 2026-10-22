@@ -77,7 +77,7 @@ fun ItemRow(
     val look = relicLook(item.rarity)
     val legend = look.legend
     val card = RoundedCornerShape(16.dp)
-    val base = item.base.flatMap { it.values }.filter { it.stat.isNotBlank() }
+    val base = item.figures
     val sub = (
         listOf(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot)) + facts +
             base.take(2).map { "${statTitle(it.stat).lowercase()} ${it.text}" }

@@ -14,6 +14,7 @@ import com.sperance.exileforge.rules.content.AdditiveEffect
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.ModifierCode
@@ -26,6 +27,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
 
@@ -141,15 +143,18 @@ fun statPercent(stat: String, index: ContentIndex? = null): Boolean = when (stat
 }
 
 /**
- * Часть [part] строки сводки [row] (`partOf`) словами, её число - [figure]: «увеличение» (вид `PERCENT` реестра, как
- * `STOCK_MANA_REGEN` у плоской регенерации маны) - «увеличение …», процентная доля числовой строки (`STOCK_LIFE_REGEN_PERCENT`) -
- * «… от максимума»; своя характеристика строки и прочее - число как есть.
+ * Часть [part] строки сводки [row] (`partOf`) словами, её число - [figure]: конец диапазона урона ([HitRange]) - «мин …» и «макс …»,
+ * «увеличение» (вид `PERCENT` реестра, как `STOCK_MANA_REGEN` у плоской регенерации маны) - «увеличение …», процентная доля числовой
+ * строки (`STOCK_LIFE_REGEN_PERCENT`) - «… от максимума»; своя характеристика строки и прочее - число как есть.
  */
-fun partFigure(row: String, part: String, figure: String, index: ContentIndex?): String = when {
-    part == row || statPercent(row, index) -> figure
-    index?.stats?.isPercent(part) == true -> ui("hero.part_increased", figure)
-    statPercent(part, index) -> ui("hero.part_share", figure)
-    else -> figure
+fun partFigure(row: String, part: String, figure: String, index: ContentIndex?): String {
+    HitRange.ofEnd(part)?.let { return ui(if (part == it.min) "hero.part_min" else "hero.part_max", figure) }
+    return when {
+        part == row || statPercent(row, index) -> figure
+        index?.stats?.isPercent(part) == true -> ui("hero.part_increased", figure)
+        statPercent(part, index) -> ui("hero.part_share", figure)
+        else -> figure
+    }
 }
 
 /** Характеристика-флаг ([StatUnit.FLAG]): игрок видит отметку, а не число. */
@@ -170,6 +175,15 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
     statFlag(stat, index) -> flagMark(value)
     else -> statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
 }
+
+/** Диапазон урона «мин–макс» вида [stat] концами [ends] (целыми); сошедшиеся концы - одно число. */
+fun rangeNumber(stat: String, ends: Pair<Double, Double>): String {
+    val (low, high) = ends
+    return if (statNumber(stat, low) == statNumber(stat, high)) statNumber(stat, high) else "${statNumber(stat, low)}–${statNumber(stat, high)}"
+}
+
+/** Диапазон урона вида удара [stat] листа [sheet] - «мин–макс» сводки ([HitRanges.range]); не вид удара - null. */
+fun hitRangeText(stat: String, sheet: Map<String, Double>, index: ContentIndex): String? = HitRange.of(stat)?.let { rangeNumber(stat, HitRanges.range(sheet, it, index.stats)) }
 
 /** Процент «больше/меньше» [percent] долей от полного: −40 → «60%». */
 fun multiplierText(percent: Double): String = shareText(100 + percent) + "%"

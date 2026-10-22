@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.fate.reshapeText
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
@@ -75,7 +76,8 @@ data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary:
 
 /**
  * A figure's window as it is read: the cards, each kind's share of the total for the bar (positive
- * only), the formula in one line, and what the figure gives other stats right now.
+ * only), the formula in one line, and what the figure gives other stats right now. [parts] - части строки урона вида удара: плоские
+ * концы диапазона (касание - их разбор) и его полуширина.
  */
 data class StatExplanation(
     val stat: String,
@@ -84,6 +86,7 @@ data class StatExplanation(
     val weights: Map<ShareKind, Double>,
     val formula: String,
     val grants: List<ShareRow>,
+    val parts: List<ShareRow> = emptyList(),
 )
 
 /** Разбор условной строки сводки: её вклад [total], карточки источников и доли видов для полосы. */
@@ -99,7 +102,8 @@ class StatExplainer(private val game: GameUi) {
     private val passives = hero?.combat?.passives.orEmpty().associateBy { it.skill }
 
     /**
-     * [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят ([CombatSheet.lowLife]): в итог не входят.
+     * [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят ([CombatSheet.lowLife]): в итог не входят. [sheet] - лист, чьи
+     * концы диапазона урона читает строка вида удара ([parts]).
      *
      * Сдвиги поверх свода: «больше» умений - к их карточке, шаги дара - «Перестройка», чтение боя - своя карточка; множитель - сдвигом
      * доли, карточка - их произведением. Бонус низкого здоровья - строкой с тем, что прибавит, в итог не входит. Силы добычи - строкой под
@@ -111,6 +115,7 @@ class StatExplainer(private val game: GameUi) {
         holders: (String) -> List<StatSource>,
         lowLife: List<Pair<PassiveSource, Double>> = emptyList(),
         apart: List<Pair<WorldPart, WorldKind>> = emptyList(),
+        sheet: Map<String, Double> = emptyMap(),
     ): StatExplanation {
         val stat = breakdown.stat
         val format = formatOf(breakdown)
@@ -144,7 +149,15 @@ class StatExplainer(private val game: GameUi) {
             weights(breakdown),
             formula(breakdown),
             grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = RowLink.Stat(it.stat), better = judge(it.stat, it.value, it.op)) },
+            HitRange.of(stat)?.let { parts(it, sheet) }.orEmpty(),
         )
+    }
+
+    /** Части строки урона вида [range] листа [sheet]: плоские концы - со ссылкой на свой разбор, полуширина - «±N%»; без концов - пусто. */
+    private fun parts(range: HitRange, sheet: Map<String, Double>): List<ShareRow> {
+        if ((sheet[range.min] ?: 0.0) == 0.0 && (sheet[range.max] ?: 0.0) == 0.0) return emptyList()
+        return listOf(range.min, range.max).map { ShareRow(statTitle(it), statNumber(it, sheet[it] ?: 0.0), link = RowLink.Stat(it)) } +
+            ShareRow(statTitle(range.spread), ui("stat.range_spread", number(sheet[range.spread] ?: 0.0)))
     }
 
     /**

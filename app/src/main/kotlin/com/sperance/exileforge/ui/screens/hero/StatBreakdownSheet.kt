@@ -29,6 +29,7 @@ import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.contentKeys
+import com.sperance.exileforge.core.display.hitRangeText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
@@ -102,8 +103,8 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
     }
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
-    val view = remember(current, combat, shifts, game.lang) {
-        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current))
+    val view = remember(current, combat, shifts, stats, game.lang) {
+        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current), stats)
     }
     val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }
     val inspect = rememberInspect()
@@ -139,7 +140,8 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game, follow) }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
             if (view.cards.isNotEmpty()) item { Formula(view.formula) }
-            if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game, follow) }
+            if (view.parts.isNotEmpty()) item { LinkRows(ui("stat.range_parts"), view.parts, follow) }
+            if (view.grants.isNotEmpty()) item { LinkRows(ui("stat.gives", statTitle(current, game.lang)), view.grants, follow) }
         }
     }
 }
@@ -202,7 +204,10 @@ fun ConditionalBreakdownSheet(game: GameUi, row: ConditionalStat, onDismiss: () 
     }
 }
 
-/** Шапка разбора: имя, раздел и итог; у уклонения и брони итог - процент защиты [defence], рейтинг - мелко под именем. */
+/**
+ * Шапка разбора: имя, раздел и итог; у уклонения и брони итог - процент защиты [defence], рейтинг - мелко под именем; у урона вида удара -
+ * диапазон «мин–макс» листа [stats].
+ */
 @Composable private fun Header(stat: String, view: StatExplanation, defence: StatReading?, stats: Map<String, Double>, accent: Color, game: GameUi) {
     val section = game.index?.stats?.section(stat)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -216,7 +221,7 @@ fun ConditionalBreakdownSheet(game: GameUi, row: ConditionalStat, onDismiss: () 
                 Text(statTitle(stat, game.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (defence != null) Text(ui("stat.defence.rating", statValue(stat, stats[stat] ?: 0.0, game.index)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
-            Text(defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: game.index?.let { hitRangeText(stat, stats, it) } ?: view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         if (section != null) {
             Text(
@@ -368,19 +373,20 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
     )
 }
 
-/** What the stat gives others now; a tap opens the one given to. */
-@Composable private fun Grants(stat: String, rows: List<ShareRow>, game: GameUi, open: (RowLink) -> Unit) {
+/** Строки-ссылки разбора под заголовком [title]: что характеристика даёт другим, части строки урона; касание строки со ссылкой - её разбор. */
+@Composable private fun LinkRows(title: String, rows: List<ShareRow>, open: (RowLink) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(ui("stat.gives", statTitle(stat, game.lang)).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+        Text(title.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
         rows.forEach { row ->
             val shape = RoundedCornerShape(8.dp)
+            val link = row.link
             Row(
-                Modifier.fillMaxWidth().clip(shape).background(PanelRaised).clickable { row.link?.let(open) }.padding(horizontal = 10.dp, vertical = 6.dp),
+                Modifier.fillMaxWidth().clip(shape).background(PanelRaised).clickable(enabled = link != null) { link?.let(open) }.padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(row.title, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 Text(row.value, color = shiftColor(row.better, Gold), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
-                Text("  ›", color = Muted)
+                if (link != null) Text("  ›", color = Muted)
             }
         }
     }

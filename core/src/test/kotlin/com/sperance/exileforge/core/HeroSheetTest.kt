@@ -21,6 +21,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
 import com.sperance.exileforge.rules.content.FlaskStat
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Influence
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.Line
@@ -52,6 +53,7 @@ import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
+import com.sperance.exileforge.rules.sheet.WeaponDamage
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
@@ -304,7 +306,8 @@ class HeroSheetTest {
     private fun own(def: ModifierDef, slot: Slot, table: Map<String, String>): Boolean = LocaleKey.modifierName(def.code) in table || def.variant != VariantKind.NATURAL && LocaleKey.modifierName(def.family) in table ||
         def.effects.indices.all { i ->
             val effect = def.effects[i]
-            ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect)) in table
+            val weapon = WeaponDamage.local(def, effect, slot)
+            (HitRange.ofEnd(effect.stat)?.let { ModifierText.rangeKey(it, weapon) } ?: ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect), weapon)) in table
         }
 
     /** Как строка вещи видна герою: строка героя, строка с условием, сила с правилами листа, усилитель своей вещи. */

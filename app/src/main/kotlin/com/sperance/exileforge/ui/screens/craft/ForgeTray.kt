@@ -41,6 +41,8 @@ import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.StackCell
+import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
+import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -132,7 +134,8 @@ private const val ONE_ROW = 6
         return
     }
     val list = rememberLazyListState(initialFirstVisibleItemIndex = (choices.indexOfFirst { it.code == chosen } - STRIP_LEAD).coerceAtLeast(0))
-    LazyRow(Modifier.fillMaxWidth(), state = list, horizontalArrangement = Arrangement.spacedBy(GAP)) {
+    val cue = rememberLazyRowScrollCue(list, choices.indexOfFirst { it.code == chosen }.takeIf { it >= 0 })
+    LazyRow(Modifier.fillMaxWidth().scrollCue(cue, Panel), state = list, horizontalArrangement = Arrangement.spacedBy(GAP)) {
         items(choices, key = { it.code }) { choice ->
             val code = choice.code
             TrayCell(game, code, code == chosen, code in waiting) { onSelect(code) }

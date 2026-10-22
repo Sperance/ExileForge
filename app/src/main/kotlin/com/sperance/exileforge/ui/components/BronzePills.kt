@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -24,11 +23,13 @@ import com.sperance.exileforge.ui.theme.Muted
 
 /**
  * Бронзовые плашки выбора раздела (Доска славы: регион и ступень раша, профессия): ряд с прокруткой вбок, выбранная -
- * залита бронзой [Brass] светлым текстом, остальные - бронзовая нить.
+ * залита бронзой [Brass] светлым текстом, остальные - бронзовая нить; края с продолжением - подсказкой [scrollCue], ряд доводится до
+ * выбранной.
  */
 @Composable fun BronzePills(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val cue = rememberRowScrollCue()
     val pill = RoundedCornerShape(50)
-    Row(modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(modifier.fillMaxWidth().scrollCue(cue).horizontalScroll(cue.state).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         labels.forEachIndexed { i, label ->
             val on = i == selected
             Text(
@@ -37,7 +38,7 @@ import com.sperance.exileforge.ui.theme.Muted
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
-                modifier = Modifier.clip(pill).then(if (on) Modifier.background(Brass.copy(alpha = .28f), pill) else Modifier)
+                modifier = Modifier.cueSelected(cue, on).clip(pill).then(if (on) Modifier.background(Brass.copy(alpha = .28f), pill) else Modifier)
                     .border(1.dp, Brass.copy(alpha = if (on) .9f else .4f), pill)
                     .selectable(selected = on, role = Role.Tab) { if (!on) onSelect(i) }
                     .padding(horizontal = 12.dp, vertical = 6.dp),

@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -220,7 +221,8 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
 
 /** The list's faction chips: all, then each faction under its sign and name in its colour. */
 @Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberLazyRowScrollCue(rememberLazyListState(), if (chosen.isBlank()) 0 else rules.factions.indexOfFirst { it.code == chosen } + 1)
+    LazyRow(Modifier.scrollCue(cue), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         item { ForgeChip(ui("common.all"), chosen.isBlank(), { onChoose("") }, state = ButtonState.of(enabled), mode = ChipMode.Choice) }
         items(rules.factions, key = { it.code }) { faction ->
             ForgeChip(

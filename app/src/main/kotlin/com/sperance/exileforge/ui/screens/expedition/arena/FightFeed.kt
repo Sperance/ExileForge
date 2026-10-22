@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -57,7 +56,8 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberRowScrollCue()
+    Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         LogKind.entries.forEach { kind ->
             val on = kind in shown
             ForgeChip(

@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.FilterList
@@ -95,7 +94,8 @@ import com.sperance.exileforge.ui.theme.Vital
 
 /** Ряд включённых сужений: чип с крестиком снимает своё, «Сбросить» в конце - все. */
 @Composable private fun NarrowingRow(chips: List<SearchChip>, onReset: () -> Unit) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberRowScrollCue()
+    Row(Modifier.fillMaxWidth().scrollCue(cue).horizontalScroll(cue.state), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         chips.forEach { chip ->
             ForgeChip(chip.title, selected = true, onClick = chip.onRemove, leading = { Icon(Icons.Outlined.Close, null) }, contentDescription = ui("filter.remove_chip", chip.title))
         }

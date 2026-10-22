@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.MaterialTheme
@@ -123,7 +122,8 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
         ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = { levels.last().back.value() }, accent = colors.arrow)
         val data = levels.last().data
         val tip = levels.last().tip
-        Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+        val cue = rememberRowScrollCue()
+        Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.label }
             names.forEachIndexed { i, name ->
                 if (i > 0) Text(" › ", color = colors.link, style = MaterialTheme.typography.labelLarge)
@@ -134,7 +134,7 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = if (here) Modifier else Modifier.clickable(role = Role.Button) { jump(i) },
+                    modifier = if (here) Modifier.cueSelected(cue, true) else Modifier.clickable(role = Role.Button) { jump(i) },
                 )
             }
         }

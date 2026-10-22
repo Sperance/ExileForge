@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -42,7 +43,9 @@ import com.sperance.exileforge.ui.components.SortButton
 import com.sperance.exileforge.ui.components.SortLabel
 import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.inputs
+import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
 import com.sperance.exileforge.ui.components.ring
+import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
@@ -126,7 +129,8 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
 
 /** Плотные чипы отбора: у каждого - сколько участников [members] под ним проходит; выбранный - в нити `Gold`. */
 @Composable internal fun RosterFilters(members: List<GuildMember>, chosen: RosterFilter, scope: RosterScope, onChoose: (RosterFilter) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberLazyRowScrollCue(rememberLazyListState(), RosterFilter.entries.indexOf(chosen))
+    LazyRow(Modifier.scrollCue(cue), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items(RosterFilter.entries, key = { it.name }) { filter ->
             val on = filter == chosen
             val shape = RoundedCornerShape(8.dp)

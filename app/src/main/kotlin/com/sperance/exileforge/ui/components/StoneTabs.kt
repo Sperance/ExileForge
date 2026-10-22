@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -44,18 +43,20 @@ import com.sperance.exileforge.ui.theme.Muted
 /**
  * Каменные вкладки («Скрижали»): тёмная дорожка, открытая вкладка - приподнятая плита в
  * золотой нити. У каждой над подписью значок режима в цвете его механики (у закрытых - приглушён). [scrollable] - плиты своей
- * ширины с прокруткой вбок (Доска славы); иначе делят ширину поровну («Поход»).
+ * ширины с прокруткой вбок (Доска славы) и подсказкой прокрутки ([scrollCue]: затухание краёв в цвет дорожки, ряд доводится до
+ * открытой); иначе делят ширину поровну («Поход»).
  */
 @Composable fun StoneTabs(tabs: List<StoneTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier, scrollable: Boolean = true) {
     val track = RoundedCornerShape(10.dp)
+    val cue = rememberRowScrollCue()
     Row(
         modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).clip(track)
             .background(Brush.verticalGradient(listOf(TrackTop, TrackBottom))).border(1.dp, Bronze, track)
-            .then(if (scrollable) Modifier.horizontalScroll(rememberScrollState()) else Modifier).padding(3.dp),
+            .then(if (scrollable) Modifier.scrollCue(cue, TrackTop).horizontalScroll(cue.state) else Modifier).padding(3.dp),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         tabs.forEachIndexed { i, tab ->
-            StoneTile(tab, i == selected, if (scrollable) Modifier.widthIn(min = TILE_MIN_WIDTH) else Modifier.weight(1f)) { onSelect(i) }
+            StoneTile(tab, i == selected, if (scrollable) Modifier.widthIn(min = TILE_MIN_WIDTH).cueSelected(cue, i == selected) else Modifier.weight(1f)) { onSelect(i) }
         }
     }
 }

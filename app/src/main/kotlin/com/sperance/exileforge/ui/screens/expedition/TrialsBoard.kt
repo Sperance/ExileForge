@@ -236,8 +236,9 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
             style = MaterialTheme.typography.labelSmall,
         )
         if (count > 1) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                (0 until shown).forEach { t -> TierPlate(t, done = t < passed, selected = t == tier) { tier = t } }
+            val cue = rememberRowScrollCue()
+            Row(Modifier.scrollCue(cue, Panel).horizontalScroll(cue.state), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                (0 until shown).forEach { t -> TierPlate(t, done = t < passed, selected = t == tier, modifier = Modifier.cueSelected(cue, t == tier)) { tier = t } }
                 if (shown < count) LockedTier(shown)
             }
         }
@@ -247,11 +248,11 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
 }
 
 /** Плашка ступени ленты: пройденная - зелёная, следующая - золотая; выбранная - в яркой нити. */
-@Composable private fun TierPlate(tier: Int, done: Boolean, selected: Boolean, onClick: () -> Unit) {
+@Composable private fun TierPlate(tier: Int, done: Boolean, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(7.dp)
     val tint = if (done) Vital else Brass
     Box(
-        Modifier.heightIn(min = 26.dp).widthIn(min = 30.dp).clip(shape).background(tint.copy(alpha = if (done) .08f else .12f))
+        modifier.heightIn(min = 26.dp).widthIn(min = 30.dp).clip(shape).background(tint.copy(alpha = if (done) .08f else .12f))
             .border(if (selected) 2.dp else 1.dp, if (selected) Brass else tint.copy(alpha = .45f), shape).clickable(onClick = onClick).padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {

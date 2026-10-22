@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -91,7 +90,8 @@ import org.koin.compose.viewmodel.koinViewModel
     PagedColumn(page.items.size, page.more, loading, vm::moreQueue, queue.kind, queue.queue, queue.query, queue.sort, modifier = Modifier.fillMaxSize(), contentPadding = SettingsPadding, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item(key = "search") { SearchBar(query, { query = it }, ui("feedback.admin.search"), onSearch = { vm.filterQueue { it.copy(query = query) } }, maxLength = account.inputs.search) }
         item(key = "queues") {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            val cue = rememberRowScrollCue()
+            Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 FeedbackQueue.entries.forEach { q ->
                     QueueChip(q, queue.counts.queues[q], queue.counts.replied.takeIf { q == FeedbackQueue.DISCUSSION } ?: 0L, queue.queue == q) { vm.filterQueue { it.copy(queue = q) } }
                 }
@@ -422,7 +422,8 @@ private val MAIL_RARITIES = listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE)
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth(),
     )
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberRowScrollCue()
+    Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         IssueMove.entries.forEach { move ->
             val ready = when (move) {
                 IssueMove.REPLY -> note.isNotBlank()

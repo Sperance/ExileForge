@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
@@ -111,7 +112,9 @@ import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.components.rememberItemShelf
+import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
 import com.sperance.exileforge.ui.components.rememberPick
+import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
@@ -122,6 +125,7 @@ import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.rarityColor
 
@@ -151,7 +155,8 @@ import com.sperance.exileforge.ui.theme.rarityColor
         item {
             ForgePanel {
                 if (stash.tabs.size > 1 || stash.tabs.any { it.name.isNotBlank() }) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    val cue = rememberLazyRowScrollCue(rememberLazyListState(), tab)
+                    LazyRow(Modifier.scrollCue(cue, Panel), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(stash.tabs.indices.toList(), key = { it }) { i ->
                             ForgeChip(GuildText.stashTab(stash.tabs[i], i), i == tab, { tab = i }, mode = ChipMode.Choice)
                         }
@@ -354,7 +359,8 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                 }
                 if (tester) Text(ui("guild.deposit_tester"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 ItemSearchBar(filterState, ui("guild.deposit_search"), game.lang, onFilter = { filtering = true })
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                val cue = rememberLazyRowScrollCue(rememberLazyListState(), DepositKind.entries.indexOf(kind))
+                LazyRow(Modifier.scrollCue(cue, Panel), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(DepositKind.entries, key = { it.name }) { each -> ForgeChip(bag.tab(each, pick::chosen), each == kind, { kind = each }, mode = ChipMode.Choice) }
                 }
                 PresetRow(pick, DepositPreset.ALL) { preset ->

@@ -159,12 +159,13 @@ private sealed interface AlbumPick {
                     }
                     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
-                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                PoolChip(ui("common.all"), shown == AlbumPick.All) { pick = AlbumPick.All }
+                            val cue = rememberRowScrollCue()
+                            Row(Modifier.fillMaxWidth().scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                PoolChip(cue, ui("common.all"), shown == AlbumPick.All) { pick = AlbumPick.All }
                                 pools.forEach { pool ->
-                                    PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), shown == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
+                                    PoolChip(cue, ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), shown == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
                                 }
-                                if (bosses.isNotEmpty()) PoolChip(ui("history.bosses"), shown == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
+                                if (bosses.isNotEmpty()) PoolChip(cue, ui("history.bosses"), shown == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
                             }
                         }
                         when (val chosen = shown) {
@@ -261,8 +262,8 @@ private sealed interface AlbumPick {
     }
 }
 
-@Composable private fun PoolChip(label: String, on: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, on, onClick, mode = ChipMode.Choice)
+@Composable private fun PoolChip(cue: RowScrollCue, label: String, on: Boolean, onClick: () -> Unit) {
+    ForgeChip(label, on, onClick, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, on))
 }
 
 @Composable private fun TemplateIcon(template: ItemTemplate) {

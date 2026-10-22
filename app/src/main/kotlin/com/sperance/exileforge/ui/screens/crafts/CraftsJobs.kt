@@ -137,7 +137,8 @@ import com.sperance.exileforge.ui.theme.*
  * входа - «бесплатно», с долей впустую, если она есть.
  */
 @Composable private fun RecipeLine(game: GameUi, job: JobView, onInput: (String) -> Unit) {
-    Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    val cue = rememberRowScrollCue()
+    Row(Modifier.scrollCue(cue, DepthBottom).horizontalScroll(cue.state), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         job.inputs.forEach { input ->
             val have = bagCount(game, input.item)
             Row(
@@ -156,10 +157,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Отбор работ по группе выхода: «Все N» и каждая группа с числом открытых работ; [selected] null - все. */
 @Composable internal fun JobFilters(groups: JobGroups, selected: String?, onSelect: (String?) -> Unit) {
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        ForgeChip(ui("crafts.group_all", groups.total), selected == null, { onSelect(null) }, mode = ChipMode.Choice)
+    val cue = rememberRowScrollCue()
+    Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        ForgeChip(ui("crafts.group_all", groups.total), selected == null, { onSelect(null) }, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, selected == null))
         groups.counts.forEach { (group, count) ->
-            ForgeChip(ui("crafts.group_count", ui("crafts.group.$group"), count), selected == group, { onSelect(group) }, mode = ChipMode.Choice)
+            ForgeChip(ui("crafts.group_count", ui("crafts.group.$group"), count), selected == group, { onSelect(group) }, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, selected == group))
         }
     }
 }
@@ -373,8 +375,10 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
  */
 @Composable private fun RecipeFormula(game: GameUi, profession: ProfessionView, job: JobView, additives: List<String>, onOpen: (Inspect?) -> Unit) {
     val inputs = Work.perCycle(job.job, additives)
+    val cue = rememberRowScrollCue()
+    val shape = RoundedCornerShape(12.dp)
     Row(
-        Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(12.dp)).horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 12.dp),
+        Modifier.fillMaxWidth().depthPanel(shape).clip(shape).scrollCue(cue, DepthBottom).horizontalScroll(cue.state).padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {

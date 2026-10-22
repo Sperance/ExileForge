@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
@@ -70,11 +71,14 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
     val inspect = rememberInspect()
     val enabled = !game.busy
     fun brew(code: String, taken: Boolean, run: () -> Unit) = inspect(Inspect.Stack(code, InspectAction(ui(if (taken) "brew.put_back" else "brew.take"), enabled = enabled) { run.invoke() }))
+    val picked = maps.all.indexOfFirst { it.item.id == maps.picked?.item?.id }
+    val cue = rememberLazyRowScrollCue(rememberLazyListState(), if (maps.all.isEmpty()) null else picked + 1)
     LazyRow(
+        state = cue.state,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         contentPadding = PaddingValues(horizontal = 2.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().scrollCue(cue, Panel),
     ) {
         if (maps.all.isEmpty()) {
             item(key = "none") { NoMaps(zone.level) }

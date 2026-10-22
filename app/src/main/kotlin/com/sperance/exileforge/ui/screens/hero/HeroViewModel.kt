@@ -6,6 +6,8 @@ import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.expedition.ExpeditionActions
+import com.sperance.exileforge.core.fate.FateDeal
+import com.sperance.exileforge.core.fate.FateRedraws
 import com.sperance.exileforge.core.filter.ItemFilter
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroActions
@@ -45,6 +47,7 @@ class HeroViewModel(
     private val pages: HeroPageModel,
     fates: HeroFateModel,
     private val expedition: ExpeditionActions,
+    private val redraws: FateRedraws,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
@@ -65,6 +68,18 @@ class HeroViewModel(
     fun sellOverflow(itemId: String) = hero.sellOverflow(itemId)
     fun learnSkill(code: String) = hero.learnSkill(code)
     fun openChest(code: String) = hero.openChest(code)
+
+    /** «Лист Угнетения» [code]: новое имя [name] текущему герою. */
+    fun renameHero(code: String, name: String) = hero.renameHero(code, name)
+
+    /** Раздача «Колоды Рока»: открыта стопкой [FateDeal.item], пока не принята или не закрыта. */
+    val fateDeal: StateFlow<FateDeal?> = redraws.deal
+    fun openDeck(code: String) = redraws.open(code)
+    fun chooseDeal(code: String) = redraws.choose(code)
+    fun closeDeal() = redraws.close()
+
+    /** Свой дар [code] из окна тестирования: модератору и аккаунту с героем-тестировщиком. */
+    fun redrawOwnFate(code: String) = redraws.redrawOwn(code)
     fun dismissChest() = hero.dismissChest()
     fun setTitle(title: String) = hero.setTitle(title)
 

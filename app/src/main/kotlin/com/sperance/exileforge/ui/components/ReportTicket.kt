@@ -1,10 +1,12 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Balance
@@ -21,7 +23,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,14 +36,17 @@ import com.sperance.exileforge.core.model.feedback.IssueNote
 import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.ReportTopic
+import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.koinInject
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
  * Карточка отчёта - тикет-чат, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
- * логин, герой ссылкой на его карточку и место); текст до трёх строк; [extra] - своё место под текстом (у модерации - обстоятельства
+ * логин, герой ссылкой на его карточку и место); текст до трёх строк ([ReportText]: выделяется, раскрывается ссылкой); номер Issue -
+ * касанием в буфер обмена; [extra] - своё место под текстом (у модерации - обстоятельства
  * дела и «Дополнение модерации»); переписка пузырями ([ThreadChat]: модерация и разработчик слева, автор справа - у игрока «Вы», у
  * модерации его логин [authorName]; [newReply] - последний ответ автора помечен «новый ответ»); [below] - место под перепиской (у игрока
  * поле ответа и «Закрыть отчёт», у модерации - поле комментария и решения); [version] - версия клиента плашкой в шапке (у модерации),
@@ -77,14 +85,14 @@ import java.time.format.DateTimeFormatter
         ) {
             ReportKindMark(kind, fate.tint)
             if (topic == ReportTopic.IMPROVEMENT) Text(ui("feedback.idea"), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
+            issue?.let { CopiedNumber(ui("feedback.issue_number", it.number)) }
             FatePill(fate, kind, issue, fresh)
             if (version.isNotBlank()) VersionTag(version)
             Spacer(Modifier.weight(1f))
             Text(reportDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         author?.let { Box(Modifier.padding(horizontal = 12.dp).padding(top = 4.dp)) { it() } }
-        ExpandableText(text, Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = ui("feedback.read_all"))
+        ReportText(text, Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp))
         extra?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
         if (thread.isNotEmpty()) ThreadChat(thread, authorName, newReply)
         below?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
@@ -97,6 +105,51 @@ import java.time.format.DateTimeFormatter
             footer()
         }
     }
+}
+
+/**
+ * Текст отчёта: выделяется ([SelectionContainer]: долгое нажатие выделяет и даёт «Копировать»), свёрнут до [TEXT_LINES] строк; раскрытие -
+ * отдельной ссылкой «Развернуть» под текстом, а не касанием текста: касание и выделение не спорят.
+ */
+@Composable private fun ReportText(text: String, modifier: Modifier) {
+    var open by remember(text) { mutableStateOf(false) }
+    var clipped by remember(text) { mutableStateOf(false) }
+    Column(modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SelectionContainer {
+            Text(
+                text,
+                color = Parchment,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = if (open) Int.MAX_VALUE else TEXT_LINES,
+                overflow = if (open) TextOverflow.Clip else TextOverflow.Ellipsis,
+                onTextLayout = { if (!open) clipped = it.hasVisualOverflow },
+            )
+        }
+        if (open || clipped) {
+            Text(
+                ui(if (open) "feedback.collapse" else "feedback.expand"),
+                color = Gold,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.clickable(role = Role.Button) { open = !open }.padding(vertical = 2.dp),
+            )
+        }
+    }
+}
+
+/** Номер отчёта или Issue в шапке: касание кладёт его в буфер обмена и говорит «Скопировано». */
+@Composable private fun CopiedNumber(number: String) {
+    val clipboard = LocalClipboardManager.current
+    val notices = koinInject<Notices>()
+    Text(
+        number,
+        color = Gold,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.clickable(role = Role.Button, onClickLabel = ui("tester.copy")) {
+            clipboard.setText(AnnotatedString(number))
+            notices.toast(ui("common.copied"))
+        },
+    )
 }
 
 /** Версия клиента отчёта мелкой плашкой в нити: шапка тикета модерации и строка списка. */
@@ -150,7 +203,10 @@ internal fun reportDate(createdAt: String): String = createdAt.take(10).split('-
     }
 }
 
-/** Тело пузыря: подпись [who], текст и время записи; рамка и подложка - цветом [tint] по стороне [mine]. */
+/**
+ * Тело пузыря: подпись [who], текст (выделяется, долгое нажатие - «Копировать») и время записи; рамка и подложка - цветом [tint] по стороне
+ * [mine].
+ */
 @Composable private fun BubbleBody(note: IssueNote, who: String, mine: Boolean, fresh: Boolean, tint: Color, shape: Shape) {
     Column(
         Modifier.clip(shape).background(if (mine) PanelRaised else tint.copy(alpha = .10f)).border(1.dp, tint.copy(alpha = if (mine && !fresh) 1f else .45f), shape)
@@ -170,7 +226,7 @@ internal fun reportDate(createdAt: String): String = createdAt.take(10).split('-
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(note.text, color = Parchment, style = MaterialTheme.typography.bodySmall)
+        SelectionContainer { Text(note.text, color = Parchment, style = MaterialTheme.typography.bodySmall) }
         remember(note.at) { noteTime(note.at) }.takeIf { it.isNotEmpty() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), modifier = Modifier.align(Alignment.End)) }
     }
 }

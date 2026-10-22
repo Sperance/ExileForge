@@ -95,8 +95,17 @@ class PlayerCardModel(
     /** Письмо администратора аккаунту героя (только администратору): форма письма адресована владельцу по id аккаунта. */
     fun writeAdmin(card: PlayerCard) {
         val owner = card.rights.moderation?.takeIf { it.userId.isNotBlank() } ?: return
+        writeAdmin(owner.userId, owner.login, card.name)
+    }
+
+    /**
+     * Письмо от Администрации аккаунту [userId] (логин [login], герой [heroName]) - из карточки и из досье модерации: форма письма
+     * адресована владельцу по id аккаунта; модератору - без вложения.
+     */
+    fun writeAdmin(userId: String, login: String, heroName: String) {
+        if (userId.isBlank()) return
         leave {
-            feedback.update { it.copy(mailTo = MailAddressee.of(owner.userId, owner.login, card.name)) }
+            feedback.update { it.copy(mailTo = MailAddressee.of(userId, login, heroName)) }
             screens.open(Landing.MAIL)
         }
     }

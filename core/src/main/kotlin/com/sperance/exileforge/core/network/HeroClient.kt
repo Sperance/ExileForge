@@ -5,6 +5,8 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
+import com.sperance.exileforge.core.model.hero.BagUse
+import com.sperance.exileforge.core.model.hero.BagUsed
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.DeletionConfirm
 import com.sperance.exileforge.core.model.hero.DeletionPreview
@@ -267,6 +269,9 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Руна [rune] в гнездо [socket] умения [skill]: прежняя руна гнезда пропадает; без руны гнездо пустеет, снятая руна тоже пропадает. */
     suspend fun socketRune(heroId: String, skill: String, socket: Int, rune: String?): HeroSkills = http.post("$HERO/skills/rune", heroQuery(heroId, "skill" to skill, "socket" to socket.toString(), "rune" to rune))
+
+    /** «Использовать» стопки сумки [request]: новое имя героя или дар из новой раздачи - одной транзакцией с тратой штуки. */
+    suspend fun useBag(heroId: String, request: BagUse): BagUsed = http.post("$HERO/bag/use", heroQuery(heroId), body = WireJson.encodeToJsonElement(request))
 
     /** Opens one loot chest of the bag: the server rolls what is inside. */
     suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))

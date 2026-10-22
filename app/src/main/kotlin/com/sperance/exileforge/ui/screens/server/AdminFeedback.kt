@@ -444,7 +444,8 @@ private const val DUPLICATE_DIGITS = 6
  * The administrator's letter: to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
  * Адресат из карточки игрока ([MailAddressee]) - плашкой без ввода: письмо уходит по id аккаунта, а имя адресата идёт логином, так что
- * сервер, что id не знает, не разошлёт письмо всем; сброс плашки возвращает ввод логина.
+ * сервер, что id не знает, не разошлёт письмо всем; сброс плашки возвращает ввод логина. Модератор (письмо из досье) пишет только адресату
+ * плашки и без вложения - панели вложения у него нет.
  */
 @Composable internal fun MailComposePage(account: AccountUi) {
     val index = account.index ?: return
@@ -497,43 +498,45 @@ private const val DUPLICATE_DIGITS = 6
             modifier = Modifier.fillMaxWidth(),
         )
     }
-    ForgePanel {
-        Engraved(ui("mail.attachment"))
-        OutlinedTextField(
-            gold,
-            { gold = it.filter(Char::isDigit).take(account.inputs.number) },
-            label = { Text(ui("tester.gold")) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        var item by remember { mutableStateOf<String?>(null) }
-        var amount by remember { mutableStateOf("1") }
-        val itemOptions = remember(index, account.lang) { PickOptions.items(index) }
-        ForgePicker(ui("tester.item"), item, itemOptions, enabled = !account.busy) { item = it }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (account.isAdmin) {
+        ForgePanel {
+            Engraved(ui("mail.attachment"))
             OutlinedTextField(
-                amount,
-                { amount = it.filter(Char::isDigit).take(account.inputs.number) },
-                label = { Text(ui("tester.amount")) },
+                gold,
+                { gold = it.filter(Char::isDigit).take(account.inputs.number) },
+                label = { Text(ui("tester.gold")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
             )
-            ForgeButton(state = ButtonState.of(item != null && (amount.toLongOrNull() ?: 0) > 0), onClick = { item?.let { code -> items[code] = (items[code] ?: 0) + amount.toLong() } }, kind = ButtonKind.Secondary) {
-                Text(ui("mail.add"))
+            var item by remember { mutableStateOf<String?>(null) }
+            var amount by remember { mutableStateOf("1") }
+            val itemOptions = remember(index, account.lang) { PickOptions.items(index) }
+            ForgePicker(ui("tester.item"), item, itemOptions, enabled = !account.busy) { item = it }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    amount,
+                    { amount = it.filter(Char::isDigit).take(account.inputs.number) },
+                    label = { Text(ui("tester.amount")) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                )
+                ForgeButton(state = ButtonState.of(item != null && (amount.toLongOrNull() ?: 0) > 0), onClick = { item?.let { code -> items[code] = (items[code] ?: 0) + amount.toLong() } }, kind = ButtonKind.Secondary) {
+                    Text(ui("mail.add"))
+                }
             }
+            var template by remember { mutableStateOf<String?>(null) }
+            var rarity by remember { mutableStateOf<Rarity?>(null) }
+            val templates = remember(index, account.lang) { PickOptions.templates(index) }
+            ForgePicker(ui("mail.template"), template, templates, enabled = !account.busy) { template = it }
+            RarityChoice(MAIL_RARITIES, { it == rarity }, { rarity = it }, any = ui("mail.template_rarity"))
+            ForgeButton(state = ButtonState.of(template != null), onClick = { template?.let { equipment += MailEquipment(it, rarity) } }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
+            items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
+            equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
         }
-        var template by remember { mutableStateOf<String?>(null) }
-        var rarity by remember { mutableStateOf<Rarity?>(null) }
-        val templates = remember(index, account.lang) { PickOptions.templates(index) }
-        ForgePicker(ui("mail.template"), template, templates, enabled = !account.busy) { template = it }
-        RarityChoice(MAIL_RARITIES, { it == rarity }, { rarity = it }, any = ui("mail.template_rarity"))
-        ForgeButton(state = ButtonState.of(template != null), onClick = { template?.let { equipment += MailEquipment(it, rarity) } }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("mail.add")) }
-        items.forEach { (code, n) -> AttachedLine("${itemTitle(code)} × $n") { items.remove(code) } }
-        equipment.forEachIndexed { i, piece -> AttachedLine(equipmentTitle(piece.template) + (piece.rarity?.let { " · " + ui("enum.rarity.${it.name}") } ?: "")) { equipment.removeAt(i) } }
     }
-    ForgeButton(state = ButtonState.of(!account.busy && subject.isNotBlank()), modifier = Modifier.fillMaxWidth(), onClick = {
+    ForgeButton(state = ButtonState.of(!account.busy && subject.isNotBlank() && (account.isAdmin || addressee != null)), modifier = Modifier.fillMaxWidth(), onClick = {
         val attachment = MailAttachment(gold.toLongOrNull() ?: 0, items.toMap(), equipment.toList())
         vm.sendMail(addressee?.let { MailRequest(it.login, subject, body, attachment, userId = it.userId) } ?: MailRequest(login, subject, body, attachment))
         subject = ""

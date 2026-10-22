@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.paging.Page
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.encodeToJsonElement
@@ -112,28 +113,50 @@ private const val DAY_MS = 86_400_000L
 
 @Serializable enum class ModerationSegment { ALL, BANNED, TRASH }
 
-/** Строка списка: герой с владельцем; в корзине аккаунт целиком - с пустым [heroId]. [protected] - роль владельца выше смотрящего. */
-@Serializable data class ModerationRow(
-    val heroId: String,
-    val heroName: String,
-    val heroClass: String = "",
-    val level: Int = 0,
+/**
+ * Карточка аккаунта списка модерации: сервер группирует страницу героев по владельцу - шапка аккаунта и его герои этой страницы. В корзине -
+ * удаления аккаунта ([sanction]) и его героев.
+ *
+ * @property protected роль владельца выше смотрящего - действия недоступны (в корзине - не администратор)
+ * @property sanction действующая санкция аккаунта - удаление, бан, немота; null - чист
+ * @property fate Предначертание аккаунта - код дара `fates.json`; null - не выбрано
+ * @property lastSeenAt когда аккаунт был в игре - последнее использование самой свежей сессии, мс эпохи; 0 - неизвестно
+ * @property clientVersion версия клиента самой свежей сессии; пусто - неизвестна
+ */
+@Serializable data class ModerationAccount(
     val userId: String,
     val login: String = "",
     val role: AccountRole = AccountRole.USER,
-    val sanction: SanctionView? = null,
     val protected: Boolean = false,
+    val sanction: SanctionView? = null,
+    val fate: String? = null,
+    val lastSeenAt: Long = 0,
+    val clientVersion: String = "",
+    val heroes: List<ModerationHero> = emptyList(),
+) {
+    /** Та же карточка с героями следующей страницы [next] того же аккаунта: аккаунт со стыка страниц - одной карточкой. */
+    fun joined(next: ModerationAccount): ModerationAccount = next.copy(heroes = (heroes + next.heroes).distinctBy { it.heroId })
+}
+
+/**
+ * Герой карточки аккаунта: [name] - у копии, стёртой владельцем, имя до стирания; [deleted] - в корзине, [sanction] - удаление, что его
+ * держит (автором или модерацией), бан или немота героя; [might] - Мощь, null - не посчитана.
+ */
+@Serializable data class ModerationHero(
+    val heroId: String,
+    val name: String,
+    val heroClass: String = "",
+    val level: Int = 0,
+    val tester: Boolean = false,
+    val might: Double? = null,
+    val deleted: Boolean = false,
+    val sanction: SanctionView? = null,
     /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
-    /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано или сервер старее. */
-    val fate: String? = null,
-) {
-    /**
-     * Ключ строки в списке: строка корзины - её санкция удаления (у одного героя их может оказаться две, строк тогда две), прочие -
-     * герой, аккаунт без героя - аккаунт. Список держит строки уникальными по нему ([Page.distinctBy], [Page.followedBy]).
-     */
-    val key: String get() = sanction?.takeIf { it.kind == SanctionKind.DELETION }?.id ?: heroId.ifEmpty { userId }
-}
+)
+
+/** Смена имени героя [hero] модерацией на [name]; [reason] - причина для игрока, обязательна: она уйдёт ему письмом. */
+@Serializable data class RenameRequest(val hero: String, val name: String, val reason: String)
 
 /**
  * Отбор списка модерации по Предначертанию, параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
@@ -160,8 +183,19 @@ sealed interface ModerationFate {
 /** Порядок списка модерации: последняя активность, уровень, дата создания, имя. */
 @Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
 
-/** Что смотрящий может сделать с целью досье; [fate] - сменить её Предначертание (сервер `ModerationPolicy.canRedrawFate`). */
-@Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false, val fate: Boolean = false)
+/**
+ * Что смотрящий может сделать с целью досье: [fate] - сменить её Предначертание (сервер `ModerationPolicy.canRedrawFate`), [mail] -
+ * написать игроку от Администрации, [rename] - сменить имя героя досье.
+ */
+@Serializable data class DossierRights(
+    val ban: Boolean = false,
+    val banDevice: Boolean = false,
+    val delete: Boolean = false,
+    val mute: Boolean = false,
+    val fate: Boolean = false,
+    val mail: Boolean = false,
+    val rename: Boolean = false,
+)
 
 @Serializable data class DossierAccount(
     val userId: String,
@@ -201,6 +235,8 @@ sealed interface ModerationFate {
     val tester: Boolean = false,
     /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
+    /** Бывшие имена героя, старые первыми. */
+    val formerNames: List<String> = emptyList(),
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)
@@ -224,10 +260,11 @@ sealed interface ModerationFate {
 )
 
 /**
- * Действие журнала модерации; [FATE] - администратор сменил Предначертание аккаунту: номера санкции нет, в заметке -
- * прежний и новый код дара через « → » ([ModerationEntryView.fateChange]), причина для игрока - [ModerationEntryView.reason].
+ * Действие журнала модерации; [FATE] - смена Предначертания аккаунту: номера санкции нет, в заметке - прежний и новый код дара через
+ * « → » ([ModerationEntryView.fateChange]), причина для игрока - [ModerationEntryView.reason]; [RENAME] - модерация сменила имя героя: в
+ * заметке - прежнее и новое имя тем же разделителем.
  */
-@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE }
+@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE, RENAME }
 
 @Serializable data class ModerationEntryView(
     val id: String,
@@ -281,14 +318,31 @@ private const val FATE_ARROW = " → "
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    /** Страница [page] раздела [segment] (всего строк - [Page.total]): поиск [query], порядок [sort] и отбор по Предначертанию [fate]. */
+    /**
+     * Страница [page] раздела [segment] карточками аккаунтов (всего героев - [Page.total]): поиск [query], порядок [sort], отбор по
+     * Предначертанию [fate], чипы «Удалённые» [deleted] и «Старая версия» [outdated] - старее версии этой сборки (её шлёт каждый запрос).
+     */
     suspend fun rows(
         query: String,
         segment: ModerationSegment,
         page: Int,
         sort: ModerationSort = ModerationSort.ACTIVITY,
         fate: ModerationFate = ModerationFate.All,
-    ): Page<ModerationRow> = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param))
+        deleted: Boolean = false,
+        outdated: Boolean = false,
+    ): Page<ModerationAccount> = http.get(
+        "$MODERATION/rows",
+        mapOf(
+            "q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param,
+            "deleted" to deleted.toString(), "outdated" to outdated.toString(),
+        ),
+    )
+
+    /** Новое имя героя: модератору и администратору по правам досье; ответ - имя, что теперь у героя. */
+    suspend fun rename(request: RenameRequest): String = http.post("$MODERATION/rename", body = WireJson.encodeToJsonElement(request))
+
+    /** Письмо игроку от Администрации из досье: модератор - одному аккаунту и без вложения; ответ - сколько писем ушло. */
+    suspend fun mail(request: MailRequest): Int = http.post("$MODERATION/mail", body = WireJson.encodeToJsonElement(request))
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */
     suspend fun dossier(heroId: String, userId: String): Dossier = http.get("$MODERATION/dossier", mapOf("hero" to heroId, "user" to userId))

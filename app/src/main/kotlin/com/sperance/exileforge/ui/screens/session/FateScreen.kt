@@ -9,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,44 +75,22 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable fun FateScreen() = com.sperance.exileforge.ui.components.PrologueGate(always = false) { FateChoice() }
 
-/**
- * Выбор дара - после пролога.
- *
- * Описание выбранной карты разворачивается свитком под веером.
- */
+/** Выбор дара - после пролога: алтарь ([FateAltar]) с выходом из аккаунта и языком в углах. */
 @Composable private fun FateChoice() {
     val vm = koinViewModel<FateViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
     val view = game.session.fate
-    val offers = view?.offers.orEmpty()
-    val chosen = view?.chosen
-    var picked by rememberSaveable { mutableStateOf<String?>(null) }
-    var hint by remember { mutableStateOf(false) }
-    val motion = LocalMotion.current
-    Box(Modifier.fillMaxSize().ashGround()) {
-        AltarGlow(Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp).size(280.dp, 60.dp))
-        EmberField(Modifier.fillMaxSize())
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-            FateTitle(motion, Modifier.fillMaxWidth().padding(top = 34.dp))
-            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                when {
-                    offers.isNotEmpty() -> FateDeck(offers, picked ?: chosen?.code, chosen != null, motion) { code ->
-                        if (chosen == null && !game.busy) picked = code
-                    }
-
-                    game.busy || game.reading -> CircularProgressIndicator(color = Gold)
-
-                    else -> ForgeButton(onClick = vm::refresh, kind = ButtonKind.Text, accent = FateInk.GoldLight) { Text(ui("fate.retry")) }
-                }
-            }
-            offers.firstOrNull { it.code == (picked ?: chosen?.code) }?.let { card ->
-                FateScroll(card, Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 10.dp))
-            }
-            FateFooter(motion, offers.isNotEmpty(), picked != null, chosen != null, hint) { refused ->
-                if (refused) hint = true else picked?.let(vm::choose)
-            }
-        }
-        FateFlash(chosen != null, motion, onDone = vm::accepted)
+    FateAltar(
+        view?.offers.orEmpty(),
+        view?.chosen?.code,
+        busy = game.busy,
+        waiting = game.busy || game.reading,
+        subtitle = ui("fate.subtitle"),
+        warning = ui("fate.warning"),
+        onRetry = vm::refresh,
+        onChoose = vm::choose,
+        onAccepted = vm::accepted,
+    ) {
         ForgeButton(onClick = vm::logout, modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(4.dp), kind = ButtonKind.Text, state = ButtonState.of(!game.busy), accent = Muted) {
             Text(ui("fate.sign_out"), style = MaterialTheme.typography.labelMedium)
         }
@@ -119,8 +98,56 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Заголовок с золотым ореолом и подзаголовок: проявляются снизу вверх (1,2 с), подзаголовок - позже. */
-@Composable private fun FateTitle(motion: Boolean, modifier: Modifier) {
+/**
+ * Алтарь выбора дара - общий для первого выбора и новой раздачи «Колоды Рока»: веер карт [offers], свиток выбранной под ним и удержание
+ * внизу с предупреждением [warning]. Принятый дар [accepted] гасит касания, играет вспышку и зовёт [onAccepted]; пока карт нет - круг
+ * ожидания ([waiting]) или «Повторить» ([onRetry]). [corners] - кнопки углов экрана.
+ */
+@Composable internal fun FateAltar(
+    offers: List<FateCard>,
+    accepted: String?,
+    busy: Boolean,
+    waiting: Boolean,
+    subtitle: String,
+    warning: String,
+    onRetry: () -> Unit,
+    onChoose: (String) -> Unit,
+    onAccepted: () -> Unit,
+    corners: @Composable BoxScope.() -> Unit,
+) {
+    var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    var hint by remember { mutableStateOf(false) }
+    val motion = LocalMotion.current
+    Box(Modifier.fillMaxSize().ashGround()) {
+        AltarGlow(Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp).size(280.dp, 60.dp))
+        EmberField(Modifier.fillMaxSize())
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            FateTitle(motion, subtitle, Modifier.fillMaxWidth().padding(top = 34.dp))
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                when {
+                    offers.isNotEmpty() -> FateDeck(offers, picked ?: accepted, accepted != null, motion) { code ->
+                        if (accepted == null && !busy) picked = code
+                    }
+
+                    waiting -> CircularProgressIndicator(color = Gold)
+
+                    else -> ForgeButton(onClick = onRetry, kind = ButtonKind.Text, accent = FateInk.GoldLight) { Text(ui("fate.retry")) }
+                }
+            }
+            offers.firstOrNull { it.code == (picked ?: accepted) }?.let { card ->
+                FateScroll(card, Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 10.dp))
+            }
+            FateFooter(motion, offers.isNotEmpty(), picked != null, accepted != null, hint, warning) { refused ->
+                if (refused) hint = true else picked?.let(onChoose)
+            }
+        }
+        FateFlash(accepted != null, motion, onDone = onAccepted)
+        corners()
+    }
+}
+
+/** Заголовок с золотым ореолом и подзаголовок [subtitle]: проявляются снизу вверх (1,2 с), подзаголовок - позже. */
+@Composable private fun FateTitle(motion: Boolean, subtitle: String, modifier: Modifier) {
     val title = remember { Animatable(if (motion) 0f else 1f) }
     val sub = remember { Animatable(if (motion) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -141,7 +168,7 @@ import org.koin.compose.viewmodel.koinViewModel
             },
         )
         Text(
-            ui("fate.subtitle"),
+            subtitle,
             color = Color(0xFFB9BFCC),
             fontSize = 12.sp,
             lineHeight = 17.sp,
@@ -217,8 +244,8 @@ private val FAN = listOf(FanSpot(-1f, 22f, -9f), FanSpot(0f, 0f, 0f), FanSpot(1f
     }
 }
 
-/** Низ экрана: кнопка удержания и предупреждение «навсегда» - проявляются после раздачи. */
-@Composable private fun FateFooter(motion: Boolean, dealt: Boolean, picked: Boolean, accepted: Boolean, hint: Boolean, onHold: (refused: Boolean) -> Unit) {
+/** Низ экрана: кнопка удержания и предупреждение [warning] - проявляются после раздачи. */
+@Composable private fun FateFooter(motion: Boolean, dealt: Boolean, picked: Boolean, accepted: Boolean, hint: Boolean, warning: String, onHold: (refused: Boolean) -> Unit) {
     val shown = remember { Animatable(if (motion) 0f else 1f) }
     LaunchedEffect(dealt) {
         if (!dealt) return@LaunchedEffect
@@ -241,7 +268,7 @@ private val FAN = listOf(FanSpot(-1f, 22f, -9f), FanSpot(0f, 0f, 0f), FanSpot(1f
             hold = Hold(Hold.FATE_MS, HoldTone.Fate),
             onDisabledClick = { onHold(true) },
         ) { Text(label) }
-        Text(ui("fate.warning"), color = FateInk.Warn, fontSize = 11.sp, modifier = Modifier.padding(top = 12.dp))
+        Text(warning, color = FateInk.Warn, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 12.dp))
     }
 }
 

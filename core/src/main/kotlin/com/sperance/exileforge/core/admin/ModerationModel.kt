@@ -11,11 +11,12 @@ import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.GameServer
+import com.sperance.exileforge.core.network.ModerationAccount
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
-import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
+import com.sperance.exileforge.core.network.RenameRequest
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.core.network.TesterAccount
@@ -34,9 +35,15 @@ import kotlinx.coroutines.flow.update
 enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
 
 /**
- * Порядок и отбор списка модерации: [sort] - порядок, [fate] - дар. Новый отбор - поле здесь и строка в [narrowings].
+ * Порядок и отбор списка модерации: [sort] - порядок, [fate] - дар, чипы [deleted] - только герои в корзине и [outdated] - только аккаунты
+ * на версии клиента старее этой сборки. Новый отбор - поле здесь и строка в [narrowings].
  */
-data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY, val fate: ModerationFate = ModerationFate.All) {
+data class ModerationFilters(
+    val sort: ModerationSort = ModerationSort.ACTIVITY,
+    val fate: ModerationFate = ModerationFate.All,
+    val deleted: Boolean = false,
+    val outdated: Boolean = false,
+) {
     /**
      * Не обычные порядок и дар сужениями под строкой поиска, каждое - с отбором без него, подписи - на языке [lang]; их число - на
      * кнопке фильтров. Дар называется по контенту [index], без контента - кодом.
@@ -49,6 +56,8 @@ data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY,
             is ModerationFate.Chosen -> FATE_MARK + (index?.fates?.all?.firstOrNull { it.code == chosen.code }?.let(FateCard::of)?.title ?: chosen.code)
         }
         fateTitle?.let { add(Narrowing(it, copy(fate = DEFAULT.fate))) }
+        if (deleted) add(Narrowing(ui(lang, "moderation.filter.deleted"), copy(deleted = false)))
+        if (outdated) add(Narrowing(ui(lang, "moderation.filter.outdated"), copy(outdated = false)))
     }
 
     companion object {
@@ -70,7 +79,8 @@ data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY,
 }
 
 /**
- * Окно модерации: раздел, поиск, прочитанные страницы строк ([page]) или журнала ([journal]) - строки всех страниц подряд; открытое
+ * Окно модерации: раздел, поиск, прочитанные страницы карточек аккаунтов ([page]; аккаунт со стыка страниц - одной карточкой) или журнала
+ * ([journal]) - строки всех страниц подряд; открытое
  * досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
 data class ModerationState(
@@ -80,7 +90,7 @@ data class ModerationState(
     val searched: String = "",
     /** Порядок списка и отбор по Предначертанию. */
     val filters: ModerationFilters = ModerationFilters.DEFAULT,
-    val page: Page<ModerationRow> = Page(),
+    val page: Page<ModerationAccount> = Page(),
     val journal: Page<ModerationEntryView> = Page(),
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
@@ -135,8 +145,8 @@ class ModerationModel(
     fun load() = commands.read(Reads.MODERATION, restart = true) {
         staff()
         val state = mutable.value
-        val answer = api.rows(state.query, state.segment, 0, state.filters.sort, state.filters.fate)
-        mutable.update { if (it.sameList(state)) it.copy(page = answer.distinctBy(ModerationRow::key), searched = state.query) else it }
+        val answer = rows(state.query, state, 0)
+        mutable.update { if (it.sameList(state)) it.copy(page = answer, searched = state.query) else it }
     }
 
     /**
@@ -146,8 +156,15 @@ class ModerationModel(
     fun more() = commands.read(Reads.MODERATION) {
         val state = mutable.value
         if (!state.page.more) return@read
-        val next = api.rows(state.searched, state.segment, state.page.page + 1, state.filters.sort, state.filters.fate)
-        mutable.update { if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next) { row -> row.key }) else it }
+        val next = rows(state.searched, state, state.page.page + 1)
+        mutable.update {
+            if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.joinedWith(next, ModerationAccount::userId, ModerationAccount::joined)) else it
+        }
+    }
+
+    /** Страница [page] раздела и отбора окна [state] по поиску [query]. */
+    private suspend fun rows(query: String, state: ModerationState, page: Int): Page<ModerationAccount> = state.filters.let { filters ->
+        api.rows(query, state.segment, page, filters.sort, filters.fate, filters.deleted, filters.outdated)
     }
 
     /** Первая страница журнала модерации; новый вызов сменяет идущий. */
@@ -280,6 +297,21 @@ class ModerationModel(
     fun forgetTester() = mutable.update { it.copy(createdTester = null) }
 
     fun delete(request: DeletionRequest) = act { api.delete(request).also { notices.toast(ui("moderation.deleted", it.label)) } }
+
+    /**
+     * Новое имя [name] герою [heroId] досье с причиной [reason] для игрока (он получит письмо): право досье `rights.rename`. Досье и раздел
+     * перечитываются.
+     */
+    fun rename(heroId: String, name: String, reason: String) {
+        val started = commands.task(writing = true) {
+            staff()
+            val now = api.rename(RenameRequest(heroId, name.trim(), reason.trim()))
+            notices.toast(ui("moderation.renamed", now))
+            if (mutable.value.dossierKey != null) reloadDossier()
+            load()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
 
     /**
      * Действие модерации: уходит сразу или падает видимой ошибкой (команда администратора не ждёт сети); после

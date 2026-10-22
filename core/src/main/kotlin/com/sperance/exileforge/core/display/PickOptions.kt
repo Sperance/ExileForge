@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreAttribute
 import com.sperance.exileforge.rules.content.GuildRank
 import com.sperance.exileforge.rules.content.ItemCode
+import com.sperance.exileforge.rules.content.ItemGrant
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -56,8 +57,12 @@ object PickOptions {
         }
     }
 
-    /** Стопки контента по полкам сумки (группа - полка), на полке - по имени: подназвание - действие сферы или оттиска, если есть. */
-    fun items(index: ContentIndex): List<PickOption<String>> = index.items.values
+    /**
+     * Стопки контента по полкам сумки (группа - полка), на полке - по имени: подназвание - действие сферы или оттиска, если есть. Без
+     * [admin] - только то, что выдаёт окно тестирования тестировщику: стопки `grant: ADMIN` выдаёт лишь администратор.
+     */
+    fun items(index: ContentIndex, admin: Boolean = true): List<PickOption<String>> = index.items.values
+        .filter { admin || it.grant != ItemGrant.ADMIN }
         .map { item -> Triple(item, BagCategory.of(item), itemTitle(item.code.value)) }
         .sortedWith(compareBy({ it.second.ordinal }, { it.third }))
         .map { (item, shelf, title) ->

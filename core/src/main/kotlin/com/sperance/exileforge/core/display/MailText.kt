@@ -140,6 +140,7 @@ object MailSchemas {
         SystemMail.AUCTION_SOLD to bidding,
         SystemMail.AUCTION_WON to bidding,
         SystemMail.FATE_REDRAWN to listOf(titled(0) { FateCard(it).title }).let { fate -> MailSchema(fate, fate, reason = 1) },
+        SystemMail.HERO_RENAMED to listOf(arg(0), arg(1)).let { names -> MailSchema(names, names, reason = 2) },
         SystemMail.CONTEST_PRIZE to contest,
         SystemMail.CONTEST_PODIUM to contest,
     )

@@ -63,6 +63,7 @@ fun HeroScreen() {
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
     var bagQuery by remember(heroId) { mutableStateOf("") }
+    var useCode by remember(heroId) { mutableStateOf<String?>(null) }
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
     val list = rememberLazyListState()
     OnReselect(TAB_HERO) {
@@ -159,9 +160,15 @@ fun HeroScreen() {
                     stackCode = null
                     model.openChest(chest)
                 },
+                onUse = { used ->
+                    stackCode = null
+                    useCode = used
+                },
             )
         }
     }
+    useCode?.let { code -> BagUseFlow(game, model, code) { useCode = null } }
+    FateDealHost(game)
     game.holding.chest?.let { opening -> ChestOpenedSheet(game, opening, model::dismissChest) }
     listStack?.let { code ->
         ListingSheet(game, itemTitle(code), owned = game.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, icon = { StackIcon(game, code, 28) }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount, terms ->

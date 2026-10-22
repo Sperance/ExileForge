@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.Rarity
@@ -47,6 +48,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     TrailData(account.heroName, Tip(body = ui("tester.for_hero", account.heroName), tint = Muted))
     if (account.isTester) FreeProgress(account.freeProgress, enabled) { heroModel.freeProgress(it) }
+    if (account.isTester || account.isModerator) OwnFate(account, enabled) { heroModel.redrawOwnFate(it) }
     ForgePanel {
         Engraved(ui("tester.currency"))
         NumberGrant(ui("tester.gold"), "1000000", account.inputs.number, enabled) { heroModel.testerGrant("gold", "amount" to it) }
@@ -60,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
     ForgePanel {
         Engraved(ui("tester.items"))
         var item by remember { mutableStateOf<String?>(null) }
-        val items = remember(index, account.lang) { PickOptions.items(index) }
+        val items = remember(index, account.lang, account.isAdmin) { PickOptions.items(index, admin = account.isAdmin) }
         ForgePicker(ui("tester.item"), item, items, enabled = enabled) { item = it }
         NumberGrant(ui("tester.amount_cap", index.rules.moderation.grantStack), "10", account.inputs.number, enabled && item != null) { amount -> item?.let { heroModel.grantItem(it, amount.toLong()) } }
         NumberGrant(ui("tester.rares"), "5", 2, enabled) { heroModel.testerGrant("rares", "count" to it) }
@@ -130,6 +132,26 @@ import org.koin.compose.viewmodel.koinViewModel
                 Text(ui("tester.free_progress_hint"), color = Muted, style = MaterialTheme.typography.labelSmall)
             }
             Switch(checked = on, enabled = enabled, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = Elder))
+        }
+    }
+}
+
+/**
+ * Своё Предначертание - модератору и аккаунту с героем-тестировщиком: нынешний дар и «Сменить» - лист всех даров ([FateRedrawSheet]),
+ * без причины и письма; счётчики дара у героев начнутся с нуля.
+ */
+@Composable private fun OwnFate(account: AccountUi, enabled: Boolean, onRedraw: (String) -> Unit) {
+    var redrawing by remember { mutableStateOf(false) }
+    val current = account.session.profile?.fate
+    ForgePanel {
+        Engraved(ui("tester.fate"))
+        Text(current?.let { FateCard(it).title } ?: ui("tester.fate_none"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+        GrantButton(ui("moderation.fate.change"), enabled) { redrawing = true }
+    }
+    if (redrawing) {
+        FateRedrawSheet(account, current, other = null, onDismiss = { redrawing = false }) { code, _ ->
+            redrawing = false
+            onRedraw(code)
         }
     }
 }

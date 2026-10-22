@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.display.shardsText
 import com.sperance.exileforge.core.display.withShards
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.BagUse
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.session.Buzzes
@@ -152,6 +153,11 @@ class HeroActions(
 
     /** Сундук с добычей вскрыт: добыча на экране, пока её не закрыли. */
     fun openChest(code: String) = heroCommand { id -> heroes.chest(api.hero.openChest(id, code)) }
+
+    /** «Лист Угнетения» [code]: новое имя [name] текущему герою - прежнее свободно сразу; список героев перечитывается. */
+    fun renameHero(code: String, name: String) = heroCommand(setOf(Reads.HERO, Reads.CHARACTERS)) { id ->
+        api.hero.useBag(id, BagUse(code, name = name.trim())).name?.let { notices.toast(ui("bag.renamed", it)) }
+    }
     fun dismissChest() = heroes.chest(null)
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) }
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
@@ -222,8 +228,8 @@ class HeroActions(
     /** Сколько осколков склеиваются в сферу - для строки осколков в тосте. */
     private val perOrb: Int get() = world.state.value.content.shardsPerOrb
 
-    /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. */
-    private fun heroCommand(block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
+    /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. [touches] - что она меняет, кроме героя. */
+    private fun heroCommand(touches: Set<String> = setOf(Reads.HERO), block: suspend (String) -> Unit) = commands.task(writing = true, touches = touches) {
         val id = heroes.heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
         val session = sessions.state.value

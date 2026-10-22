@@ -210,7 +210,8 @@ private val GAP = 6.dp
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  *
  * [onRead] - книга умения класса читается сразу, [onEssence] - эссенция в кузню, [onOpenChest] - сундук-добыча открывается на месте,
- * [onSeal] - печать Атласа в раздел печатей кузни. Сундук можно и выставить на аукцион, торговцу - нет.
+ * [onSeal] - печать Атласа в раздел печатей кузни, [onUse] - «Использовать» стопки с действием контента ([BagUseFlow]). Сундук можно и
+ * выставить на аукцион, торговцу - нет.
  */
 @Composable fun BagSheet(
     game: GameUi,
@@ -222,6 +223,7 @@ private val GAP = 6.dp
     onEssence: (String) -> Unit = {},
     onOpenChest: (String) -> Unit = {},
     onSeal: (String) -> Unit = {},
+    onUse: (String) -> Unit = {},
 ) {
     val code = stack.code
     val uses = StackUses.of(game.index, code, game.hero?.heroClass)
@@ -240,6 +242,7 @@ private val GAP = 6.dp
                 RowButton(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"), onClick = { onRead(skill.code) }, state = idle)
             }
             if (StackUse.CHEST in uses) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
+            if (StackUse.USE in uses) RowButton(ui("bag.use"), onClick = { onUse(code) }, state = idle)
         }
     }
 }

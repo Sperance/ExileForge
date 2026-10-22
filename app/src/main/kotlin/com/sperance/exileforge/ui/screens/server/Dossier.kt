@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
@@ -42,6 +43,7 @@ import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -50,8 +52,9 @@ import java.time.format.DateTimeFormatter
  * Досье как страница настроек: шапка в две строки, строки «Роль ›», «Сервер ›» и переключатель «Тестировщик» - значение роли и сервера
  * печатается только в своей строке; одна панель «ключ — значение» в две колонки, свёрнутые строки Экономика, Связи, История и
  * Предначертание с итогом справа и красный блок опасных действий внизу - у каждого строка последствий. Своё досье администратора -
- * «Сменить» в Предначертании: лист всех даров. Досье - уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]): своей
- * стрелки у него нет.
+ * «Сменить» в Предначертании: лист всех даров. В шапке - «✉ Написать» (письмо игроку от Администрации, право `rights.mail`), строка «Имя ›»
+ * меняет имя героя с причиной для игрока (`rights.rename`). Досье - уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]):
+ * своей стрелки у него нет.
  */
 @Composable internal fun DossierView(account: AccountUi, vm: ModerationModel, dossier: Dossier?) {
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
@@ -62,7 +65,8 @@ import java.time.format.DateTimeFormatter
         return
     }
     val state by vm.state.collectAsStateWithLifecycle()
-    DossierHeader(account, dossier)
+    val cards = koinViewModel<PlayerCardViewModel>().model
+    DossierHeader(account, dossier, onMail = { cards.writeAdmin(dossier.account.userId, dossier.account.login, dossier.hero?.name.orEmpty()) }.takeIf { dossier.rights.mail && !vm.owns(dossier.account.userId) })
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
             sanctionLine(active),
@@ -95,8 +99,11 @@ import java.time.format.DateTimeFormatter
     }
 }
 
-/** Шапка досье: портрет 40dp, «Имя · класс уровень», ниже «логин · ✦ дар»; роль и сервер - в своих строках под шапкой. */
-@Composable private fun DossierHeader(account: AccountUi, dossier: Dossier) {
+/**
+ * Шапка досье: портрет 40dp, «Имя · класс уровень», ниже «логин · ✦ дар» и бывшие имена героя; справа - «✉ Написать» ([onMail], null - нельзя);
+ * роль и сервер - в своих строках под шапкой.
+ */
+@Composable private fun DossierHeader(account: AccountUi, dossier: Dossier, onMail: (() -> Unit)?) {
     val hero = dossier.hero
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         ClassPortrait(hero?.heroClass, account.world.portraits, Modifier.size(40.dp))
@@ -109,7 +116,9 @@ import java.time.format.DateTimeFormatter
                 MutedText(dossier.account.login, style = MaterialTheme.typography.labelSmall)
                 dossier.account.fate?.let { FateMark(FateCard(it)) }
             }
+            hero?.formerNames?.takeIf { it.isNotEmpty() }?.let { MutedText(ui("dossier.former_names", it.joinToString()), style = MaterialTheme.typography.labelSmall) }
         }
+        onMail?.let { ForgeButton(onClick = it, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(!account.busy), icon = Icons.Outlined.Mail) { Text(ui("dossier.write")) } }
     }
 }
 
@@ -268,9 +277,9 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 }
 
 /**
- * Строки досье «имя — значение ›»: роль аккаунта (меняет администратор; администратора не меняет никто), сервер героя (администратор:
- * лист серверов с переносом удержанием) и переключатель тестировщика (администратор и модератор). Нельзя менять - строка без «›» и
- * не нажимается; у аккаунта без героя - только роль.
+ * Строки досье «имя — значение ›»: роль аккаунта (меняет администратор; администратора не меняет никто), имя героя (лист нового имени с
+ * причиной для игрока - право `rights.rename`), сервер героя (администратор: лист серверов с переносом удержанием) и переключатель
+ * тестировщика (администратор и модератор). Нельзя менять - строка без «›» и не нажимается; у аккаунта без героя - только роль.
  */
 @Composable private fun SettingRows(account: AccountUi, vm: ModerationModel, dossier: Dossier, servers: List<GameServer>) {
     val hero = dossier.hero
@@ -279,6 +288,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
     if (server) LaunchedEffect(Unit) { vm.loadServers() }
     var picking by remember { mutableStateOf(false) }
     var moving by remember(hero?.heroId) { mutableStateOf(false) }
+    var renaming by remember(hero?.heroId) { mutableStateOf(false) }
     val shape = RoundedCornerShape(10.dp)
     Column(Modifier.fillMaxWidth().clip(shape).border(1.dp, Bronze, shape)) {
         Box {
@@ -294,6 +304,8 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
         }
         if (hero != null) {
             HorizontalDivider(color = Bronze)
+            SettingRow(ui("dossier.name"), hero.name, enabled = dossier.rights.rename && !account.busy) { renaming = true }
+            HorizontalDivider(color = Bronze)
             SettingRow(ui("dossier.server"), vm.serverName(hero.server), enabled = server && !account.busy) { moving = true }
             HorizontalDivider(color = Bronze)
             Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -306,6 +318,12 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
                     modifier = Modifier.height(24.dp),
                 )
             }
+        }
+    }
+    if (renaming && hero != null) {
+        HeroNameSheet(ui("rename.title_for", hero.name), hero.name, account.inputs, account.busy, onDismiss = { renaming = false }, reasonLabel = ui("rename.reason")) { name, reason ->
+            renaming = false
+            vm.rename(hero.heroId, name, reason)
         }
     }
     if (moving && hero != null) {
@@ -450,7 +468,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
  * сменить» - нынешний дар выбрать нельзя. Счётчики дара у героев начнутся с нуля, начатый заход доиграет со старым. Чужому
  * аккаунту [other] (логин; null - свой) - ещё обязательная причина для игрока: без неё кнопка неактивна, игрок получит её письмом.
  */
-@Composable private fun FateRedrawSheet(account: AccountUi, current: String?, other: String?, onDismiss: () -> Unit, onPick: (String, String) -> Unit) {
+@Composable internal fun FateRedrawSheet(account: AccountUi, current: String?, other: String?, onDismiss: () -> Unit, onPick: (String, String) -> Unit) {
     val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
     var picked by remember { mutableStateOf(current) }
     var reason by remember { mutableStateOf("") }

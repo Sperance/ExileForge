@@ -32,6 +32,7 @@ import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.RiftActions
 import com.sperance.exileforge.core.expedition.RunLastFight
 import com.sperance.exileforge.core.expedition.TrialActions
+import com.sperance.exileforge.core.fate.FateRedraws
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.feedback.LastFight
@@ -166,6 +167,7 @@ val appModule = module {
     single { Haptics(androidContext()) }
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
+    singleOf(::FateRedraws)
     single { ExpeditionRepository() }
     single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), lazy { get<HeroActions>() }, get(), get(named(APP_SCOPE))) }
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }

@@ -197,11 +197,14 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
 }
 
 /**
- * Что фильтр предметов спрашивает о герое на экране: [heroName] - для «сделано мной», [heroLevel] - для «Около моего» вилки уровня,
+ * Что фильтр предметов спрашивает о герое на экране: [heroId] и [heroName] - для «сделано мной» (мастер вещи - по id, у прежних вещей
+ * без id - по имени, `Maker.madeBy`), [heroLevel] - для «Около моего» вилки уровня,
  * [unmet] - чего копии не хватает до «могу надеть», [better] - улучшит ли вещь героя на своём месте («лучше надетого»,
  * [GearVerdict.better][com.sperance.exileforge.core.character.GearVerdict.better]).
  */
 interface ItemJudge {
+    val heroId: String
+
     val heroName: String
 
     val heroLevel: Int
@@ -213,7 +216,7 @@ interface ItemJudge {
 
 /**
  * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), вилка уровня предмета ([level]), качество,
- * характеристика строки ([mod], null - любая: «по моду»), «сделано мной» (поле `maker` копии - имя героя), «сделано ремеслом» (метка
+ * характеристика строки ([mod], null - любая: «по моду»), «сделано мной» (поле `maker` копии - id и имя мастера), «сделано ремеслом» (метка
  * происхождения копии `origin` с сервера), «могу надеть», «лучше надетого» ([better]), «скрыть надетое» и порядок. Хранится на
  * устройстве для своего списка ([ItemShelf]), у новых граней - значения по умолчанию, так что сохранённый раньше фильтр читается.
  * Поиск строки - отдельно ([ItemQuery]): он не запоминается.
@@ -275,7 +278,7 @@ data class ItemFilter(
             (!on(FilterFacet.LEVEL) || level.admits(piece.level)) &&
             (!on(FilterFacet.QUALITY) || quality.admits(piece)) &&
             (!on(FilterFacet.MOD) || mod == null || piece.hasModStat(mod)) &&
-            (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == judge.heroName) &&
+            (!on(FilterFacet.MINE) || !mine || piece.item.maker?.madeBy(judge.heroId, judge.heroName) == true) &&
             (!on(FilterFacet.CRAFTED) || !crafted || piece.item.origin != null) &&
             (!on(FilterFacet.WEARABLE) || !wearable || judge.unmet(piece.item).isEmpty()) &&
             !hides(piece, shelf) &&
@@ -321,12 +324,14 @@ fun railGroups(pieces: List<ItemView>): List<Pair<SlotGroup, Int>> {
 }
 
 /**
- * Герой на экране глазами фильтра предметов - снимок героя и контента сейчас: «сделано мной» - по его имени, «могу надеть» - по
+ * Герой на экране глазами фильтра предметов - снимок героя и контента сейчас: «сделано мной» - по его id и имени, «могу надеть» - по
  * его листу, «лучше надетого» - по вердикту вещи ([gearVerdict]) на её лучшем месте. Меряет вещи и вне главного потока.
  */
 val GameUi.itemJudge: ItemJudge get() {
     val game = this
     return object : ItemJudge {
+        override val heroId: String = game.heroId
+
         override val heroName: String = game.hero?.info?.name.orEmpty()
 
         override val heroLevel: Int = game.heroLevel

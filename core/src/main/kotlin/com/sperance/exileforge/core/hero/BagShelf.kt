@@ -24,14 +24,15 @@ import kotlinx.serialization.encoding.Encoder
 /** Стопка сумки: код предмета [code] и сколько их у героя [amount]. */
 data class BagStack(val code: String, val amount: Long)
 
-/** Что стопка сумки делает из своего листа: в кузницу (сфера, эссенция, оттиск), прочитать книгу, открыть сундук. */
-enum class StackUse { ORB, ESSENCE, SEAL, BOOK, CHEST }
+/** Что стопка сумки делает из своего листа: в кузницу (сфера, эссенция, оттиск), прочитать книгу, открыть сундук, «Использовать» ([USE]). */
+enum class StackUse { ORB, ESSENCE, SEAL, BOOK, CHEST, USE }
 
 /** Действия стопки - одни для кнопок листа стопки и фильтра сумки «Можно применить». */
 object StackUses {
     /**
      * Что делает стопка [code] у героя класса [heroClass]: сфера, что ложится на вещь (Сожаление - на древо, не в кузницу),
-     * эссенция и оттиск - в кузницу, книга умения своего класса или общего - читается, сундук-добыча - открывается.
+     * эссенция и оттиск - в кузницу, книга умения своего класса или общего - читается, сундук-добыча - открывается, стопка с действием
+     * контента (`items.json` → `use`: «Лист Угнетения», «Колода Рока») - используется.
      */
     fun of(index: ContentIndex?, code: String, heroClass: String?): Set<StackUse> = buildSet {
         val orb = Orb.of(code)
@@ -41,6 +42,7 @@ object StackUses {
         if (index.seal(code) != null) add(StackUse.SEAL)
         if (heroClass != null && index.skills.byBook(code)?.fits(heroClass) == true) add(StackUse.BOOK)
         if (index.item(ItemCode(code))?.category == Item.CHEST) add(StackUse.CHEST)
+        if (index.item(ItemCode(code))?.use != null) add(StackUse.USE)
     }
 }
 

@@ -18,9 +18,10 @@ fun interface CrashTraces {
 class BugEvidence(private val slice: GameSlice, private val connection: ServerConnection, private val crashes: CrashTraces, private val fights: LastFight) {
     /** Отчёт [report] с приложенным на этот миг. */
     suspend fun attach(report: BugReportRequest): BugReportRequest {
-        val rules = slice.ui.value.index?.rules?.feedback
+        val index = slice.ui.value.index
+        val rules = index?.rules?.feedback
         val evidence = if (report.kind == FeedbackKind.BUG) {
-            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet().orEmpty(), fight = fights.report()?.let(FightDigest::of).orEmpty())
+            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet(index).orEmpty(), fight = fights.report()?.let(FightDigest::of).orEmpty())
         } else {
             report
         }

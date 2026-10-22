@@ -51,6 +51,8 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalBuzzes
+import com.sperance.exileforge.ui.components.LootCellSize
+import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Bronze
@@ -157,7 +159,7 @@ private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Bo
         }
         if (reward.items.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                reward.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackChip(game, code, amount) { onStack(code) } }
+                reward.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize) { onStack(code) } }
             }
         }
     }

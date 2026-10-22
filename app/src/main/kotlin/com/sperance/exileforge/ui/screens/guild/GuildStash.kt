@@ -64,6 +64,7 @@ import com.sperance.exileforge.core.model.guild.GuildStashEntry
 import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DepositBar
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
@@ -104,6 +105,7 @@ import com.sperance.exileforge.ui.components.RarityChoice
 import com.sperance.exileforge.ui.components.SearchBar
 import com.sperance.exileforge.ui.components.SearchFilter
 import com.sperance.exileforge.ui.components.SheetBody
+import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -111,7 +113,6 @@ import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.components.rememberItemShelf
 import com.sperance.exileforge.ui.components.rememberPick
 import com.sperance.exileforge.ui.components.shortText
-import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
 import com.sperance.exileforge.ui.screens.auction.TradeRow
@@ -304,12 +305,12 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
         ItemTradeRow(view, enabled = true, unmet = game.unmetFor(view.code), extra = by, onClick = open, price = tag)
     } else {
         TradeRow(
-            "${itemTitle(entry.code)} × ${entry.amount}",
+            itemTitle(entry.code),
             Parchment,
             by,
             enabled = true,
             onClick = open,
-            icon = { BagIcon(entry.code, Modifier.size(28.dp)) },
+            icon = { StackCell(index, entry.code, entry.amount, size = 44.dp) },
             price = tag,
         )
     }
@@ -393,7 +394,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                             lot.bar?.let { BarReason(it) }
                         }
                     } else {
-                        StackLine(lot, typed[lot.code], Modifier.weight(1f), onClick = { if (lot.bar == null) pick.toggle(lot.id) else inspect(Inspect.Stack(lot.code)) }) {
+                        StackLine(game.index, lot, typed[lot.code], Modifier.weight(1f), onClick = { if (lot.bar == null) pick.toggle(lot.id) else inspect(Inspect.Stack(lot.code)) }) {
                             if (lot.bar == null) {
                                 editing = lot.code
                                 if (!pick.chosen(lot.id)) pick.toggle(lot.id)
@@ -433,13 +434,13 @@ private const val AMOUNT_DIGITS = 12
 /** Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по набранному [typed]) и причина запрета; удержание - [onHold]. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun StackLine(lot: DepositLot, typed: String?, modifier: Modifier, onClick: () -> Unit, onHold: () -> Unit) {
+private fun StackLine(index: ContentIndex?, lot: DepositLot, typed: String?, modifier: Modifier, onClick: () -> Unit, onHold: () -> Unit) {
     Row(
         modifier.heightIn(min = 48.dp).combinedClickable(onLongClick = onHold, onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        BagIcon(lot.code, Modifier.size(32.dp))
+        StackCell(index, lot.code, 1, size = 40.dp)
         Column(Modifier.weight(1f)) {
             Text(itemTitle(lot.code), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             lot.bar?.let { BarReason(it) }

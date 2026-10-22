@@ -1,7 +1,5 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +13,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.BagCategory
@@ -52,6 +49,8 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.components.RowActions
 import com.sperance.exileforge.ui.components.RowButton
+import com.sperance.exileforge.ui.components.StackCell
+import com.sperance.exileforge.ui.components.StackCellSize
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.skills.SkillPeek
 import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
@@ -78,8 +77,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
 }
 
 /**
- * The bag as a table: a heading per category and under it square cells — the stack's icon
- * and its count in the corner — as many to a row as fit [CELL]. The name, the rule and the ways on
+ * The bag as a table: a heading per category and under it the stack cells ([StackCell]) - as many to a row as fit [CELL]. The name, the rule and the ways on
  * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code.
  */
 @Composable fun BagGrid(game: GameUi, sections: List<Pair<BagCategory, List<BagStack>>>, onOpen: (String) -> Unit) {
@@ -91,8 +89,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
                     MutedText(ui(category.key), style = MaterialTheme.typography.labelMedium)
                     stacks.chunked(columns).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                            row.forEach { stack -> BagCell(game, stack, Modifier.weight(1f)) { onOpen(stack.code) } }
-                            repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                            row.forEach { stack -> StackCell(game.index, stack.code, stack.amount, size = CELL) { onOpen(stack.code) } }
                         }
                     }
                 }
@@ -101,51 +98,16 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
     }
 }
 
-private val CELL = 60.dp
+private val CELL = StackCellSize
 private val GAP = 6.dp
 
-/** One cell of the bag: the stack's icon in a panel square, its count in the bottom corner. */
-@Composable private fun BagCell(game: GameUi, stack: BagStack, modifier: Modifier, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(6.dp)
-    val title = itemTitle(stack.code)
-    Box(
-        modifier.aspectRatio(1f).depthPanel(shape)
-            .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        StackIcon(game, stack.code, 36)
-        Text(
-            compactCount(stack.amount),
-            color = GoldBright,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 4.dp, vertical = 2.dp),
-        )
-    }
-}
-
-/** A count that fits a cell's corner: 12 345 is «12k», a million and more «1.2M». */
-internal fun compactCount(amount: Long): String = when {
-    amount >= 1_000_000 -> String.format(java.util.Locale.ROOT, "%.1fM", amount / 1_000_000.0).replace(".0M", "M")
-    amount >= 10_000 -> "${amount / 1_000}k"
-    else -> amount.toString()
-}
-
 /**
- * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon.
- * An orb is its stained glass; anything else is the server's sprite when the set has one,
- * the bundled glyph of its category otherwise — muted for a code the content does not know.
+ * Значок стопки без рамки, как в её ячейке ([StackCell]): стекло сервера, а без него - знак её категории (тусклый у кода, которого
+ * контент не знает).
  */
 @Composable internal fun StackIcon(game: GameUi, code: String, size: Int) {
-    if (Orb.of(code) != null) {
-        BagIcon(code, Modifier.size(size.dp))
-        return
-    }
-    val frame = RoundedCornerShape(6.dp)
     val known = game.index?.item(ItemCode(code))
-    Box(Modifier.size(size.dp).background(Gold.copy(alpha = .08f), frame).border(1.dp, Gold.copy(alpha = .55f), frame), contentAlignment = Alignment.Center) {
-        BagIcon(code, Modifier.size((size * .55f).dp), tint = if (known != null) Gold else Muted, kind = known?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
-    }
+    BagIcon(code, Modifier.size(size.dp), tint = if (known != null) Gold else Muted, kind = known?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
 }
 
 /**

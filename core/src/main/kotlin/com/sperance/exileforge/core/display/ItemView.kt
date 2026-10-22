@@ -37,10 +37,12 @@ import kotlin.math.round
  * C верстак, F расколотая, U уникальная, и свои буквы игры: H ручная работа кузнеца, V порча, A алхимия карты, X строка особой
  * эссенции, N строка пула влияния.
  *
- * Порядок записей - порядок строк на карточке, в плитке и строках списков ([ItemView.lineGroups]). [special] - особый источник:
- * полная карточка кладёт его строки плашками особого блока над основными.
+ * Порядок записей - порядок строк на карточке, в плитке и строках списков ([ItemView.lineGroups]): строка влияния - всегда первой, над
+ * всеми модификаторами. [special] - особый источник: полная карточка кладёт его строки плашками особого блока над основными, строку
+ * влияния - своей печатью над всеми.
  */
 enum class AffixKind(val letter: Char, val special: Boolean) {
+    INFLUENCE('N', true),
     IMPLICIT('I', false),
     CORRUPTION('V', true),
     FRACTURED('F', true),
@@ -48,23 +50,17 @@ enum class AffixKind(val letter: Char, val special: Boolean) {
     HANDCRAFTED('H', true),
     ALCHEMY('A', true),
     CRAFTED('C', true),
-    INFLUENCE('N', true),
     UNIQUE('U', false),
     PREFIX('P', false),
     SUFFIX('S', false),
     ;
 
     companion object {
-        /**
-         * Расколотость и верстак сильнее места строки: они решают, что сфера может с ней сделать; строка пула влияния [influenced] -
-         * своего вида, место аффикса она всё равно занимает.
-         */
-        fun of(source: Source?, crafted: Boolean, fractured: Boolean, influenced: Boolean = false): AffixKind? = when {
+        /** Расколотость и верстак сильнее места строки: они решают, что сфера может с ней сделать. */
+        fun of(source: Source?, crafted: Boolean, fractured: Boolean): AffixKind? = when {
             fractured -> FRACTURED
 
             crafted -> CRAFTED
-
-            influenced -> INFLUENCE
 
             else -> when (source) {
                 Source.PREFIX -> PREFIX
@@ -75,6 +71,7 @@ enum class AffixKind(val letter: Char, val special: Boolean) {
                 Source.ALCHEMY -> ALCHEMY
                 Source.UNIQUE -> UNIQUE
                 Source.ESSENCE -> ESSENCE
+                Source.INFLUENCE -> INFLUENCE
                 Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, Source.ALTAR, Source.LAW, null -> null
             }
         }
@@ -112,7 +109,7 @@ data class AffixMarks(
 
     companion object {
         fun of(def: ModifierDef?, roll: Roll): AffixMarks {
-            val kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured, def?.influence != null)
+            val kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured)
             return AffixMarks(
                 tier = roll.tier,
                 crafted = def?.crafted == true,
@@ -165,6 +162,19 @@ data class ItemLine(
     /** The tier's every range is a single number: there is nowhere inside it to land. */
     val fixed: Boolean get() = definition?.tier(roll.tier)?.values?.all { it[1] <= it[0] } == true
 
+    /**
+     * Шкала вилки строки: первая вилка тира с разбросом - её края числами и место ролла (доля); null - строке некуда было выпасть
+     * (без тира или все вилки - одно число). Карточка уникалки ставит по ней точку числа на его вилку.
+     */
+    val scale: LineScale? get() {
+        val def = definition ?: return null
+        val tier = def.tier(roll.tier) ?: return null
+        val at = tier.values.indexOfFirst { it.size == 2 && it[1] > it[0] }.takeIf { it >= 0 } ?: return null
+        val stat = def.effectOf(at)?.stat.orEmpty()
+        val (low, high) = tier.values[at]
+        return LineScale(modNumber(stat, low), modNumber(stat, high), roll.share.coerceIn(0.0, 1.0))
+    }
+
     /** The tier's ranges as the card prints them: "70–79", a fixed one as its single number, effects split by " / ". */
     val range: String? get() = definition?.let { def -> def.tier(roll.tier)?.let { rangeText(def, it) } }
 
@@ -179,6 +189,12 @@ data class ItemLine(
 
     /** The characteristics the line moves, each once, in its effects' order. */
     val stats: List<String> get() = definition?.effects?.map { it.stat }?.distinct().orEmpty()
+}
+
+/** Вилка строки на шкале: края [low] и [high] числами, место ролла [share] - 0 низ вилки, 1 верх. */
+data class LineScale(val low: String, val high: String, val share: Double) {
+    /** Место ролла в процентах, как его печатает метка качества. */
+    val percent: Int get() = Math.round(share * 100).toInt()
 }
 
 /** What the head of a card reads before any line: how well the item rolled on average and its best tier. */
@@ -205,7 +221,7 @@ data class BaseProperty(val code: String, val template: String, val values: List
  * card, a row or a tooltip prints is derived here once, so no screen reads a roll on its own.
  * [ranged] - витрина шаблона ([showcase]): строка печатает вилку своего тира, а не выпавшее число.
  */
-class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, private val ranged: Boolean = false) {
+class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, val ranged: Boolean = false) {
     val id: String get() = item.id
     val code: String get() = template.code
     val rarity: Rarity get() = item.rarity
@@ -280,6 +296,12 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     /** The lines that hold affix places (prefixes and suffixes, the bench's among them). */
     val affixes: List<ItemLine> get() = lines.filter { it.affix }
+
+    /** Строка влияния копии - на своём месте сверх аффиксов; null - места влияния нет или оно пусто (пустое не печатается). */
+    val influenceLine: ItemLine? get() = lines.firstOrNull { it.marks.kind == AffixKind.INFLUENCE }
+
+    /** Места влияния: занято и всего (`influence.slots` правил); null - строки влияния нет. */
+    val influenceSlots: Pair<Int, Int>? get() = lines.count { it.marks.kind == AffixKind.INFLUENCE }.takeIf { it > 0 }?.let { it to index.rules.influence.slots }
 
     /**
      * The base of the item with every local line and its quality folded into it, by the rules' own fold — the
@@ -464,8 +486,12 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
     if (from == to) from else "$from–$to"
 }.joinToString(" / ").ifBlank { null }
 
-/** Стороны аффиксов одной строкой: «Преф. 2/3 · Суф. 1/3». */
-fun sidesText(sides: AffixSides): String = ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit)
+/** Стороны аффиксов одной строкой: «Преф. 2/3 · Суф. 1/3», с занятым местом влияния [influence] - ещё « · Влияние 1/1». */
+fun sidesText(sides: AffixSides, influence: Pair<Int, Int>? = null): String =
+    listOfNotNull(ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit), influence?.let(::influenceSlotText)).joinToString(" · ")
+
+/** Место влияния словами: «Влияние 1/1» - занято из всех. */
+fun influenceSlotText(slots: Pair<Int, Int>): String = ui("card.influence_slot", slots.first, slots.second)
 
 /** Строка верстака как фраза, что она добавит, с вилкой тира, куда ляжет ролл: «+(70–79) к максимуму здоровья». */
 fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)

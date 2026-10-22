@@ -49,12 +49,7 @@ import com.sperance.exileforge.ui.theme.Parchment
  */
 @Composable fun GoldCost(bill: GoldBill, modifier: Modifier = Modifier, purse: Boolean = true) {
     val shape = RoundedCornerShape(50)
-    val shortened = fullIfShortened(bill.price) != null || (purse && fullIfShortened(bill.have) != null)
-    val tip = if (shortened) {
-        { Tip(facts = listOfNotNull(ui("confirm.spend") to groupedNumber(bill.price), (ui("gold.have") to groupedNumber(bill.have)).takeIf { purse })) }
-    } else {
-        null
-    }
+    val tip = fullNumbersTip(listOfNotNull(ui("confirm.spend") to bill.price, (ui("gold.have") to bill.have).takeIf { purse }))
     Tipped(tip, modifier) {
         Row(
             Modifier.background(Abyss, shape).border(1.dp, Bronze, shape).padding(horizontal = 8.dp, vertical = 3.dp)

@@ -30,6 +30,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.sperance.exileforge.core.display.fullIfShortened
+import com.sperance.exileforge.core.display.groupedNumber
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -62,11 +64,19 @@ data class Tip(val title: String? = null, val body: String = "", val tint: Color
 
 /**
  * Короткое число [value] ([com.sperance.exileforge.core.display.compactNumber]) в [content]: касание открывает подсказку с полным
- * числом, если короткая запись его сократила ([fullIfShortened]); несокращённое не нажимается.
+ * числом под подписью [label] ([fullNumbersTip]); несокращённое не нажимается.
  */
-@Composable fun FullNumberTipped(value: Long, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    val full = fullIfShortened(value)
-    Tipped(full?.let { { Tip(body = it) } }, modifier, content = content)
+@Composable fun FullNumberTipped(value: Long, modifier: Modifier = Modifier, label: String = ui("number.full"), content: @Composable BoxScope.() -> Unit) {
+    Tipped(fullNumbersTip(listOf(label to value)), modifier, content = content)
+}
+
+/**
+ * Подсказка полных чисел коротких записей - одна для всех мест с коротким числом: строки «подпись - полное число» [facts], если хоть одно
+ * число сокращено ([fullIfShortened]); ничего не сокращено - null, место не нажимается.
+ */
+fun fullNumbersTip(facts: List<Pair<String, Long>>): (() -> Tip)? {
+    if (facts.none { fullIfShortened(it.second) != null }) return null
+    return { Tip(facts = facts.map { (label, value) -> label to groupedNumber(value) }) }
 }
 
 /**

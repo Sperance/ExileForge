@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.ui
-import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.roundToLong
 
 /**
@@ -11,27 +11,23 @@ import kotlin.math.roundToLong
  * (`number.decimal`): «1,5кк»; дробь отбрасывается, а не округляется вверх - короткое число не больше полного. Полное число
  * сокращённого - [fullIfShortened].
  */
-fun compactNumber(value: Double): String {
-    val size = abs(value).roundToLong()
-    if (size < SHORT_FROM) return groupedNumber(value.roundToLong())
+fun compactNumber(value: Long): String {
+    if (!shortened(value)) return groupedNumber(value)
+    val size = if (value == Long.MIN_VALUE) Long.MAX_VALUE else value.absoluteValue
     val step = NumberStep.of(size)
     val tenths = size / (step.unit / 10)
-    val figure = if (tenths < 100) {
-        (tenths / 10).toString() + if (tenths % 10 == 0L) "" else ui("number.decimal") + tenths % 10
-    } else {
-        (tenths / 10).toString()
-    }
+    val figure = (tenths / 10).toString() + if (tenths < 100 && tenths % 10 != 0L) ui("number.decimal") + tenths % 10 else ""
     return (if (value < 0) "-" else "") + ui(step.key, figure)
 }
 
-/** Короткое число целого [value] - [compactNumber]. */
-fun compactNumber(value: Long): String = compactNumber(value.toDouble())
+/** Короткое число дробного [value]: округлено до целого - [compactNumber]. */
+fun compactNumber(value: Double): String = compactNumber(value.roundToLong())
 
 /** Полное число с разрядами («1 520 340»), если [compactNumber] его сократил; не сокращено - null: подсказке нечего добавить. */
-fun fullIfShortened(value: Double): String? = value.roundToLong().takeIf { abs(it) >= SHORT_FROM }?.let(::groupedNumber)
+fun fullIfShortened(value: Long): String? = if (shortened(value)) groupedNumber(value) else null
 
-/** Полное число целого [value], если оно сокращено, - [fullIfShortened]. */
-fun fullIfShortened(value: Long): String? = fullIfShortened(value.toDouble())
+/** Сокращает ли [compactNumber] число [value]. */
+private fun shortened(value: Long): Boolean = value <= -SHORT_FROM || value >= SHORT_FROM
 
 /** Ступень короткого числа: единица [unit] и ключ словаря [key] с суффиксом; от большей к меньшей. */
 private enum class NumberStep(val unit: Long, val key: String) {

@@ -110,7 +110,7 @@ fun MightStanding.tint(): Color = when (this) {
 
 /**
  * Разбор Мощи героя: «⚜ Мощь» и число целиком, одна короткая строка, что это за число, и одной строкой натиск и стойкость
- * своими цветами: «⚔ Натиск 150к · 🛡 Стойкость 40k».
+ * своими цветами: «⚔ Натиск 150к · 🛡 Стойкость 40 000».
  */
 @Composable private fun ColumnScope.MightBreakdown(reading: MightReading) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

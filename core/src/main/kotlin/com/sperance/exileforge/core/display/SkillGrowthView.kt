@@ -64,7 +64,7 @@ data class SkillGrowthView(
                 boostedCap = index.skills.rules.boostedMaxLevel,
                 boostedTier = progress.boostedTier,
                 waiting = level > 0 && growth.waiting(skills, skill, heroLevel, stats),
-                bookXp = progress.bookShare * (growth.toNext(level) ?: 0.0),
+                bookXp = growth.bookExperience(level),
                 tier = tier,
                 owned = skills.tier(skill.code),
                 sockets = sockets,

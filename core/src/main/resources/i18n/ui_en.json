@@ -223,6 +223,8 @@
   "auction.bid_label": "bid",
   "auction.first_bid": "starting bid",
   "auction.buyout_label": "buyout",
+  "auction.buyout_grows": "Buyout grows with the bid",
+  "auction.buyout_after": "After this bid the buyout becomes {0}",
   "auction.bids_count": "bids: {0}",
   "auction.no_bids": "no bids",
   "auction.you_lead": "you lead",

@@ -113,7 +113,8 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Строка торгов (вариант A), как [TradeRow], из готовых данных: плита товара - значок вида [visual], имя цветом редкости, факты [facts] и
  * пометки (ставок N, «вы лидер» / «ставку перебили»), срок к «сейчас» [now] (часы сервера); справа колонка - ставка крупно (без ставок -
- * первая ставка) и выкуп под ней; снизу полоса оставшегося срока, в последние часы хвоста ставки - красная. Лидер и перебитая ставка -
+ * первая ставка) и выкуп под ней, у торгов с растущим выкупом - строка «Выкуп растёт со ставкой» ([buyoutGrows]); снизу полоса
+ * оставшегося срока, в последние часы хвоста ставки - красная. Лидер и перебитая ставка -
  * цветной кромкой слева: зелёной и красной. [due] - дело строки ([MarketDue]): жёлтая точка у пометки «ставку перебили» или «можно продать».
  */
 @Composable internal fun BidRow(lot: AuctionLot, facts: List<String>, visual: ItemVisualKind, rules: AuctionRules?, now: Long, enabled: Boolean, due: MarketDue? = null, onClick: () -> Unit) {
@@ -135,6 +136,7 @@ import com.sperance.exileforge.ui.theme.*
                 Text(lot.title, color = color, style = itemName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 TradeFacts(facts, bidMarks(lot, due))
                 lotLeft(lot, now)?.let { Text(ui("auction.left", it), color = if (ending) LifeRed else Muted, style = MaterialTheme.typography.labelSmall) }
+                if (lot.buyoutGrows) Text(ui("auction.buyout_grows"), color = Muted, style = MaterialTheme.typography.labelSmall)
             }
             BidColumn(lot)
         }
@@ -207,7 +209,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
  * шкала цены от первой ставки до выкупа с текущей, своей суммой и медианой похожих сделок [hint] ([PriceScale]), правила торгов - в ⓘ,
  * лента ставок без имён ([BidFeed]) и продавец (касание - карточка игрока). Внизу закреплены: когда кончатся торги, если поставить сейчас
  * ([BidTailLine]), шаги «−» / «+» с наименьшей ставкой и шагом, залог «Спишется сейчас» - сферы и сбор против сумки и кошелька
- * ([BidPledge], золото - счёт [goldBill]), сбор выкупа и кнопки «Поставить N» и «Выкупить за M» - удержанием. Шаг, наименьшая ставка,
+ * ([BidPledge], золото - счёт [goldBill]), у торгов с растущим выкупом - «После ставки выкуп станет N» ([buyoutAfter]), сбор выкупа и кнопки «Поставить N» и «Выкупить за M» - удержанием. Шаг, наименьшая ставка,
  * залог и срок - правила `:core` ([minBid], [bidCost], [endsAfterBid]); своя лидирующая ставка не перебивается, свой лот - только
  * смотреть, лот другого героя своего аккаунта - кнопки погашены и сказано почему ([sameAccount]).
  */
@@ -270,6 +272,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
                         MutedText(ui("auction.bid_step", percent(rules.bidStep), rules.bidStepMin))
                     }
                     BidPledge(lot, index, hero, if (lot.leading) null else amount, goldBill)
+                    if (bidding && lot.buyoutGrows && !lot.buysOut(amount)) MutedText(ui("auction.buyout_after", number(lot.buyoutAfter(amount).toDouble())))
                     bidShort?.takeIf { bidding }?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
                     goldBill(lot.fee)?.let { bill ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

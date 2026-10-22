@@ -52,7 +52,7 @@ import kotlin.time.TimeSource
  * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
  * боя узла («Журнал боя»); [toll] - итог последнего выигранного боя для шапки; [coffers] - что лежало в открытых сундуках Владыки
  * по номеру сундука (только пока забег стоит у сундуков); [chart] - карта доски: что можно выбрать и почему нельзя; [walk] - шаг героя
- * к выбранному узлу, пока доска с ответом не легла; [recap] - итог боя с павшим стражем (лист «Страж повержен»), до следующего боя.
+ * к выбранному узлу, пока доска с ответом не легла; [recap] - итог последнего выигранного боя (лист итога), до следующего боя.
  */
 data class RiftState(
     val open: Boolean = false,
@@ -69,13 +69,14 @@ data class RiftState(
 )
 
 /**
- * Итог боя с павшим стражем Разлома: страж [guardian] акта [act] ([final] - Владыка), сам бой [fight] (разбор и журнал), Честь и взятый
- * ключ боя [toll] из предела [honorMax], ключи к сундукам по металлам [keys] (после Владыки - сколько их ждёт), счёт забега до
- * [scoreBefore] и после [scoreAfter]. [shown] - лист открыт: он открывается сам после принятого сервером итога, закрытый ждёт плашкой
- * «Итог боя» на карте до следующего боя.
+ * Итог выигранного боя Разлома: узел вида [kind] акта [act], у стража - сам страж [guardian] ([final] - Владыка), бой [fight] (разбор и
+ * журнал), Честь и взятый ключ боя [toll] из предела [honorMax], ключи к сундукам по металлам [keys] (после Владыки - сколько их ждёт),
+ * счёт забега до [scoreBefore] и после [scoreAfter]. [shown] - лист открыт: он открывается сам после принятого сервером итога и
+ * закрывается только кнопкой, закрытый ждёт плашкой «Итог боя» на карте до следующего боя.
  */
 data class RiftRecap(
-    val guardian: MonsterCode,
+    val kind: RiftNodeKind,
+    val guardian: MonsterCode?,
     val act: Int,
     val final: Boolean,
     val fight: FightReport,
@@ -199,10 +200,10 @@ class RiftActions(
     /** Итог боя в шапке прочитан. */
     fun dismissToll() = mutable.update { it.copy(toll = null) }
 
-    /** Лист «Страж повержен» снова открыт с карты. */
+    /** Лист итога боя снова открыт с карты. */
     fun openRecap() = mutable.update { state -> state.copy(recap = state.recap?.copy(shown = true)) }
 
-    /** Лист «Страж повержен» закрыт: итог ждёт плашкой на карте до следующего боя. */
+    /** Лист итога боя закрыт кнопкой: итог ждёт плашкой на карте до следующего боя. */
     fun closeRecap() = mutable.update { state -> state.copy(recap = state.recap?.copy(shown = false)) }
 
     /**
@@ -244,12 +245,13 @@ class RiftActions(
     }
 
     /**
-     * Итог боя [end] забега [before], принятый ответом [report], если пал страж: бой - журнал арены, Честь, ключ и счёт - до и после
-     * (кончился ли забег с ним - из итога забега). Не страж, проигрыш, нет журнала, контента или забега после боя - null.
+     * Итог выигранного боя [end] забега [before], принятый ответом [report]: бой - журнал арены, Честь, ключ и счёт - до и после
+     * (кончился ли забег с ним - из итога забега). Проигрыш, нет журнала, контента или забега после боя - null.
      */
     private fun recap(before: RiftRun, end: RiftAct.Fight, report: RiftReport): RiftRecap? {
         val board = mutable.value.board ?: return null
-        val node = before.at?.let(board.plan::node)?.takeIf { end.won && it.kind == RiftNodeKind.GUARDIAN } ?: return null
+        val node = before.at?.let(board.plan::node)?.takeIf { end.won } ?: return null
+        val guardian = node.kind == RiftNodeKind.GUARDIAN
         val fight = mutable.value.lastFight ?: return null
         val rules = world.state.value.content?.campaign?.trials?.rift ?: return null
         val engine = engine(board) ?: return null
@@ -257,9 +259,10 @@ class RiftActions(
         val result = report.result
         val toll = after?.let { RiftToll.of(before, it) } ?: result?.let { RiftToll(before.honor, it.honor.toDouble(), null) } ?: return null
         return RiftRecap(
-            guardian = rules.guardian(node.act),
+            kind = node.kind,
+            guardian = rules.guardian(node.act).takeIf { guardian },
             act = node.act,
-            final = rules.isFinal(node.act),
+            final = guardian && rules.isFinal(node.act),
             fight = fight,
             toll = toll,
             honorMax = engine.maxHonor(after ?: before),

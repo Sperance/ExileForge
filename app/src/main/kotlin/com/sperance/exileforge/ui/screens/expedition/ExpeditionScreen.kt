@@ -142,7 +142,7 @@ private const val CARD_TOP = .48f
     val now = rememberServerNow(SEARCH_TICK_MS)
     val places = remember(index, unlocked, game.hero?.campaign, now) { Places.zones(index, unlocked, game.hero?.campaign, now) }
     val recent = remember(places, game.heroId) { vm.recentZones(game.heroId).mapNotNull { code -> places.firstOrNull { it.key == code } } }
-    val text = PlaceSearchText(ui("expedition.search_hint"), ui("expedition.search_help"), ui("expedition.search_none"), ui("expedition.search_none_help"))
+    val text = PlaceSearchText(ui("expedition.search_hint"), ui("expedition.search_help"), ui("expedition.search_none_help"))
     PlaceSearchSheet(places, recent, text, onDismiss) { vm.selectZone(it.value) }
 }
 

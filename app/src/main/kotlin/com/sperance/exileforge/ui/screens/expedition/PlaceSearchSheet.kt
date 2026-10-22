@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,8 +40,9 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
 
-/** Слова листа поиска мест: подсказка строки [hint], как искать [help], пусто [none] (с запросом) и что сказать дальше [noneHelp]. */
-internal class PlaceSearchText(val hint: String, val help: String, val none: String, val noneHelp: String)
+/** Слова места в листе поиска: подсказка строки [hint], как искать [help] и что делать, когда ничего не нашлось [noneHelp]; общие - `search.*`. */
+@Immutable
+internal class PlaceSearchText(val hint: String, val help: String, val noneHelp: String)
 
 /**
  * Лист поиска места на карте - один на «Поход» (зоны) и Атлас (узлы): строка ввода в шапке, ниже ленивым списком - пока запрос пуст,
@@ -68,17 +70,17 @@ internal class PlaceSearchText(val hint: String, val help: String, val none: Str
             when {
                 parsed == PlaceQuery.Blank -> {
                     item { MutedText(text.help) }
-                    if (recent.isNotEmpty()) rows(ui("expedition.search_recent"), recent, pick)
+                    if (recent.isNotEmpty()) rows(ui("search.recent"), recent, pick)
                 }
 
                 found.isEmpty() -> item {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(text.none, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                        Text(ui("search.none"), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                         MutedText(text.noneHelp)
                     }
                 }
 
-                else -> rows(ui("expedition.search_found", found.size), found, pick)
+                else -> rows(ui("search.found", found.size), found, pick)
             }
         }
     }

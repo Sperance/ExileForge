@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.loc
@@ -101,6 +102,9 @@ fun classTitle(code: String): String = loc(LocaleKey.className(code))
 fun nodeTitle(code: String): String = loc(LocaleKey.skillNodeName(code))
 
 fun atlasNodeTitle(code: String): String = loc(LocaleKey.atlasNodeName(code))
+
+/** Имя ветви Атласа - словарём клиента. */
+fun atlasBranchTitle(branch: AtlasBranch): String = ui("atlas.branch.${branch.name}")
 fun professionTitle(code: String): String = loc(LocaleKey.professionName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = loc(LocaleKey.jobName(code))

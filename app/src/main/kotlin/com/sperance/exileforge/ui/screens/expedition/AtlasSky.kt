@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasFog
-import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.display.atlasBranchTitle
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
@@ -78,7 +78,7 @@ import kotlin.math.sin
     val labelStyle = MaterialTheme.typography.labelSmall
     val labels = remember(nodes, labelStyle) {
         BranchLabel.of(nodes).map { label ->
-            label to measurer.measure(ui("atlas.branch.${label.branch.name}"), labelStyle.copy(color = label.tint(), fontStyle = if (label.mini) FontStyle.Italic else FontStyle.Normal))
+            label to measurer.measure(atlasBranchTitle(label.branch), labelStyle.copy(color = label.tint(), fontStyle = if (label.mini) FontStyle.Italic else FontStyle.Normal))
         }
     }
     val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }

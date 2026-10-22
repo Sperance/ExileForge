@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.display.ItemSearch
+import com.sperance.exileforge.core.display.atlasBranchTitle
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
@@ -66,10 +68,10 @@ object Places {
         Place(code, title, facts, zone.level, listOf(ItemSearch.fold(title), ItemSearch.fold(guardian)))
     }.sortedWith(compareBy({ it.level }, { it.title }))
 
-    /** Узлы Атласа [nodes]: имя, ветвь и «взят» по взятым [taken]; слова - имя узла и ветви ([branch] - имя ветви узла). */
-    fun atlas(nodes: List<AtlasNode>, taken: Set<String>, branch: (AtlasNode) -> String): List<Place<String>> = nodes.map { node ->
+    /** Узлы Атласа [nodes]: имя, ветвь и «взят» по взятым [taken]; слова - имя узла и ветви. */
+    fun atlas(nodes: List<AtlasNode>, taken: Set<String>): List<Place<String>> = nodes.map { node ->
         val title = atlasNodeTitle(node.code)
-        val group = branch(node)
+        val group = atlasBranchTitle(AtlasFog.branch(node.code))
         Place(node.code, title, if (node.code in taken) ui("atlas.search_taken", group) else group, null, listOf(ItemSearch.fold(title), ItemSearch.fold(group)))
     }.sortedBy { it.title }
 }

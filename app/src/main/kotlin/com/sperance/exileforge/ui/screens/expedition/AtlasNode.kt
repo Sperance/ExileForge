@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
+import com.sperance.exileforge.core.display.atlasBranchTitle
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
@@ -82,7 +83,7 @@ import kotlin.math.sin
     ) {
         val kind = ui("atlas.kind.${node.kind.name}")
         Text(
-            if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, ui("atlas.branch.${node.branch.name}")).uppercase(),
+            if (node.branch == AtlasBranch.ROOT) kind else ui("atlas.kind_branch", kind, atlasBranchTitle(node.branch)).uppercase(),
             color = Sky.text.copy(alpha = .75f),
             style = MaterialTheme.typography.labelSmall,
         )
@@ -174,7 +175,7 @@ internal fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: ()
             Text(ui("atlas.summary_title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
             if (groups.isEmpty()) Text(ui("atlas.summary_empty"), color = Sky.text, style = MaterialTheme.typography.bodySmall)
             groups.forEach { (branch, totals) ->
-                Text(ui("atlas.branch.${branch.name}").uppercase(), color = branch.hue(), style = MaterialTheme.typography.labelMedium)
+                Text(atlasBranchTitle(branch).uppercase(), color = branch.hue(), style = MaterialTheme.typography.labelMedium)
                 totals.forEach { (code, values) -> Text("•  ${lineText(index, Line(code, values))}", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
             }
         }

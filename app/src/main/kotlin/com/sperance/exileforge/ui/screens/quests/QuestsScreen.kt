@@ -68,7 +68,7 @@ fun QuestsScreen() {
     val busy = activity.busy
     board?.let { ResetData(current, it) }
     Column(Modifier.fillMaxSize()) {
-        StoryLine(game, board, Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp), onOpen = vm::openStory) { ClaimButton(vm, busy, it) }
+        StoryLine(game, board, onOpen = vm::openStory, modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp)) { ClaimButton(vm, busy, it) }
         Segments(
             QuestTab.entries,
             current,

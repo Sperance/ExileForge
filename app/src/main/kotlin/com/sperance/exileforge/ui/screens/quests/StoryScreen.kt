@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.StoryBooks
 import com.sperance.exileforge.rules.content.StoryChapter
 import com.sperance.exileforge.rules.content.ThroneLaws
@@ -124,10 +126,11 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Глава сюжета на доске заданий - одна строка 48dp: том, цель шага и «глава · шаг N из M», прогресс «12 / 30» (готово - кнопка сдачи
- * [claim] шага), шеврон и тонкая полоса прогресса по низу; нажатие - весь сюжет. Ждёт выбор за пройденную главу - та же строка
- * становится плашкой выбора: знак закона или книги, зов выбрать и имя главы. Сюжет пройден и выбора нет - строки нет.
+ * шага), шеврон и тонкая полоса прогресса по низу; нажатие - весь сюжет ([onOpen]). Ждёт выбор за пройденную главу - та же строка
+ * становится плашкой выбора: знак закона или книги, зов выбрать и имя главы. Сюжет пройден и выбора нет - строки нет. Слот [claim] -
+ * кнопка сдачи: вызывается только для готового шага (выполнен и не сдан).
  */
-@Composable fun StoryLine(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit, claim: @Composable (Quest) -> Unit) {
+@Composable fun StoryLine(game: GameUi, board: QuestBoard?, onOpen: () -> Unit, modifier: Modifier = Modifier, claim: @Composable (Quest) -> Unit) {
     val index = game.index ?: return
     board ?: return
     val laws = game.heroInfo?.laws.orEmpty()
@@ -166,7 +169,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 subtitle?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
             if (step != null) {
-                if (step.done && !step.claimed) {
+                if (step.awaitsHand) {
                     claim(step)
                 } else {
                     MutedText(ui("quest.progress", number(step.progress.toDouble()), number(step.target.toDouble())), style = MaterialTheme.typography.labelSmall)
@@ -335,14 +338,17 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
         val current = board.story?.takeIf { index == board.step && it.goal == step.code }
         when {
             current != null -> QuestRow(current) { ClaimButton(vm, busy, current) }
-            index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital) { vm.reread(board.chapter, step.code) }
-            else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
+            index < board.step -> DoneStep(step.code) { vm.reread(board.chapter, step.code) }
+            else -> StepLine("· " + loc(LocaleKey.questTitle(QuestKind.STORY, step.code)), Muted)
         }
     }
     item(key = "done") { DoneChapters(chapters.take(board.chapter), vm::reread) }
     item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
     item(key = "codex") { StoryCodex(chapters, board.chapter + 1) }
 }
+
+/** Сданный шаг [code]: «✓ имя шага»; касание - перечитать его текст «после» ([onRead]). */
+@Composable private fun DoneStep(code: String, onRead: () -> Unit) = StepLine("✓ " + loc(LocaleKey.questTitle(QuestKind.STORY, code)), Vital, onRead)
 
 /** Строка шага главы; сданный шаг [onRead] - касанием перечитать его текст «после». */
 @Composable private fun StepLine(text: String, color: Color, onRead: (() -> Unit)? = null) {
@@ -356,7 +362,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
  */
 @Composable private fun DoneChapters(chapters: List<StoryChapter>, onRead: (Int, String) -> Unit) {
     if (chapters.isEmpty()) return
-    var open by remember { mutableStateOf(false) }
+    var open by rememberSaveable { mutableStateOf(false) }
     ForgePanel {
         Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { open = !open }, horizontalArrangement = Arrangement.SpaceBetween) {
             Engraved(ui("story.chapters_done"))
@@ -365,7 +371,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
         if (!open) return@ForgePanel
         chapters.forEachIndexed { number, chapter ->
             Text(loc(LocaleKey.chapterTitle(chapter.region)), color = GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
-            chapter.steps.forEach { step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital) { onRead(number, step.code) } }
+            chapter.steps.forEach { step -> DoneStep(step.code) { onRead(number, step.code) } }
         }
     }
 }

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.character.WearOutcome
 import com.sperance.exileforge.core.character.WearPlace
+import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.CardSeal
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.MapCapture
@@ -178,6 +179,9 @@ fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLe
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
+
+/** Вещи тайника героя, что встают на место [place]: не в гнёздах, слотом под это место; пусто - нечем заменить. */
+fun GameUi.placeCandidates(place: BodyPlace): List<ItemView> = hero?.stash.orEmpty().filter { !it.socketed }.mapNotNull { view(it) }.filter { place.takes(it.slot) }
 
 /** Какие требования вещи [code] герой не выполняет - по чипу карточки; героя или шаблона нет - null (без отметок). */
 fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {

@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.itemSeals
+import com.sperance.exileforge.core.sheet.placeCandidates
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
@@ -120,16 +121,17 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             var more by remember(itemId) { mutableStateOf(false) }
             val wornPlace = game.hero?.equipped?.takeIf { instance.equipped }?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
             val swappable = remember(game.hero?.items, game.index, wornPlace) { wornPlace?.let { game.placeCandidates(it).isNotEmpty() } == true }
-            val offer = wornPlace?.let { place -> WearOffer(ui("hero.replace"), can && swappable) { replacing = place } } ?: wearOffer(game, model, shell, instance, can, twin, onDismiss)
+            val swap = wornPlace?.let { place -> WornSwap(swappable) { replacing = place } }
+            val offer = wearOffer(game, model, shell, instance, can, twin, swap, onDismiss)
+            val unwear = wornPlace?.let { unwearOffer(model, instance, can, onDismiss) }
             val menu: @Composable () -> Unit = {
                 Box {
                     ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, kind = ButtonKind.Secondary, size = ButtonSize.Wide)
                     ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
-                        if (wornPlace != null) {
-                            MenuLine(Icons.Outlined.RemoveCircleOutline, ui("hero.unequip"), can) {
+                        unwear?.let { line ->
+                            MenuLine(Icons.Outlined.RemoveCircleOutline, line.label, line.enabled) {
                                 more = false
-                                onDismiss()
-                                model.unequip(instance.id)
+                                line.run(null)
                             }
                         }
                         MenuLine(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
@@ -155,7 +157,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         ) { Text(offer.label, maxLines = 1) }
                         menu()
                     }
-                    if (wornPlace != null && !swappable) Text(ui("hero.replace_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                    if (swap?.swappable == false) Text(ui("hero.replace_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
                 OwnItemActions(game, instance, onDone = onDismiss) { if (offer == null) menu() }
             }

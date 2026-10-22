@@ -35,8 +35,8 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.toolPlaces
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.placeCandidates
 import com.sperance.exileforge.core.sheet.unmetFor
-import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -271,6 +271,3 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
         }
     }
 }
-
-/** Вещи тайника, что встают на место [place]: не в гнёздах, слотом под это место; их предлагает [SlotPicker], пусто - нечем заменить. */
-internal fun GameUi.placeCandidates(place: BodyPlace): List<ItemView> = hero?.stash.orEmpty().filter { !it.socketed }.mapNotNull { view(it) }.filter { place.takes(it.slot) }

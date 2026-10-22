@@ -395,12 +395,21 @@ private fun hazardLine(hazard: HazardView): String {
     }
 }
 
+/** Подсказка карты по касанию - одна за раз: ловушка ([TrapTip]) или холод героя ([ChillTip]); новая сменяет прежнюю. */
+internal sealed interface MapHint {
+    /** Ловушка [spot], которой коснулись. */
+    data class Trap(val spot: TrapSpot) : MapHint
+
+    /** Холод героя по касанию его жетона. */
+    data object Chill : MapHint
+}
+
 /**
  * Подсказка карты по касанию: плашка в рамке цвета [tint] над низом экрана, висит [MAP_TIP_MS] и уходит сама ([onDone]);
- * новый [key] - отсчёт заново.
+ * новый [restartOn] - отсчёт заново.
  */
-@Composable private fun MapTip(key: Any, tint: Color, onDone: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    LaunchedEffect(key) {
+@Composable private fun MapTip(restartOn: Any, tint: Color, onDone: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    LaunchedEffect(restartOn) {
         delay(MAP_TIP_MS)
         onDone()
     }

@@ -97,23 +97,22 @@ private val ItemInstance.loose: Boolean get() = !equipped && !socketed
 /** Действие надевания вещи: подпись, доступность и что делает с местом, выбранным в карточке (null - решает слот шаблона). */
 class WearOffer(val label: String, val enabled: Boolean, val run: (Slot?) -> Unit)
 
-/**
- * Надеть, снять или в дерево - по тому, где вещь [item] и что она: в гнезде и надетая - «Снять», самоцвет - «В дерево» (гаснет без
- * свободного взятого гнезда), прочее - «Надеть» (гаснет без требований и второй копией уникалки [twin]); карта не надевается - null.
- * [can] - герой свой и свободен; [onDone] - перед командой (лист закрывается).
- */
-fun wearOffer(game: GameUi, model: HeroViewModel, shell: ShellViewModel, item: ItemInstance, can: Boolean, twin: Boolean, onDone: () -> Unit): WearOffer? {
-    val slot = game.index?.template(item.template)?.slot
-    return when {
-        item.socketed -> WearOffer(ui("hero.unequip"), can) {
-            onDone()
-            model.unsocketJewel(item.id)
-        }
+/** Замена надетой вещи на её месте тела: [swappable] - в тайнике есть чем заменить, [replace] - открыть выбор вещи на место. */
+class WornSwap(val swappable: Boolean, val replace: () -> Unit)
 
-        item.equipped -> WearOffer(ui("hero.unequip"), can) {
-            onDone()
-            model.unequip(item.id)
-        }
+/**
+ * Надеть, заменить, снять или в дерево - по тому, где вещь [item] и что она: надетая на место с заменой [swap] - «Заменить» (гаснет,
+ * когда нечем), иначе надетая и в гнезде - «Снять» ([unwearOffer]), самоцвет - «В дерево» (гаснет без свободного взятого гнезда),
+ * прочее - «Надеть» (гаснет без требований и второй копией уникалки [twin]); карта не надевается - null. [can] - герой свой и
+ * свободен; [onDone] - перед командой (лист закрывается).
+ */
+fun wearOffer(game: GameUi, model: HeroViewModel, shell: ShellViewModel, item: ItemInstance, can: Boolean, twin: Boolean, swap: WornSwap? = null, onDone: () -> Unit): WearOffer? {
+    val slot = game.index?.template(item.template)?.slot
+    val unwear = unwearOffer(model, item, can, onDone)
+    return when {
+        swap != null && item.equipped && !item.socketed -> WearOffer(ui("hero.replace"), can && swap.swappable) { swap.replace() }
+
+        unwear != null -> unwear
 
         slot == null || slot == Slot.MAP -> null
 
@@ -130,4 +129,19 @@ fun wearOffer(game: GameUi, model: HeroViewModel, shell: ShellViewModel, item: I
             model.equip(item.id, place)
         }
     }
+}
+
+/** «Снять» надетой вещи [item]: самоцвет вынимается из гнезда, прочее снимается с места тела; не надета - null. [onDone] - перед командой. */
+fun unwearOffer(model: HeroViewModel, item: ItemInstance, can: Boolean, onDone: () -> Unit): WearOffer? = when {
+    item.socketed -> WearOffer(ui("hero.unequip"), can) {
+        onDone()
+        model.unsocketJewel(item.id)
+    }
+
+    item.equipped -> WearOffer(ui("hero.unequip"), can) {
+        onDone()
+        model.unequip(item.id)
+    }
+
+    else -> null
 }

@@ -120,17 +120,11 @@ import kotlin.math.roundToInt
                 RunPhase.MAP -> {
                     val flight = rememberBagFlight(hud.drops)
                     var barBottom by remember { mutableIntStateOf(0) }
-                    var trapTip by remember(run) { mutableStateOf<TrapSpot?>(null) }
-                    var chillTip by remember(run) { mutableStateOf(false) }
+                    var hint by remember(run) { mutableStateOf<MapHint?>(null) }
                     val chilled by remember(live) { derivedStateOf { live.value.stride < 1.0 } }
-                    val showTrap: (TrapSpot) -> Unit = {
-                        chillTip = false
-                        trapTip = it
-                    }
-                    val showChill = {
-                        trapTip = null
-                        chillTip = true
-                    }
+                    val showTrap: (TrapSpot) -> Unit = remember(run) { { hint = MapHint.Trap(it) } }
+                    val showChill: () -> Unit = remember(run) { { hint = MapHint.Chill } }
+                    val hideHint: () -> Unit = remember(run) { { hint = null } }
                     Stick(run, { barBottom }, onTrap = showTrap, onHero = showChill.takeIf { chilled }) { model.runCommand(RunCommand.OfferFountain(it)) }
                     MapBar(
                         game,
@@ -147,8 +141,11 @@ import kotlin.math.roundToInt
                         onQuests = { questsOpen = true },
                     )
                     BagFan(flight)
-                    trapTip?.let { TrapTip(run, it) { trapTip = null } }
-                    if (chillTip) ChillTip { chillTip = false }
+                    when (val shown = hint) {
+                        is MapHint.Trap -> TrapTip(run, shown.spot, hideHint)
+                        MapHint.Chill -> ChillTip(hideHint)
+                        null -> Unit
+                    }
                     if (questsOpen) {
                         HoldsRun(run)
                         RunQuestsSheet(board, hud.questTally) { questsOpen = false }

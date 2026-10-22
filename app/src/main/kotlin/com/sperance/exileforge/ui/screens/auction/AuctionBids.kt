@@ -272,7 +272,10 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
                         MutedText(ui("auction.bid_step", percent(rules.bidStep), rules.bidStepMin))
                     }
                     BidPledge(lot, index, hero, if (lot.leading) null else amount, goldBill)
-                    if (bidding && lot.buyoutGrows && !lot.buysOut(amount)) MutedText(ui("auction.buyout_after", number(lot.buyoutAfter(amount).toDouble())))
+                    if (bidding && lot.buyoutGrows && !lot.buysOut(amount)) {
+                        val after = lot.buyoutAfter(amount)
+                        FullNumberTipped(after) { MutedText(ui("auction.buyout_after", compactNumber(after))) }
+                    }
                     bidShort?.takeIf { bidding }?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
                     goldBill(lot.fee)?.let { bill ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

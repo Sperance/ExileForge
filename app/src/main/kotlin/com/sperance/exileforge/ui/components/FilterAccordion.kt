@@ -33,8 +33,8 @@ import com.sperance.exileforge.ui.theme.*
 /** Строка шторки-аккордеона: имя группы, её текущий выбор словами и что раскрывается под ней по нажатию. */
 class AccordionGroup(val key: String, val title: String, val value: String, val content: @Composable () -> Unit)
 
-/** Переключатель под группами шторки: «Только сделанное мной», «Скрыть надетое» и подобные. */
-class FilterSwitch(val title: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
+/** Переключатель под группами шторки: «Только сделанное мной», «Скрыть надетое» и подобные; [hint] - что он значит, мелко под именем. */
+class FilterSwitch(val title: String, val checked: Boolean, val hint: String? = null, val onChange: (Boolean) -> Unit)
 
 /**
  * Шторка фильтров «Аккордеон» - одна на все списки приложения: под именем - [header] (вилка уровня, [LevelRangeHeader]), каждая
@@ -79,7 +79,10 @@ fun FilterAccordionSheet(
                     .toggleable(switch.checked, role = Role.Switch, onValueChange = switch.onChange).padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Column(Modifier.weight(1f)) {
+                    Text(switch.title, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    switch.hint?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+                }
                 Switch(checked = switch.checked, onCheckedChange = null, modifier = Modifier.scale(SWITCH_SCALE))
             }
         }

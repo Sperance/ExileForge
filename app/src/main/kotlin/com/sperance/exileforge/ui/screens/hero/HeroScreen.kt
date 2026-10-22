@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.fate.fateNow
+import com.sperance.exileforge.core.hero.BagStack
 import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
@@ -61,6 +62,7 @@ fun HeroScreen() {
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
+    var bagQuery by remember(heroId) { mutableStateOf("") }
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
     val list = rememberLazyListState()
     OnReselect(TAB_HERO) {
@@ -70,6 +72,7 @@ fun HeroScreen() {
         list.animateScrollToItem(0)
     }
     val hero = game.hero
+    val bag = if (page == HeroPage.BAG) rememberBagShelf(game, bagQuery) else null
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
         when {
             hero == null -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) { item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) } }
@@ -82,9 +85,17 @@ fun HeroScreen() {
                         item { rememberEquipment(game)?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
                     }
 
-                    HeroPage.BAG -> {
-                        val sections = bagSections(game)
-                        if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) } else item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
+                    HeroPage.BAG -> when {
+                        bag == null || bag.counts.isEmpty() -> item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
+
+                        else -> {
+                            item(key = "bag_search") { BagSearch(game, bag, bagQuery) { bagQuery = it } }
+                            if (bag.sections.isEmpty()) {
+                                item(key = "bag_none") { BagNothingFound(game, bag, bagQuery) { bagQuery = it } }
+                            } else {
+                                item(key = "bag") { BagGrid(game, bag.sections) { stackCode = it } }
+                            }
+                        }
                     }
 
                     else -> {

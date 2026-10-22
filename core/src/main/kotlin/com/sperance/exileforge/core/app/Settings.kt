@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.app
 
+import com.sperance.exileforge.core.hero.BagFilter
 import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.content.MapCode
 import kotlinx.serialization.Serializable
@@ -47,6 +48,8 @@ data class GameSettings(
     val requirementsOpen: Boolean = false,
     /** Панель механик тестировщика в карточке зоны раскрыта; по умолчанию свёрнута заголовком. */
     val testerMechanicsOpen: Boolean = false,
+    /** Отбор и порядок сумки героя ([BagFilter]): полки, «Можно применить», порядок внутри полки; поиск не помнится. */
+    val bag: BagFilter = BagFilter(),
     /** Ключ строки, что окно загрузки показало последней ([com.sperance.exileforge.core.i18n.LaunchLines]): следующая будет другой. */
     val lastLaunchLine: String = "",
 ) {

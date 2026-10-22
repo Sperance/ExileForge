@@ -33,26 +33,45 @@ import com.sperance.exileforge.core.display.itemUseIndex
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
+import com.sperance.exileforge.core.hero.BagFilter
+import com.sperance.exileforge.core.hero.BagOrder
+import com.sperance.exileforge.core.hero.BagSection
+import com.sperance.exileforge.core.hero.BagShelf
+import com.sperance.exileforge.core.hero.BagStack
+import com.sperance.exileforge.core.hero.StackUse
+import com.sperance.exileforge.core.hero.StackUses
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.ItemCode
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.RuneDefinition
+import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipSize
 import com.sperance.exileforge.ui.components.Engraved
+import com.sperance.exileforge.ui.components.FilterAccordionSheet
+import com.sperance.exileforge.ui.components.FilterSwitch
+import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.InfoCard
 import com.sperance.exileforge.ui.components.InfoMark
+import com.sperance.exileforge.ui.components.LocalSettingsEdit
 import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.components.RowActions
 import com.sperance.exileforge.ui.components.RowButton
+import com.sperance.exileforge.ui.components.SearchBar
+import com.sperance.exileforge.ui.components.SearchFilter
+import com.sperance.exileforge.ui.components.SortButton
+import com.sperance.exileforge.ui.components.SortLabel
+import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.StackCellSize
 import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.skills.SkillPeek
 import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
@@ -60,29 +79,97 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** One stack of the bag: the item's code and how many the hero holds. */
-data class BagStack(val code: String, val amount: Long)
+/**
+ * Сумка героя на экране ([BagShelf]) под отбором, что помнится на устройстве ([com.sperance.exileforge.core.app.GameSettings.bag]), и поиском [query]; пересобирается,
+ * только когда сдвинулись сумка, отбор, поиск, язык или контент.
+ */
+@Composable fun rememberBagShelf(game: GameUi, query: String): BagShelf {
+    val bag = game.hero?.bag.orEmpty()
+    val heroClass = game.hero?.heroClass
+    return remember(bag, heroClass, game.settings.bag, query, game.lang, game.index) { BagShelf.of(game.index, bag, heroClass, game.settings.bag, query) }
+}
 
 /**
- * The bag by category — orbs, then essences, books and materials, then whatever the content does not
- * name — each by rarity, then by name. A stack has no rarity of its own, so its worth stands
- * for it: the dearer the rarer. An empty category is left out.
+ * Строка поиска сумки ([SearchBar]): «Найти в сумке», кнопка фильтра со шторкой ([BagFilterSheet]) и порядок словом ([SortButton]);
+ * включённые сужения - чипами под строкой. Отбор и порядок пишутся в настройки устройства ([LocalSettingsEdit]), поиск - нет.
  */
-fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
-    val index = game.index
-    fun category(code: String) = BagCategory.of(index?.item(ItemCode(code)))
-    fun worth(code: String) = index?.item(ItemCode(code))?.price ?: 0L
-    val byCategory = game.hero?.bag.orEmpty().filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
-        .sortedWith(compareBy({ -worth(it.code) }, { itemTitle(it.code) }))
-        .groupBy { category(it.code) }
-    return BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { category to it } }
+@Composable fun BagSearch(game: GameUi, shelf: BagShelf, query: String, onQuery: (String) -> Unit) {
+    val filter = game.settings.bag
+    val edit = LocalSettingsEdit.current
+    val apply: (BagFilter) -> Unit = { next -> edit?.invoke { copy(bag = next) } }
+    var sheet by remember { mutableStateOf(false) }
+    SearchBar(
+        query,
+        onQuery,
+        ui("bag.search"),
+        filter = SearchFilter(rememberChips(filter.narrowings(game.lang), apply), onOpen = { sheet = true }, onReset = { apply(filter.cleared()) }),
+        maxLength = game.inputs.search,
+    ) {
+        SortButton(SortLabel.Word(filter.order.title(game.lang)), BagOrder.entries.map { order -> SortOption(order.title(game.lang), order == filter.order) { apply(filter.copy(order = order)) } })
+    }
+    if (sheet) {
+        BagFilterSheet(game, shelf, filter, query, onDismiss = { sheet = false }) {
+            sheet = false
+            apply(it)
+        }
+    }
+}
+
+/**
+ * Шторка фильтра сумки: полки множеством фишками с числом стопок всей сумки (пустые полки не предлагаются) и «Можно применить»
+ * ([StackUses]); ничего не применяется до «Показать N», «Сбросить» снимает всё сразу.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BagFilterSheet(game: GameUi, shelf: BagShelf, filter: BagFilter, query: String, onDismiss: () -> Unit, onApply: (BagFilter) -> Unit) {
+    var draft by remember { mutableStateOf(filter) }
+    val chosen = BagCategory.entries.filter { it in draft.shelves }
+    val groups = listOf(
+        AccordionGroup("shelves", ui("bag.shelves"), if (chosen.isEmpty()) ui("bag.shelves_all") else chosen.joinToString(", ") { ui(it.key) }) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                BagCategory.entries.forEach { category ->
+                    val count = shelf.counts[category] ?: 0
+                    if (count > 0) {
+                        val on = category in draft.shelves
+                        ForgeChip(ui(category.key), on, { draft = draft.copy(shelves = if (on) draft.shelves - category else draft.shelves + category) }, size = ChipSize.Dense, count = count)
+                    }
+                }
+            }
+        },
+    )
+    FilterAccordionSheet(
+        groups = groups,
+        switches = listOf(FilterSwitch(ui("bag.filter.applicable"), draft.applicable, ui("bag.filter.applicable_hint")) { draft = draft.copy(applicable = it) }),
+        show = ui("filter.show", shelf.count(draft, query)),
+        resettable = draft.narrowed,
+        onReset = { onApply(draft.cleared()) },
+        onShow = { onApply(draft) },
+        onDismiss = onDismiss,
+    )
+}
+
+/**
+ * Пусто под отбором и поиском: «Ничего не нашлось», почему - словами ([BagShelf.emptyReason]) и одно действие - снять фильтры, а без
+ * них очистить поиск.
+ */
+@Composable fun BagNothingFound(game: GameUi, shelf: BagShelf, query: String, onQuery: (String) -> Unit) {
+    val filter = game.settings.bag
+    val edit = LocalSettingsEdit.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        InfoCard(ui("bag.none_title"), shelf.emptyReason(filter, query, game.lang))
+        if (filter.narrowed) {
+            ForgeButton(onClick = { edit?.invoke { copy(bag = filter.cleared()) } }, kind = ButtonKind.Secondary) { Text(ui("bag.clear_filters")) }
+        } else {
+            ForgeButton(onClick = { onQuery("") }, kind = ButtonKind.Secondary) { Text(ui("picker.clear_search")) }
+        }
+    }
 }
 
 /**
  * The bag as a table: a heading per category and under it the stack cells ([StackCell]) - as many to a row as fit [CELL]. The name, the rule and the ways on
  * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code.
  */
-@Composable fun BagGrid(game: GameUi, sections: List<Pair<BagCategory, List<BagStack>>>, onOpen: (String) -> Unit) {
+@Composable fun BagGrid(game: GameUi, sections: List<BagSection>, onOpen: (String) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = ((maxWidth + GAP) / (CELL + GAP)).toInt().coerceAtLeast(1)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -135,13 +222,8 @@ private val GAP = 6.dp
     onSeal: (String) -> Unit = {},
 ) {
     val code = stack.code
-    val orb = Orb.of(code)
-    val forgeable = orb != null && orb != Orb.ORB_OF_REGRET
+    val uses = StackUses.of(game.index, code, game.hero?.heroClass)
     val skill = game.index?.skills?.byBook(code)
-    val readable = skill != null && game.hero?.heroClass?.let(skill::fits) == true
-    val essence = game.index?.essence(code) != null
-    val seal = game.index?.seal(code) != null
-    val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
     val bound = game.index?.bound(code) == true
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
@@ -149,13 +231,13 @@ private val GAP = 6.dp
         RowActions(Modifier.fillMaxWidth()) {
             val idle = ButtonState.of(!game.busy)
             if (!bound) RowButton(ui("hero.action_auction"), onClick = { onAuction(code) }, kind = ButtonKind.Secondary, state = idle)
-            if (forgeable) RowButton(ui("bag.to_forge"), onClick = { onForge(code) }, state = idle)
-            if (essence) RowButton(ui("bag.to_forge"), onClick = { onEssence(code) }, state = idle)
-            if (seal) RowButton(ui("bag.to_forge"), onClick = { onSeal(code) }, state = idle)
-            if (readable && skill != null) {
+            if (StackUse.ORB in uses) RowButton(ui("bag.to_forge"), onClick = { onForge(code) }, state = idle)
+            if (StackUse.ESSENCE in uses) RowButton(ui("bag.to_forge"), onClick = { onEssence(code) }, state = idle)
+            if (StackUse.SEAL in uses) RowButton(ui("bag.to_forge"), onClick = { onSeal(code) }, state = idle)
+            if (StackUse.BOOK in uses && skill != null) {
                 RowButton(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"), onClick = { onRead(skill.code) }, state = idle)
             }
-            if (chest) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
+            if (StackUse.CHEST in uses) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
         }
     }
 }

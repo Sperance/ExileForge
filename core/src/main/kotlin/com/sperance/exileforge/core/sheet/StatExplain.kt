@@ -135,7 +135,7 @@ class StatExplainer(private val game: GameUi) {
         if (lowLife.isNotEmpty()) {
             cards += ShareCard(
                 ShareKind.LOW_LIFE,
-                lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { StatSpread.parts(it.stat, it.op).any { part -> part.stat == stat } }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown), better = judge(stat, gain)) },
+                lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { StatSpread.touches(it.stat, it.op, stat) }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown), better = judge(stat, gain)) },
                 "",
             )
         }

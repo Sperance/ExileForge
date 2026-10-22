@@ -11,6 +11,8 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.ItemTemplate
+import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
@@ -98,13 +100,17 @@ class MetaCombatTest {
         if (defs.isEmpty() || !defs.all { it.local }) return null
         val roller = AffixRoller(index)
         val (template, def) = defs.firstNotNullOfOrNull { def ->
-            index.templates.values.firstOrNull { template ->
-                (def.code in template.fixedCodes || index.modifierPool(template.tables).any { it.value.code == def.code }) && roller.bears(template, def)
-            }?.let { it to def }
+            index.templates.values.firstOrNull { template -> (def.code in template.fixedCodes || def.code in pool(template)) && roller.bears(template, def) }?.let { it to def }
         } ?: return null
         val calc = SheetCalculator(index)
         return calc.foldItem(template, emptyList()) to calc.foldItem(template, listOf(Roll(def.code, tier = 1, share = 1.0)))
     }
+
+    /** Коды строк пула шаблонов по коду шаблона ([pool]). */
+    private val pools = HashMap<String, Set<ModifierCode>>()
+
+    /** Коды строк пула шаблона [template]: пул собирается один раз на шаблон. */
+    private fun pool(template: ItemTemplate): Set<ModifierCode> = pools.getOrPut(template.code) { index.modifierPool(template.tables).mapTo(HashSet()) { it.value.code } }
 
     /**
      * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
@@ -194,7 +200,7 @@ class MetaCombatTest {
     /** Пары «стат × операция» всех носителей контента и наибольшее по модулю число, с каким носитель их кладёт. */
     private fun contentLines(): Map<Pair<String, Op>, Found> {
         val out = HashMap<Pair<String, Op>, Found>()
-        CARRIERS.forEach { file ->
+        CARRIERS.forEach { carrier ->
             fun walk(e: JsonElement) {
                 when (e) {
                     is JsonObject -> {
@@ -202,7 +208,7 @@ class MetaCombatTest {
                         if (stat != null && index.stats[stat] != null) {
                             val op = (e["op"] as? JsonPrimitive)?.content?.let { runCatching { Op.valueOf(it) }.getOrNull() } ?: Op.ADD
                             val found = out.getOrPut(stat to op) { Found(0.0, HashSet()) }
-                            found.carriers += file.removeSuffix(".json")
+                            found.carriers += carrier
                             found.value = maxOf(found.value, numbers(e).maxOfOrNull { abs(it) } ?: 0.0)
                         }
                         e.values.forEach(::walk)
@@ -213,7 +219,7 @@ class MetaCombatTest {
                     else -> Unit
                 }
             }
-            walk(TestContent.json(file))
+            walk(TestContent.json("$carrier.json"))
         }
         return out
     }
@@ -255,10 +261,10 @@ class MetaCombatTest {
         const val FOE_LEVEL = 40
 
         /** Носители строк вещей в контенте: пара только с них и только локальными строками - строка своей вещи ([worn]). */
-        val ITEM_CARRIERS = setOf("modifiers", "equipment")
+        val ITEM_CARRIERS = listOf("modifiers", "equipment")
 
-        /** Носители строк героя в контенте. */
-        val CARRIERS = listOf("modifiers.json", "equipment.json", "items.json", "tree.json", "skills.json", "powers.json", "classes.json", "fates.json", "atlas.json")
+        /** Носители строк героя в контенте - файлы `<носитель>.json`. */
+        val CARRIERS = ITEM_CARRIERS + listOf("items", "tree", "skills", "powers", "classes", "fates", "atlas")
 
         /** Лист эталона поверх класса: урон, защиты, щит, недуги, крит - чтобы условия большинства строк наступали в бою. */
         val BASE = mapOf(

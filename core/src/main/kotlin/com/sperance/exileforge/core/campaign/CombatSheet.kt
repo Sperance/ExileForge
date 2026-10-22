@@ -57,26 +57,22 @@ interface SheetReading {
         ?: listOf(Shift(StatSource(SourceKind.FIGHT, from), body[from], from)).filter { it.delta != 0.0 }
 
     companion object {
-        /** Чтения боя без правил движка: потоки и сопротивления ([FightReading]) и части диапазонов урона ([HitReading]). */
-        val RULELESS: List<SheetReading> by lazy { FightReading.entries + HitReading.ALL }
+        /** Чтения боя без правил движка: потоки и сопротивления ([FightReading]). */
+        val RULELESS: List<SheetReading> by lazy { FightReading.entries }
     }
 }
 
 /**
- * Часть [from] диапазона урона вида удара [range] - конец или полуширина: концы уже лежат в среднем половиной каждый ([StatSpread]),
- * полуширину бой читает броском удара (`HitDice`), а строка сводки показывает среднее диапазоном «мин–макс» (`HitRanges.range`) -
- * к цифре среднего чтение ничего не прибавляет.
+ * Части строки сводки, что бой читает не прибавкой к её цифре: концы и полуширина вида удара ([HitRange.parts]). Концы лежат в среднем
+ * половиной каждый ([StatSpread]), полуширину бой читает броском удара (`HitDice`), а строка вида показывает среднее диапазоном
+ * «мин–макс» (`HitRanges.range`). Связь «часть → строка» нужна отметкам и разбору сводки, в чтение цифр она не входит.
  */
-class HitReading private constructor(range: HitRange, override val from: String) : SheetReading {
-    override val stat: String = range.hit
-    override val creates: Boolean get() = false
+object RowParts {
+    /** Строка сводки, частью которой служит [part]; не часть диапазона - null. */
+    fun rowOf(part: String): String? = HitRange.ofPart(part)?.hit
 
-    override fun steps(body: Combatant): List<ReadingStep> = emptyList()
-
-    companion object {
-        /** Чтения концов и полуширины каждого вида удара. */
-        val ALL: List<HitReading> = HitRange.entries.flatMap { range -> listOf(range.min, range.max, range.spread).map { HitReading(range, it) } }
-    }
+    /** Части строки сводки [row]: у вида удара - концы и полуширина, у прочей - пусто. */
+    fun of(row: String): List<String> = HitRange.of(row)?.parts.orEmpty()
 }
 
 /**
@@ -359,18 +355,19 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
     private val skilled: Set<String> by lazy {
-        val direct = steady.flatMap { it.lines }.flatMap { line -> StatSpread.parts(line.stat, line.op) }.map { it.stat }
+        val direct = steady.flatMap { it.lines }.flatMap { line -> StatSpread.stats(line.stat, line.op) }
         direct.toSet() + moved(read(bare), read(body)).keys
     }
 
     /** Прямые цели строк дара и шаги его преобразований листа. */
     private val fated: Set<String> by lazy {
-        val direct = model.operations.filter { it.source?.kind == SourceKind.FATE }.flatMap { operation -> StatSpread.parts(operation.stat, operation.op) }.map { it.stat }
+        val direct = model.operations.filter { it.source?.kind == SourceKind.FATE }.flatMap { operation -> StatSpread.stats(operation.stat, operation.op) }
         direct.toSet() + model.reshapes(steady.flatMap { it.lines }).keys
     }
 
-    /** Отмеченные [marks] с цифрами, что бой читает из них ([SheetReading.from]), среди строк сводки [shown]. */
-    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> = (marks + readings.filter { it.from in marks }.map { it.stat }).filterTo(HashSet()) { it in shown }
+    /** Отмеченные [marks] с цифрами, что бой читает из них ([SheetReading.from]), и строками их частей ([RowParts]) среди строк сводки [shown]. */
+    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> =
+        (marks + readings.filter { it.from in marks }.map { it.stat } + marks.mapNotNull(RowParts::rowOf)).filterTo(HashSet()) { it in shown }
 
     /**
      * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата
@@ -413,7 +410,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     fun lowLife(stat: String): List<Pair<PassiveSource, Double>> {
         val steadyLines = steady.flatMap { it.lines }
         val now = model.with(steadyLines)[stat] ?: 0.0
-        return passives.filter { passive -> passive.lowLife && passive.lines.any { StatSpread.parts(it.stat, it.op).any { part -> part.stat == stat } } }
+        return passives.filter { passive -> passive.lowLife && passive.lines.any { StatSpread.touches(it.stat, it.op, stat) } }
             .map { passive -> passive to (model.with(steadyLines + passive.lines)[stat] ?: 0.0) - now }
     }
 

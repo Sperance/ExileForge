@@ -4,10 +4,12 @@ import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.PhaseFoes
+import com.sperance.exileforge.core.campaign.RowParts
 import com.sperance.exileforge.core.campaign.SheetReading
 import com.sperance.exileforge.core.campaign.Spawns
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.itemSourceIndex
@@ -46,7 +48,7 @@ import com.sperance.exileforge.rules.roll.Veils
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.sheet.Amplify
-import com.sperance.exileforge.rules.sheet.FlaskSheet
+import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.sheet.LineScope
 import com.sperance.exileforge.rules.sheet.MightStats
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -247,14 +249,14 @@ class HeroSheetTest {
             else -> moved.toList()
         }
         if (rows.isEmpty()) return listOf("не двигает строку сводки")
-        val from = if (kind == Shown.HERO) StatSpread.parts(effect.stat, effect.op).map { it.stat } else emptyList()
+        val from = if (kind == Shown.HERO) StatSpread.stats(effect.stat, effect.op) else emptyList()
         return listOfNotNull("разбор не называет вещь".takeIf { rows.none { row -> (readFrom(row) + from).any { after.names(it) } } }) +
             rows.filter { abs(after.combat.explain(it).total - (after.values[it] ?: 0.0)) > TOTAL }.map { "разбор $it не сходится с цифрой" } +
             rows.flatMap { row -> Lang.entries.filter { lang -> UiStrings.table(lang).let { it["stat.desc.$row"].isNullOrBlank() || it[StatDetail.key(row)].isNullOrBlank() } }.map { "${it.code}: нет описания $row" } }
     }
 
-    /** Строка сводки [row] и то, из чего её читает бой ([SheetReading.RULELESS]): в разборе любой из них видна вещь. */
-    private fun readFrom(row: String): List<String> = listOf(row) + SheetReading.RULELESS.filter { it.stat == row }.map { it.from }
+    /** Строка сводки [row], то, из чего её читает бой ([SheetReading.RULELESS]), и её части ([RowParts]): в разборе любой из них видна вещь. */
+    private fun readFrom(row: String): List<String> = listOf(row) + SheetReading.RULELESS.filter { it.stat == row }.map { it.from } + RowParts.of(row)
 
     /** Разбор характеристики [stat] называет вещь пробы: её вклад или сила, что она держит. */
     private fun ReferenceSheet.names(stat: String): Boolean {
@@ -304,11 +306,7 @@ class HeroSheetTest {
 
     /** Свой текст строки [def] на носителе [slot] в словаре [table]: имя описания или семейства, иначе шаблон каждого эффекта. */
     private fun own(def: ModifierDef, slot: Slot, table: Map<String, String>): Boolean = LocaleKey.modifierName(def.code) in table || def.variant != VariantKind.NATURAL && LocaleKey.modifierName(def.family) in table ||
-        def.effects.indices.all { i ->
-            val effect = def.effects[i]
-            val weapon = def.ownWeapon(effect, slot)
-            (HitRange.ofEnd(effect.stat)?.let { ModifierText.rangeKey(it, weapon) } ?: ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect), weapon)) in table
-        }
+        def.effects.indices.all { ModifierText.keyOf(def, it, slot) in table }
 
     /** Как строка вещи видна герою: строка героя, строка с условием, сила с правилами листа, усилитель своей вещи. */
     private enum class Shown { HERO, CONDITIONAL, POWER, AMPLIFIER }
@@ -409,10 +407,31 @@ class HeroSheetTest {
         }
     }
 
-    /** Часть строки сводки из контента (`partOf`) читается боем вместе со строкой: иначе её цифра пропала бы из сводки. */
+    /**
+     * Часть строки сводки из контента (`partOf`) читается боем вместе со строкой: прибавкой к её цифре ([SheetReading.RULELESS]) или, у
+     * частей диапазона урона ([RowParts]), броском удара вида ([rolledByTheFight]) - иначе её цифра пропала бы из сводки.
+     */
     @Test fun everyRowPartIsReadByTheFight() {
         val read = SheetReading.RULELESS.map { it.stat to it.from }.toSet()
-        registry.stats.filter { it.partOf != null }.forEach { part -> assertTrue(part.partOf to part.code in read, "${part.code}: часть ${part.partOf} без чтения боя") }
+        registry.stats.filter { it.partOf != null }.forEach { part ->
+            val rolled = RowParts.rowOf(part.code) == part.partOf && rolledByTheFight(part.code)
+            assertTrue(part.partOf to part.code in read || rolled, "${part.code}: часть ${part.partOf} без чтения боя")
+        }
+    }
+
+    /**
+     * Сдвиг части диапазона [part] меняет бросок удара вида в бою ([Combatant.dice]): конец - через полуширину, что шаг листа считает из
+     * концов ([HitRanges.spreads]), полуширина - сама.
+     */
+    private fun rolledByTheFight(part: String): Boolean {
+        val range = HitRange.ofPart(part) ?: return false
+        val type = DamageType.entries.first { it.attack == range.hit }
+        val ends = mapOf(range.hit to 100.0, range.min to 70.0, range.max to 130.0)
+        fun sheet(raw: Map<String, Double>): Map<String, Double> = raw + HitRanges.spreads(raw, raw)
+        val before = sheet(ends)
+        val after = if (part == range.spread) before + (part to before.getValue(part) * 2) else sheet(ends + (part to ends.getValue(part) + 10))
+        fun width(stats: Map<String, Double>): Double = Combatant(stats, 1, index.campaign.combat).dice(type).width
+        return abs(width(after) - width(before)) > SummaryProbe.MOVED
     }
 
     @Test

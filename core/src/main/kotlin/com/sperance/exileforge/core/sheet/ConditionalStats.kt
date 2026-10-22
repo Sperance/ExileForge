@@ -54,6 +54,6 @@ object ConditionalStats {
      * стихиям» - в сопротивлениях); null - места в сводке нет.
      */
     fun placed(stat: String, op: Op, registry: StatRegistry): StatSection? = registry.section(stat)
-        ?: StatSpread.parts(stat, op).firstNotNullOfOrNull { registry.section(it.stat) }
+        ?: StatSpread.stats(stat, op).firstNotNullOfOrNull { registry.section(it) }
         ?: FightReading.entries.firstOrNull { it.from == stat }?.let { registry.section(it.stat) }
 }

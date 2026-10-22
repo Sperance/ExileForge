@@ -9,19 +9,18 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
-import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.StatRegistry
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.TakenNode
-import com.sperance.exileforge.rules.content.WeaponEnd
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.SourcedLine
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
+import com.sperance.exileforge.rules.sheet.WeaponDamage
 import com.sperance.exileforge.rules.sheet.sourcedLines
 
 /** Общее сторожей сводки героя ([HeroSheetTest]): эталон, пробы и строки сводки, что двигает строка. */
@@ -58,13 +57,13 @@ internal object SummaryProbe {
     val ATTRIBUTES = mapOf(CoreStat.STRENGTH.code to 300.0, CoreStat.AGILITY.code to 300.0, CoreStat.INTELLECT.code to 300.0)
 
     /**
-     * Строки сводки, что двигает операция [op] над [stat]: цифры членов, на которые она раскладывается ([StatSpread]), - у «больше»
-     * конца урона своего оружия ([WeaponEnd]) это свой конец каждого вида удара, - строки, частью которых они объявлены, и то, что бой
-     * читает вместе с ними ([SheetReading.RULELESS]).
+     * Строки сводки, что двигает операция [op] над [stat]: цифры членов, на которые она раскладывается ([StatSpread]) после раскладки
+     * свода оружия ([WeaponDamage.laid]: «больше» конца своего оружия - свой конец каждого вида удара), строки, частью которых они
+     * объявлены, и то, что бой читает вместе с ними ([SheetReading.RULELESS]).
      */
     fun rows(stat: String, op: Op, registry: StatRegistry): Set<String> {
-        val laid = WeaponEnd.of(stat)?.let { end -> HitRange.entries.map(end::end) } ?: listOf(stat)
-        val targets = laid.flatMap { StatSpread.parts(it, op) }.map { it.stat }
+        val laid = WeaponDamage.laid(StatOperation(stat, op, PROBE), WeaponDamage.LINE).map { it.stat }
+        val targets = laid.flatMap { StatSpread.stats(it, op) }
         return (targets + targets.map(registry::row) + SheetReading.RULELESS.filter { it.from in targets }.map { it.stat }).toSet()
     }
 }

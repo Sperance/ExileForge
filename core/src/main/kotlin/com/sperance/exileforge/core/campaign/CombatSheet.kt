@@ -366,8 +366,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     }
 
     /** Отмеченные [marks] с цифрами, что бой читает из них ([SheetReading.from]), и строками их частей ([RowParts]) среди строк сводки [shown]. */
-    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> =
-        (marks + readings.filter { it.from in marks }.map { it.stat } + marks.mapNotNull(RowParts::rowOf)).filterTo(HashSet()) { it in shown }
+    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> = (marks + readings.filter { it.from in marks }.map { it.stat } + marks.mapNotNull(RowParts::rowOf)).filterTo(HashSet()) { it in shown }
 
     /**
      * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата

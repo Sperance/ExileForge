@@ -6,9 +6,9 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.Received
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.rules.content.MapCode
-import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
+import com.sperance.exileforge.rules.run.StartOptions
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.encodeToJsonElement
@@ -35,19 +35,13 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun bosses(heroId: String): BossRecords = http.get("$CAMPAIGN/bosses", heroQuery(heroId))
 
     /**
-     * Enters [mapCode], with a map item spent on it or without one. Repeated only under its key ([SafeRetry]): a repeat never opens another run. A [potion]
-     * goes into the run and [scarabs] with the map, both spent there. [forced] (сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
-     * [summon] - павший страж встаёт на пост перед входом за золото: без открытого захода (`CP_030`), страж повержен (`CP_031`).
+     * Enters [mapCode] with [options] ([StartOptions]), with a map item spent on it or without one. Repeated only under its key ([SafeRetry]): a repeat
+     * never opens another run. A potion goes into the run and scarabs with the map, both spent there. `forced` (сервер `API_REVISION` 61) -
+     * механики, что тестировщик ставит на заход насильно. `summon` - с ревизии 102: павший страж встаёт на пост перед входом за золото
+     * (допуск правил `Zone.summonBar`: на посту - `CP_031`, открыт заход - `CP_030`, финал без карты - `CP_029`).
      */
-    suspend fun start(
-        heroId: String,
-        mapCode: MapCode,
-        itemId: String? = null,
-        potion: String? = null,
-        scarabs: List<String> = emptyList(),
-        forced: Set<MapMechanic> = emptySet(),
-        summon: Boolean = false,
-    ): RunStart {
+    suspend fun start(heroId: String, mapCode: MapCode, options: StartOptions = StartOptions()): RunStart {
+        val (itemId, potion, scarabs, forced, summon) = options
         itemId?.let(::requireItemId)
         return http.post(
             "$CAMPAIGN/start",

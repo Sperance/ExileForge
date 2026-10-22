@@ -55,6 +55,7 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
 import com.sperance.exileforge.rules.run.RunStart
+import com.sperance.exileforge.rules.run.StartOptions
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -312,11 +313,7 @@ class ExpeditionActions(
                 api.campaign.start(
                     id,
                     mapCode,
-                    picked,
-                    launch?.potion,
-                    launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(),
-                    forced = repository.state.value.forced,
-                    summon = summon,
+                    StartOptions(picked, launch?.potion, launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(), repository.state.value.forced, summon),
                 )
             } catch (e: ApiFailure) {
                 if (e.code != SEED_TOO_SOON) throw e

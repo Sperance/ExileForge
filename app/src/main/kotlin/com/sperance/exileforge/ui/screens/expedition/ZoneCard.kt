@@ -15,9 +15,11 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,13 +42,13 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.campaign.SummonBar
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Monster
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SummonBar
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -57,7 +59,6 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.pow
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
 internal data class StashMap(val item: ItemInstance, val view: ItemView)
@@ -124,10 +125,9 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             }
             val wait = seedWait(seedReadyAt(game, zone.code, launch, forced))
             val mapless = launch.picked == null && !continues(game, zone.code, launch, forced) && zone.needsMap(game.hero?.campaign?.cleared.orEmpty())
-            val summon = GuardianCall(
-                mapRun = launch.picked != null,
-                blocked = if (wait > 0) ui("expedition.launch_wait", wait) else null,
-            ) { launchGuarded { vm.startRun(zone.code.value, summon = true) } }
+            val enterSummoned by rememberUpdatedState { launchGuarded { vm.startRun(zone.code.value, summon = true) } }
+            val mapRun = launch.picked != null
+            val summon = remember(mapRun, wait) { GuardianCall(mapRun, wait) { enterSummoned() } }
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 index.monster(zone.boss)?.let { Guardian(game, zone, it, maps.picked?.view?.areaLevel ?: zone.level, summon, Modifier.weight(1f).fillMaxHeight()) } ?: Spacer(Modifier.weight(1f))
                 AtlasPips(game.atlasState?.earned.orEmpty(), zone.code.value, Modifier.fillMaxHeight())
@@ -289,9 +289,10 @@ private const val SEED_TICK_MS = 1000L
 
 /**
  * Призыв павшего стража перед входом из карточки зоны: [mapRun] - вход с картой-предметом (финал региона зовёт стража только с ней),
- * [blocked] - почему войти сейчас нельзя (ожидание семени), [enter] - вход с призывом.
+ * [wait] - сколько секунд ждать нового семени (0 - войти можно), [enter] - вход с призывом.
  */
-internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter: () -> Unit)
+@Immutable
+internal class GuardianCall(val mapRun: Boolean, val wait: Long, val enter: () -> Unit)
 
 /**
  * The zone's guardian: its bust and name, and whether it waits by the exit or lies slain until its
@@ -302,7 +303,8 @@ internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter
  */
 @Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster, areaLevel: Int, summon: GuardianCall?, modifier: Modifier = Modifier) {
     val campaign = game.hero?.campaign
-    val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
+    val now = rememberServerNow(SUMMON_TICK_MS)
+    val back = campaign?.takeIf { it.bossDown(zone.code, now) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
     var open by remember { mutableStateOf(false) }
     if (open) GuardianSheet(game, zone, boss, areaLevel) { open = false }
@@ -319,7 +321,7 @@ internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter
                 color = if (back != null) Muted else Color(0xFFE0907F),
                 style = MaterialTheme.typography.labelMedium,
             )
-            if (back != null && summon != null) SummonRow(game, zone, boss, areaLevel, summon)
+            if (back != null && summon != null) SummonRow(game, zone, boss, areaLevel, now, summon)
         }
     }
 }
@@ -328,12 +330,12 @@ internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter
  * Призыв павшего стража до входа (цена в золоте у места оплаты): слева «Призыв до входа» и у повтора в окне - во сколько дороже,
  * справа цена [GoldCost] над маленькой «Призвать» ([RowButton], не хватает - недостача). Касание - подтверждение «Призвать и войти»
  * удержанием со строками «Есть · Спишется · Останется»; открытый заход, финал без карты и ожидание семени гасят его с причиной.
- * Цена и причина - [com.sperance.exileforge.core.model.campaign.CampaignState.summonOffer] по часам сервера.
+ * Цена и причина - [com.sperance.exileforge.core.model.campaign.CampaignState.summonOffer] на миг [now] часов сервера (тот же, что у
+ * строки стража).
  */
-@Composable private fun SummonRow(game: GameUi, zone: Zone, boss: Monster, areaLevel: Int, call: GuardianCall) {
+@Composable private fun SummonRow(game: GameUi, zone: Zone, boss: Monster, areaLevel: Int, now: Long, call: GuardianCall) {
     val index = game.index ?: return
     val services = index.campaign.services
-    val now = rememberServerNow(SUMMON_TICK_MS)
     val offer = game.hero?.campaign?.summonOffer(zone, services, areaLevel, call.mapRun, now) ?: return
     val bill = game.goldBill(offer.price) ?: return
     var asking by remember { mutableStateOf(false) }
@@ -341,7 +343,7 @@ internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter
         Column(Modifier.weight(1f)) {
             MutedText(ui("expedition.summon_before"), style = MaterialTheme.typography.labelSmall)
             if (offer.repeats > 0) {
-                Text(ui("expedition.summon_repeat", number(services.summonWindowHours), number(services.summonGrowth.pow(offer.repeats))), color = Caution, style = MaterialTheme.typography.labelSmall)
+                Text(ui("expedition.summon_repeat", number(services.summonWindowHours), number(services.growthAt(offer.repeats))), color = Caution, style = MaterialTheme.typography.labelSmall)
             }
         }
         RowActions(value = { GoldCost(bill) }) {
@@ -352,7 +354,7 @@ internal class GuardianCall(val mapRun: Boolean, val blocked: String?, val enter
         val bar = when (offer.bar) {
             SummonBar.OPEN_RUN -> game.hero?.campaign?.run?.let { ui("expedition.summon_open_run", mapTitle(it.zone)) }
             SummonBar.NEEDS_MAP -> ui("expedition.summon_needs_map")
-            null -> call.blocked
+            SummonBar.ALIVE, null -> ui("expedition.launch_wait", call.wait).takeIf { call.wait > 0 }
         }
         ConfirmSheet(
             title = ui("expedition.summon_q"),

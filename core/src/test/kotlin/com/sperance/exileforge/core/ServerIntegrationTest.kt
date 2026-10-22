@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.rules.roll.ItemBuckets
 import com.sperance.exileforge.rules.run.MapMechanic
+import com.sperance.exileforge.rules.run.StartOptions
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import kotlinx.coroutines.delay
@@ -112,10 +113,10 @@ class ServerIntegrationTest {
 
             val zoneCode = index.world.unlocked(emptyList()).first()
             val corrupted = index.zone(zoneCode)!!.corrupted.value.isNotBlank()
-            if (corrupted) assertEquals("CP_028", (runCatching { api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL)) }.exceptionOrNull() as? ApiFailure)?.code)
+            if (corrupted) assertEquals("CP_028", (runCatching { api.campaign.start(heroId, zoneCode, StartOptions(forced = setOf(MapMechanic.VAAL))) }.exceptionOrNull() as? ApiFailure)?.code)
             api.hero.freeProgress(heroId, true)
             if (corrupted) {
-                val vaal = api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL))
+                val vaal = api.campaign.start(heroId, zoneCode, StartOptions(forced = setOf(MapMechanic.VAAL)))
                 assertEquals(1, assertNotNull(api.campaign.events(heroId, vaal.id, listOf(RunEvent.VaalOpen(0)))).applied)
                 assertEquals(zoneCode, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).campaign.vaalZone?.mapCode)
             }

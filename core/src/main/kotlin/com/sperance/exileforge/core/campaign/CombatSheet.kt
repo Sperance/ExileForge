@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
@@ -54,6 +55,28 @@ interface SheetReading {
     /** Сдвиги разбора: шаг - своим сдвигом (источник [ReadingPart.ref], касание - его характеристика), иначе одна прибавка [from]. */
     fun shifts(body: Combatant): List<Shift> = steps(body)?.map { Shift(StatSource(SourceKind.FIGHT, it.part.ref), it.delta, it.part.stat) }
         ?: listOf(Shift(StatSource(SourceKind.FIGHT, from), body[from], from)).filter { it.delta != 0.0 }
+
+    companion object {
+        /** Чтения боя без правил движка: потоки и сопротивления ([FightReading]) и части диапазонов урона ([HitReading]). */
+        val RULELESS: List<SheetReading> by lazy { FightReading.entries + HitReading.ALL }
+    }
+}
+
+/**
+ * Часть [from] диапазона урона вида удара [range] - конец или полуширина: концы уже лежат в среднем половиной каждый ([StatSpread]),
+ * полуширину бой читает броском удара (`HitDice`), а строка сводки показывает среднее диапазоном «мин–макс» (`HitRanges.range`) -
+ * к цифре среднего чтение ничего не прибавляет.
+ */
+class HitReading private constructor(range: HitRange, override val from: String) : SheetReading {
+    override val stat: String = range.hit
+    override val creates: Boolean get() = false
+
+    override fun steps(body: Combatant): List<ReadingStep> = emptyList()
+
+    companion object {
+        /** Чтения концов и полуширины каждого вида удара. */
+        val ALL: List<HitReading> = HitRange.entries.flatMap { range -> listOf(range.min, range.max, range.spread).map { HitReading(range, it) } }
+    }
 }
 
 /**
@@ -236,8 +259,8 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
     private val bare: Combatant by lazy { Combatant(hero.bare, level, index.campaign.combat) }
 
-    /** Что бой читает вместе с цифрами сводки: чтения без правил и максимумы зарядов правил. */
-    private val readings: List<SheetReading> = FightReading.entries + ChargeReading.of(index.rules.charges)
+    /** Что бой читает вместе с цифрами сводки: чтения без правил ([SheetReading.RULELESS]) и максимумы зарядов правил. */
+    private val readings: List<SheetReading> = SheetReading.RULELESS + ChargeReading.of(index.rules.charges)
 
     /** Тело героя между боями: лист с пассивными умениями. */
     val body: Combatant by lazy { Combatant(hero.stats, level, index.campaign.combat) }

@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.PhaseFoes
+import com.sperance.exileforge.core.campaign.SheetReading
 import com.sperance.exileforge.core.campaign.Spawns
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
@@ -252,8 +253,8 @@ class HeroSheetTest {
             rows.flatMap { row -> Lang.entries.filter { lang -> UiStrings.table(lang).let { it["stat.desc.$row"].isNullOrBlank() || it[StatDetail.key(row)].isNullOrBlank() } }.map { "${it.code}: нет описания $row" } }
     }
 
-    /** Строка сводки [row] и то, из чего её читает бой ([FightReading]): в разборе любой из них видна вещь. */
-    private fun readFrom(row: String): List<String> = listOf(row) + FightReading.entries.filter { it.stat == row }.map { it.from }
+    /** Строка сводки [row] и то, из чего её читает бой ([SheetReading.RULELESS]): в разборе любой из них видна вещь. */
+    private fun readFrom(row: String): List<String> = listOf(row) + SheetReading.RULELESS.filter { it.stat == row }.map { it.from }
 
     /** Разбор характеристики [stat] называет вещь пробы: её вклад или сила, что она держит. */
     private fun ReferenceSheet.names(stat: String): Boolean {
@@ -410,8 +411,8 @@ class HeroSheetTest {
 
     /** Часть строки сводки из контента (`partOf`) читается боем вместе со строкой: иначе её цифра пропала бы из сводки. */
     @Test fun everyRowPartIsReadByTheFight() {
-        val read = FightReading.entries.map { it.stat to it.from }.toSet()
-        registry.stats.filter { it.partOf != null }.forEach { part -> assertTrue(part.partOf to part.code in read, "${part.code}: часть ${part.partOf} без FightReading") }
+        val read = SheetReading.RULELESS.map { it.stat to it.from }.toSet()
+        registry.stats.filter { it.partOf != null }.forEach { part -> assertTrue(part.partOf to part.code in read, "${part.code}: часть ${part.partOf} без чтения боя") }
     }
 
     @Test

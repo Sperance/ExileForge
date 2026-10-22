@@ -96,16 +96,18 @@ import kotlinx.coroutines.withContext
 @Composable fun BagSearch(game: GameUi, shelf: BagShelf, query: String, onQuery: (String) -> Unit) {
     val filter = game.settings.bag
     val edit = LocalSettingsEdit.current
-    val apply: (BagFilter) -> Unit = { next -> edit?.invoke { copy(bag = next) } }
+    val apply: (BagFilter) -> Unit = remember(edit) { { next -> edit?.invoke { copy(bag = next) } } }
+    val narrowings = remember(filter, game.lang) { filter.narrowings(game.lang) }
+    val orders = remember(filter, game.lang, apply) { BagOrder.entries.map { order -> SortOption(order.title(game.lang), order == filter.order) { apply(filter.copy(order = order)) } } }
     var sheet by remember { mutableStateOf(false) }
     SearchBar(
         query,
         onQuery,
         ui("bag.search"),
-        filter = SearchFilter(rememberChips(filter.narrowings(game.lang), apply), onOpen = { sheet = true }, onReset = { apply(filter.cleared()) }),
+        filter = SearchFilter(rememberChips(narrowings, apply), onOpen = { sheet = true }, onReset = { apply(filter.cleared()) }),
         maxLength = game.inputs.search,
     ) {
-        SortButton(SortLabel.Word(filter.order.title(game.lang)), BagOrder.entries.map { order -> SortOption(order.title(game.lang), order == filter.order) { apply(filter.copy(order = order)) } })
+        SortButton(SortLabel.Word(filter.order.title(game.lang)), orders)
     }
     if (sheet) {
         BagFilterSheet(game, shelf, filter, query, onDismiss = { sheet = false }) {
@@ -140,7 +142,7 @@ private fun BagFilterSheet(game: GameUi, shelf: BagShelf, filter: BagFilter, que
     FilterAccordionSheet(
         groups = groups,
         switches = listOf(FilterSwitch(ui("bag.filter.applicable"), draft.applicable, ui("bag.filter.applicable_hint")) { draft = draft.copy(applicable = it) }),
-        show = ui("filter.show", shelf.count(draft, query)),
+        show = ui("filter.show", remember(shelf, draft, query) { shelf.count(draft, query) }),
         resettable = draft.narrowed,
         onReset = { onApply(draft.cleared()) },
         onShow = { onApply(draft) },

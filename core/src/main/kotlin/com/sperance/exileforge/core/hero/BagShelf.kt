@@ -11,7 +11,15 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /** Стопка сумки: код предмета [code] и сколько их у героя [amount]. */
 data class BagStack(val code: String, val amount: Long)
@@ -37,7 +45,7 @@ object StackUses {
 }
 
 /** Порядок стопок внутри полки сумки: ценность (дороже - раньше), имя, количество (больше - раньше). */
-@Serializable
+@Serializable(with = BagOrderByName::class)
 enum class BagOrder {
     VALUE,
     NAME,
@@ -49,11 +57,13 @@ enum class BagOrder {
 
 /**
  * Отбор сумки, что помнится на устройстве: полки множеством [shelves] (пусто - все), только то, что можно применить
- * ([applicable], [StackUses]), и порядок внутри полки [order]. Поиск по имени - не грань и не помнится: его держит экран.
+ * ([applicable], [StackUses]), и порядок внутри полки [order]. Поиск по имени - не грань и не помнится: его держит экран. Полки и
+ * порядок пишутся именами и читаются терпимо ([ShelvesByName], [BagOrderByName]): переименованная полка или порядок не сбрасывают
+ * остальные настройки устройства.
  */
 @Serializable
 data class BagFilter(
-    val shelves: Set<BagCategory> = emptySet(),
+    @Serializable(with = ShelvesByName::class) val shelves: Set<BagCategory> = emptySet(),
     val applicable: Boolean = false,
     val order: BagOrder = BagOrder.VALUE,
 ) {
@@ -68,6 +78,25 @@ data class BagFilter(
     fun cleared(): BagFilter = BagFilter(order = order)
 }
 
+/** Полки отбора сумки на устройстве - именами; имя, которого больше нет среди [BagCategory], при чтении пропускается. */
+object ShelvesByName : KSerializer<Set<BagCategory>> {
+    private val names = SetSerializer(String.serializer())
+    override val descriptor: SerialDescriptor = names.descriptor
+
+    override fun serialize(encoder: Encoder, value: Set<BagCategory>) = encoder.encodeSerializableValue(names, value.mapTo(LinkedHashSet()) { it.name })
+
+    override fun deserialize(decoder: Decoder): Set<BagCategory> = decoder.decodeSerializableValue(names).mapNotNullTo(LinkedHashSet()) { name -> BagCategory.entries.firstOrNull { it.name == name } }
+}
+
+/** Порядок сумки на устройстве - именем; незнакомое имя при чтении - [BagOrder.VALUE]. */
+object BagOrderByName : KSerializer<BagOrder> {
+    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("BagOrder", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: BagOrder) = encoder.encodeString(value.name)
+
+    override fun deserialize(decoder: Decoder): BagOrder = decoder.decodeString().let { name -> BagOrder.entries.firstOrNull { it.name == name } } ?: BagOrder.VALUE
+}
+
 /** Полка сумки на экране: её стопки [stacks] в порядке отбора. */
 data class BagSection(val category: BagCategory, val stacks: List<BagStack>)
 
@@ -75,9 +104,9 @@ data class BagSection(val category: BagCategory, val stacks: List<BagStack>)
  * Сумка глазами экрана - полки по порядку [BagCategory], без пустых, под отбором [BagFilter] и поиском по имени ([ItemSearch]);
  * [counts] - стопок на каждой полке всей сумки (числа фишек шторки фильтра).
  */
-class BagShelf private constructor(val sections: List<BagSection>, val counts: Map<BagCategory, Int>, private val all: List<BagStack>, private val lens: BagLens) {
+class BagShelf private constructor(val sections: List<BagSection>, val counts: Map<BagCategory, Int>, private val seen: List<SeenStack>) {
     /** Сколько стопок покажет отбор [filter] с поиском [query] - «Показать N» шторки, пока отбор в черновике. */
-    fun count(filter: BagFilter, query: String): Int = all.count { lens.fits(it, filter, query) }
+    fun count(filter: BagFilter, query: String): Int = seen.count { it.fits(filter, query) }
 
     /** Почему под отбором [filter] и поиском [query] пусто, словами для игрока: полки с запросом, один запрос или одни фильтры. */
     fun emptyReason(filter: BagFilter, query: String, lang: Lang): String {
@@ -92,31 +121,37 @@ class BagShelf private constructor(val sections: List<BagSection>, val counts: M
     companion object {
         /**
          * Сумка [bag] героя класса [heroClass] над контентом [index] под отбором [filter] и поиском [query]: стопки с числом больше
-         * нуля, по полкам, внутри полки - порядком [BagFilter.order] (равные - по имени).
+         * нуля, по полкам, внутри полки - порядком [BagFilter.order] (равные - по имени). Полка, годность, имя и цена стопки
+         * считаются раз на стопку ([SeenStack]).
          */
         fun of(index: ContentIndex?, bag: Map<String, Long>, heroClass: String?, filter: BagFilter, query: String): BagShelf {
-            val lens = BagLens(index, heroClass)
-            val all = bag.filterValues { it > 0 }.map { (code, amount) -> BagStack(code, amount) }
-            val byCategory = all.filter { lens.fits(it, filter, query) }.sortedWith(lens.order(filter.order)).groupBy { lens.category(it.code) }
+            val seen = bag.filterValues { it > 0 }.map { (code, amount) -> SeenStack.of(index, heroClass, BagStack(code, amount)) }
+            val byCategory = seen.filter { it.fits(filter, query) }.sortedWith(SeenStack.order(filter.order)).groupBy({ it.category }, { it.stack })
             val sections = BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { BagSection(category, it) } }
-            return BagShelf(sections, all.groupingBy { lens.category(it.code) }.eachCount(), all, lens)
+            return BagShelf(sections, seen.groupingBy { it.category }.eachCount(), seen)
         }
     }
 }
 
-/** Как сумка видит стопку над контентом [index] у героя класса [heroClass]: полка, ценность, годность к действию, отбор и порядок. */
-private class BagLens(private val index: ContentIndex?, private val heroClass: String?) {
-    fun category(code: String): BagCategory = BagCategory.of(index?.item(ItemCode(code)))
+/** Что сумка знает о стопке [stack], посчитанное раз: полка [category], годность к действию [usable] ([StackUses]), имя [name] и цена [worth]. */
+private class SeenStack(val stack: BagStack, val category: BagCategory, val usable: Boolean, val name: String, val worth: Long) {
+    fun fits(filter: BagFilter, query: String): Boolean =
+        (filter.shelves.isEmpty() || category in filter.shelves) && (!filter.applicable || usable) && ItemSearch.matches(stack.code, query)
 
-    fun fits(stack: BagStack, filter: BagFilter, query: String): Boolean =
-        (filter.shelves.isEmpty() || category(stack.code) in filter.shelves) && (!filter.applicable || StackUses.of(index, stack.code, heroClass).isNotEmpty()) && ItemSearch.matches(stack.code, query)
+    companion object {
+        fun of(index: ContentIndex?, heroClass: String?, stack: BagStack): SeenStack {
+            val item = index?.item(ItemCode(stack.code))
+            return SeenStack(stack, BagCategory.of(item), StackUses.of(index, stack.code, heroClass).isNotEmpty(), itemTitle(stack.code), item?.price ?: 0L)
+        }
 
-    fun order(order: BagOrder): Comparator<BagStack> {
-        val byName = compareBy<BagStack> { itemTitle(it.code) }
-        return when (order) {
-            BagOrder.VALUE -> compareByDescending<BagStack> { index?.item(ItemCode(it.code))?.price ?: 0L }.then(byName)
-            BagOrder.NAME -> byName
-            BagOrder.AMOUNT -> compareByDescending<BagStack> { it.amount }.then(byName)
+        /** Порядок [order] внутри полки; равные - по имени. */
+        fun order(order: BagOrder): Comparator<SeenStack> {
+            val byName = compareBy<SeenStack> { it.name }
+            return when (order) {
+                BagOrder.VALUE -> compareByDescending<SeenStack> { it.worth }.then(byName)
+                BagOrder.NAME -> byName
+                BagOrder.AMOUNT -> compareByDescending<SeenStack> { it.stack.amount }.then(byName)
+            }
         }
     }
 }

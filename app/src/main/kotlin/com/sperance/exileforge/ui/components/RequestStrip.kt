@@ -63,11 +63,14 @@ sealed interface StripState {
  */
 @Immutable data class StripTones(val line: Color, val track: Color, val restored: Color, val muted: Color = Muted)
 
-/** Полоса шага, что повторяется сам ([CallState]): «нет связи» с «Повторить» ([onRetry]) и пояснением «выбор сохранён». */
-fun CallState.strip(onRetry: () -> Unit): StripState = when (this) {
+/**
+ * Полоса шага, что повторяется сам ([CallState]): «нет связи» с «Повторить» ([onRetry]) и пояснением [offlineNote] - по умолчанию
+ * «выбор сохранён».
+ */
+fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_saved")): StripState = when (this) {
     CallState.Idle -> StripState.None
     is CallState.Waiting -> StripState.Waiting(since, attempt, attempts)
-    CallState.Lost -> StripState.Offline(ui("call.offline_saved"), onRetry)
+    is CallState.Lost -> StripState.Offline(offlineNote, onRetry)
     CallState.Restored -> StripState.Restored
 }
 

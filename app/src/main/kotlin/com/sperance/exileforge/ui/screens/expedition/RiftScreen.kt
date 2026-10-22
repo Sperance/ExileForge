@@ -474,7 +474,7 @@ private enum class RunSheet { BOONS, CURSES }
         RiftAscent(rules, engine, chart, state.walk, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
         Column(Modifier.align(Alignment.TopCenter)) {
             RiftHud(model, rules, board, engine, run, state.toll, state.recap?.takeIf { !it.shown }, idle, onLeave = { leaving = true }) { sheet = it }
-            RequestStrip(step.strip(model::retryRiftStep), RiftStripTones)
+            RequestStrip(step.strip(model::retryRiftStep, offlineNote(step)), RiftStripTones)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
@@ -490,7 +490,7 @@ private enum class RunSheet { BOONS, CURSES }
     if (leaving) {
         ConfirmSheet(ui("rift.end"), ui("rift.end_hold"), onDismiss = { leaving = false }, danger = true) {
             leaving = false
-            model.riftAct(RiftAct.End)
+            model.leaveRift()
         }
     }
     looking?.let(chart::spot)?.let { spot ->
@@ -555,7 +555,7 @@ private enum class RunSheet { BOONS, CURSES }
             RiftChip(ui("rift.curses_n", run.curses.size), RiftColors.Warn) { onSheet(RunSheet.CURSES) }
             RiftChip(ui("rift.sight", engine.sight(run)), RiftColors.Muted)
             Spacer(Modifier.weight(1f))
-            RiftMenu(rules, board, idle, onLeave)
+            RiftMenu(rules, board, onLeave)
         }
     }
 }
@@ -676,10 +676,10 @@ private val RiftMenuPalette = MenuPalette(
  * Меню забега Разлома (общее [RunMenu]) в палитре Разлома: срок недели у заголовка, мутаторы недели теми же строками, что на Вратах;
  * свой пункт - «Покинуть Разлом» ([onLeave]: подтверждение удержанием), под именем - что будет с забегом.
  */
-@Composable private fun RiftMenu(rules: RiftRules, board: RiftBoard, idle: Boolean, onLeave: () -> Unit) {
+@Composable private fun RiftMenu(rules: RiftRules, board: RiftBoard, onLeave: () -> Unit) {
     RunMenu(
         items = listOf(
-            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), ui("rift.end_confirm"), danger = true, enabled = idle, onClick = onLeave),
+            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), ui("rift.end_confirm"), danger = true, onClick = onLeave),
         ),
         hold = {},
         extra = {
@@ -702,6 +702,9 @@ private val RiftMenuPalette = MenuPalette(
         trigger = { onClick -> RiftChip("☰", RiftColors.Muted, onClick) },
     )
 }
+
+/** Пояснение «нет связи» полосы шага: выход из Разлома - что он не дошёл, прочий шаг - что выбор сохранён. */
+private fun offlineNote(step: CallState): String = ui(if (step.tag == RiftAct.End) "rift.leave_offline" else "call.offline_saved")
 
 /** Краски полосы шага в палитре Разлома. */
 private val RiftStripTones = StripTones(line = RiftColors.Rift, track = RiftColors.Line, restored = RiftColors.Soft, muted = RiftColors.Muted)

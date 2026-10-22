@@ -4731,6 +4731,8 @@
   "call.restored_note": "Данные обновлены",
   "call.slow": "Сервер долго отвечает",
   "call.attempt": "Попытка {0} из {1}",
+  "call.attempt_open": "Попытка {0}",
+  "rift.leave_offline": "Выход из Разлома не дошёл до сервера — нажмите «Повторить»",
   "rift.keys_count": "{0}: {1}",
   "rift.metal.BRONZE": "Бронза",
   "rift.metal.SILVER": "Серебро",

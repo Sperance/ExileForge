@@ -26,16 +26,19 @@ sealed interface CallState {
      * Запрос в полёте: нажат в [since] (мс стены), идёт попытка [attempt] из [attempts]; [tag] - что нажали (по нему экран крутит
      * спиннер на той самой кнопке).
      */
-    data class Waiting(val since: Long, val attempt: Int, val attempts: Int, val tag: Any?) : CallState
+    data class Waiting(val since: Long, val attempt: Int, val attempts: Int, override val tag: Any?) : CallState
 
-    /** Попытки кончились, ответа нет: запрос не потерян - [PatientCall.retry] шлёт его снова тем же ключом. */
-    data object Lost : CallState
+    /** Попытки кончились, ответа нет: запрос [tag] не потерян - [PatientCall.retry] шлёт его снова тем же ключом. */
+    data class Lost(override val tag: Any?) : CallState
 
     /** Запрос прошёл после сбоя: весть держится [PatientCall.RESTORED_MS], потом - [Idle]. */
     data object Restored : CallState
 
     /** Кнопки запросов гаснут: запрос в полёте или ждёт повтора. */
     val holds: Boolean get() = this is Waiting || this is Lost
+
+    /** Что нажали у запроса в полёте или ждущего повтора; null - запроса нет. */
+    val tag: Any? get() = null
 }
 
 /** Пороги ожидания для экрана, мс от нажатия: спиннер на нажатой кнопке и полоса «Сервер долго отвечает». */
@@ -87,9 +90,18 @@ class PatientCall(
         return true
     }
 
+    /**
+     * Шлёт [request] новым ключом, бросив прежний - в полёте или ждущий повтора: его ответа больше никто не ждёт (сервер мог его и
+     * принять - [request] идёт уже после него). Так выход из режима не ждёт повисший шаг.
+     */
+    fun supersede(request: Request) {
+        drop()
+        send(request)
+    }
+
     /** «Повторить»: потерянный запрос уходит снова тем же ключом, с полным числом попыток. */
     fun retry() {
-        val lost = pending?.takeIf { mutable.value == CallState.Lost } ?: return
+        val lost = pending?.takeIf { mutable.value is CallState.Lost } ?: return
         launch(lost, shaken = true)
     }
 
@@ -131,7 +143,7 @@ class PatientCall(
                 troubled = true
                 if (attempt < attempts) delay(pauseMs)
             }
-            mutable.value = CallState.Lost
+            mutable.value = CallState.Lost(call.request.tag)
         }
     }
 

@@ -184,6 +184,17 @@ class RiftActions(
         }
     }
 
+    /**
+     * «Покинуть Разлом»: забег кончается ([RiftAct.End]) и счёт остаётся. Шаг, что висит в полёте или ждёт повтора, бросается - выход его
+     * не ждёт (сервер мог его и принять, конец забега идёт после него); выход сам повторяется, как шаг, и без связи ждёт «Повторить».
+     */
+    fun leave() {
+        val run = mutable.value.board?.progress?.run ?: return
+        val heroId = heroes.heroId
+        mutable.update { it.copy(walk = null) }
+        steps.supersede(request(RiftAct.End) { key -> land(api.trials.riftAct(heroId, run.id, RiftAct.End, key)) })
+    }
+
     /** Шаг забега [act] по нажатию игрока: ответ - новая доска, у сундука Владыки - его содержимое, а у конца - итог и сундук. */
     fun act(act: RiftAct) {
         val run = mutable.value.board?.progress?.run ?: return
@@ -203,8 +214,11 @@ class RiftActions(
     /** Шаг [tag] через [steps]; пока идёт команда раннера (чтение доски, вход), шаг не начинается. */
     private fun sendStep(tag: Any?, send: suspend (String) -> Unit): Boolean {
         if (commands.busy) return false
-        return steps.send(PatientCall.Request(tag, refused = ::refused, restored = ::refresh, send = send))
+        return steps.send(request(tag, send))
     }
+
+    /** Шаг Разлома [tag]: отказ - строка отказа и свежая доска, прошёл после сбоя - свежая доска. */
+    private fun request(tag: Any?, send: suspend (String) -> Unit) = PatientCall.Request(tag, refused = ::refused, restored = ::refresh, send = send)
 
     /** Сервер отказал шагу: строка отказа, доска - заново. */
     private fun refused(failure: ApiFailure) {

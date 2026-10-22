@@ -4731,6 +4731,8 @@
   "call.restored_note": "Data refreshed",
   "call.slow": "The server is slow to answer",
   "call.attempt": "Attempt {0} of {1}",
+  "call.attempt_open": "Attempt {0}",
+  "rift.leave_offline": "Leaving the Rift did not reach the server — tap Retry",
   "rift.keys_count": "{0}: {1}",
   "rift.metal.BRONZE": "Bronze",
   "rift.metal.SILVER": "Silver",

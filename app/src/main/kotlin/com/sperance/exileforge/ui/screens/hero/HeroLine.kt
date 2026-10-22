@@ -104,21 +104,24 @@ import kotlinx.coroutines.flow.StateFlow
     shown.tally?.let { FateChip(it, shown.card, shown.visit, onVisit) }
 }
 
-/** Опыт внутри уровня: доля полосы и подпись; [gained] и [span] - набрано и нужно в уровне, null - масштаба нет или уровень последний. */
-private class Experience(val fraction: Float, val label: String, val gained: Long? = null, val span: Long? = null)
+/** Опыт внутри уровня: доля полосы и подпись; [progress] - набрано и нужно в уровне, null - масштаба нет или уровень последний. */
+private class Experience(val fraction: Float, val label: String, val progress: LevelProgress? = null)
+
+/** Опыт в уровне: набрано [gained] из [needed]; [left] - сколько осталось до следующего уровня. */
+private class LevelProgress(val gained: Long, val needed: Long) {
+    val left: Long get() = needed - gained
+}
 
 /**
  * Подсказка имени и уровня героя [hero]: уровень, опыт в уровне «набрано / нужно» и сколько осталось до следующего уровня; на последнем
  * уровне - что он последний. Без таблицы опыта - только уровень.
  */
 internal fun heroLevelTip(hero: HeroHeaderState): Tip {
-    val xp = experienceOf(hero.classes, hero.level, hero.experience)
-    val gained = xp.gained
-    val span = xp.span
+    val progress = experienceOf(hero.classes, hero.level, hero.experience).progress
     val steps = when {
-        gained != null && span != null -> listOf(
-            ui("hero.level_tip.xp") to "${groupedNumber(gained)} / ${groupedNumber(span)}",
-            ui("hero.level_tip.left", hero.level + 1) to groupedNumber(span - gained),
+        progress != null -> listOf(
+            ui("hero.level_tip.xp") to "${groupedNumber(progress.gained)} / ${groupedNumber(progress.needed)}",
+            ui("hero.level_tip.left", hero.level + 1) to groupedNumber(progress.left),
         )
         hero.classes != null -> listOf(ui("hero.level_tip.xp") to ui("hero.xp_last"))
         else -> emptyList()
@@ -142,5 +145,5 @@ private fun experienceOf(classes: ClassesFile?, level: Int, experience: Double):
         next == null -> ui("hero.xp_last")
         else -> ui("hero.xp_compact", Math.round(fraction * 100), groupedNumber(inLevel.toLong()), groupedNumber(span.toLong()))
     }
-    return if (next != null) Experience(fraction, label, inLevel.toLong(), span.toLong()) else Experience(fraction, label)
+    return Experience(fraction, label, next?.let { LevelProgress(inLevel.toLong(), span.toLong()) })
 }

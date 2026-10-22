@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -33,6 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
+import com.sperance.exileforge.core.campaign.Places
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
@@ -113,12 +115,14 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var resetting by remember { mutableStateOf(false) }
     var refunding by remember { mutableStateOf<String?>(null) }
     var summary by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
+    var centerOn by remember { mutableIntStateOf(0) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         } else {
             val taken = state.allocated.toSet()
-            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = model::selectAtlasNode)
+            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), centerOn, onSelect = model::selectAtlasNode)
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
@@ -132,7 +136,14 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         }
         val spent = (state?.allocated?.size ?: 1) - 1
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+            if (index != null) ForgeIconButton(Icons.Outlined.Search, ui("atlas.search"), onClick = { searching = true }, shape = IconButtonShape.Circle, accent = Sky.text)
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
+        }
+        if (searching && index != null) {
+            AtlasSearch(index, state?.allocated?.toSet().orEmpty(), { searching = false }) { code ->
+                model.selectAtlasNode(code)
+                centerOn++
+            }
         }
         val regrets = game.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L
         if (resetting && index != null && state != null) {
@@ -169,6 +180,13 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
         ToastBelow(64.dp)
     }
+}
+
+/** Поиск узла Атласа ([PlaceSearchSheet]): имя узла и ветви, взятый - с пометкой; выбор ставит звезду посреди неба и открывает её лист. */
+@Composable private fun AtlasSearch(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val places = remember(index, taken) { Places.atlas(index.atlas.nodes, taken) { ui("atlas.branch.${it.branch.name}") } }
+    val text = PlaceSearchText(ui("atlas.search_hint"), ui("atlas.search_help"), ui("atlas.search_none"), ui("atlas.search_none_help"))
+    PlaceSearchSheet(places, emptyList(), text, onDismiss, onPick)
 }
 
 /**

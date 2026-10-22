@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CallState
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.rules.rift.RiftAct
@@ -45,6 +46,9 @@ class ExpeditionViewModel(
 ) : ViewModel() {
     /** Где стояла камера карты у героя [heroId]; не стояла - null, карта откроется на фронтире. */
     fun worldView(heroId: String): WorldView? = prefs.worldView(heroId)
+
+    /** Недавние зоны входа героя [heroId] на устройстве, новые первыми. */
+    fun recentZones(heroId: String): List<MapCode> = prefs.settings.value.recentZones[heroId].orEmpty()
 
     /** Запомнить камеру карты героя [heroId] на устройстве. */
     fun keepWorldView(heroId: String, view: WorldView) {

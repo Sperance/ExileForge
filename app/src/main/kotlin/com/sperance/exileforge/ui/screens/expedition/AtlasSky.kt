@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasFog
@@ -47,9 +48,10 @@ import kotlin.math.sin
  * стоит без анимаций и вне экрана; нити, кольца дорог и подписи ветвей рисуются заново лишь со сдвигом, масштабом или взятием. Тумана нет:
  * всё небо видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг
  * касания, жест не перезапускается каждый кадр. Атлас - колесо вокруг старта: пунктирные кольца - кольцевые дороги раскладки, у каждой
- * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев.
+ * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев. Каждый новый [centerOn] (найденный поиском узел) ставит выбранную
+ * звезду [selected] посреди открытого листом места.
  */
-@Composable internal fun Sky(index: ContentIndex, taken: Set<String>, selected: String, modifier: Modifier, onSelect: (String) -> Unit) {
+@Composable internal fun Sky(index: ContentIndex, taken: Set<String>, selected: String, modifier: Modifier, centerOn: Int = 0, onSelect: (String) -> Unit) {
     val graph = index.atlasGraph
     val nodes = index.atlas.nodes
     val bounds = remember(nodes) { SkyBounds.of(nodes) }
@@ -59,6 +61,15 @@ import kotlin.math.sin
     var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
+    var area by remember { mutableStateOf(IntSize.Zero) }
+    LaunchedEffect(centerOn, area) {
+        if (centerOn == 0 || area == IntSize.Zero) return@LaunchedEffect
+        val node = graph.node(selected) ?: return@LaunchedEffect
+        val width = area.width.toFloat()
+        val height = area.height.toFloat()
+        val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(node)
+        pan = Placement(bounds, width, height, floor, margin, scale, Offset(width / 2 - at.x, (height - floor) / 2 - at.y)).held()
+    }
     val clock = com.sperance.exileforge.ui.components.decorTime()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     val shown = nodes
@@ -76,6 +87,7 @@ import kotlin.math.sin
     Box(
         modifier.clipToBounds()
             .onSizeChanged { size ->
+                area = size
                 if (framed || size.width == 0) return@onSizeChanged
                 val start = nodes.firstOrNull { it.kind == AtlasNodeKind.START } ?: return@onSizeChanged
                 val width = size.width.toFloat()

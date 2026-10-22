@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -17,8 +19,10 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.unlocked
+import com.sperance.exileforge.core.campaign.Places
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
@@ -115,19 +119,38 @@ private const val CARD_TOP = .48f
             val story = quests.board?.let { board -> game.index?.quests?.story?.getOrNull(board.chapter)?.steps?.getOrNull(board.step)?.zone?.value?.takeIf { it != com.sperance.exileforge.rules.content.MapCode.NONE.value } }
             WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
+        var searching by remember { mutableStateOf(false) }
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
-            WorldBar(Modifier)
+            WorldBar(Modifier) { searching = true }
             Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 StoryButton(game, quests.board, questModel)
                 ZoomButtons(camera, Modifier) { factor -> scope.launch { camera.zoomBy(factor) } }
             }
         }
         if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, Modifier.align(Alignment.BottomCenter))
+        if (searching) ZoneSearch(game, vm) { searching = false }
     }
 }
 
-/** Шапка карты: заголовок на вуали, что гаснет к карте. */
-@Composable private fun WorldBar(modifier: Modifier) {
+/**
+ * Поиск зоны карты мира ([PlaceSearchSheet]): только открытые зоны кампании - имя, уровень, страж (убит ли - по часам сервера) и акт;
+ * недавние - зоны входа на устройстве. Выбор открывает карточку зоны, камера едет к ней сама.
+ */
+@Composable private fun ZoneSearch(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
+    val index = game.index ?: return
+    val unlocked = game.progress?.unlocked.orEmpty()
+    val now = rememberServerNow(SEARCH_TICK_MS)
+    val places = remember(index, unlocked, game.hero?.campaign, now) { Places.zones(index, unlocked, game.hero?.campaign, now) }
+    val recent = remember(places, game.heroId) { vm.recentZones(game.heroId).mapNotNull { code -> places.firstOrNull { it.key == code } } }
+    val text = PlaceSearchText(ui("expedition.search_hint"), ui("expedition.search_help"), ui("expedition.search_none"), ui("expedition.search_none_help"))
+    PlaceSearchSheet(places, recent, text, onDismiss) { vm.selectZone(it.value) }
+}
+
+/** Такт часов поиска зон: «страж убит» хватает раз в минуту. */
+private const val SEARCH_TICK_MS = 60_000L
+
+/** Шапка карты: заголовок на вуали, что гаснет к карте, справа - лупа поиска зоны [onSearch]. */
+@Composable private fun WorldBar(modifier: Modifier, onSearch: () -> Unit) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
             .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
@@ -135,6 +158,7 @@ private const val CARD_TOP = .48f
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        ForgeIconButton(Icons.Outlined.Search, ui("expedition.search"), onClick = onSearch, shape = IconButtonShape.Circle, accent = GoldBright)
     }
 }
 

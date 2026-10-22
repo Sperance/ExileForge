@@ -33,6 +33,8 @@ data class GameSettings(
      * последней зоны не хранит (только открытый заход); к ней ведут кнопка «К герою» и первая камера карты «Похода».
      */
     val lastZones: Map<String, MapCode> = emptyMap(),
+    /** Недавние зоны входа каждого героя на этом устройстве, новые первыми (не больше [GameSettings.RECENT_ZONES]): лист поиска зон их предлагает. */
+    val recentZones: Map<String, List<MapCode>> = emptyMap(),
     /** Пролог уже показан на этом устройстве: дальше перед созданием героя его можно пропустить сразу. */
     val prologueSeen: Boolean = false,
     /** Подсказка боя «Коснитесь врага, чтобы бить его первым» уже показана на этом устройстве: крестик или первое касание врага. */
@@ -50,6 +52,9 @@ data class GameSettings(
 ) {
     companion object {
         val PAUSES = listOf(0, 30, 50)
+
+        /** Сколько недавних зон входа помнит устройство на героя ([recentZones]). */
+        const val RECENT_ZONES = 5
     }
 }
 

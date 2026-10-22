@@ -51,14 +51,17 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
     /** Последняя зона, в которую входил герой [heroId] на этом устройстве; не входил - null. */
     fun lastZone(heroId: String): MapCode? = settings.value.lastZones[heroId]
 
-    /** Запомнить зону [zone], в которую вошёл герой [heroId]: только настройки устройства; без героя - ничего. */
+    /** Запомнить зону [zone], в которую вошёл герой [heroId], и поставить её первой в недавние: только настройки устройства; без героя - ничего. */
     suspend fun keepLastZone(heroId: String, zone: MapCode) {
         if (heroId.isBlank()) return
-        editSettings { copy(lastZones = lastZones + (heroId to zone)) }
+        editSettings {
+            val recent = (listOf(zone) + recentZones[heroId].orEmpty().filter { it != zone }).take(GameSettings.RECENT_ZONES)
+            copy(lastZones = lastZones + (heroId to zone), recentZones = recentZones + (heroId to recent))
+        }
     }
 
-    /** Забыть камеру карты и последнюю зону стёртого героя [heroId]: его записи на устройстве больше никому не нужны. */
-    suspend fun forgetHero(heroId: String) = editSettings { copy(worldViews = worldViews - heroId, lastZones = lastZones - heroId) }
+    /** Забыть камеру карты, последнюю и недавние зоны стёртого героя [heroId]: его записи на устройстве больше никому не нужны. */
+    suspend fun forgetHero(heroId: String) = editSettings { copy(worldViews = worldViews - heroId, lastZones = lastZones - heroId, recentZones = recentZones - heroId) }
 
     /**
      * Строка окна загрузки на этот показ из [keys]: не та, что в прошлый ([GameSettings.lastLaunchLine], прочитано с устройства), выбор

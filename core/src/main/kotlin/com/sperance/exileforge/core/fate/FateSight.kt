@@ -2,10 +2,10 @@ package com.sperance.exileforge.core.fate
 
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.statsOf
 import com.sperance.exileforge.core.i18n.LocaleHoles
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.FateBoon
 import com.sperance.exileforge.rules.content.FateBoonDef
@@ -68,7 +68,7 @@ class FateSight(val index: ContentIndex, private val fate: String?, worn: Collec
 
 /** Характеристики, что двигает судьбоносная строка [boon] - строка листа (`FateBoonDef.Line`); правило и подстройка рычага - пусто. */
 fun boonStats(index: ContentIndex, boon: FateBoon): List<String> =
-    (index.fates.boons.def(boon.fate, boon.boon, boon.tier) as? FateBoonDef.Line)?.let { StatDetail.stats(index, it.line) }.orEmpty()
+    (index.fates.boons.def(boon.fate, boon.boon, boon.tier) as? FateBoonDef.Line)?.let { index.statsOf(it.line) }.orEmpty()
 
 /**
  * Текст судьбоносной строки [boon] словами сервера (`FateBoons.key`): `{v}` - модуль значения, `{p}` и `{c}` - постоянные правила

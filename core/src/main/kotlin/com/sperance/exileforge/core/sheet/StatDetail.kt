@@ -3,13 +3,14 @@ package com.sperance.exileforge.core.sheet
 import com.sperance.exileforge.core.display.numberedText
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.ModifierCode
+import com.sperance.exileforge.rules.text.LocaleKey
 
 /**
- * Пояснение характеристики [stat] для строки, что её двигает: имя [title], короткая фраза [quote] (`stat.desc.<код>`, нет - null) и
+ * Пояснение характеристики [stat] для строки, что её двигает: имя [title], короткая фраза [quote] ([StatDetail.quote], нет - null) и
  * абзацы подробного описания [paragraphs] - тот же текст, что цитата и «Подробнее» разбора сводки героя.
  */
 data class StatNote(val stat: String, val title: String, val quote: String?, val paragraphs: List<String>)
@@ -26,6 +27,12 @@ object StatDetail {
     /** Ключ короткой фразы характеристики [stat] - цитаты шапки разбора. */
     fun quoteKey(stat: String): String = "stat.desc.$stat"
 
+    /**
+     * Короткая фраза [stat] без чисел: словарь клиента на языке [lang] (характеристики героя), иначе словарь сервера (Атлас и карты,
+     * `StatGroup.described`); нет нигде - пусто.
+     */
+    fun quote(stat: String, lang: Lang = uiLanguage): String = uiOr(lang, quoteKey(stat), "").ifBlank { locOr(LocaleKey.statDescription(stat), "") }
+
     /** Абзацы описания [stat] на языке [lang] с числами контента [index]; нет описания, контента или числа - пусто. */
     fun paragraphs(stat: String, index: ContentIndex?, lang: Lang = uiLanguage): List<String> {
         val text = uiOr(lang, key(stat), "")
@@ -34,15 +41,12 @@ object StatDetail {
         return filled.split('\n').map { it.trim() }.filter { it.isNotEmpty() }
     }
 
-    /** Характеристики, что двигает модификатор [code], по порядку его эффектов; модификатора нет в контенте - пусто. */
-    fun stats(index: ContentIndex, code: ModifierCode): List<String> = index.modifier(code)?.effects?.map { it.stat }.orEmpty()
-
-    /** Есть ли у [stat] на языке [lang] фраза или подробное описание: строка с ней объясняет себя по касанию. */
-    fun described(stat: String, lang: Lang = uiLanguage): Boolean = uiOr(lang, quoteKey(stat), "").isNotBlank() || uiOr(lang, key(stat), "").isNotBlank()
+    /** Есть ли у [stat] фраза ([quote]) или подробное описание на языке [lang]: строка с ней объясняет себя по касанию. */
+    fun described(stat: String, lang: Lang = uiLanguage): Boolean = quote(stat, lang).isNotBlank() || uiOr(lang, key(stat), "").isNotBlank()
 
     /** Пояснения характеристик [stats] на языке [lang] по порядку, без повторов; характеристика без описания пропускается. */
     fun notes(stats: List<String>, index: ContentIndex?, lang: Lang = uiLanguage): List<StatNote> = stats.distinct().filter { described(it, lang) }.map { stat ->
-        val quote = uiOr(lang, quoteKey(stat), "").takeIf { it.isNotBlank() }?.let { index.numberedText(it, stat) }
+        val quote = quote(stat, lang).takeIf { it.isNotBlank() }?.let { index.numberedText(it, stat) }
         StatNote(stat, statTitle(stat, lang), quote, paragraphs(stat, index, lang))
     }
 }

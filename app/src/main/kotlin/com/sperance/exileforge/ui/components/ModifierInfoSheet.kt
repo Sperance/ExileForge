@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.tierOf
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.theme.*
@@ -28,12 +29,13 @@ import kotlin.math.roundToInt
  * What a modifier line is, behind a tap on it: its name and sentence, where it sits (prefix, suffix,
  * implicit…), its tier out of how many, the tier's range and where the roll landed inside it.
  * The range lives here, not on the line. Под фразой - пояснения характеристик строки ([StatNotes]: имя, фраза и подробное описание,
- * как в разборе сводки героя, числа - контента [index]); без них - пояснение строки ([ItemLine.note]), если оно есть (строки карты).
+ * как в разборе сводки героя, числа - контента [index]); имя печатается, когда пояснений больше одного.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModifierInfoSheet(line: ItemLine, index: ContentIndex, onDismiss: () -> Unit) {
-    val notes = remember(line, index) { StatDetail.notes(line.stats, index) }
+    val lang = uiLanguage
+    val notes = remember(line, index, lang) { StatDetail.notes(line.stats, index, lang) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 28.dp),
@@ -50,7 +52,7 @@ fun ModifierInfoSheet(line: ItemLine, index: ContentIndex, onDismiss: () -> Unit
                 )
             }
             Text(line.text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
-            if (notes.isNotEmpty()) StatNotes(notes, titled = line.stats.size > 1) else line.note?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+            if (notes.isNotEmpty()) StatNotes(notes, titled = notes.size > 1)
             Column(Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(6.dp)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Fact(ui("modinfo.kind"), line.kindText())
                 if (line.roll.tier > 0 && line.tierCount > 0) TierScale(line.roll.tier, line.tierOpen)

@@ -2,6 +2,8 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -27,44 +29,61 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.core.sheet.StatNote
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.theme.*
 
-/** Где строка с пояснением ловит касание: вся строка или только её знак ⓘ (строка внутри того, что касание уже выбирает). */
-enum class NoteTap { LINE, MARK }
-
 /**
  * Строка характеристик, что объясняет себя: касание открывает окно у строки с пояснением каждой характеристики [stats] ([StatNotes]:
  * имя, фраза и подробное описание - тот же текст, что в разборе сводки героя); справа - тихий знак ⓘ. Без описаний строка не
- * нажимается и знака нет. [tap] - что ловит касание: строка или, внутри выбирающего касанием (вариант узла), только знак с зоной
- * касания 44 dp. Пояснения собираются при открытии окна; [tint] - рамка окна.
+ * нажимается и знака нет. Пояснения собираются при открытии окна; [tint] - рамка окна.
  */
 @Composable fun StatNoted(
     stats: List<String>,
     index: ContentIndex?,
     modifier: Modifier = Modifier,
     tint: Color = Rune,
-    tap: NoteTap = NoteTap.LINE,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val described = remember(stats) { stats.any { StatDetail.described(it) } }
+    val lang = uiLanguage
+    val described = remember(stats, lang) { stats.any { StatDetail.described(it, lang) } }
     var open by remember { mutableStateOf(false) }
-    val opens = Modifier.clickable(role = Role.Button, onClickLabel = ui("stat.note.open")) { open = true }
-    Row(modifier.then(if (described && tap == NoteTap.LINE) opens else Modifier), verticalAlignment = Alignment.CenterVertically) {
+    val opens = if (described) Modifier.clickable(role = Role.Button, onClickLabel = ui("stat.note.open")) { open = true } else Modifier
+    Row(modifier.then(opens), verticalAlignment = Alignment.CenterVertically) {
         content()
-        if (described) {
-            val mark = Modifier.padding(start = 6.dp)
-            Icon(
-                Icons.Outlined.Info,
-                null,
-                tint = Muted.copy(alpha = .6f),
-                modifier = (if (tap == NoteTap.MARK) mark.then(opens).touchZone() else mark).size(NoteMarkSide),
-            )
-        }
-        if (open) TipCallout(tint, onClose = { open = false }) { StatNotes(remember(stats, index) { StatDetail.notes(stats, index) }) }
+        if (described) NoteMark(Modifier.padding(start = 6.dp))
+        if (open) NotesCallout(stats, index, tint) { open = false }
     }
+}
+
+/**
+ * Знак ⓘ в углу того, что касание уже выбирает (вариант узла древа): строки внутри не нажимаются, касание знака открывает окно с
+ * пояснениями всех характеристик [stats] ([StatNotes]). Зона касания 44 dp лежит в рамке родителя и не раздувает его разметку; без
+ * описаний знака нет.
+ */
+@Composable fun BoxScope.StatNoteCorner(stats: List<String>, index: ContentIndex?, tint: Color = Rune) {
+    val lang = uiLanguage
+    val described = remember(stats, lang) { stats.any { StatDetail.described(it, lang) } }
+    if (!described) return
+    var open by remember { mutableStateOf(false) }
+    Box(Modifier.matchParentSize(), contentAlignment = Alignment.TopEnd) {
+        NoteMark(Modifier.clickable(role = Role.Button, onClickLabel = ui("stat.note.open")) { open = true }.touchZone())
+        if (open) NotesCallout(stats, index, tint) { open = false }
+    }
+}
+
+/** Тихий знак ⓘ строки с пояснением. */
+@Composable private fun NoteMark(modifier: Modifier) {
+    Icon(Icons.Outlined.Info, null, tint = Muted.copy(alpha = .6f), modifier = modifier.size(NoteMarkSide))
+}
+
+/** Окно у строки с пояснениями характеристик [stats] на языке интерфейса, числа - контента [index]. */
+@Composable private fun NotesCallout(stats: List<String>, index: ContentIndex?, tint: Color, onClose: () -> Unit) {
+    val lang = uiLanguage
+    val notes = remember(stats, index, lang) { StatDetail.notes(stats, index, lang) }
+    TipCallout(tint, onClose = onClose) { StatNotes(notes) }
 }
 
 /**

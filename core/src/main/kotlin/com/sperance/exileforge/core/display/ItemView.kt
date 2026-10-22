@@ -177,8 +177,8 @@ data class ItemLine(
     /** Where the definition puts the line — prefix, suffix, implicit…; a fracture and the bench are [marks], not a place. */
     val placement: AffixKind? get() = AffixKind.of(definition?.source, crafted = false, fractured = false)
 
-    /** The characteristics the line moves, each once, in its effects' order. */
-    val stats: List<String> get() = definition?.effects?.map { it.stat }?.distinct().orEmpty()
+    /** The characteristics the line moves, each once, in its effects' order ([ModifierDef.stats]). */
+    val stats: List<String> get() = definition?.stats().orEmpty()
 }
 
 /** What the head of a card reads before any line: how well the item rolled on average and its best tier. */

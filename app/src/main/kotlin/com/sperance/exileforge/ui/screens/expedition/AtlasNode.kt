@@ -34,12 +34,11 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.lineNote
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.statsOf
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.GoldBill
-import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -91,11 +90,9 @@ import kotlin.math.sin
         val isTaken = node.code in taken
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
-            StatNoted(StatDetail.stats(index, line.code), index, Modifier.fillMaxWidth(), Sky.text) {
-                effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f)) }
-            }
-            lineNote(index, line)?.let { note ->
-                Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
+            val stats = remember(index, line.code) { index.statsOf(line.code) }
+            StatNoted(stats, index, Modifier.fillMaxWidth(), Sky.text) {
+                Text("•  ${lineText(index, line)}", color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             }
             if (node.kind != AtlasNodeKind.START) {
                 val now = totals[line.code]?.firstOrNull() ?: 0.0
@@ -152,12 +149,6 @@ import kotlin.math.sin
     }
 }
 
-/**
- * Строка узла Атласа полной фразой словаря сервера: «+1,8% к шансу, что вещь, выпавшая на захваченной карте,
- * несёт влияние этой карты»; флаг - фраза без числа («…захватывает только Зодчий»). Короткое имя характеристики узел не печатает.
- */
-internal fun effectLines(index: ContentIndex, line: Line): List<String> = listOf(lineText(index, line))
-
 /** The atlas's lines added up: by modifier code, value by value, over every taken node. */
 internal object AtlasTotals {
     fun of(index: ContentIndex, taken: Set<String>): Map<ModifierCode, List<Double>> = sum(index.atlas.nodes.filter { it.code in taken }.flatMap { it.lines })
@@ -184,7 +175,7 @@ internal fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: ()
             if (groups.isEmpty()) Text(ui("atlas.summary_empty"), color = Sky.text, style = MaterialTheme.typography.bodySmall)
             groups.forEach { (branch, totals) ->
                 Text(ui("atlas.branch.${branch.name}").uppercase(), color = branch.hue(), style = MaterialTheme.typography.labelMedium)
-                totals.forEach { (code, values) -> effectLines(index, Line(code, values)).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) } }
+                totals.forEach { (code, values) -> Text("•  ${lineText(index, Line(code, values))}", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
             }
         }
     }

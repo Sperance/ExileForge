@@ -91,7 +91,7 @@ fun HeroScreen() {
                         fate?.let { shown ->
                             item(key = "fate") {
                                 val now = remember(shown.effects, game.lang) { game.index?.let { fateNow(it, shown.effects) }.orEmpty() }
-                                val caption = shown.tally?.caption ?: ui("fate.ribbon.caption")
+                                val caption = shown.tally ?: ui("fate.ribbon.caption")
                                 FateRibbon(
                                     shown.card,
                                     shown.effects.power.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,

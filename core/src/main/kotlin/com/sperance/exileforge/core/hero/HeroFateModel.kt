@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.FateCounter
 import com.sperance.exileforge.core.display.FateSource
-import com.sperance.exileforge.core.display.FateTally
 import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
@@ -34,10 +33,10 @@ data class FateVisit(val building: Building, val label: String)
 
 /**
  * Дар играемого героя для показа: карточка [card], рычаги на силе героя с переносом Разгона [effects] (лента: «Сейчас
- * действует» и сила), счёт [tally] (null - дар ничего не копит) и кнопка к зданию счёта [visit] - только если здание герою
+ * действует» и сила), подпись счёта [tally] (null - дар ничего не копит) и кнопка к зданию счёта [visit] - только если здание герою
  * открыто.
  */
-data class HeroFate(val card: FateCard, val effects: FateEffects, val tally: FateTally?, val visit: FateVisit?)
+data class HeroFate(val card: FateCard, val effects: FateEffects, val tally: String?, val visit: FateVisit?)
 
 /**
  * Дар героя одним потоком на приложение: лента листа героя читает его, а не считает сама. Пересчёт - когда меняются
@@ -66,8 +65,10 @@ class HeroFateModel(slice: GameSlice, expedition: ExpeditionActions, scope: Coro
         val index = inputs.index ?: return null
         val fate = index.fates.of(hero.info.fate) ?: return null
         val effects = FateKit.of(index, fate.code, hero.stats, hero.equipped.values, hero.info.fateCarry).effects
-        val tally = FateCounter.of(streak?.let { FateSource(hero.info, it.fate, it.won) } ?: FateSource(hero.info, effects))
-        return HeroFate(FateCard.of(fate), effects, tally, tally?.counter?.visit()?.takeIf { it.building in inputs.open })
+        val source = streak?.let { FateSource(hero.info, it.fate, it.won) } ?: FateSource(hero.info, effects)
+        val tally = FateCounter.of(source)
+        val visit = tally?.let { FateCounter.of(source.effects)?.visit() }?.takeIf { it.building in inputs.open }
+        return HeroFate(FateCard.of(fate), effects, tally, visit)
     }
 
     /** Где тратят счёт дара: трофеи - у торговца; прочие счета тратить негде. */

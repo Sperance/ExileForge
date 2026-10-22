@@ -9,14 +9,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +43,7 @@ import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.rules.content.ContestKind
 import com.sperance.exileforge.rules.content.ContestMetric
 import com.sperance.exileforge.rules.content.ContestRow
 import com.sperance.exileforge.rules.content.ContestRules
@@ -62,10 +68,9 @@ private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 private const val TICK_MS = 10_000L
 
 /**
- * Здание «Состязания»: два стенда - сутки и неделя - с мерой периода (у «босса» - его портрет и имя), сроком, своим местом и тем,
- * сколько не хватает до призов, мини-пьедесталом лиги и анонсом следующего периода; «Таблица лиги» открывает таблицу в облике доски
- * славы ([ContestTableView]), «Награды» - лист наград лиги. Лига героя - справа в строке цепочки. Сменился период - здание
- * перечитывается само.
+ * Здание «Состязания»: сверху каменные вкладки «День» и «Неделя» (точка - у героя сейчас приз в этом периоде), под вкладкой стенд
+ * выбранного периода тремя панелями ([StandPanels]); «Таблица лиги» открывает таблицу в облике доски славы ([ContestTableView]),
+ * «Награды» - лист наград лиги. Лига героя - справа в строке цепочки. Сменился период - здание перечитывается само.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,6 +79,7 @@ fun ContestScreen() {
     val game by vm.game.collectAsStateWithLifecycle()
     val state by vm.contests.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
+    var kind by rememberSaveable { mutableStateOf(ContestKind.DAY) }
     val rules = game.index?.rules?.contests
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isBlank()) return@LaunchedEffect
@@ -100,24 +106,45 @@ fun ContestScreen() {
         return
     }
     var prizes by remember { mutableStateOf<ContestStand?>(null) }
-    PullToRefreshBox(isRefreshing = Reads.CONTESTS in activity.loading, onRefresh = { vm.load(force = true) }, modifier = Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            board.stands.forEach { stand ->
-                StandCard(game, rules, stand, onTable = { vm.open(ContestPick(stand.kind)) }, onPrizes = { prizes = stand })
+    val stands = board.stands.sortedBy { it.kind }
+    val stand = stands.firstOrNull { it.kind == kind } ?: stands.firstOrNull()
+    Column(Modifier.fillMaxSize()) {
+        StoneTabs(stands.map(::kindTab), stands.indexOf(stand), { kind = stands[it].kind }, scrollable = false)
+        PullToRefreshBox(isRefreshing = Reads.CONTESTS in activity.loading, onRefresh = { vm.load(force = true) }, modifier = Modifier.weight(1f)) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                stand?.let { shown -> StandPanels(game, rules, shown, onTable = { vm.open(ContestPick(shown.kind)) }, onPrizes = { prizes = shown }) }
             }
-            NextPanel(board.stands)
         }
     }
-    prizes?.let { stand -> PrizesSheet(rules, stand) { prizes = null } }
+    prizes?.let { PrizesSheet(rules, it) { prizes = null } }
+}
+
+/** Вкладка периода: у суток - солнце цветом предостережения, у недели - луна цветом золотой медали; точка - у героя сейчас приз. */
+private fun kindTab(stand: ContestStand): StoneTab {
+    val label = ui("contest.kind_short.${stand.kind.name}")
+    val prized = stand.place in 1L..stand.prized
+    return when (stand.kind) {
+        ContestKind.DAY -> StoneTab(label, Icons.Outlined.WbSunny, Caution, prized)
+        ContestKind.WEEK -> StoneTab(label, Icons.Outlined.DarkMode, medalOf(1), prized)
+    }
 }
 
 /**
- * Стенд состязания: вид и срок, мера (у «босса» - портрет и имя босса), пьедестал лиги, своё место с результатом и что дальше - до
- * следующего места в призах или до границы лучших 10%; героя ещё нет в таблице - как в неё попасть. Внизу - таблица лиги и награды.
+ * Стенд периода тремя панелями: вид и срок, мера (у «босса» - портрет и имя босса) и под чертой анонс следующей меры периода; своё
+ * место с тем, что дальше, и нынешний приз; лига героя с мини-пьедесталом, «Награды» и «Таблица лиги».
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun StandCard(game: GameUi, rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit) {
+private fun StandPanels(game: GameUi, rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit) {
+    MetricPanel(game, stand)
+    ForgePanel {
+        OwnStanding(stand)
+        if (stand.own != null && stand.place > 0) PrizeNow(rules, stand, stand.place.toInt())
+    }
+    LeaguePanel(rules, stand, onTable, onPrizes)
+}
+
+/** Мера периода: вид и срок, мера (у «босса» - портрет и имя босса; что считается - в ⓘ), под пунктиром - «Завтра:» или «С 27.10:» и следующая мера. */
+@Composable private fun MetricPanel(game: GameUi, stand: ContestStand) {
     val left = rememberServerLeft(stand.endsAt, TICK_MS)
     ForgePanel(accent = metricHue(stand.metric)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -132,8 +159,21 @@ private fun StandCard(game: GameUi, rules: ContestRules, stand: ContestStand, on
             }
             InfoMark(ui("contest.metric.${stand.metric.name}"), { Tip(contestMetricTitle(stand.metric), ui("contest.metric_desc.${stand.metric.name}")) })
         }
+        DashLine(Bronze, Modifier.fillMaxWidth())
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(ui("contest.next.${stand.kind.name}", dayOf(stand.endsAt)), color = Caution, style = MaterialTheme.typography.bodySmall)
+            Text(contestMetricLine(stand.next, stand.nextBoss), color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+        }
+    }
+}
+
+/** Лига героя: «Лига 20-39 · ваша», мини-пьедестал, «Награды» и «Таблица лиги». */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit) {
+    ForgePanel {
+        MutedText(ui("contest.league_mine", leagueLabel(rules, stand.league)))
         MiniPodium(stand)
-        OwnStanding(stand)
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ForgeButton(onPrizes, size = ButtonSize.Small, kind = ButtonKind.Text) { Text(ui("contest.prizes"), maxLines = 1) }
             ForgeButton(onTable, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = ForgeGlyphs.Trophy) { Text(ui("contest.table", leagueLabel(rules, stand.league)), maxLines = 1) }
@@ -201,19 +241,6 @@ private fun nextStep(stand: ContestStand, own: ContestRow): String {
 
 /** Сколько не хватает мере [mine], чтобы обойти [target]: при равенстве выше раньше достигший, поэтому - строго лучше. */
 private fun gap(metric: ContestMetric, mine: Long, target: Long): Long = if (metric.board.lower) mine - target + 1 else target - mine + 1
-
-/** Анонс следующих периодов: «Завтра: Быстрейший босс · Король Бездны», «С 27.10: Опыт за период». */
-@Composable private fun NextPanel(stands: List<ContestStand>) {
-    ForgePanel {
-        Text(ui("contest.next"), color = Muted, style = MaterialTheme.typography.labelMedium)
-        stands.forEach { stand ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(ui("contest.next.${stand.kind.name}", dayOf(stand.endsAt)), color = Caution, style = MaterialTheme.typography.bodySmall)
-                Text(contestMetricLine(stand.next, stand.nextBoss), color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-            }
-        }
-    }
-}
 
 /**
  * Лист наград лиги стенда [stand]: места - сколько сфер ценной таблицы, у первых мест - ещё титул и рамка; лучшие 10% - по нынешнему
@@ -375,10 +402,15 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
 /** Граница лучших 10% - пунктир с подписью под последним местом с наградой. */
 @Composable private fun TopBorder() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Canvas(Modifier.weight(1f).height(1.dp)) {
-            drawLine(Rune, center.copy(x = 0f), center.copy(x = size.width), strokeWidth = size.height, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())))
-        }
+        DashLine(Rune, Modifier.weight(1f))
         Text(ui("contest.top_border"), color = Rune, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** Пунктирная черта цвета [color] толщиной в 1 dp. */
+@Composable private fun DashLine(color: Color, modifier: Modifier) {
+    Canvas(modifier.height(1.dp)) {
+        drawLine(color, center.copy(x = 0f), center.copy(x = size.width), strokeWidth = size.height, pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())))
     }
 }
 
@@ -394,7 +426,7 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
                 val place = stand.place.toInt()
                 MutedText(ui("contest.own_bar", place, stand.size, contestValue(stand.metric, own.value)), style = MaterialTheme.typography.labelMedium)
                 if (place > PODIUM.size) TableRow(game, rules, stand, own, place, own = true)
-                Text(ownPrize(rules, stand, place), color = Caution, style = MaterialTheme.typography.labelMedium)
+                PrizeNow(rules, stand, place)
             }
 
             mine != null && mine != stand.league -> MutedText(ui("contest.other_league", leagueLabel(rules, mine)))
@@ -407,7 +439,15 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
     }
 }
 
-/** Нынешний приз места [place]: «Приз сейчас: ×8 сфер, титул «…», серебряная рамка» или что приза пока нет. */
+/** Строка «Приз сейчас» героя на месте [place]: подпись слева, приз места справа. */
+@Composable private fun PrizeNow(rules: ContestRules, stand: ContestStand, place: Int) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        MutedText(ui("contest.prize_label"), style = MaterialTheme.typography.labelMedium)
+        Text(ownPrize(rules, stand, place), color = GoldBright, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+    }
+}
+
+/** Нынешний приз места [place]: «×8 сфер, титул «…», серебряная рамка» или что приза пока нет. */
 private fun ownPrize(rules: ContestRules, stand: ContestStand, place: Int): String {
     val prize = rules.prize(stand.kind, place, stand.size.toInt()) ?: return ui("contest.prize_none")
     if (!rules.honoured(place)) return ui("contest.prize_now", prize.orbs)

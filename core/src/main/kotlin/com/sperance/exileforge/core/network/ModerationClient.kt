@@ -1,7 +1,7 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.rules.run.RunFlag
+import com.sperance.exileforge.core.model.paging.Page
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.encodeToJsonElement
 
@@ -127,7 +127,10 @@ private const val DAY_MS = 86_400_000L
     val lastSeenAt: Long = 0,
     /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано или сервер старее. */
     val fate: String? = null,
-)
+) {
+    /** Ключ строки в списке: герой, а у аккаунта в корзине - его санкция удаления. */
+    val key: String get() = heroId.ifEmpty { sanction?.id ?: userId }
+}
 
 /**
  * Отбор списка модерации по Предначертанию, параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
@@ -153,8 +156,6 @@ sealed interface ModerationFate {
 
 /** Порядок списка модерации: последняя активность, уровень, дата создания, имя. */
 @Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
-
-@Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
 
 /** Что смотрящий может сделать с целью досье; [fate] - сменить её Предначертание (сервер `ModerationPolicy.canRedrawFate`). */
 @Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false, val fate: Boolean = false)
@@ -197,8 +198,6 @@ sealed interface ModerationFate {
     val tester: Boolean = false,
     /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
-    /** Метки темпа героя ([RunFlag] правил - тот же тип, что пишет сервер, старые первыми); решает смотрящий. */
-    val runFlags: List<RunFlag> = emptyList(),
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)
@@ -279,14 +278,14 @@ private const val FATE_ARROW = " → "
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    /** Страница [page] раздела [segment]: поиск [query], порядок [sort] и отбор по Предначертанию [fate]. */
+    /** Страница [page] раздела [segment] (всего строк - [Page.total]): поиск [query], порядок [sort] и отбор по Предначертанию [fate]. */
     suspend fun rows(
         query: String,
         segment: ModerationSegment,
         page: Int,
         sort: ModerationSort = ModerationSort.ACTIVITY,
         fate: ModerationFate = ModerationFate.All,
-    ): ModerationPage = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param))
+    ): Page<ModerationRow> = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param))
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */
     suspend fun dossier(heroId: String, userId: String): Dossier = http.get("$MODERATION/dossier", mapOf("hero" to heroId, "user" to userId))
@@ -304,7 +303,8 @@ class ModerationClient internal constructor(private val http: Transport) {
 
     suspend fun delete(request: DeletionRequest): SanctionView = http.post("$MODERATION/delete", body = WireJson.encodeToJsonElement(request))
 
-    suspend fun log(page: Int, actor: String = ""): List<ModerationEntryView> = http.get("$MODERATION/log", mapOf("page" to page.toString(), "actor" to actor))
+    /** Страница [page] журнала модерации, новые сверху, с числом записей и признаком, что старше есть; [actor] - действия одного логина. */
+    suspend fun log(page: Int, actor: String = ""): Page<ModerationEntryView> = http.get("$MODERATION/log", mapOf("page" to page.toString(), "actor" to actor))
 
     suspend fun notice(id: String): SanctionNotice = decode(http.request("GET", NOTICE, mapOf("id" to id)))
 

@@ -51,12 +51,12 @@ import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.UpdateHintState
 import com.sperance.exileforge.ui.components.UpdateHost
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.screens.city.CityScreen
 import com.sperance.exileforge.ui.screens.city.UniquesScreen
-import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
@@ -178,8 +178,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 ) {
                     com.sperance.exileforge.ui.components.FateSightHost(game) {
                         com.sperance.exileforge.ui.components.LoreHost(game) {
-                            com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                                com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                            com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                                com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
                                     com.sperance.exileforge.ui.components.PlayerCardHost(game) {
                                         Box(Modifier.fillMaxSize()) {
                                             val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
@@ -210,12 +210,12 @@ import org.koin.compose.viewmodel.koinViewModel
                     expedition,
                     drafts,
                     onDismiss = { sheets.bug = false },
-                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(it) },
+                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView() },
                     onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
                 )
             }
             if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues) { sheets.reports = null } }
+            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
             if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
             if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
@@ -260,7 +260,7 @@ private val BANNER_TOAST_TOP = 60.dp
                 entry<Route.Tree> { ProgressPlaceScreen(ProgressPlace.TREE) }
                 entry<Route.Grimoire> { ProgressPlaceScreen(ProgressPlace.GRIMOIRE) }
                 entry<Route.Expedition>(metadata = TabMemory.ROOT) { ExpeditionScreen() }
-                entry<Route.Crafts>(metadata = TabMemory.ROOT) { CraftsScreen() }
+                entry<Route.Crafts> { ProgressPlaceScreen(ProgressPlace.CRAFTS) }
                 entry<Route.Progress>(metadata = TabMemory.ROOT) { ProgressScreen() }
                 entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE) }
                 entry<Route.Trials> { com.sperance.exileforge.ui.screens.expedition.TrialsPage() }
@@ -270,10 +270,11 @@ private val BANNER_TOAST_TOP = 60.dp
                 entry<Route.Quests> { CityScreen(Building.QUESTS) }
                 entry<Route.Merchant> { CityScreen(Building.MERCHANT) }
                 entry<Route.Auction> { CityScreen(Building.AUCTION) }
-                entry<Route.Guild> { CityScreen(Building.GUILD) }
+                entry<Route.Guild>(metadata = TabMemory.ROOT) { com.sperance.exileforge.ui.screens.guild.GuildTabScreen() }
                 entry<Route.History> { CityScreen(Building.HISTORY) }
                 entry<Route.Chronicle> { com.sperance.exileforge.ui.screens.city.HistoryChronicleScreen() }
                 entry<Route.Hall> { CityScreen(Building.HALL) }
+                entry<Route.Contests> { CityScreen(Building.CONTESTS) }
                 entry<Route.Uniques> { UniquesScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }
             },

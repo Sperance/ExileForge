@@ -29,7 +29,7 @@ internal fun Battle.rage() {
     foeFighters.forEach { foe ->
         if (!foe.alive || (raged[foe.index] ?: 0) >= enrage) return@forEach
         raged[foe.index] = enrage
-        buff(foe, RAGE, lines, FOREVER)
+        buff(foe, RAGE, lines, FOREVER, origin = EffectOrigin.Rage)
     }
 }
 

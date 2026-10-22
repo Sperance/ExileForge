@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,9 +70,11 @@ import com.sperance.exileforge.ui.theme.*
             ) {
                 FlaskBottle(flask?.sheet?.kind, 1f, flask != null, Modifier.size(34.dp, 56.dp))
                 Text(
-                    if (flask != null) "${flask.sheet.maxCharges.toInt()} · ${flask.sheet.perUse(body::get).toInt()}" else ui("skills.belt_empty"),
+                    if (flask != null) ui("skills.belt_charges", flask.sheet.maxCharges.toInt(), flask.sheet.perUse(body::get).toInt()) else ui("skills.belt_empty"),
                     color = if (flask != null) GoldBright else Muted,
                     style = MaterialTheme.typography.labelSmall,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
                 )
                 Text(flask?.condition?.let(::conditionTitle) ?: "", color = Rune, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

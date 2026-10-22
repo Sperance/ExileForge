@@ -44,7 +44,9 @@ import com.sperance.exileforge.core.display.flowParts
 import com.sperance.exileforge.core.display.flowRate
 import com.sperance.exileforge.core.display.guildLineTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.totemTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -229,7 +231,7 @@ internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
             when {
                 view.passive -> "fight.src.passive"
                 view.flask != null -> "fight.src.flask"
-                view.source == PROVOKED -> "fight.src.provoke"
+                view.source == INTIMIDATED -> "fight.src.intimidate"
                 view.kind == EffectKind.CURSE -> "fight.src.curse"
                 view.kind == EffectKind.HINDER -> "fight.src.hinder"
                 view.kind == EffectKind.MARK -> "fight.src.mark"
@@ -239,7 +241,7 @@ internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
         ),
         when {
             view.halted -> listOf(ui("fight.flask_halted"))
-            view.source == PROVOKED -> listOf(ui("fight.provoked_hint"))
+            view.source == INTIMIDATED -> listOf(ui("fight.intimidated_hint"))
             view.kind == EffectKind.MARK -> listOf(ui("fight.mark_hint"))
             else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value, index) }
         },
@@ -333,13 +335,20 @@ private fun powerBadge(view: PowerView): String? = if (view.standing) {
 /** Яркость вспышки сработавшей силы в её начале. */
 private const val FLASH_ALPHA = .5f
 
-/** Имя эффекта: бафф правил - по виду, бафф дара - даром, глоток - флаконом, прочее - умением. */
+/** Имя эффекта: бафф правил - по виду, бафф дара - даром, глоток - флаконом, тотем и ярость - своим именем, прочее - умением. */
 internal fun effectTitle(view: EffectView): String = when {
     view.buff != null -> ui("fight.buff.${view.buff!!.name}")
-    view.source == PROVOKED -> ui("fight.provoked")
+    view.source == INTIMIDATED -> ui("fight.intimidated")
     fateSourced(view.source) -> ui("fight.fate_buff")
     view.flask != null -> equipmentTitle(view.source)
-    else -> SkillText.title(view.source)
+    else -> view.origin?.let(::originTitle) ?: SkillText.title(view.source)
+}
+
+/** Имя эффекта без своего умения: тотема - из словаря тотемов, ярости - словом боя, свиты на боссе - именем монстра. */
+internal fun originTitle(origin: EffectOrigin): String = when (origin) {
+    is EffectOrigin.Totem -> totemTitle(origin.code)
+    EffectOrigin.Rage -> ui("fight.rage_buff")
+    is EffectOrigin.Ward -> monsterTitle(origin.monster)
 }
 
 /** Цвет эффекта: вред - кровью, глоток - цветом флакона, прочее - золотом. */

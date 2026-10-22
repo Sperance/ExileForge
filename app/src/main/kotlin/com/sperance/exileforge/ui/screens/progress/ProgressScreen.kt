@@ -3,8 +3,6 @@ package com.sperance.exileforge.ui.screens.progress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,16 +14,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_CRAFT
+import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_PROGRESS
 import com.sperance.exileforge.core.app.TAB_SKILLS
 import com.sperance.exileforge.core.app.TAB_TREE
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.unlocked
+import com.sperance.exileforge.core.display.jobTitle
+import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
+import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
@@ -33,13 +35,14 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The screens the «Развитие» tab holds: the forge, the tree and the grimoire open over the hub with a
+ * The screens the «Развитие» tab holds: the forge, the tree, the grimoire and the crafts open over the hub with a
  * way back to it. The trials and the atlas are pages of «Поход», the chronicle a building of the City.
  */
 enum class ProgressPlace(val tab: Int, private val title: String, val icon: ImageVector) {
     FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil),
     TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
     GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire),
+    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Hammer),
     ;
 
     val label: String get() = ui(title)
@@ -47,15 +50,17 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 
 /**
  * «Развитие»: the hero's growth between runs gathered in one tab — the forge,
- * the tree and the grimoire, and a dashed tile of the place to come («Скоро · Восхождение»). Each tile says in a line what it
+ * the tree, the grimoire and the crafts, сеткой 2×2. Each tile says in a line what it
  * holds and, in its colour, what waits; a badge counts what asks to be done.
  *
- * Место, что ещё впереди, держит сетку 2×2 и не открывается; вкладка нажата снова - наверх.
+ * Ремёсла: в строке - идущая работа («Горное дело · Железная жила»), досчёт после отлучки, ещё не показанный листом, - «Пока вас не
+ * было» и точка на плитке. Вкладка нажата снова - наверх.
  */
 @Composable fun ProgressScreen() {
     val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val progress: ProgressViewModel = koinViewModel()
+    val away by shell.craftsAway.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { progress.ensure() }
     val hero = game.hero
     val tiles = run {
@@ -89,7 +94,16 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.GRIMOIRE),
             ) { shell.tab(TAB_SKILLS) },
-            HubTile(ui("progress.soon"), Icons.Outlined.QuestionMark, Muted, ui("progress.soon_ascendancy"), null, onOpen = null),
+            HubTile(
+                ui("nav.crafts"),
+                ForgeGlyphs.Hammer,
+                Brass,
+                ui("progress.crafts_note"),
+                if (away) ui("progress.crafts_away") else hero?.crafts?.work?.let { "${professionTitle(it.profession)} · ${jobTitle(it.job)}" },
+                0,
+                game.lockOf(Feature.CRAFTS),
+                alert = away,
+            ) { shell.tab(TAB_CRAFTS) },
         )
     }
     val scroll = rememberScrollState()
@@ -101,7 +115,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /**
- * A screen of the hub with its way back: the forge, the tree or the grimoire. The forge is reached from an item's
+ * A screen of the hub with its way back: the forge, the tree, the grimoire or the crafts. The forge is reached from an item's
  * sheet as well, and «back» from it comes here too — the hub is where it lives.
  *
  * Кузня читает героя сама, дерево и гримуар - только это.
@@ -117,6 +131,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ProgressPlace.FORGE -> CraftScreen()
                 ProgressPlace.TREE -> SkillTreeScreen()
                 ProgressPlace.GRIMOIRE -> GrimoireScreen()
+                ProgressPlace.CRAFTS -> CraftsScreen()
             }
         }
     }

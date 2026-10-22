@@ -35,12 +35,9 @@ import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.Rate
-import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.displayName
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
@@ -51,22 +48,22 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.core.sheet.view
-import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.LootCellSize
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.SaleMarked
 import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellLine
 import com.sperance.exileforge.ui.components.SellPick
 import com.sperance.exileforge.ui.components.SellPresetRow
+import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberSellPick
-import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -352,7 +349,7 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
     if (loot.items.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-                StackChip(game, code, amount) { onStack(code) }
+                StackCell(game.index, code, amount, size = LootCellSize) { onStack(code) }
             }
         }
     }
@@ -407,21 +404,6 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
     WornLootRow(item)
 } else {
     ItemRow(item, note = mark?.text, noteColor = mark?.color ?: Gold, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, accent = mark?.color, onClick = onClick)
-}
-
-/** A stack of the bag as a chip: its icon, its name and how many. */
-@Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {
-    val kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
-    val shape = RoundedCornerShape(3.dp)
-    Row(
-        Modifier.clip(shape).background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape)
-            .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        BagIcon(code, Modifier.size(18.dp), kind = kind)
-        Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium)
-    }
 }
 
 /** Сколько итоги карты глухи к нажатиям после появления, мс. */

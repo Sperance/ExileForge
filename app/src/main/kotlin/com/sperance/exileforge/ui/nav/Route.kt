@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.app.TAB_CITY
 import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
 import com.sperance.exileforge.core.app.TAB_REDEMPTION
@@ -63,7 +64,9 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_EXPEDITION
     }
 
+    /** Ремёсла: экран над хабом «Развития», плитка его сетки. */
     @Serializable data object Crafts : Route {
+        override val root: Route get() = Progress
         override val tab get() = TAB_CRAFTS
     }
 
@@ -116,10 +119,9 @@ sealed interface Route : NavKey {
         override val building get() = Building.AUCTION
     }
 
+    /** Гильдия: корень своей вкладки панели; до уровня открытия гильдий - экран замка. */
     @Serializable data object Guild : Route {
-        override val root: Route get() = City
-        override val tab get() = TAB_CITY
-        override val building get() = Building.GUILD
+        override val tab get() = TAB_GUILD
     }
 
     @Serializable data object History : Route {
@@ -140,6 +142,13 @@ sealed interface Route : NavKey {
         override val root: Route get() = City
         override val tab get() = TAB_CITY
         override val building get() = Building.HALL
+    }
+
+    /** Состязания: здание Города - сутки и неделя по лигам, таблица лиги внутри. */
+    @Serializable data object Contests : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.CONTESTS
     }
 
     /** Найденные уникалки: экран над «Историей», «назад» ведёт в неё. */
@@ -171,7 +180,7 @@ sealed interface Route : NavKey {
     }
 
     companion object {
-        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Trials, City, Account, Settings(), Redemption)
+        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Trials, City, Guild, Account, Settings(), Redemption)
 
         /** Экран по прежнему номеру вкладки; неизвестный номер - герой. */
         fun ofTab(tab: Int): Route = GAME.firstOrNull { it.tab == tab } ?: Hero
@@ -181,9 +190,9 @@ sealed interface Route : NavKey {
             Building.QUESTS -> Quests
             Building.MERCHANT -> Merchant
             Building.AUCTION -> Auction
-            Building.GUILD -> Guild
             Building.HISTORY -> History
             Building.HALL -> Hall
+            Building.CONTESTS -> Contests
             null -> City
         }
     }
@@ -201,7 +210,7 @@ private fun barKey(tab: Int): String? = when (tab) {
     TAB_PROGRESS -> "nav.progress"
     TAB_EXPEDITION -> "nav.expedition"
     TAB_CITY -> "nav.city"
-    TAB_CRAFTS -> "nav.crafts"
+    TAB_GUILD -> "nav.guild"
     else -> null
 }
 
@@ -214,17 +223,13 @@ fun reportPlace(route: Route): ReportPlace {
     val screen = route::class.simpleName.orEmpty()
     val root = route.root ?: route
     val area = when (root.tab) {
-        TAB_PROGRESS -> "progress"
+        TAB_PROGRESS -> if (route == Route.Crafts) "crafts" else "progress"
 
         TAB_EXPEDITION -> if (route == Route.Atlas) "atlas" else "run"
 
-        TAB_CITY -> when (route) {
-            Route.Guild -> "guild"
-            Route.Auction -> "auction"
-            else -> "city"
-        }
+        TAB_CITY -> if (route == Route.Auction) "auction" else "city"
 
-        TAB_CRAFTS -> "crafts"
+        TAB_GUILD -> "guild"
 
         TAB_SETTINGS -> "settings"
 

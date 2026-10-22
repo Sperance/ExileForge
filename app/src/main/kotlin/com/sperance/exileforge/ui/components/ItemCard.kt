@@ -43,7 +43,6 @@ import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
-import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.statTitle
@@ -154,9 +153,9 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * Цена торговца копии заменяет голую цену шаблона; [priced] false - плашки цены нет (место само печатает цену сделки). Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить.
- * Строки - в порядке [ItemView.lineGroups]: врождённые над чертой, у полной - особые источники и [seals] (`GameUi.itemSeals`: захват
- * и качество карты с Атласом героя) плашками особого блока, основные - списком, под ними стороны аффиксов; у короткой - тот же порядок
- * без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
+ * Строки - в порядке [ItemView.lineGroups]: у полной - строка влияния печатью первой, врождённые над чертой, особые источники и
+ * [seals] (`GameUi.itemSeals`: захват и качество карты с Атласом героя) плашками особого блока, основные - списком (у уникалки - каждая
+ * со шкалой вилки и качеством строк над ними); стороны аффиксов - чипами под именем; у короткой - тот же порядок без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -195,7 +194,7 @@ fun ItemCard(
             ShortHead(item, look, chipPrice, locked, waiting, selected)
         }
         if (detailed) {
-            RelicLines(item, look, seals) { opened = it }
+            RelicLines(item, seals) { opened = it }
         } else {
             ShortLines(rolled.take(SHORT_LINES))
             if (rolled.size > SHORT_LINES) MutedText(ui("card.more_properties", rolled.size - SHORT_LINES), style = MaterialTheme.typography.labelMedium)
@@ -316,10 +315,13 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
             figures.take(MEDALLION_FIGURES).forEach { MedallionFigure(it.text, statTitle(it.stat), if (it.augmented) Rune else FigureInk, look) }
             mapLevel?.let { MedallionFigure(it.toString(), ui("card.map_level_short"), FigureInk, look) }
         }
-        if (look.legend != null) {
-            Astrolabe(look, size = 112.dp, socket = 72.dp) { ItemIcon(item, look.rarity, Modifier.size(48.dp)) }
-        } else {
-            RelicSocket(item, look, 72.dp)
+        Box {
+            if (look.legend != null) {
+                Astrolabe(look, size = 112.dp, socket = 72.dp) { ItemIcon(item, look.rarity, Modifier.size(48.dp)) }
+            } else {
+                RelicSocket(item, look, 72.dp)
+            }
+            item.influenceLine?.marks?.influence?.let { InfluenceSealMark(it, 26.dp, Modifier.align(Alignment.BottomEnd).offset(6.dp, 6.dp)) }
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (item.orderedLines.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
@@ -335,6 +337,7 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
             RelicTitle(item, look, MEDALLION_NAME, maxLines = 4)
         }
     }
+    SideChips(item)
     RelicChips(item, look, price, noLevel = mapLevel != null, serial = true)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
     BaseFigures(item, look, skip = MEDALLION_FIGURES)
@@ -406,16 +409,19 @@ private const val SHORT_LINES = 3
 internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT
 
 /**
- * Строки полной карточки по группам [ItemView.lineGroups]: врождённые и черта под ними, особый блок - сначала плашки [seals], затем
- * строки особых источников плашками, - основные списком и стороны аффиксов под ними. Касание строки - [onOpen] (тир и место ролла).
+ * Строки полной карточки по группам [ItemView.lineGroups]: строка влияния печатью - первой над всеми, врождённые и черта под ними, особый
+ * блок - сначала плашки [seals], затем строки особых источников плашками, - основные списком. Строки уникалки - каждая со шкалой своей
+ * вилки ([RollScale]), над ними качество строк с ⓘ ([UniqueQuality]). Касание строки - [onOpen] (тир и место ролла).
  */
-@Composable private fun RelicLines(item: ItemView, look: RelicLook, seals: List<CardSeal>, onOpen: (ItemLine) -> Unit) {
+@Composable private fun RelicLines(item: ItemView, seals: List<CardSeal>, onOpen: (ItemLine) -> Unit) {
     val groups = item.lineGroups
+    val influence = groups.firstOrNull { it.kind == AffixKind.INFLUENCE }?.lines.orEmpty()
     val implicit = groups.firstOrNull { it.kind == AffixKind.IMPLICIT }?.lines.orEmpty()
-    val special = groups.filter { it.special }.flatMap { it.lines }
+    val special = groups.filter { it.special && it.kind != AffixKind.INFLUENCE }.flatMap { it.lines }
     val main = groups.filter { it.kind != AffixKind.IMPLICIT && !it.special }.flatMap { it.lines }
-    if (implicit.isEmpty() && special.isEmpty() && main.isEmpty() && seals.isEmpty()) return
+    if (influence.isEmpty() && implicit.isEmpty() && special.isEmpty() && main.isEmpty() && seals.isEmpty()) return
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        influence.forEach { InfluenceSealCard(it) { onOpen(it) } }
         implicit.forEach { RelicModLine(it, { onOpen(it) }) }
         if (implicit.isNotEmpty() && (special.isNotEmpty() || main.isNotEmpty() || seals.isNotEmpty())) {
             HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
@@ -426,9 +432,18 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
                 special.forEach { LinePlaque(it) { onOpen(it) } }
             }
         }
-        main.forEach { RelicModLine(it, { onOpen(it) }) }
-        item.sides?.let {
-            Text(sidesText(it), color = look.faint, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.fillMaxWidth())
+        val scaled = !item.ranged && main.any { it.marks.kind == AffixKind.UNIQUE }
+        if (scaled) item.summary.quality?.let { UniqueQuality(it) }
+        main.forEach { line ->
+            val scale = line.scale.takeIf { scaled && line.marks.kind == AffixKind.UNIQUE }
+            if (scale == null) {
+                RelicModLine(line, { onOpen(line) })
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    RelicModLine(line, { onOpen(line) })
+                    RollScale(scale, Modifier.padding(start = 30.dp))
+                }
+            }
         }
     }
 }

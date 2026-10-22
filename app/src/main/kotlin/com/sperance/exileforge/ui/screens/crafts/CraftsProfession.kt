@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.crafts
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Stop
@@ -132,15 +130,19 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /**
- * Окно профессии плотной колонкой: в шапке имя, уровень тонкой полосой (опыт - в подсказке по касанию), справка ⓘ (с описанием
- * профессии и тем, как идёт работа) и инструмент; под ней идущая здесь работа - та же плашка, что на главном экране вкладки
+ * Окно профессии плотной колонкой - уровень цепочки «назад» с её именем («Развитие › Ремёсла › Горное дело»): в шапке уровень тонкой
+ * полосой (опыт - в подсказке по касанию), справка ⓘ (с описанием профессии и тем, как идёт работа) и инструмент; под ней идущая здесь работа - та же плашка, что на главном экране вкладки
  * ([WorkPlaque]); ниже без заголовка работы профессии строками ([JobRow], идущая - короткой строкой) с отбором по группе выхода
  * ([JobGroups]), когда групп больше одной.
  *
  * Открытые работы и следующая за ними - «???» со своим уровнем.
  */
 @Composable internal fun ProfessionWindow(game: GameUi, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
-    BackHandler { vm.openProfession("") }
+    TrailLevel(professionTitle(profession.code), onBack = { vm.openProfession("") }) { ProfessionBody(game, vm, crafts, profession, offset) }
+}
+
+/** Тело окна профессии под звеном цепочки: шапка, плашка идущей здесь работы, отбор и работы строками, их листы. */
+@Composable private fun ProfessionBody(game: GameUi, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
     var picking by remember { mutableStateOf(false) }
     var toolOpen by remember(profession.equipped?.id) { mutableStateOf(false) }
     var chosen by remember { mutableStateOf<JobView?>(null) }
@@ -152,7 +154,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     val next = profession.jobs.firstOrNull(locked)
     val shown = profession.jobs.filter { (!locked(it) || it == next) && (picked == null || groups.groupOf(it) == picked) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { ProfessionHeader(game, crafts, profession, onBack = { vm.openProfession("") }) { if (profession.equipped == null) picking = true else toolOpen = true } }
+        item { ProfessionHeader(game, crafts, profession) { if (profession.equipped == null) picking = true else toolOpen = true } }
         if (work != null) item { WorkPlaque(game, vm, crafts, offset) }
         if (groups.size > 1) item { JobFilters(groups, picked) { group = it } }
         items(shown, key = { it.code }) { job ->
@@ -167,7 +169,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         }
     }
     if (picking) {
-        ToolPicker(game, profession, onDismiss = { picking = false }) { id ->
+        ToolPickSheet(game, profession, onDismiss = { picking = false }) { id ->
             picking = false
             vm.equipTool(id)
         }
@@ -175,14 +177,12 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /**
- * Шапка окна профессии: назад, имя и уровень тонкой полосой (на последнем - «макс.»; касание - подсказка с опытом «набрано / нужно»),
- * справка с описанием профессии и инструмент. Срок до уровня печатает плашка идущей работы.
+ * Шапка окна профессии: уровень тонкой полосой (на последнем - «макс.»; касание - подсказка с опытом «набрано / нужно»), справка с
+ * описанием профессии и инструмент; имя профессии - звено цепочки «назад». Срок до уровня печатает плашка идущей работы.
  */
-@Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onBack: () -> Unit, onTool: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), onClick = onBack, accent = Gold)
+@Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onTool: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val tip = profession.next?.let { next ->
                 { Tip(ui("crafts.level", profession.level), facts = listOf(ui("crafts.totals_experience") to ui("crafts.level_experience", compactNumber(profession.experience), compactNumber(next)))) }
             }

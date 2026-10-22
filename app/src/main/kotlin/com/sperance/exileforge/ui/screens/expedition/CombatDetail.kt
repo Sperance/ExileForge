@@ -137,6 +137,7 @@ internal fun Marks(event: CombatEvent, trace: Trace) {
             HitKind.CRIT -> add(hit?.factors?.firstOrNull { it.key == FactorKey.CRIT }?.let { ui("trace.tag.crit_by", fineNumber(it.value)) } ?: ui("trace.tag.crit"))
             HitKind.EVADED -> add(ui("trace.tag.evaded"))
             HitKind.BLOCKED -> add(ui("trace.tag.blocked"))
+            HitKind.INVULNERABLE -> add(ui("trace.tag.invulnerable"))
             else -> Unit
         }
         if (event.stunned) add(ui("expedition.stunned"))

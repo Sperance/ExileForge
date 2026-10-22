@@ -51,7 +51,6 @@ import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
-import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -93,9 +92,9 @@ import org.koin.compose.viewmodel.koinViewModel
         KeyGrid(
             listOf(
                 TrialRules.CREST to "$crests/${rules.rush.key}",
-                TrialRules.KEY to compactCount(keys),
-                TrialRules.SEAL to compactCount(seals),
-                RiftRules.KEY to compactCount(hero.bag[RiftRules.KEY] ?: 0L),
+                TrialRules.KEY to stackCount(keys),
+                TrialRules.SEAL to stackCount(seals),
+                RiftRules.KEY to stackCount(hero.bag[RiftRules.KEY] ?: 0L),
             ),
         )
         trials.run?.let { open -> OpenTrial(open.kind, if (open.kind == TrialKind.RUSH) regionTitle(open.region) else open.floor.toString(), idle, vm::abandonTrial) }

@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.screens.auction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -53,7 +52,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The lots themselves, the next page added under them by «Показать ещё» while the server has one.
+ * The lots themselves, the next page added under them by scrolling to the edge ([PagedColumn]) while the server has one.
  *
  * The filter travels in as a header so the list can be driven without a view model: what is worth
  * checking here is which lot offers a Buy button and what the price says, not the form wiring.
@@ -77,7 +76,8 @@ import org.koin.compose.viewmodel.koinViewModel
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
-    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
+    val showcase = market.showcase
+    PagedColumn(showcase.items.size, showcase.next != null, Reads.AUCTION in game.loading, onMore, market.filter, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (market.showcase.items.isEmpty() && market.showcaseFailed) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -97,14 +97,6 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         items(market.showcase.items, key = { it.id }) { lot ->
             LotRow(game, lot, marks = if (lot.belongsTo(game.heroId)) listOf(TradeMark(ui("auction.your_lot"))) else emptyList()) { openLot = lot.id }
-        }
-        val showcase = market.showcase
-        if (showcase.next != null) {
-            item {
-                ForgeButton(state = ButtonState.of(!game.busy && Reads.AUCTION !in game.loading), onClick = onMore, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) {
-                    Text(ui("auction.more", showcase.items.size, showcase.totalItems))
-                }
-            }
         }
     }
     market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
@@ -133,7 +125,7 @@ import org.koin.compose.viewmodel.koinViewModel
         ConfirmSheet(
             title = ui("auction.buy_q"),
             subtitle = lot.title,
-            icon = { LotIcon(game, lot, Modifier.size(44.dp)) },
+            icon = { LotIcon(game, lot, 44.dp) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
                 fee.takeIf { it > 0 }?.let { LedgerLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },

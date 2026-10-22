@@ -32,8 +32,11 @@ enum class Action {
     NOTE,
 }
 
-/** How a blow ended: it landed, landed hard, or never reached. */
-enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
+/**
+ * How a blow ended: it landed, landed hard, or never reached. [INVULNERABLE] - цель неуязвима: удар без урона и без бросков, это не
+ * блок цели и не уклонение (разбор боя их не считает).
+ */
+enum class HitKind { HIT, CRIT, EVADED, BLOCKED, INVULNERABLE }
 
 /** Чем кончился бой: из боя не уходят - он идёт до победы или поражения. */
 enum class Outcome { WIN, LOSS }

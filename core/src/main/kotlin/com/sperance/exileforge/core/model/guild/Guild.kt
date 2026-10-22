@@ -28,9 +28,6 @@ import kotlinx.serialization.Serializable
     val full: Boolean get() = capacity in 1..members
 }
 
-/** A page of the guild list, paged by the server as the auction's showcase is. */
-@Serializable data class GuildPage(val items: List<GuildCard> = emptyList(), val page: Int = 0, val totalItems: Long = 0, val totalPages: Int = 0)
-
 /** A member as the guild sees them; [contribution] is all-time in this guild and decides [rank], [lastSeenAt] is epoch millis. */
 @Serializable data class GuildMember(
     val heroId: String,
@@ -147,6 +144,3 @@ import kotlinx.serialization.Serializable
 
 /** One line of the guild's journal: what happened ([kind]), to whom, and the figure it carries. */
 @Serializable data class GuildLogEntry(val at: Long = 0, val kind: String = "", val heroName: String = "", val value: String = "")
-
-/** Страница журнала гильдии: [entries] новыми сверху и [more] - есть ли старше; журнал дочитывается прокруткой. */
-@Serializable data class GuildLogPage(val entries: List<GuildLogEntry> = emptyList(), val more: Boolean = false)

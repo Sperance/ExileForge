@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.DevourerRule
 import com.sperance.exileforge.rules.content.LordRule
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -29,12 +30,7 @@ data class RiftCombat(
     val forbidden: RiftLaw? = null,
     /** Засада: столько секунд герой вступает в бой позже. */
     val ambush: Double = 0.0,
-    /** Идол Стража - тотем правил [WardenRule.idols], найденный среди тотемов кампании; null - Страж без идолов. */
-    val idol: FoeTotem? = null,
-) {
-    /** Слоты вокруг стража, нужные Разлому: идолам Стража. Тени Поглотителя свои слоты приносят сами ([withShades]). */
-    internal val slots: Int get() = if (warden != null && idol != null) warden.idolCount else 0
-}
+)
 
 /**
  * След боя для Испытания чемпиона и Чести Разлома: сколько флаконов выпито (кроме выпитых самими собой в начале боя), самая низкая
@@ -120,6 +116,26 @@ fun PhaseFoes.withShades(foes: List<Foe>, shade: Foe, count: Int): List<Foe> {
     if (boss < 0 || count <= 0) return foes
     val grown = foes.mapIndexed { i, foe -> if (i == boss) foe.copy(slots = maxOf(foe.slots, count)) else foe }
     return grown + List(count) { shade.copy(summonOf = boss) }
+}
+
+/**
+ * Идолы Стража Врат: к стае [foes] добавлены [WardenRule.idolCount] копий [idol] - его свита, что не бьёт ([Foe.inert]) и встаёт с
+ * началом боя; здоровье каждого - [WardenRule.idolLife]% наибольшего здоровья стража, пока стоит - на страже его строки
+ * [WardenRule.idolLines]. Страж получает слоты под них.
+ */
+fun PhaseFoes.withIdols(foes: List<Foe>, idol: Foe, rule: WardenRule): List<Foe> {
+    val boss = foes.indexOfFirst { it.guards }
+    if (boss < 0 || rule.idolCount <= 0) return foes
+    val life = mapOf(CoreStat.HEALTH.code to foes[boss].body.maxLife * rule.idolLife / 100)
+    val stone = idol.copy(
+        body = idol.body.copy(stats = idol.body.stats + life),
+        origin = idol.origin?.let { it.copy(stats = it.stats + life) },
+        summonOf = boss,
+        inert = true,
+        ward = rule.idolLines.map { StatLine(it.stat, it.op, it.value) },
+    )
+    val grown = foes.mapIndexed { i, foe -> if (i == boss) foe.copy(slots = maxOf(foe.slots, rule.idolCount)) else foe }
+    return grown + List(rule.idolCount) { stone }
 }
 
 /** Строки, что снимают [line] с листа: прибавка - вычетом, увеличение - уменьшением, «больше» - обратным «меньше»; SET не снять. */

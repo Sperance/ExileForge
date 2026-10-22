@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.Foe
-import com.sperance.exileforge.core.campaign.combat.FoeTotem
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.Muster
@@ -14,6 +13,7 @@ import com.sperance.exileforge.core.campaign.combat.RiftBoonLines
 import com.sperance.exileforge.core.campaign.combat.RiftCombat
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
+import com.sperance.exileforge.core.campaign.combat.withIdols
 import com.sperance.exileforge.core.campaign.combat.withShades
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FightReport
@@ -269,7 +269,6 @@ class RiftArena(
             lord = guardians.lord.takeIf { act != null && act >= 2 },
             forbidden = run.forbidden,
             ambush = touch.rules[RiftRule.AMBUSH] ?: 0.0,
-            idol = guardians.warden.takeIf { act == 0 }?.let { index.campaign.totems.byCode[it.idols] }?.let { FoeTotem(it) },
         )
     }
 
@@ -284,6 +283,13 @@ class RiftArena(
             index.monster(devourer.shade)?.let { shade ->
                 val rolledShade = roller.build(shade, fight.level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList())
                 foes = phases.withShades(foes, phases.foe(rolledShade, fight.level), devourer.shades)
+            }
+        }
+        val warden = rules.guardians.warden.takeIf { fight.guardian == 0 }
+        if (warden != null) {
+            index.monster(warden.idol)?.let { idol ->
+                val rolledIdol = roller.build(idol, fight.level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList())
+                foes = phases.withIdols(foes, phases.foe(rolledIdol, fight.level), warden)
             }
         }
         battle = Battle(

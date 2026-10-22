@@ -4,11 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
@@ -27,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.admin.ModerationFilters
+import com.sperance.exileforge.core.admin.ModerationModel
+import com.sperance.exileforge.core.admin.ModerationState
 import com.sperance.exileforge.core.admin.ModerationTab
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
@@ -48,84 +49,109 @@ import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.core.network.TesterAccount
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Окно модерации («Досье-карточки»): поиск, разделы «Все / Баны / Корзина /
- * Журнал», карточки героев с кромкой статуса; тап открывает досье. Бан и удаление - нижними шторками, удаление - удержанием.
- * Что смотрящему нельзя (админ, модератор для модератора), сервер не пропустит, а карточка показывает замком.
+ * Окно модерации («Досье-карточки»): поиск, разделы «Все / Баны / Корзина / Журнал», карточки героев с кромкой статуса; тап открывает
+ * досье. Бан и удаление - нижними шторками, удаление - удержанием. Что смотрящему нельзя (админ, модератор для модератора), сервер не
+ * пропустит, а карточка показывает замком.
  *
  * Сверху строка поиска ([SearchBar]): порядок и отбор по дару - за кнопкой фильтра с числом сужений, заданные - чипами под
- * полем (у корзины и журнала фильтра нет), справа - «+» тестировщика у администратора. Над списком - сколько найдено.
+ * полем (у корзины и журнала фильтра нет), справа - «+» тестировщика у администратора. Над списком - сколько найдено. Списки и журнал -
+ * страницами сервера ([PagedColumn]): листание до края дочитывает следующую, смена раздела, поиска и отбора читает с первой.
  */
 @Composable internal fun ModerationPage(account: AccountUi) {
     val vm = koinViewModel<ModerationViewModel>().model
     val state by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.load(0) }
+    LaunchedEffect(Unit) { vm.load() }
     if (state.dossierKey != null) {
-        TrailLevel(ui("moderation.dossier"), onBack = vm::close) { DossierView(account, vm, state.dossier) }
+        TrailLevel(ui("moderation.dossier"), onBack = vm::close) { SettingsScroll { DossierView(account, vm, state.dossier) } }
         return
     }
     var creating by remember { mutableStateOf(false) }
     var filtering by remember { mutableStateOf(false) }
-    val filtered = state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL
-    SearchBar(
-        state.query,
-        vm::search,
-        ui("moderation.search"),
-        onSearch = { vm.load(0) },
-        filter = SearchFilter(
-            rememberChips(state.filters.narrowings(account.lang, account.index), vm::filter),
-            onOpen = { filtering = true },
-            onReset = { vm.filter(ModerationFilters.DEFAULT) },
-            enabled = !account.busy,
-        ).takeIf { filtered },
-        action = if (account.isAdmin) {
-            { ForgeIconButton(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), onClick = { creating = true }, kind = ButtonKind.Primary, size = ButtonSize.Compact, state = ButtonState.of(!account.busy)) }
-        } else {
-            null
-        },
-    )
     if (creating || state.createdTester != null) {
         AccountSheet(account, state.createdTester, onCreate = vm::createAccount) {
             creating = false
             vm.forgetTester()
         }
     }
-    PillTabs(
-        ModerationTab.entries.map { ui("moderation.tab.${it.name}") },
-        state.tab.ordinal,
-        { vm.tab(ModerationTab.entries[it]) },
-        enabled = !account.busy,
-        segmented = true,
-    )
-    if (state.tab == ModerationTab.JOURNAL) {
-        if (state.journal.isEmpty()) MutedText(ui("moderation.journal_empty"))
-        state.journal.forEach { JournalRow(it) }
-        Pager(state.journalPage, if (state.journal.size >= PAGE_GUESS) state.journalPage + 2 else state.journalPage + 1, account.busy, vm::journal)
-        return
-    }
-    val page = state.page
     if (filtering) {
         FiltersSheet(account, state.filters, onDismiss = { filtering = false }) {
             filtering = false
             vm.filter(it)
         }
     }
-    MutedText(ui("moderation.total", page.total), style = MaterialTheme.typography.labelSmall)
-    if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
-    page.rows.forEach { row ->
-        if (state.tab == ModerationTab.TRASH) {
-            TrashCard(account, row) { row.sanction?.let(vm::lift) }
+    val journal = state.tab == ModerationTab.JOURNAL
+    val loading = Reads.MODERATION in account.activity.loading
+    val page = state.page
+    PagedColumn(
+        count = if (journal) state.journal.items.size else page.items.size,
+        more = if (journal) state.journal.more else page.more,
+        loading = loading,
+        onMore = { if (journal) vm.moreJournal() else vm.more() },
+        state.tab,
+        state.searched,
+        state.filters,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = SettingsPadding,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(key = "search") { ModerationSearch(account, state, vm, onFilters = { filtering = true }, onCreate = { creating = true }) }
+        item(key = "tabs") {
+            PillTabs(
+                ModerationTab.entries.map { ui("moderation.tab.${it.name}") },
+                state.tab.ordinal,
+                { vm.tab(ModerationTab.entries[it]) },
+                enabled = !account.busy,
+                segmented = true,
+            )
+        }
+        if (journal) {
+            val entries = state.journal.items
+            if (entries.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.journal_empty")) }
+            items(entries.size) { JournalRow(entries[it]) }
         } else {
-            PlayerCard(account, row) { vm.open(row.heroId, row.userId) }
+            item(key = "total") { MutedText(ui("moderation.total", page.total ?: 0L), style = MaterialTheme.typography.labelSmall) }
+            if (page.items.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.none")) }
+            items(page.items, key = { it.key }) { row ->
+                if (state.tab == ModerationTab.TRASH) {
+                    TrashCard(account, row) { row.sanction?.let(vm::lift) }
+                } else {
+                    PlayerCard(account, row) { vm.open(row.heroId, row.userId) }
+                }
+            }
         }
     }
-    val pages = if (page.size > 0) ((page.total + page.size - 1) / page.size).toInt() else 1
-    Pager(page.page, pages, account.busy, vm::load)
+}
+
+/**
+ * Строка поиска окна модерации: поиск у сервера с клавиатуры и очисткой поля, порядок и отбор по дару - за кнопкой фильтра
+ * ([onFilters]) с чипами сужений (у корзины и журнала фильтра нет), «+» тестировщика у администратора ([onCreate]).
+ */
+@Composable private fun ModerationSearch(account: AccountUi, state: ModerationState, vm: ModerationModel, onFilters: () -> Unit, onCreate: () -> Unit) {
+    val filtered = state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL
+    SearchBar(
+        state.query,
+        vm::search,
+        ui("moderation.search"),
+        onSearch = vm::load,
+        filter = SearchFilter(
+            rememberChips(state.filters.narrowings(account.lang, account.index), vm::filter),
+            onOpen = onFilters,
+            onReset = { vm.filter(ModerationFilters.DEFAULT) },
+            enabled = !account.busy,
+        ).takeIf { filtered },
+        action = if (account.isAdmin) {
+            { ForgeIconButton(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), onClick = onCreate, kind = ButtonKind.Primary, size = ButtonSize.Compact, state = ButtonState.of(!account.busy)) }
+        } else {
+            null
+        },
+    )
 }
 
 /**
@@ -190,15 +216,6 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 private const val FATE_COLUMNS = 2
-
-@Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
-    if (pages <= 1 && page == 0) return
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, ui("common.prev_page"), onClick = { onPage(page - 1) }, state = ButtonState.of(!busy && page > 0))
-        Text(ui("moderation.page", page + 1, pages), color = Muted, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
-        ForgeIconButton(Icons.AutoMirrored.Outlined.KeyboardArrowRight, ui("common.next_page"), onClick = { onPage(page + 1) }, state = ButtonState.of(!busy && page + 1 < pages))
-    }
-}
 
 /** Карточка игрока: портрет класса, имя и роль, класс, уровень и логин; под баном - красная кромка и строка бана. */
 @Composable private fun PlayerCard(account: AccountUi, row: ModerationRow, onOpen: () -> Unit) {
@@ -489,9 +506,6 @@ private const val DIGITS = 4
 private const val HOURS_IN_DAY = 24
 internal const val DATE = 10
 internal const val HARDWARE = 6
-
-/** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
-private const val PAGE_GUESS = 30
 
 /** Роли, что администратор создаёт формой «+»; тестировщик - отметка героя в досье, не роль аккаунта. */
 private val CREATABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)

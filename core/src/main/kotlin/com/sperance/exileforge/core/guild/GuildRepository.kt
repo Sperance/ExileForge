@@ -1,9 +1,10 @@
 package com.sperance.exileforge.core.guild
 
+import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildLogEntry
 import com.sperance.exileforge.core.model.guild.GuildMine
-import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.guild.GuildStashView
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole
@@ -34,19 +35,26 @@ enum class GuildTab(val requires: GuildAction? = null) {
 data class Guilds(
     val mine: GuildMine? = null,
     val query: String = "",
-    val search: GuildPage = GuildPage(),
+    val search: Page<GuildCard> = Page(),
+    /** Поиск, с которым прочитан показанный список: набранный [query] уходит в список только поиском с клавиатуры. */
+    val searched: String = "",
     /** Фракция, до которой сужен список; пусто - все. */
     val faction: String = "",
     /** Раздел, открытый над залом гильдии; null - сам зал. */
     val tab: GuildTab? = null,
-    val log: List<GuildLogEntry> = emptyList(),
-    val logPage: Int = 0,
-    val logEnd: Boolean = false,
+    /** Журнал гильдии: прочитанные страницы подряд, новые сверху. */
+    val log: Page<GuildLogEntry> = Page(),
     /** Хранилище гильдии, читается при входе в раздел. */
     val stash: GuildStashView? = null,
     /** Превью приглашения: кого позовёт введённый номер или имя; null - не искали или поле сменилось. */
     val recruit: com.sperance.exileforge.core.model.guild.GuildRecruit? = null,
-)
+) {
+    /**
+     * Приглашения, что ждут героя вне гильдии: число на вкладке «Гильдия»; в гильдии или до ответа сервера - ноль. Приходят с входом в
+     * Город (`TownActions.visit`), а его делает и прогрев героя - вкладка знает число, не заходя в гильдию.
+     */
+    val invitesWaiting: Int get() = mine?.takeIf { it.guild == null }?.invites?.size ?: 0
+}
 
 /** Единственный источник правды о гильдии. */
 class GuildRepository {

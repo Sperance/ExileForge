@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,7 +56,6 @@ import org.koin.compose.koinInject
 @Composable
 internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
-    TrailTitle(GuildText.title(ui("guild.title"), guild.tag))
     val tabs = GuildTab.entries.filter { it.openTo(me?.role) }
     val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
@@ -154,25 +154,32 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
     }
 }
 
+/**
+ * Шапка зала одной строкой: герб, имя с тегом, фракция, под ними «Ур. 7», полоса уровня и состав «18/25» (опыт «набрано / нужно» - в
+ * подсказке по касанию строки уровня) и меню [menu] справа; под ней - слово главы, если есть.
+ */
 @Composable private fun GuildHeader(game: GameUi, guild: GuildView, menu: @Composable () -> Unit) {
     val rules = game.index?.guilds
     val capacity = guild.capacity.takeIf { it > 0 } ?: rules?.capacity(guild.level) ?: 0
+    val progress = rules?.levelProgress(guild.level, guild.experience)
+        ?: if (guild.next > 0) (guild.experience.toFloat() / guild.next).coerceIn(0f, 1f) else 1f
     ForgePanel(accent = guildColor(guild.color)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            GuildEmblem(guild.emblem, guild.color, 52.dp)
-            Column(Modifier.weight(1f)) {
-                Text(GuildText.title(guild.name, guild.tag), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                FactionLine(guild.faction, rules, ui("guild.header_line", guild.members.size, capacity))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GuildEmblem(guild.emblem, guild.color, 44.dp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(GuildText.title(guild.name, guild.tag), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                FactionLine(guild.faction, rules)
+                val xp = if (guild.next > 0) ui("guild.xp", number(guild.experience.toDouble()), number(guild.next.toDouble())) else ui("guild.xp_max")
+                Tipped({ Tip(ui("guild.level", guild.level), facts = listOf(ui("guild.experience") to xp)) }, Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(ui("common.level_short", guild.level), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f).height(4.dp), color = guildColor(guild.color), trackColor = Abyss)
+                        MutedText("${guild.members.size}/$capacity", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
             menu()
         }
-        val progress = rules?.levelProgress(guild.level, guild.experience)
-            ?: if (guild.next > 0) (guild.experience.toFloat() / guild.next).coerceIn(0f, 1f) else 1f
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("guild.level", guild.level), color = Rune, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-            MutedText(if (guild.next > 0) ui("guild.xp", number(guild.experience.toDouble()), number(guild.next.toDouble())) else ui("guild.xp_max"))
-        }
-        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(6.dp), color = guildColor(guild.color), trackColor = Abyss)
         guild.announcement.takeIf { it.isNotBlank() }?.let {
             Row(
                 Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 7.dp),

@@ -25,13 +25,16 @@ import com.sperance.exileforge.core.app.ShellModel
 import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.app.WarmupActions
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
+import com.sperance.exileforge.core.contest.ContestModel
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.RiftActions
+import com.sperance.exileforge.core.expedition.RunLastFight
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.feedback.LastFight
 import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.ReportTrail
 import com.sperance.exileforge.core.feedback.SeenReplies
@@ -48,6 +51,7 @@ import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.hero.TreeModel
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketActions
+import com.sperance.exileforge.core.market.MarketChoresModel
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.HttpLink
@@ -82,6 +86,7 @@ import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.auction.MarketViewModel
 import com.sperance.exileforge.ui.screens.city.HistoryViewModel
+import com.sperance.exileforge.ui.screens.contest.ContestViewModel
 import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionViewModel
@@ -198,15 +203,18 @@ val appModule = module {
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get<StallWatchdog>(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
-    single { BugEvidence(get(), get(), get<com.sperance.exileforge.platform.CrashKeeper>()) }
+    single<LastFight> { RunLastFight(get(), get(), get()) }
+    single { BugEvidence(get(), get(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
     factoryOf(::ShellModel)
     factoryOf(::ModerationModel)
     factoryOf(::SanctionModel)
     singleOf(::HallFocus)
     factoryOf(::HallModel)
+    singleOf(::ContestModel)
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
     single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }
+    single { MarketChoresModel(get(), get(), get(named(APP_SCOPE))) }
     factoryOf(::CharactersModel)
     factoryOf(::TreeModel)
     viewModelOf(::ShellViewModel)
@@ -222,6 +230,7 @@ val appModule = module {
     viewModelOf(::GuildViewModel)
     viewModelOf(::HistoryViewModel)
     viewModelOf(::HallViewModel)
+    viewModelOf(::ContestViewModel)
     viewModelOf(::PlayerCardViewModel)
     viewModelOf(::CraftsViewModel)
     viewModelOf(::ProgressViewModel)

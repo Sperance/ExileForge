@@ -65,7 +65,7 @@ object JobLedger {
             if (sure) {
                 ladder.row(LedgerKind.SURE, nothing, Scale.PERCENT, ui("crafts.help.sure"), "", "✓")
             } else {
-                ladder.row(LedgerKind.WASTE, nothing, Scale.PERCENT, ui("crafts.help.waste"), "", percent(nothing.total))
+                ladder.row(LedgerKind.WASTE, nothing, Scale.CHANCE, ui("crafts.help.waste"), "", percent(nothing.total))
             },
             ladder.row(
                 LedgerKind.YIELD,
@@ -82,19 +82,28 @@ object JobLedger {
             breakdown[WorkFigure.EXPERIENCE].let { ladder.row(LedgerKind.EXPERIENCE, it, Scale.COUNT, ui("crafts.help.experience"), "", "+" + number(it.total)) },
         )
         val finds = breakdown.finds.mapIndexed { i, find ->
-            ladder.row(LedgerKind.FIND, find.line, Scale.PERCENT, itemTitle(find.extra.item), ui("crafts.ledger.find"), percent(find.line.total), "${LedgerKind.FIND.name}$i", find.extra.item)
+            ladder.row(LedgerKind.FIND, find.line, Scale.CHANCE, itemTitle(find.extra.item), ui("crafts.ledger.find"), percent(find.line.total), "${LedgerKind.FIND.name}$i", find.extra.item)
         }
         return shown + finds
     }
 
-    /** Единица меры: как печатаются её числа и сдвиги. */
-    private enum class Scale(val value: (Double) -> String, val shift: (Double) -> String) {
-        TIME({ clock(it.toLong()) }, { ui("crafts.ledger.seconds", fineNumber(it / 1000)) }),
-        COUNT({ fineNumber(it) }, { fineNumber(it) }),
-        PERCENT({ percent(it) }, { percent(it) }),
+    /**
+     * Единица меры: как печатаются её числа и сдвиги. [shift] получает сдвиг источника и меру, которую множит его бонус ([Ladder]):
+     * её читает лишь шанс, что множится бонусом героя.
+     */
+    private enum class Scale(val value: (Double) -> String, val shift: (Double, Double) -> String) {
+        TIME({ clock(it.toLong()) }, { shift, _ -> signed(shift) { ui("crafts.ledger.seconds", fineNumber(it / 1000)) } }),
+        COUNT({ fineNumber(it) }, { shift, _ -> signed(shift, ::fineNumber) }),
+        PERCENT({ percent(it) }, { shift, _ -> signed(shift, ::percent) }),
 
         /** Средний выход цикла: «×1.1», сдвиг - лишняя добыча в процентах. */
-        UNITS({ ui("crafts.ledger.times", number(it)) }, { percent(it * 100) }),
+        UNITS({ ui("crafts.ledger.times", number(it)) }, { shift, _ -> signed(shift) { percent(it * 100) } }),
+
+        /**
+         * Шанс, что бонус героя множит, а не складывает (впустую - удача, находка - уровень и бонус находок): сдвиг - доля от меры, которую
+         * множит бонус, и что она даёт в пунктах: «−8,3% от 35% = −2,9». Мера без числа - сдвиг пунктами.
+         */
+        CHANCE({ percent(it) }, { shift, from -> if (from == 0.0) signed(shift, ::percent) else ui("crafts.ledger.relative", signed(shift / from * 100, ::percent), percent(from), signed(shift, ::number)) }),
     }
 
     private fun percent(value: Double): String = ui("crafts.percent", number(value))
@@ -111,18 +120,23 @@ object JobLedger {
 
         fun row(kind: LedgerKind, line: WorkLine, unit: Scale, caption: String, note: String, value: String, key: String = kind.name, item: String = ""): LedgerRow = LedgerRow(key, kind, caption, note, value, line.shifts.any { it.source == WorkSource.TOOL }, steps(line, unit), item)
 
+        /**
+         * Лесенка меры [line]: база, вклад каждого источника и итог. Бонус уровня множит базу, бонусы прочих источников - меру после
+         * уровня (у шанса впустую уровень вклада не даёт - это та же база): от неё [Scale.CHANCE] считает долю сдвига.
+         */
         private fun steps(line: WorkLine, unit: Scale): List<LedgerStep> {
             val runs = line.shifts.runningFold(line.base) { run, shift -> run + shift.shift }
             val top = (runs + line.total).maxOf { abs(it) }.takeIf { it > 0 } ?: 1.0
             fun share(value: Double) = (abs(value) / top).toFloat()
             val bySource = line.shifts.zip(runs.zipWithNext()).associateBy { it.first.source }
+            val leveled = line.base + (bySource[WorkSource.LEVEL]?.first?.shift ?: 0.0)
             val middle = WorkSource.entries.mapNotNull { source ->
                 val step = bySource[source]
                 when {
                     step != null -> {
                         val (shift, run) = step
                         val (before, after) = run
-                        LedgerStep(StepKind.SOURCE, title(source), signed(shift.shift, unit.shift), unit.value(after), share(minOf(before, after)), share(maxOf(before, after)), source == WorkSource.TOOL)
+                        LedgerStep(StepKind.SOURCE, title(source), unit.shift(shift.shift, if (source == WorkSource.LEVEL) line.base else leveled), unit.value(after), share(minOf(before, after)), share(maxOf(before, after)), source == WorkSource.TOOL)
                     }
 
                     source == WorkSource.TOOL && toolless -> LedgerStep(StepKind.NO_TOOL, ui("crafts.ledger.no_tool"), ui("crafts.ledger.no_tool_hint"), "—", 0f, 0f)

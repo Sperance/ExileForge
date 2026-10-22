@@ -248,8 +248,8 @@ private const val HERO_KEY = -1
 }
 
 /**
- * Шипы и отражение - удар назад от ударенного; уклонение и блок - у того, по кому били; умение называет удар или кто и на кого; заметка -
- * что случилось без удара.
+ * Шипы и отражение - удар назад от ударенного; уклонение и блок - у того, по кому били; удар по неуязвимому - своей строкой «без урона»;
+ * умение называет удар или кто и на кого; заметка - что случилось без удара.
  */
 private fun logLine(event: CombatEvent, monster: String): String {
     val damage = event.damage.roundToInt()
@@ -267,6 +267,7 @@ private fun logLine(event: CombatEvent, monster: String): String {
             HitKind.CRIT -> if (hero) ui("expedition.log_you_crit", damage) else ui("expedition.log_they_crit", monster, damage)
             HitKind.EVADED -> if (hero) ui("expedition.log_they_evade", monster) else ui("expedition.log_you_evade")
             HitKind.BLOCKED -> if (hero) ui("expedition.log_they_block", monster) else ui("expedition.log_you_block")
+            HitKind.INVULNERABLE -> if (hero) ui("expedition.log_you_hit_invulnerable") else ui("expedition.log_they_hit_invulnerable", monster)
         }
 
         Action.SKILL -> {
@@ -275,6 +276,8 @@ private fun logLine(event: CombatEvent, monster: String): String {
                 event.kind == HitKind.EVADED -> if (hero) ui("expedition.log_skill_evaded", skill, monster) else ui("expedition.log_skill_you_evade", monster, skill)
 
                 event.kind == HitKind.BLOCKED -> if (hero) ui("expedition.log_skill_blocked", skill, monster) else ui("expedition.log_skill_you_block", monster, skill)
+
+                event.kind == HitKind.INVULNERABLE -> if (hero) ui("expedition.log_skill_invulnerable", skill) else ui("expedition.log_they_skill_invulnerable", monster, skill)
 
                 event.damage > 0 -> if (hero) {
                     ui(if (event.kind == HitKind.CRIT) "expedition.log_skill_crit" else "expedition.log_skill_hit", skill, monster, damage)
@@ -332,7 +335,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.CAST -> castLine("expedition.log_note_cast", event, monster, SkillText.title(note.ref), fineNumber(note.value))
         NoteKind.CAST_BROKEN -> castLine("expedition.log_note_cast_broken", event, monster, SkillText.title(note.ref), fineNumber(note.value))
         NoteKind.CAST_NO_MANA -> ui("expedition.log_note_cast_no_mana", SkillText.title(note.ref), fineNumber(note.value))
-        NoteKind.PROVOKED -> ui("expedition.log_note_provoked", monster, fineNumber(note.value))
+        NoteKind.INTIMIDATED -> ui("expedition.log_note_intimidated", monster, fineNumber(note.value))
         NoteKind.MARK_BURST -> ui("expedition.log_note_mark_burst", SkillText.title(note.ref), note.value.roundToInt())
     }
 }
@@ -373,5 +376,6 @@ private fun logColour(event: CombatEvent): Color = when {
     event.action == Action.TICK || event.action == Action.REFLECT -> tickTint(event.ailment, event.type).copy(alpha = .85f)
     event.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     event.kind == HitKind.HIT -> if (event.actor == Side.HERO) Parchment else Color(0xFFE9A0A0)
+    event.kind == HitKind.INVULNERABLE -> FrameGoldBright
     else -> Muted
 }

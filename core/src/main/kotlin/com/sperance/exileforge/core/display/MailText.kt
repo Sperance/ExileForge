@@ -7,6 +7,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailKind
+import com.sperance.exileforge.rules.content.ContestKind
+import com.sperance.exileforge.rules.content.ContestMetric
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.SystemMail
 import com.sperance.exileforge.rules.text.LocaleKey
 
@@ -92,6 +95,32 @@ object MailSchemas {
     /** Письмо о лоте: предмет лота и число. */
     private val auction = listOf(titled(0, ::lotItem), arg(1)).let { lot -> MailSchema(lot, lot) }
 
+    /** Аргумент [index] - имя перечисления [E], или null. */
+    private inline fun <reified E : Enum<E>> enumArg(args: List<String>, index: Int): E? = args.getOrNull(index)?.let { name -> enumValues<E>().firstOrNull { it.name == name } }
+
+    /**
+     * Письмо о призе состязания ([SystemMail.CONTEST_PRIZE]): вид словами, мера с боссом, лига уровнями, место, число героев, результат
+     * мерой и, у первых мест, титул и его срок.
+     */
+    private val contest = listOf(
+        MailSlot { args -> enumArg<ContestKind>(args, CONTEST_KIND)?.let { ui("contest.mail.kind.${it.name}") }.orEmpty() },
+        MailSlot { args -> enumArg<ContestMetric>(args, CONTEST_METRIC)?.let { contestMetricLine(it, args.getOrNull(CONTEST_BOSS)?.takeIf(String::isNotBlank)?.let(::MonsterCode)) }.orEmpty() },
+        MailSlot { args ->
+            val from = args.getOrNull(CONTEST_FROM)?.toIntOrNull() ?: return@MailSlot ""
+            val to = args.getOrNull(CONTEST_TO)?.toIntOrNull() ?: 0
+            if (to > 0) ui("contest.league_range", from, to) else ui("contest.league_open", from)
+        },
+        arg(CONTEST_PLACE),
+        arg(CONTEST_SIZE),
+        MailSlot { args -> enumArg<ContestMetric>(args, CONTEST_METRIC)?.let { metric -> args.getOrNull(CONTEST_VALUE)?.toLongOrNull()?.let { contestValue(metric, it) } }.orEmpty() },
+        MailSlot { args ->
+            val metric = enumArg<ContestMetric>(args, CONTEST_METRIC)
+            val kind = enumArg<ContestKind>(args, CONTEST_KIND)
+            if (metric != null && kind != null) contestTitle(metric, kind) else ""
+        },
+        MailSlot { args -> args.getOrNull(CONTEST_UNTIL)?.toLongOrNull()?.takeIf { it > 0 }?.let(::stampText).orEmpty() },
+    ).let { slots -> MailSchema(slots, slots) }
+
     /** Письмо о торгах: предмет лота, число, сферы и имя сферы цены. */
     private val bidding = listOf(titled(0, ::lotItem), arg(1), arg(2), titled(3, ::itemTitle)).let { deal -> MailSchema(deal, deal) }
 
@@ -101,6 +130,7 @@ object MailSchemas {
         SystemMail.FEEDBACK_STATUS to feedback(status),
         SystemMail.FEEDBACK_ISSUE to feedback(issueState(ISSUE_VERSION)),
         SystemMail.FEEDBACK_REPLY to feedback(status),
+        SystemMail.FEEDBACK_COMMENT to feedback(status),
         SystemMail.AUCTION_EXPIRED to auction,
         SystemMail.AUCTION_RECALLED to auction,
         SystemMail.AUCTION_EXPIRING to auction,
@@ -109,6 +139,8 @@ object MailSchemas {
         SystemMail.AUCTION_SOLD to bidding,
         SystemMail.AUCTION_WON to bidding,
         SystemMail.FATE_REDRAWN to listOf(titled(0) { FateCard(it).title }).let { fate -> MailSchema(fate, fate, reason = 1) },
+        SystemMail.CONTEST_PRIZE to contest,
+        SystemMail.CONTEST_PODIUM to contest,
     )
 
     /** Номера аргументов письма об отчёте ([SystemMail.FEEDBACK_STATUS]). */
@@ -121,4 +153,15 @@ object MailSchemas {
     private const val REPORT_DAY = 6
 
     private const val FIXED = "FIXED"
+
+    /** Номера аргументов письма о призе состязания ([SystemMail.CONTEST_PRIZE]). */
+    private const val CONTEST_KIND = 0
+    private const val CONTEST_METRIC = 1
+    private const val CONTEST_BOSS = 2
+    private const val CONTEST_FROM = 3
+    private const val CONTEST_TO = 4
+    private const val CONTEST_PLACE = 5
+    private const val CONTEST_SIZE = 6
+    private const val CONTEST_VALUE = 7
+    private const val CONTEST_UNTIL = 8
 }

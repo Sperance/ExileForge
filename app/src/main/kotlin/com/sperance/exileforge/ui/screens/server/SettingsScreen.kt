@@ -57,14 +57,17 @@ import com.sperance.exileforge.ui.screens.session.SessionViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** The pages behind the settings' rows: the language and the developers' tools, each with «back» to the list. */
-internal enum class SettingsPage(val title: String) {
+/**
+ * The pages behind the settings' rows: the language and the developers' tools, each with «back» to the list. [paged] - страница
+ * сама - серверный список страницами ([PagedColumn]): общей прокрутки у неё нет, её строки листает её ленивый список.
+ */
+internal enum class SettingsPage(val title: String, val paged: Boolean = false) {
     LANGUAGE("account.language"),
     SERVER("account.server"),
     CLIENT("account.client"),
     TESTING("tester.window"),
-    FEEDBACK("feedback.admin"),
-    MODERATION("moderation.title"),
+    FEEDBACK("feedback.admin", paged = true),
+    MODERATION("moderation.title", paged = true),
     MAIL("mail.compose"),
     WHATS_NEW("settings.whats_new"),
 }
@@ -111,38 +114,47 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-/** Тело уровня настроек: список ([open] null) или страница; своего заголовка нет - уровень называет цепочка. */
+/**
+ * Тело уровня настроек: список ([open] null) или страница; своего заголовка нет - уровень называет цепочка. Страница со списком
+ * страницами ([SettingsPage.paged]) листается своим списком, остальные - общей прокруткой ([SettingsScroll]).
+ */
 @Composable private fun SettingsBody(account: AccountUi, open: SettingsPage?, onPage: (SettingsPage) -> Unit) {
     val sessionModel: SessionViewModel = koinViewModel()
-    RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            when (open) {
-                null -> SettingsList(account, onPage)
+    val page: @Composable () -> Unit = {
+        when (open) {
+            null -> SettingsList(account, onPage)
 
-                SettingsPage.LANGUAGE -> ForgePanel {
-                    LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
-                }
-
-                SettingsPage.SERVER -> ServerPage(account)
-
-                SettingsPage.CLIENT -> ClientPage(account)
-
-                SettingsPage.TESTING -> TestingPage(account)
-
-                SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
-
-                SettingsPage.MODERATION -> ModerationPage(account)
-
-                SettingsPage.MAIL -> MailComposePage(account)
-
-                SettingsPage.WHATS_NEW -> WhatsNewPage()
+            SettingsPage.LANGUAGE -> ForgePanel {
+                LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
             }
+
+            SettingsPage.SERVER -> ServerPage(account)
+
+            SettingsPage.CLIENT -> ClientPage(account)
+
+            SettingsPage.TESTING -> TestingPage(account)
+
+            SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
+
+            SettingsPage.MODERATION -> ModerationPage(account)
+
+            SettingsPage.MAIL -> MailComposePage(account)
+
+            SettingsPage.WHATS_NEW -> WhatsNewPage()
         }
     }
+    RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
+        if (open?.paged == true) page() else SettingsScroll { page() }
+    }
 }
+
+/** Страница настроек, что листается целиком: общие поля и промежутки страниц ([SettingsPadding]). */
+@Composable internal fun SettingsScroll(content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(SettingsPadding), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+}
+
+/** Поля страницы настроек - и у листающейся целиком ([SettingsScroll]), и у списка страницами ([PagedColumn]). */
+internal val SettingsPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
 
 @Composable private fun SettingsList(account: AccountUi, onPage: (SettingsPage) -> Unit) {
     val shell: ShellViewModel = koinViewModel()
@@ -252,15 +264,15 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - лист «Мои /
- * Известные»; без системных листов приложения ([LocalSystemSheets]) строк нет.
+ * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - лист своих
+ * отчётов; без системных листов приложения ([LocalSystemSheets]) строк нет.
  */
 @Composable private fun ReportRows() {
     val sheets = LocalSystemSheets.current ?: return
     SettingRow(Icons.Outlined.BugReport, ui("bug.open"), ui("settings.bug_chord"), onClick = { sheets.bug = true }) {
         Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
-    AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { sheets.reports = ReportsView(ReportsTab.MINE) }
+    AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { sheets.reports = ReportsView() }
 }
 
 /** Версия сборки: проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */

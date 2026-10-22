@@ -1,69 +1,68 @@
 package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.model.feedback.AdminReport
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.FeedbackMove
+import com.sperance.exileforge.core.model.feedback.FeedbackQueue
+import com.sperance.exileforge.core.model.feedback.FeedbackQueuePage
+import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.IssueMove
-import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.LetterRequest
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Vote
 import kotlinx.serialization.json.encodeToJsonElement
 
 private const val REPORTS = "api/v1/bugreport"
 private const val MAIL = "api/v1/mail"
 private const val ADMIN = "api/v1/admin"
 
-/** Known reports and one's own (без предложений); the administrator's view of them all. */
+/** Свои отчёты игрока и очередь модерации страницами. */
 class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
-
-    /** Известные проблемы: ошибки с открытым Issue, по рейтингу. */
-    suspend fun known(): List<KnownReport> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
-
-    suspend fun vote(id: String, vote: Vote): KnownReport = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
     /** Ответ автора в Issue своего отчёта (сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
     suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
-    /** Удаление отчёта (сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
-    suspend fun delete(id: String) {
-        http.request("POST", "$REPORTS/delete", mapOf("id" to id), authenticated = true)
-    }
+    /** Автор закрывает свой отчёт - новый или в обсуждении: «Закрыт автором», без возврата; ответ - отчёт как он теперь стоит. */
+    suspend fun close(id: String): OwnReport = http.post("$REPORTS/close", mapOf("id" to id))
 
-    suspend fun all(kind: FeedbackKind?, status: ReportStatus?): List<AdminReport> = http.get(
-        "$ADMIN/feedback",
-        buildMap {
-            kind?.let { put("kind", it.name) }
-            status?.let { put("status", it.name) }
-        },
-    )
+    /**
+     * Страница [page] очереди модерации [queue] под видом и поиском [sight] (текст, переписка, номер Issue, логин автора) в порядке [sort] -
+     * отбор и порядок сервера, размер страницы - его `rules.pageSize`; счёт очередей - только у первой страницы.
+     */
+    suspend fun queue(sight: QueueSight, queue: FeedbackQueue, sort: FeedbackSort, page: Int): FeedbackQueuePage =
+        http.get("$ADMIN/feedback", sight.params + mapOf("queue" to queue.name, "sort" to sort.name, "page" to page.coerceAtLeast(0).toString()))
 
-    suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport = http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
+    /**
+     * Действия модерации с отчётом [id]: ответ - отчёт, как он теперь стоит, с его очередью и свежий счёт очередей под видом и поиском
+     * [sight] модерации ([FeedbackMove]).
+     */
+    suspend fun setStatus(id: String, status: ReportStatus, reason: String, sight: QueueSight): FeedbackMove =
+        http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
+
+    /** Комментарий модерации автору: отчёт - в «Обсуждении», автору письмо. */
+    suspend fun comment(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/comment", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+
+    /** Удаление отчёта модерацией: ошибку и жалобу - да, апелляцию - никто; свой отчёт автор не удаляет, а закрывает ([close]). */
+    suspend fun delete(id: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/delete", sight.params + ("id" to id))
 
     /** Issue в GitHub: из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
-    suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
+    suspend fun toIssue(id: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/issue", sight.params + ("id" to id))
 
-    /** Дополнение модерации к отчёту [id]: раздел тела Issue, автору не видно, письма нет; пустой [text] стирает его. */
-    suspend fun note(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/note", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+    /** Дополнение модерации к отчёту: раздел тела Issue, автору не видно, письма нет; пустой [text] стирает его. */
+    suspend fun note(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/note", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
     /** Issue из игры: ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
-    suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
+    suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int, sight: QueueSight): FeedbackMove = http.post(
         "$ADMIN/feedback/issue/move",
-        mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
+        sight.params + mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
         WireJson.encodeToJsonElement(ReportAnswer(text)),
     )
-
-    private companion object {
-        /** Известных проблем за раз: весь открытый список, поиск и фильтр - на клиенте. */
-        const val KNOWN_PAGE = 100
-    }
 }
 
 /**

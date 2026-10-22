@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.screens.guild
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,8 +10,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.HourglassEmpty
@@ -42,7 +39,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -60,7 +59,21 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The guild, a building of the City. A hero outside one finds a guild, answers an invitation or
+ * Вкладка «Гильдия» - корень своей вкладки панели: до уровня открытия гильдий - экран замка ([FeatureGate]), иначе экран гильдии
+ * под цепочкой «назад» вкладки («← Гильдия [TAG] › Состав»). Вкладка нажата снова - открытый раздел закрывается.
+ */
+@Composable fun GuildTabScreen() {
+    val vm = koinViewModel<GuildViewModel>()
+    val game by vm.game.collectAsStateWithLifecycle()
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
+    OnReselect(TAB_GUILD) { vm.tab(null) }
+    FeatureGate(game, Feature.GUILD) {
+        BackTrailHost(guilds.mine?.guild?.let { GuildText.title(ui("nav.guild"), it.tag) } ?: ui("nav.guild")) { GuildScreen() }
+    }
+}
+
+/**
+ * The guild, its own tab of the bar. A hero outside one finds a guild, answers an invitation or
  * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
  * the screen only says in advance what a button would be refused for, from `guilds.json`.
  */
@@ -104,7 +117,8 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * Список первым: пауза после выхода - одна жёлтая строка; приглашения - компактные строки в рамке `Rune`, только когда есть; поиск,
  * «Код» и «Своя» - одна строка инструментов (код и основание - шторками); ниже чипы фракций и гильдии двухстрочными строками, под
- * ними - цена заявки и страницы. Вступление по коду: шесть цифр от главы или офицера - сразу в гильдию, мимо её режима.
+ * ними - цена заявки. Список - страницами сервера ([PagedColumn]): листание до края дочитывает следующую, поиск и фракция читают с
+ * первой. Вступление по коду: шесть цифр от главы или офицера - сразу в гильдию, мимо её режима.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,32 +126,31 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     var founding by remember { mutableStateOf(false) }
     var coding by remember { mutableStateOf(false) }
-    LaunchedEffect(game.heroId) { vm.search(0) }
+    LaunchedEffect(game.heroId) { vm.search() }
     val waiting = mine.rejoinAt?.takeIf { it > System.currentTimeMillis() }
     val price = game.index?.guilds?.application?.price?.of(game.heroLevel) ?: 0L
     PullToRefreshBox(
         isRefreshing = Reads.GUILD in game.loading || Reads.GUILD_SEARCH in game.loading,
         onRefresh = {
             vm.load()
-            vm.search(guilds.search.page)
+            vm.search()
         },
         modifier = Modifier.weight(1f),
     ) {
-        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
+        val page = guilds.search
+        PagedColumn(page.items.size, page.more, Reads.GUILD_SEARCH in game.loading, vm::moreSearch, guilds.searched, guilds.faction, modifier = Modifier.fillMaxSize()) {
             waiting?.let { item(key = "wait") { RejoinStrip(it) } }
             if (mine.invites.isNotEmpty()) item(key = "invites") { Invites(game, mine.invites, vm) }
             item(key = "tools") {
-                SearchBar(guilds.query, vm::query, ui("guild.search"), onSearch = { vm.search(0) }, maxLength = game.inputs.search) {
+                SearchBar(guilds.query, vm::query, ui("guild.search"), onSearch = vm::search, maxLength = game.inputs.search) {
                     ToolButton(Icons.Outlined.Tag, ui("guild.tool_code"), enabled = waiting == null, accent = Rune) { coding = true }
                     ToolButton(Icons.Outlined.Add, ui("guild.tool_found"), enabled = !game.busy) { founding = true }
                 }
             }
             game.index?.guilds?.takeIf { it.factions.isNotEmpty() }?.let { rules -> item(key = "factions") { FactionFilter(guilds.faction, rules, !game.busy, vm::filterFaction) } }
-            val page = guilds.search
             if (page.items.isEmpty() && Reads.GUILD_SEARCH !in game.loading) item { InfoCard(ui("guild.none_found"), ui("guild.none_found_hint")) }
             items(page.items, key = { it.id }) { card -> GuildRow(game, card, JoinBlock.of(game, card, waiting), waiting, price) { vm.join(card) } }
             if (price > 0 && page.items.any { it.mode == GuildMode.APPLY }) item(key = "foot") { ApplyFoot(price) }
-            if (page.totalPages > 1) item(key = "pager") { Pager(page.page, page.totalPages, vm::search) }
         }
     }
     if (founding) {
@@ -322,19 +335,6 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
         Icon(Icons.Outlined.Info, null, tint = Muted, modifier = Modifier.size(14.dp))
         Text(ui("guild.apply_note", number(price.toDouble())), color = Muted, style = MaterialTheme.typography.labelSmall)
     }
-}
-
-/** Страницы списка: ‹ «1 из 4» ›. */
-@Composable private fun Pager(page: Int, pages: Int, onPage: (Int) -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)) {
-        PageButton(Icons.Outlined.ChevronLeft, ui("guild.back_page"), page > 0) { onPage(page - 1) }
-        Text(ui("guild.page", page + 1, pages), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-        PageButton(Icons.Outlined.ChevronRight, ui("auction.forward"), page + 1 < pages) { onPage(page + 1) }
-    }
-}
-
-@Composable private fun PageButton(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(enabled))
 }
 
 /** Шторка «Вступить по коду»: шесть ячеек цифр и «Вступить», пока код не полон - погашена. */

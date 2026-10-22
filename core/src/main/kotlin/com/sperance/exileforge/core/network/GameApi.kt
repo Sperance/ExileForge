@@ -74,6 +74,7 @@ class GameApi(
     val campaign = CampaignClient(http)
     val trials = TrialClient(http)
     val hall = HallClient(http)
+    val contests = ContestClient(http)
     val merchant = MerchantClient(http)
     val crafts = CraftsClient(http)
     val guild = GuildClient(http)

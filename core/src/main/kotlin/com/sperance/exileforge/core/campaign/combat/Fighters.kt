@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuffStack
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.MonsterTrait
@@ -95,6 +96,13 @@ data class Foe(
     val round: Int = 0,
     /** Осквернён: несёт печать Скверны - цель условия `VS_BLIGHTED`, а герой со снижением от Скверны получает от него меньше. */
     val tainted: Boolean = false,
+    /**
+     * Неживой: не бьёт и не применяет умений - идол стража, свита, что встаёт с началом боя ([raiseIdols]), а не по зову фаз; бить его
+     * можно, как любую свиту.
+     */
+    val inert: Boolean = false,
+    /** Строки, что свита кладёт на своего босса, пока стоит: падает - снимаются. */
+    val ward: List<StatLine> = emptyList(),
 ) {
     val summoned: Boolean get() = summonOf != null
 }
@@ -125,6 +133,8 @@ data class TimedEffect(
     val stacks: Int = 1,
     /** Слой баффа, если эффект - бафф вида ([BuffStack]): вечный или временный, с силой; иначе null. */
     val buff: BuffStack? = null,
+    /** Чей эффект, когда его источник - не умение (тотем, ярость, свита на боссе): даётся при создании; null - имя по коду источника. */
+    val origin: EffectOrigin? = null,
 ) {
     /** Строки на бойце при условиях героя [active]: постоянные и условные, чьё условие держится. */
     fun holding(active: Set<Condition>): List<StatLine> = if (conditional.isEmpty()) lines else lines + conditional.filter { !it.condition.target && it.condition in active }.map { it.line }
@@ -254,9 +264,25 @@ data class EffectView(
     val flask: FlaskKind? = null,
     /** Глоток погас на полном здоровье: плитка «прервано: здоровье полное», срока у неё нет. */
     val halted: Boolean = false,
+    /** Чей это эффект, когда его источник - не умение: тотем, ярость боя; null - имя по коду источника. */
+    val origin: EffectOrigin? = null,
 ) {
     /** Лежит весь бой: носимый с начала бафф ([Battle.wear]) или пассивное умение - полка «на весь бой», не таймер. */
     val lasting: Boolean get() = passive || seconds >= Battle.FOREVER / 2
+}
+
+/**
+ * Чей эффект, у которого нет своего умения: его имя и справка берутся отсюда, а не из кода источника (`totem#3` - не умение).
+ */
+sealed interface EffectOrigin {
+    /** Строки или проклятие стоящего тотема [code]. */
+    data class Totem(val code: String) : EffectOrigin
+
+    /** Ступень ярости боя на враге. */
+    data object Rage : EffectOrigin
+
+    /** Строки свиты [monster], что лежат на её боссе, пока она стоит ([Foe.ward]). */
+    data class Ward(val monster: MonsterCode) : EffectOrigin
 }
 
 /**

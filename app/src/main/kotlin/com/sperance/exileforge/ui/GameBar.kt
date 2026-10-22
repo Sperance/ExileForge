@@ -51,8 +51,8 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.TAB_CITY
-import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
 import com.sperance.exileforge.core.app.lockedText
@@ -72,8 +72,11 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.depthPanel
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Из чего вкладки панели читают свой знак: игра [game] и досчёт ремёсел после отлучки, ещё не показанный листом, [craftsAway]. */
-private class BarState(val game: GameUi, val craftsAway: Boolean)
+/**
+ * Из чего вкладки панели читают свой знак: игра [game], досчёт ремёсел после отлучки, ещё не показанный листом, [craftsAway] и
+ * приглашения в гильдию [invites].
+ */
+private class BarState(val game: GameUi, val craftsAway: Boolean, val invites: Int)
 
 /** Знак в углу вкладки панели; [reason] - почему он стоит, его называет долгое нажатие на вкладку. */
 private sealed interface BarBadge {
@@ -107,10 +110,10 @@ private fun alert(on: Boolean, key: String): BarBadge? = if (on) BarBadge.Alert(
  */
 private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector, private val waits: (BarState) -> BarBadge? = { null }) {
     HERO(TAB_HERO, "nav.hero", ForgeGlyphs.Helm),
-    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, { free(it.game.freeTreePoints, "nav.reason.tree_points") }),
+    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, { free(it.game.freeTreePoints, "nav.reason.tree_points") ?: alert(it.craftsAway, "nav.reason.crafts_away") }),
     EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords, { free(it.game.freeAtlasPoints, "nav.reason.atlas_points") }),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
-    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil, { alert(it.craftsAway, "nav.reason.crafts_away") }),
+    GUILD(TAB_GUILD, "nav.guild", ForgeGlyphs.Banner, { free(it.invites, "nav.reason.guild_invites") }),
     ;
 
     /** Знак вкладки в [state]: замок, пока раздел закрыт уровнем героя, иначе то, что ждёт на ней; ничего - null. */
@@ -130,15 +133,16 @@ private const val CAPSULE_GROW = 2.4f
 /**
  * Нижняя панель: парящая плита «Глубины»; у выбранной вкладки
  * кнопка раскрывается в капсулу - иконка заливается и растёт, рядом выезжает подпись; прочие - одни значки. Всё за 220 мс
- * той же кривой, что и сдвиг экрана. Пять вкладок у всех. Вкладка, нажатая снова
- * изнутри, возвращает к своему корню.
+ * той же кривой, что и сдвиг экрана. Пять вкладок у всех; закрытая уровнем героя - с замком, касание открывает её экран замка. Вкладка,
+ * нажатая снова изнутри, возвращает к своему корню.
  *
- * Знак в углу вкладки - её [BarTab.badge]: замок, число того, что ждёт решения там, где его тратят, или точка. Долгое нажатие на
- * вкладку со знаком называет причину окном у неё.
+ * Знак в углу вкладки - её [BarTab.badge]: замок, число того, что ждёт там решения, или точка (есть число - точка ждёт). Долгое
+ * нажатие на вкладку со знаком называет причину окном у неё.
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
     val craftsAway by shell.craftsAway.collectAsStateWithLifecycle()
+    val invites by shell.guildInvites.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
     Row(
         Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(plate, elevation = 16.dp).clip(plate)
@@ -146,7 +150,7 @@ private const val CAPSULE_GROW = 2.4f
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        val state = remember(game, craftsAway) { BarState(game, craftsAway) }
+        val state = remember(game, craftsAway, invites) { BarState(game, craftsAway, invites) }
         PLAYER_TABS.forEach { index ->
             val tab = BarTab.of(index)
             BarCapsule(tab, selected = route.root?.tab == index, badge = tab.badge(state)) { shell.tab(index) }
@@ -163,10 +167,10 @@ private const val CAPSULE_GROW = 2.4f
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
     val tint by animateColorAsState(if (selected) Gold else Muted, tween(TAB_SHIFT_MS, easing = TabShiftEasing), label = "capsuleTint")
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(24.dp)
     val label = ui(tab.title)
     Row(
-        Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(44.dp).clip(shape)
+        Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(48.dp).clip(shape)
             .background(PanelRaised.copy(alpha = grow))
             .border(1.dp, Gold.copy(alpha = .4f * grow), shape)
             .combinedClickable(

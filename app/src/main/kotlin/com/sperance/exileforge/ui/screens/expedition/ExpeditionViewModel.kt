@@ -120,6 +120,8 @@ class ExpeditionViewModel(
     fun riftCommand(command: RunCommand) = rift.send(command)
     fun dismissRiftResult() = rift.dismissResult()
     fun dismissRiftToll() = rift.dismissToll()
+    fun openRiftRecap() = rift.openRecap()
+    fun closeRiftRecap() = rift.closeRecap()
 
     fun leaveRiftRefused() = rift.leaveRefused()
 }

@@ -17,18 +17,20 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.*
-import com.sperance.exileforge.core.campaign.run.ProvokeView
+import com.sperance.exileforge.core.campaign.run.IntimidateView
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.sin
 
-internal fun tauntTip(provoke: ProvokeView?) = Tip(
-    ui("fight.taunt"),
-    provoke?.let {
-        ui("fight.taunt_hero", fineNumber(it.chance), fineNumber(it.seconds), fineNumber(it.cut), fineNumber(it.bossCut), fineNumber(it.immunity), fineNumber(it.bossImmunity))
-    } ?: ui("fight.taunt_hint"),
+/** Подсказка провокатора-монстра: пока жив, бить можно только его. */
+internal fun tauntTip() = Tip(ui("fight.taunt"), ui("fight.taunt_hint"), TauntCrimson)
+
+/** Подсказка устрашения героя [view]: шанс, срок, насколько слабее бьёт устрашённый и невосприимчивость. */
+internal fun intimidateTip(view: IntimidateView) = Tip(
+    ui("fight.intimidate"),
+    ui("fight.intimidate_hero", fineNumber(view.chance), fineNumber(view.seconds), fineNumber(view.cut), fineNumber(view.bossCut), fineNumber(view.immunity), fineNumber(view.bossImmunity)),
     TauntCrimson,
 )
 

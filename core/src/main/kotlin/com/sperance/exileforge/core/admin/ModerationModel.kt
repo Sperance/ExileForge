@@ -6,13 +6,14 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
+import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
-import com.sperance.exileforge.core.network.ModerationPage
+import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionRequest
@@ -69,24 +70,36 @@ data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY,
 }
 
 /**
- * Окно модерации: раздел, поиск, страница строк или журнала; открытое досье - поверх
- * списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
+ * Окно модерации: раздел, поиск, прочитанные страницы строк ([page]) или журнала ([journal]) - строки всех страниц подряд; открытое
+ * досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
 data class ModerationState(
     val tab: ModerationTab = ModerationTab.ALL,
     val query: String = "",
+    /** Поиск, с которым прочитан показанный список: набранный [query] уходит в список только поиском с клавиатуры. */
+    val searched: String = "",
     /** Порядок списка и отбор по Предначертанию. */
     val filters: ModerationFilters = ModerationFilters.DEFAULT,
-    val page: ModerationPage = ModerationPage(),
-    val journal: List<ModerationEntryView> = emptyList(),
-    val journalPage: Int = 0,
+    val page: Page<ModerationRow> = Page(),
+    val journal: Page<ModerationEntryView> = Page(),
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
     /** Только что созданный тестировщик: логин и пароль показываются один раз. */
     val createdTester: TesterAccount? = null,
     /** Игровые серверы: администратор переносит между ними героя из досье. */
     val servers: List<GameServer> = emptyList(),
-)
+) {
+    /** Список сервера раздела: корзина и баны - свои, журнал и «Все» - все герои. */
+    val segment: ModerationSegment
+        get() = when (tab) {
+            ModerationTab.BANNED -> ModerationSegment.BANNED
+            ModerationTab.TRASH -> ModerationSegment.TRASH
+            else -> ModerationSegment.ALL
+        }
+
+    /** Тот же ли список у окна [other]: раздел и отбор - ответ на прежний список в новый не ложится. */
+    fun sameList(other: ModerationState): Boolean = tab == other.tab && filters == other.filters
+}
 
 /**
  * Модерация глазами модератора и администратора: списки героев, баны, корзина и журнал, досье игрока,
@@ -110,31 +123,46 @@ class ModerationModel(
     /** Новые порядок и отбор списка (лист «Фильтры»): с первой страницы, одним запросом. */
     fun filter(filters: ModerationFilters) {
         mutable.update { it.copy(filters = filters) }
-        load(0)
+        load()
     }
 
     fun tab(tab: ModerationTab) {
         mutable.update { it.copy(tab = tab) }
-        if (tab == ModerationTab.JOURNAL) journal(0) else load(0)
+        if (tab == ModerationTab.JOURNAL) journal() else load()
     }
 
-    /** Страница [page] раздела под текущим поиском. */
-    fun load(page: Int = mutable.value.page.page) = commands.read(Reads.MODERATION, restart = true) {
+    /** Первая страница раздела под текущим поиском и отбором; новый вызов сменяет идущий. */
+    fun load() = commands.read(Reads.MODERATION, restart = true) {
         staff()
         val state = mutable.value
-        val segment = when (state.tab) {
-            ModerationTab.BANNED -> ModerationSegment.BANNED
-            ModerationTab.TRASH -> ModerationSegment.TRASH
-            else -> ModerationSegment.ALL
-        }
-        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.filters.sort, state.filters.fate)
-        mutable.update { it.copy(page = answer) }
+        val answer = api.rows(state.query, state.segment, 0, state.filters.sort, state.filters.fate)
+        mutable.update { if (it.sameList(state)) it.copy(page = answer, searched = state.query) else it }
     }
 
-    fun journal(page: Int) = commands.read(Reads.MODERATION, restart = true) {
+    /**
+     * Следующая страница раздела под прочитанными (листание до края списка): чтение не перезапускается, страница ложится, только пока
+     * раздел, поиск, отбор и прочитанные страницы те же.
+     */
+    fun more() = commands.read(Reads.MODERATION) {
+        val state = mutable.value
+        if (!state.page.more) return@read
+        val next = api.rows(state.searched, state.segment, state.page.page + 1, state.filters.sort, state.filters.fate)
+        mutable.update { if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next) { row -> row.key }) else it }
+    }
+
+    /** Первая страница журнала модерации; новый вызов сменяет идущий. */
+    fun journal() = commands.read(Reads.MODERATION, restart = true) {
         staff()
-        val entries = api.log(page.coerceAtLeast(0))
-        mutable.update { it.copy(journal = entries, journalPage = page.coerceAtLeast(0)) }
+        val read = api.log(0)
+        mutable.update { it.copy(journal = read) }
+    }
+
+    /** Следующая страница журнала под прочитанными (листание до края): ложится, только пока прочитанные страницы те же. */
+    fun moreJournal() = commands.read(Reads.MODERATION) {
+        val shown = mutable.value.journal
+        if (!shown.more) return@read
+        val read = api.log(shown.page + 1)
+        mutable.update { if (it.journal.page == shown.page) it.copy(journal = Page(it.journal.items + read.items, read.page, read.total, read.more)) else it }
     }
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */
@@ -262,7 +290,7 @@ class ModerationModel(
             staff()
             block()
             if (mutable.value.dossierKey != null) reloadDossier()
-            if (mutable.value.tab == ModerationTab.JOURNAL) journal(mutable.value.journalPage) else load()
+            if (mutable.value.tab == ModerationTab.JOURNAL) journal() else load()
         }
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }

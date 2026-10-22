@@ -34,7 +34,8 @@ class GuildViewModel(
 
     /** Экран открылся: ответ моложе полуминуты не перечитывается. */
     fun open() = actions.load(fresh = true)
-    fun search(page: Int = 0) = actions.search(page)
+    fun search() = actions.search()
+    fun moreSearch() = actions.moreSearch()
     fun create(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) = actions.create(name, tag, faction, emblem, color, mode, minLevel)
     fun join(card: GuildCard) = actions.join(card)
     fun acceptInvite(guildId: String) = actions.acceptInvite(guildId)

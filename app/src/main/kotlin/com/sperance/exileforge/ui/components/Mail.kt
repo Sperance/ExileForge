@@ -187,7 +187,7 @@ object MailLinks {
         if (link == null || sheets == null) return false
         return when (link.target) {
             MailLinkKind.REPORT -> {
-                sheets.reports = ReportsView(ReportsTab.MINE, focus = link.id)
+                sheets.reports = ReportsView(focus = link.id)
                 true
             }
 

@@ -338,18 +338,19 @@ class KeyScreensShotTest {
     }
 
     /**
-     * Модерация: строки в две линии (версия, падения, ошибки запросов, Issue, голоса) и раскрытые тикеты - новый и отправленный с
+     * Модерация: строки в две линии (версия, падения, ошибки запросов, Issue) и раскрытые тикеты - новый и отправленный с
      * ответом.
      */
     @Test fun moderation() {
         fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG, crashes: Int = 0, failures: Int = 0) = AdminReport(
             FullReport(
-                id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind, likes = 4, dislikes = 1,
+                id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind,
                 createdAt = "2026-10-17T10:00:00", issue = issue, clientVersion = "0.16.3", crashCount = crashes, failureCount = failures,
             ),
             login = "sperance",
             moves = if (status == ReportStatus.CREATED) listOf(ReportStatus.SENT, ReportStatus.REJECTED) else emptyList(),
             deletable = true,
+            discussable = status == ReportStatus.CREATED && kind == FeedbackKind.BUG,
         )
         val fresh = report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально, и проверь все экраны, где числа в секунду бывают нулём", ReportStatus.CREATED, crashes = 2, failures = 1)
         shot("moderation") {

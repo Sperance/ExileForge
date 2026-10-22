@@ -5,9 +5,6 @@ import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.ReportTopic
 import kotlinx.serialization.Serializable
 
-/** The showcase is paged by the server, so this is what the client asks it for. */
-const val AUCTION_PAGE_SIZE = 20
-
 /** The document that makes a hero: the rest the server defaults. */
 @Serializable data class CreateHeroCommand(val userId: String, val name: String, val description: String = "", val heroClass: String)
 
@@ -118,6 +115,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val trail: List<String> = emptyList(),
     /** Снимок героя строками «что - значение»: здоровье, сопротивления, Мощь, умения, надетое кодами. */
     val heroSheet: List<String> = emptyList(),
+    /** Сжатый разбор последнего боя забега ([com.sperance.exileforge.core.feedback.FightDigest]); пусто - отчёт не из забега. */
+    val fight: List<String> = emptyList(),
     /**
      * Игрок отметил «Добавить логи сервера»: сервер добавит в Issue его строки лога за 15 минут до отчёта без личного. Только у ошибки
      * из формы; падению и зависанию сервер добавляет лог сам.

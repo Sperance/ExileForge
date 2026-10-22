@@ -44,10 +44,25 @@ class MarketActions(
 
     private fun market(transform: (Market) -> Market) = repository.update(transform)
 
-    /** Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром. */
+    /**
+     * Вкладка [tab]; витрина и торги читаются при входе на свою вкладку, если прочитаны не под нынешним фильтром, свой рынок («Мои лоты»,
+     * «История») - если прочитан дольше полуминуты назад. Невыполненная просьба входа с плитки снимается.
+     */
     fun tab(tab: MarketTab) {
         market { it.copy(tab = tab) }
+        repository.focus.value?.let(repository::focused)
         if (tab.mode != null && market.readUnder[tab] != showcaseFilter()) loadShowcase()
+        if (tab.ownMarket) loadMyLots(fresh = true)
+    }
+
+    /**
+     * Вход с плитки Города: есть дело - рынок открывается на «Моих лотах», и экран просят показать строку [lotId] (первое дело,
+     * [MarketChores.first]); дел нет - вкладка как была.
+     */
+    fun attend(lotId: String?) {
+        if (lotId == null) return
+        market { it.copy(tab = MarketTab.LOTS) }
+        repository.focus(lotId)
     }
 
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
@@ -93,7 +108,7 @@ class MarketActions(
     }
 
     /**
-     * «Показать ещё»: следующая страница по курсору под уже показанными лотами. Чтение не перезапускается - это
+     * Листание до края витрины: следующая страница по курсору под уже показанными лотами. Чтение не перезапускается - это
      * уронило бы свежую первую страницу, - а страница остаётся, только пока фильтр и показанные страницы те же.
      */
     fun moreShowcase() = trade {
@@ -107,7 +122,7 @@ class MarketActions(
         }
     }
 
-    /** «Показать ещё» торгов: следующая страница по курсору, как у витрины ([moreShowcase]). */
+    /** Листание до края торгов: следующая страница по курсору, как у витрины ([moreShowcase]). */
     fun moreAuctions() = trade {
         val shown = market.auctions
         val trail = shown.nextTrail ?: return@trade
@@ -164,11 +179,11 @@ class MarketActions(
         notices.toast(ui("fate.trophy_traded", equipmentTitle(bought.item.template)), NoticeKind.LOOT)
     }
 
-    /** Купленный лот уходит с витрины; страницы под ним остаются. */
+    /** Купленный лот уходит с витрины, страницы под ним остаются; свой рынок с этой сделкой - из ответа, одной правкой. */
     fun buy(lotId: String) = trade(writing = true) {
-        val lot = api.auction.buy(heroes.heroId, lotId)
-        notices.toast(ui("toast.bought", lot.title))
-        market { it.copy(showcase = it.showcase.without(lotId)) }
+        val answer = api.auction.buy(heroes.heroId, lotId)
+        answer.lot?.let { notices.toast(ui("toast.bought", it.title)) }
+        market { it.withMine(answer).copy(showcase = it.showcase.without(lotId)) }
     }
 
     /** Выставляет копию за цену в сферах - [priceOrb] код предмета-валюты; торгами - [terms], цена - выкуп. */
@@ -182,20 +197,22 @@ class MarketActions(
     }
 
     /**
-     * Ставка [amount] сфер в торгах [lotId]: лот в торгах и в своих ставках - как ответил сервер; ставка от выкупа - выкуп, лот уходит из
-     * торгов. Тост - «ставка принята» или «выкуплено».
+     * Ставка [amount] сфер в торгах [lotId]: ответ - свой рынок с лотом; лот в торгах - как ответил сервер, ставка от выкупа - выкуп, лот
+     * уходит из торгов. Тост - «ставка принята» или «выкуплено».
      */
     fun bid(lotId: String, amount: Long) = trade(writing = true) {
-        val lot = api.auction.bid(heroes.heroId, lotId, amount)
-        notices.toast(ui(if (lot.onSale) "toast.bid_placed" else "toast.bought", lot.title))
-        traded(lot)
+        val answer = api.auction.bid(heroes.heroId, lotId, amount)
+        val lot = answer.lot
+        lot?.let { notices.toast(ui(if (it.onSale) "toast.bid_placed" else "toast.bought", it.title)) }
+        market { state -> state.withMine(answer).let { if (lot == null) it else it.traded(lot) } }
     }
 
-    /** Выкуп торгов [lotId] за цену выкупа: лот уходит из торгов и своих ставок. */
+    /** Выкуп торгов [lotId] за цену выкупа: лот уходит из торгов, свой рынок с этой сделкой - из ответа, одной правкой. */
     fun buyout(lotId: String) = trade(writing = true) {
-        val lot = api.auction.buyout(heroes.heroId, lotId)
-        notices.toast(ui("toast.bought", lot.title))
-        traded(lot)
+        val answer = api.auction.buyout(heroes.heroId, lotId)
+        val lot = answer.lot
+        lot?.let { notices.toast(ui("toast.bought", it.title)) }
+        market { state -> state.withMine(answer).let { if (lot == null) it else it.traded(lot) } }
     }
 
     /** Продажа своих торгов [lotId] лучшей ставке досрочно: ответ - свой рынок. */
@@ -203,14 +220,11 @@ class MarketActions(
         mine(api.auction.accept(heroes.heroId, lotId), "toast.sold_to_bid")
     }
 
-    /** Лот торгов после своей команды: открытый - на своё место в торгах и своих ставках, закрытый - из торгов и ставок прочь. */
-    private fun traded(lot: AuctionLot) = market { state ->
-        if (lot.onSale) {
-            val bids = listOf(lot) + state.myBids.filterNot { it.id == lot.id }
-            state.copy(auctions = state.auctions.copy(items = state.auctions.items.map { if (it.id == lot.id) lot else it }), myBids = bids)
-        } else {
-            state.copy(auctions = state.auctions.without(lot.id), myBids = state.myBids.filterNot { it.id == lot.id })
-        }
+    /** Страница торгов после своей команды над лотом [lot]: открытый - на своём месте, как ответил сервер, закрытый - прочь. */
+    private fun Market.traded(lot: AuctionLot): Market = if (lot.onSale) {
+        copy(auctions = auctions.copy(items = auctions.items.map { if (it.id == lot.id) lot else it }))
+    } else {
+        copy(auctions = auctions.without(lot.id))
     }
 
     /** Ещё неделя своему лоту в его последний день. */
@@ -218,18 +232,18 @@ class MarketActions(
         mine(api.auction.extend(heroes.heroId, lotId), "toast.extended")
     }
 
-    /** Подсказка цены тому, что герой выставляет: читается тихо, ошибка - просто нет подсказки; одна на вещь за сеанс. */
+    /**
+     * Подсказка цены - медиана похожих сделок - тому, что герой выставляет или на что ставит: читается тихо, ошибка - просто нет подсказки;
+     * одна на вещь за сеанс.
+     */
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? {
         val key = "$itemCode/${rarity?.name}/$itemLevel"
         hints[key]?.let { return it.value }
-        return try {
-            api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            null
-        }
+        return quietly { api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) } }
     }
+
+    /** Подсказка цены товара лота [lot] ([priceHint]): вещь - по базе, редкости и уровню, стопка - по коду. */
+    suspend fun priceHint(lot: AuctionLot): PriceHint? = priceHint(lot.itemCode, lot.rarity, lot.itemLevel)
 
     /** Подсказки цен сеанса: сделки копятся медленно, а лист выставления открывают часто. */
     private val hints = java.util.concurrent.ConcurrentHashMap<String, Hint>()
@@ -253,7 +267,10 @@ class MarketActions(
     }
 
     /** Свой рынок из ответа: лоты, места, сделки и свои ставки. */
-    private fun mine(answer: AuctionMine) = market { it.copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids) }
+    private fun mine(answer: AuctionMine) = market { it.withMine(answer) }
+
+    /** Рынок со своим рынком из ответа [answer]: лоты, места, сделки и свои ставки. */
+    private fun Market.withMine(answer: AuctionMine): Market = copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids)
 
     /** Свой рынок героя [id] из входа в Город: рынок открыт, замка по уровню нет. */
     internal fun land(id: String, answer: AuctionMine) {
@@ -290,8 +307,11 @@ class MarketActions(
     }
 
     /** Страница активной вкладки и свой рынок, прочитанные заново; не прочитались - null. */
-    private suspend fun fresh(): Pair<(Market) -> Market, AuctionMine>? = try {
-        page(market.tab) to api.auction.mine(heroes.heroId)
+    private suspend fun fresh(): Pair<(Market) -> Market, AuctionMine>? = quietly { page(market.tab) to api.auction.mine(heroes.heroId) }
+
+    /** Тихое чтение [read]: сбой - null, отмена идёт дальше. */
+    private suspend fun <T> quietly(read: suspend () -> T): T? = try {
+        read()
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {
@@ -329,5 +349,8 @@ class MarketActions(
                 MarketTab.AUCTION -> LotMode.BID
                 MarketTab.LOTS, MarketTab.HISTORY -> null
             }
+
+        /** Вкладка своего рынка - читает `auction/mine`: свои лоты и ставки, сделки. */
+        val MarketTab.ownMarket: Boolean get() = this == MarketTab.LOTS || this == MarketTab.HISTORY
     }
 }

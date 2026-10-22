@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.run.PackHit
 import com.sperance.exileforge.rules.content.FightTally
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToLong
 
@@ -65,7 +66,10 @@ object FightFigures {
     /** The damage types in the order the chronicle lists them. */
     val types: List<String> = DamageType.entries.map { it.name }
 
-    /** Враг, чей удар кончил проигранный бой, - убийца: статистика героя считает смерти по убийцам. */
+    /**
+     * Враг, чей удар кончил проигранный бой, - убийца: статистика героя считает смерти по убийцам. У боя с боссом - ещё код босса
+     * (уникальный монстр стаи): по нему сервер ведёт состязание «Быстрейший босс».
+     */
     fun of(pack: List<PackHit>, duration: Double, boss: Boolean, won: Boolean): FightTally {
         val events = pack.flatMap { it.events }.filter { !it.onSelf }
         val mine = events.filter { it.actor == Side.HERO && (it.action == Action.ATTACK || it.action == Action.SKILL || it.action == Action.TICK || it.action == Action.REFLECT) }
@@ -85,6 +89,7 @@ object FightFigures {
             millis = (duration * 1000).roundToLong(),
             maxHit = mine.maxOfOrNull { it.damage }?.roundToLong() ?: 0,
             boss = boss, won = won,
+            foe = if (boss) (pack.firstOrNull { it.monster.rarity == MonsterRarity.UNIQUE } ?: pack.firstOrNull())?.monster?.code?.value else null,
             killer = if (won) {
                 null
             } else {

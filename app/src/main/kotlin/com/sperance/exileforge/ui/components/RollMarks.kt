@@ -1,9 +1,12 @@
 package com.sperance.exileforge.ui.components
 
 import android.graphics.Matrix
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.LinearGradientShader
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
@@ -32,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.LineScale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
@@ -191,3 +196,58 @@ private fun rollLabel(quality: Int, tier: RollTier): String = ui("card.roll_qual
     val label = rollLabel(quality, tier)
     RollMark(quality, tier, PillSpec, Modifier.clearAndSetSemantics { contentDescription = label })
 }
+
+/**
+ * Число строки уникалки на шкале своей вилки: края вилки числами, тусклая дорожка, ромб на месте ролла цветом его ступени и «N%» справа;
+ * чтение экрана слышит «вилка a–b · N%». Касание строки над шкалой открывает её разбор, как у всех строк.
+ */
+@Composable fun RollScale(scale: LineScale, modifier: Modifier = Modifier) {
+    val tier = RollTier.of(scale.percent)
+    val label = ui("card.roll_scale", scale.low, scale.high, scale.percent)
+    Row(
+        modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = label },
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(scale.low, color = Quiet, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        Canvas(Modifier.weight(1f).height(SCALE_HEIGHT)) {
+            val mid = size.height / 2
+            drawLine(Parchment.copy(alpha = SCALE_TRACK), Offset(0f, mid), Offset(size.width, mid), strokeWidth = 2.dp.toPx())
+            val r = SCALE_MARK.toPx() / 2
+            val x = r + (size.width - 2 * r) * scale.share.toFloat()
+            val diamond = Path().apply {
+                moveTo(x, mid - r)
+                lineTo(x + r, mid)
+                lineTo(x, mid + r)
+                lineTo(x - r, mid)
+                close()
+            }
+            drawPath(diamond, tier.tint)
+        }
+        Text(scale.high, color = Quiet, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        Text(ui("row.rolls", scale.percent), color = tier.tint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/**
+ * Качество строк уникалки над ними: «Качество строк» и «N% · ступень» её цветом, справа ⓘ - уровень вещи не влияет на строки уникального
+ * предмета (вместо серой сноски).
+ */
+@Composable fun UniqueQuality(quality: Int, modifier: Modifier = Modifier) {
+    val tier = RollTier.of(quality)
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(ui("card.unique_quality"), color = Quiet, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Spacer(Modifier.weight(1f))
+        Text(ui("card.unique_quality_value", quality, ui(tier.key)), color = tier.tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        InfoMark(ui("card.unique_level_label"), { Tip(body = ui("card.unique_level_note")) })
+    }
+}
+
+/** Высота шкалы вилки. */
+private val SCALE_HEIGHT = 14.dp
+
+/** Размер ромба места ролла на шкале. */
+private val SCALE_MARK = 10.dp
+
+/** Прозрачность дорожки шкалы. */
+private const val SCALE_TRACK = .18f

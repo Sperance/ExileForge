@@ -42,9 +42,11 @@ const val LOCKED_TILE_ALPHA = .45f
 
 /**
  * Плитка хаба («Развитие», «Город»): название, значок на квадрате цвета [accent], строка того, что внутри ([note]), и
- * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [lockedUntil] - уровень открытия, пока герой
- * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»); [badgeTip] - что значит счётчик: касание счётчика открывает
- * его окном. Без [onOpen] - заглушка будущего места: пунктирная рамка, тускло, не нажимается.
+ * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [alert] - что-то ждёт взгляда без числа (точка в
+ * углу; есть число - точка ждёт), [lockedUntil] - уровень открытия, пока герой ниже него (плитка тусклая, с замком, вместо строк -
+ * «откроется с N»). [chores] - строки дел, что ждут действия («Можно продлить: 1»), каждая с жёлтой точкой дела ([ChoreDot]), на месте
+ * [news]. [badgeTip] - что значит счётчик: касание счётчика (зона 44 dp в углу) открывает его окном. Без [onOpen] - заглушка будущего
+ * места: пунктирная рамка, тускло, не нажимается.
  */
 @Immutable data class HubTile(
     val title: String,
@@ -54,6 +56,8 @@ const val LOCKED_TILE_ALPHA = .45f
     val news: String?,
     val badge: Int = 0,
     val lockedUntil: Int? = null,
+    val chores: List<String> = emptyList(),
+    val alert: Boolean = false,
     val badgeTip: String? = null,
     val onOpen: (() -> Unit)?,
 )
@@ -69,11 +73,11 @@ const val LOCKED_TILE_ALPHA = .45f
     }
 }
 
-/** Одна плитка: значок на подкрашенном квадрате, имя и строки внизу; в углу - счётчик того, что ждёт, или замок. */
+/** Одна плитка: значок на подкрашенном квадрате, имя и строки внизу; в углу - счётчик того, что ждёт, точка или замок. */
 @Composable fun HubTileCard(tile: HubTile, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     val locked = tile.lockedUntil
-    val hot = tile.badge > 0 && locked == null
+    val hot = (tile.badge > 0 || tile.alert) && locked == null
     val open = tile.onOpen
     val framed = modifier.heightIn(min = HUB_TILE_MIN_HEIGHT).alpha(if (locked != null || open == null) LOCKED_TILE_ALPHA else 1f).clip(shape)
     Box(
@@ -95,23 +99,44 @@ const val LOCKED_TILE_ALPHA = .45f
                     MutedText(ui("unlock.from", locked))
                 } else {
                     tile.note?.let { MutedText(it) }
-                    tile.news?.let { Text(it, color = tile.accent, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                    if (tile.chores.isNotEmpty()) {
+                        tile.chores.forEach { ChoreLine(it) }
+                    } else {
+                        tile.news?.let { Text(it, color = tile.accent, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                    }
                 }
             }
         }
         if (locked != null) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
-        if (hot) {
-            Tipped(tile.badgeTip?.let { tip -> { Tip(body = tip, tint = tile.accent) } }, Modifier.align(Alignment.TopEnd), Alignment.TopEnd) {
-                Box(Modifier.padding(start = BADGE_REACH, bottom = BADGE_REACH).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+        when {
+            !hot -> Unit
+
+            tile.badge > 0 -> Tipped(tile.badgeTip?.let { tip -> { Tip(body = tip, tint = tile.accent) } }, Modifier.align(Alignment.TopEnd).sizeIn(minWidth = BADGE_ZONE, minHeight = BADGE_ZONE), Alignment.TopEnd) {
+                Box(Modifier.background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
                     Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                 }
             }
+
+            else -> Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(8.dp).background(GoldBright, CircleShape))
         }
     }
 }
 
-/** На сколько касание счётчика плитки выходит за него влево и вниз: счётчик остаётся в углу, зона касания растёт от угла внутрь. */
-private val BADGE_REACH = 12.dp
+/** Зона касания счётчика плитки: квадрат в её углу, счётчик - в его углу. */
+private val BADGE_ZONE = 44.dp
+
+/** Строка дела плитки: жёлтая точка и текст. */
+@Composable private fun ChoreLine(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        ChoreDot()
+        Text(text, color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Точка дела, что ждёт действия: одна на плитке, вкладке, разделе и строке - цвета [Caution]. */
+@Composable fun ChoreDot(modifier: Modifier = Modifier) {
+    Box(modifier.size(8.dp).background(Caution, CircleShape))
+}
 
 /** Пунктирная рамка заглушки: контур [shape] штрихами цвета [color]. */
 internal fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier = drawBehind {

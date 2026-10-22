@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.craft
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -41,6 +40,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -54,9 +54,8 @@ private const val ONE_ROW = 6
 
 /**
  * The tray of the forge (mockup B): a compact grid of what can be laid on the anvil — only stacks the bag holds and the item
- * takes — each a drawing with its count. Лоток только выбирает: имя выбранного, итог и описание называет рецепт полосы
- * ([Recipe]); пустой лоток не рисуется - что выбирать нечего, говорит тот же рецепт. [codes] are in their shelf order; [glyph]
- * draws one; [dimmed] - стопка, что цель не примет (тусклая, причину называет рецепт).
+ * takes — each a stack cell ([StackCell]). Лоток только выбирает: имя выбранного, итог и описание называет рецепт полосы
+ * ([Recipe]); пустой лоток не рисуется - что выбирать нечего, говорит тот же рецепт. [codes] are in their shelf order; [dimmed] - стопка, что цель не примет (тусклая, причину называет рецепт).
  */
 @Composable internal fun ForgeTray(
     game: GameUi,
@@ -67,7 +66,6 @@ private const val ONE_ROW = 6
     onSelect: (String) -> Unit,
     dimmed: (String) -> Boolean = { false },
     marked: (String) -> Boolean = { false },
-    glyph: @Composable (String) -> Unit,
 ) {
     if (codes.isEmpty()) return
     val shape = RoundedCornerShape(14.dp)
@@ -85,7 +83,7 @@ private const val ONE_ROW = 6
         ) {
             items(codes, key = { it }) { code ->
                 Box(Modifier.alpha(if (dimmed(code)) .4f else 1f)) {
-                    TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, marked(code), accent, { onSelect(code) }) { glyph(code) }
+                    TrayCell(game, code, code == chosen, marked(code)) { onSelect(code) }
                 }
             }
         }
@@ -93,26 +91,11 @@ private const val ONE_ROW = 6
 }
 
 /**
- * One stack of the tray: its drawing, the count in the corner, and a gold frame when it lies on the anvil. [marked] -
- * знак знамения в нижнем углу: стопка ляжет только с ним.
+ * Стопка лотка - ячейка стопки ([StackCell]) размера лотка: выбранная - в золотой обводке. [marked] - знак знамения в нижнем углу:
+ * стопка ляжет только с ним.
  */
-@Composable private fun TrayCell(name: String, count: Long, selected: Boolean, marked: Boolean, accent: Color, onClick: () -> Unit, glyph: @Composable () -> Unit) {
-    val shape = RoundedCornerShape(10.dp)
-    Box(
-        Modifier.size(CELL).clip(shape).background(if (selected) accent.copy(alpha = .14f) else PanelRaised, shape)
-            .border(if (selected) 2.dp else 1.dp, if (selected) accent else Bronze, shape)
-            .clickable(role = Role.Button, onClick = onClick).semantics { contentDescription = name },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(Modifier.size(26.dp), contentAlignment = Alignment.Center) { glyph() }
-        Text(
-            count.toString(),
-            color = GoldBright,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp),
-        )
+@Composable private fun TrayCell(game: GameUi, code: String, selected: Boolean, marked: Boolean, onClick: () -> Unit) {
+    StackCell(game.index, code, game.bagAmount(code) ?: 0L, size = CELL, selected = selected, onClick = onClick) {
         if (marked) Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp).size(11.dp))
     }
 }
@@ -152,9 +135,7 @@ private const val ONE_ROW = 6
     LazyRow(Modifier.fillMaxWidth(), state = list, horizontalArrangement = Arrangement.spacedBy(GAP)) {
         items(choices, key = { it.code }) { choice ->
             val code = choice.code
-            TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, code in waiting, Gold, { onSelect(code) }) {
-                BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
-            }
+            TrayCell(game, code, code == chosen, code in waiting) { onSelect(code) }
         }
         if (hidden.isNotEmpty()) {
             item(key = HIDDEN_CELL) {
@@ -214,9 +195,7 @@ private const val HIDDEN_CELL = "hidden"
         Gold,
         onSelect,
         marked = { it in waiting },
-    ) { code ->
-        BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
-    }
+    )
 }
 
 /**
@@ -237,9 +216,7 @@ private const val HIDDEN_CELL = "hidden"
         Elder,
         onSelect,
         dimmed = refusals::containsKey,
-    ) { code ->
-        BagIcon(code, Modifier.fillMaxSize(), tint = if (index.essence(code)?.special == true) GoldBright else Elder)
-    }
+    )
 }
 
 /**
@@ -259,7 +236,5 @@ private const val HIDDEN_CELL = "hidden"
  * снова - снимается. Имя и описание выбранного называет рецепт полосы.
  */
 @Composable fun OmenTray(game: GameUi, title: String, omens: List<Omen>, chosenOmen: String, onSelect: (String) -> Unit) {
-    ForgeTray(game, title, omens.map { it.code }, chosenOmen, Rune, { code -> onSelect(if (code == chosenOmen) "" else code) }) {
-        Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.fillMaxSize())
-    }
+    ForgeTray(game, title, omens.map { it.code }, chosenOmen, Rune, { code -> onSelect(if (code == chosenOmen) "" else code) })
 }

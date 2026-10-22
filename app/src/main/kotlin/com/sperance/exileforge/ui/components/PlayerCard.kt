@@ -52,7 +52,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.contestTitle
 import com.sperance.exileforge.core.display.groupedNumber
+import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
@@ -62,6 +64,7 @@ import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.server.ModerationViewModel
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
+import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
@@ -149,7 +152,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 }
 
 /**
- * «Свиток»: слева корешок - уровень, знак класса и класс; справа титул над именем и справочные строки.
+ * «Свиток»: слева корешок - уровень, знак класса и класс; справа титулы над именем (лучший титул состязаний цветом медали, затем
+ * титул летописи) и справочные строки - прочие титулы состязаний строками со сроком.
  *
  * Номер героя: по нему зовут в гильдию, касание копирует. Первая справочная строка - «Место по Мощи · №37 из 1 284 ›» (касание - доска
  * славы «Мощь», прокрученная к герою); героя нет на доске - строки нет.
@@ -158,6 +162,9 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Spine(game, card, Modifier.width(96.dp).fillMaxHeight())
         Column(Modifier.weight(1f)) {
+            card.honours.firstOrNull()?.let {
+                Text(contestTitle(it).uppercase(), color = medalOf(it.place), style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp, maxLines = 2)
+            }
             card.title.takeIf { it.isNotBlank() }?.let {
                 Text(titleName(it).uppercase(), color = Caution, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             }
@@ -172,12 +179,15 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 ReferenceRow(ui("player.guild"), ui("player.guild_value", guild.tag, ui("guild.role.${guild.role.name}")), Parchment, onClick = if (opens) ({ vm.openGuild(card) }) else null)
             }
             ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
+            card.honours.drop(1).forEach { honour ->
+                ReferenceRow(ui("player.contest_title.${honour.kind.name}"), ui("player.contest_title_value", contestTitle(honour), stampText(honour.until)), medalOf(honour.place))
+            }
         }
     }
 }
 
 /**
- * Корешок свитка: уровень серифом, знак класса, имя класса, Мощь.
+ * Корешок свитка: уровень серифом, знак класса в рамке лучшего титула состязаний (без титула - золото), имя класса, Мощь.
  *
  * Мощь «⚜ 12.5k» под классом - сервер считает её из листа при выдаче карточки.
  */
@@ -190,7 +200,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     ) {
         Text(ui("player.level"), color = Muted, style = MaterialTheme.typography.labelSmall)
         Text(card.level.toString(), style = relicName(22).copy(color = GoldBright))
-        ClassPortrait(card.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(44.dp), round = true)
+        ClassPortrait(card.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(44.dp), round = true, ring = honourRing(card.honours.firstOrNull(), Gold))
         Text(classTitle(card.heroClass), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
         MightLine(card.might)
     }

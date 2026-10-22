@@ -98,7 +98,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, LifeRed.copy(alpha = .3f + .2f * i), shape).clickable { onPick(i) }.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(SkillText.statLine(mod.stat, mod.op, mod.value, index), color = LifeRed, style = MaterialTheme.typography.titleSmall)
+                mod.lines.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.titleSmall) }
                 Text(ui("trials.tower_choice_hoard", mod.hoard.toInt()), color = GoldBright, style = MaterialTheme.typography.labelMedium)
             }
         }
@@ -125,7 +125,7 @@ import org.koin.compose.viewmodel.koinViewModel
             color = if (hud.limit > 0 && hud.elapsed > hud.limit) Muted else Parchment,
             style = MaterialTheme.typography.labelSmall,
         )
-        hud.mods.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+        hud.mods.flatMap { it.lines }.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
         if (hud.awaiting > 0) Receiving()
     }
 }

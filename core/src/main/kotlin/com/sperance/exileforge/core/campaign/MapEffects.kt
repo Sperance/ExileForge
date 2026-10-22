@@ -58,7 +58,10 @@ enum class MapLineKind {
 object MapEffects {
     /** Удары монстра: все виды его урона, и чары, - одна точка правил. */
     private val damage = GuardianFloor.STRIKES
-    private val resists = DamageType.entries.mapNotNull { it.resist }
+
+    /** Сопротивления стихиям (огонь, холод, молния): их меняют стихийные строки карты, хаос - свои строки. */
+    private val elementalResists = DamageType.ELEMENTS.mapNotNull { it.resist }
+    private val chaosResist = CoreStat.RESIST_CHAOS.code
 
     /** The hero's critical chances a map lowers together: the attacks' and the spells' own. */
     private val criticalChances = listOf(CoreStat.CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_CHANCE.code)
@@ -73,7 +76,8 @@ object MapEffects {
         effects[MapStat.MONSTER_LIFE.code]?.let { add(MonsterEffect(CoreStat.HEALTH.code, Op.INCREASED, it)) }
         effects[MapStat.MONSTER_DAMAGE.code]?.let { v -> damage.forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
         effects[MapStat.MONSTER_SPEED.code]?.let { v -> listOf(CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code).forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
-        effects[MapStat.MONSTER_RESIST.code]?.let { v -> resists.forEach { add(MonsterEffect(it, Op.ADD, v)) } }
+        effects[MapStat.MONSTER_RESIST.code]?.let { v -> elementalResists.forEach { add(MonsterEffect(it, Op.ADD, v)) } }
+        effects[MapStat.MONSTER_CHAOS_RESIST.code]?.let { add(MonsterEffect(chaosResist, Op.ADD, it)) }
         effects[MapStat.MONSTER_PENETRATION.code]?.let { add(MonsterEffect(CoreStat.PENETRATE_ELEMENTAL.code, Op.ADD, it)) }
         effects[MapStat.MONSTER_REFLECT.code]?.let { add(MonsterEffect(CoreStat.REFLECT.code, Op.ADD, it)) }
         effects[MapStat.MONSTER_CRITICAL.code]?.let { add(MonsterEffect(CoreStat.CRITICAL_CHANCE.code, Op.ADD, it)) }
@@ -106,7 +110,8 @@ object MapEffects {
     fun hero(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, Double> {
         if (effects.isEmpty()) return stats
         val sheet = stats.toMutableMap()
-        effects[MapStat.HERO_RESIST.code]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
+        effects[MapStat.HERO_RESIST.code]?.let { v -> elementalResists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
+        effects[MapStat.HERO_CHAOS_RESIST.code]?.let { sheet[chaosResist] = (stats[chaosResist] ?: 0.0) - it }
         fun add(stat: String, v: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) + v
         }
@@ -116,10 +121,8 @@ object MapEffects {
         }
         AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         effects[MapStat.HERO_RECOVERY.code]?.let { add(CoreStat.RECOVERY_RATE.code, -it) }
-        effects[MapStat.HERO_MAX_RESIST.code]?.let { v ->
-            add(CoreStat.RESIST_MAX_ALL.code, -v)
-            add(CoreStat.RESIST_MAX_CHAOS.code, -v)
-        }
+        effects[MapStat.HERO_MAX_RESIST.code]?.let { add(CoreStat.RESIST_MAX_ALL.code, -it) }
+        effects[MapStat.HERO_MAX_CHAOS_RESIST.code]?.let { add(CoreStat.RESIST_MAX_CHAOS.code, -it) }
         effects[MapStat.HERO_DEFENCES.code]?.let { v -> listOf(CoreStat.ARMOR.code, CoreStat.EVASION.code, CoreStat.ENERGY_SHIELD.code).forEach { scale(it, -v) } }
         effects[MapStat.HERO_BLOCK.code]?.let { add(CoreStat.BLOCK_CHANCE.code, -it) }
         effects[MapStat.HERO_CRIT.code]?.let { v -> criticalChances.filter { it in sheet }.forEach { scale(it, -v) } }

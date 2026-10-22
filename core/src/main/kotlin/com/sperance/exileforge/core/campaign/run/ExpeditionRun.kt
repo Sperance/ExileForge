@@ -707,7 +707,7 @@ class ExpeditionRun(
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
             val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
-            val own = MapEffects.sum(mapOf(MapStat.HERO_RESIST.code to penalty).filterValues { it > 0 }, if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
+            val own = MapEffects.sum(MapStat.resistPenalty(penalty), if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
             val effects = MapEffects.sum(base, own)
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))

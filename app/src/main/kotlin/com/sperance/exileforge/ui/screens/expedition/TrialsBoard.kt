@@ -130,7 +130,7 @@ import org.koin.compose.viewmodel.koinViewModel
             )
         }
         val towerEntry: @Composable ColumnScope.() -> Unit = {
-            tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {
+            tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).flatMap { it.lines }.forEach {
                 Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall)
             }
             EnterButton(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)), entryBlock(trials.run != null, seals), idle, vm::enterTower)

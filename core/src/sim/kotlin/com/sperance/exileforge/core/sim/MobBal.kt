@@ -125,7 +125,7 @@ class MobKit(val index: ContentIndex) {
     fun worth(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>, skills: HeroSkills, penalty: Double): Double {
         val body = HeroBody.of(index, HeroInputs(level, heroClass.code, tree, items, skills = skills))
         val stats = body.stats
-        val c = Combatant(MapEffects.hero(stats, if (penalty > 0) mapOf(MapStat.HERO_RESIST.code to penalty) else emptyMap()), level, rules)
+        val c = Combatant(MapEffects.hero(stats, MapStat.resistPenalty(penalty)), level, rules)
         val foe = index.referenceFoe
         val evade = rules.accuracy.evaded(foe.accuracy(level), c.evasion).coerceAtMost(c.evasionCap)
         val avoid = (1 - evade) * (1 - c.block)
@@ -509,7 +509,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     private fun heroEffects(zone: Zone, effects: Map<String, Double>, onMap: Boolean): Map<String, Double> {
         val penalty = index.campaign.resistPenalty(zone.code, onMap)
         val out = effects.toMutableMap()
-        if (penalty > 0) out.merge(MapStat.HERO_RESIST.code, penalty, Double::plus)
+        MapStat.resistPenalty(penalty).forEach { (stat, value) -> out.merge(stat, value, Double::plus) }
         return out
     }
 
@@ -962,7 +962,7 @@ fun main(args: Array<String>) {
                     val band = GearBand.valueOf(System.getProperty("band") ?: "TYPICAL")
                     val hero = sim.hero(c, System.getProperty("level")?.toIntOrNull() ?: zone.level, Archetype(band), penalty(zone, false))
                     val run = Run(index, zone, SimKit.SEED, RunContext(c.code, hero.level))
-                    val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to penalty(zone, false)))
+                    val arena = Arena(index, hero, MapStat.resistPenalty(penalty(zone, false)))
                     val boss = Spawns(index, run).boss(zone, emptyList(), emptyList())!!
                     val foe = arena.phases.foe(boss, run.levelOf(zone))
                     val battle = if (System.getProperty("dummy") == "1") arena.battle(listOf(arena.phases.foe(Prober.dummy(boss), run.levelOf(zone))), 9173L, false) else arena.battle(listOf(foe), 9173L, true, run::bound)

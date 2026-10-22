@@ -324,7 +324,7 @@ class TrialArena(
     }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
-    private fun effects(): Map<String, Double> = MapEffects.sum(atlas, floor?.mods.orEmpty().groupBy { it.stat }.mapValues { (_, lines) -> lines.sumOf { it.value } })
+    private fun effects(): Map<String, Double> = MapEffects.sum(atlas, floor?.mods.orEmpty().flatMap { it.lines }.groupBy { it.stat }.mapValues { (_, lines) -> lines.sumOf { it.value } })
 
     /** The hero made again on the floor's lines; life keeps its share. */
     private fun rebuild() {

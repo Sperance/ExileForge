@@ -103,7 +103,7 @@ class ModesBal(private val index: ContentIndex) {
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level))
         val crystal = EssenceCrystals(index).roll(run.levelOf(zone), zone.monsters, Dice(Streams.mix(seed, place.toLong(), 5L)), AtlasBonuses())
         val guardian = Spawns(index, run).crystalGuardian(crystal, place, emptyList(), emptyList()) ?: error("no crystal guardian in ${zone.code}")
-        val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false)))
+        val arena = Arena(index, hero, MapStat.resistPenalty(index.campaign.resistPenalty(zone.code, false)))
         return arena.fight(listOf(arena.phases.foe(guardian, run.levelOf(zone))), seed + place, CAP, retinue = false)
     }
 
@@ -123,7 +123,7 @@ class ModesBal(private val index: ContentIndex) {
     fun abyssDepth(hero: Hero, zone: Zone, seed: Long, depth: Int): Fought {
         val rule = checkNotNull(index.campaign.abyss) { "campaign: no abyss" }
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level))
-        val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false)))
+        val arena = Arena(index, hero, MapStat.resistPenalty(index.campaign.resistPenalty(zone.code, false)))
         val fights = AbyssWaves(index, run).wave(rule, depth, 0, zone, emptyMap(), 0)
         val level = rule.waves[depth - 1].levelAt(run.levelOf(zone))
         val battles = fights.mapIndexed { i, foes -> arena.fight(foes.map { arena.phases.foe(it, level) }, seed + 31L * (depth - 1) + i, CAP, retinue = false) }
@@ -207,7 +207,7 @@ class ModesBal(private val index: ContentIndex) {
     private fun hearth(hero: Hero, zone: Zone, seed: Long): Hearth? {
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level, forced = setOf(MapMechanic.BLIGHT)))
         val blight = run.features.all.filterIsInstance<MapFeature.Blight>().firstOrNull() ?: return null
-        return Hearth(blight, Spawns(index, run), Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false))), seed)
+        return Hearth(blight, Spawns(index, run), Arena(index, hero, MapStat.resistPenalty(index.campaign.resistPenalty(zone.code, false))), seed)
     }
 
     /** Очаг [blight] захода: бой каждой точки - своими костями от [seed]. */

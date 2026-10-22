@@ -28,7 +28,6 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
-import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.theme.*
 
 /**

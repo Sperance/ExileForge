@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
+import com.sperance.exileforge.core.display.BaseTile
 import com.sperance.exileforge.core.display.CardSeal
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemLine
@@ -41,6 +42,7 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.Term
+import com.sperance.exileforge.core.display.TileInk
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
@@ -53,11 +55,9 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.FlaskBonuses
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.vector
-import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -280,7 +280,10 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
     }
 }
 
-/** Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера, плашки и плитки базы. */
+/**
+ * Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера, плашки и плитки базы ([BaseTiles];
+ * уровень карты плиткой - без плашки уровня).
+ */
 @Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
     val legend = look.legend != null
     Row(
@@ -299,20 +302,19 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
     }
     RelicTitle(item, look, if (legend) 23 else 22, maxLines = 2)
     if (item.item.serial > 0) SerialSeal(item.item.serial, look)
-    RelicChips(item, look, price)
+    RelicChips(item, look, price, noLevel = item.levelTiled)
     BaseTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
 }
 
 /**
  * Шапка полной карточки - «Медальон»: в центре гнездо или «Астролябия» 112dp с печатью влияния, справа кольцо качества роллов и
- * значки состояний. Ниже имя (касание - английское имя для поиска на аукционе), тип, плашки и плитки базы ([BaseTiles]; у карты без
- * базы - уровень карты плиткой), под ними разделитель.
+ * значки состояний. Ниже имя (касание - английское имя для поиска на аукционе), тип, плашки и плитки базы ([BaseTiles]; уровень карты
+ * плиткой - без плашки уровня), под ними разделитель.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
-    val mapLevel = item.mapLevel.takeIf { item.figures.isEmpty() }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.weight(1f))
         Box {
@@ -338,8 +340,8 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
         }
     }
     SideChips(item)
-    RelicChips(item, look, price, noLevel = mapLevel != null, serial = true)
-    BaseTiles(item, look, mapLevel)
+    RelicChips(item, look, price, noLevel = item.levelTiled, serial = true)
+    BaseTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
 }
 
@@ -419,19 +421,17 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 }
 
 /**
- * Числа базы плитками ([ItemView.figures]) под именем и плашками, до строк - одна сетка полной и короткой карточки: по [TILE_COLUMNS]
- * клетки в ряд, урон базы оружия - широкой плиткой на две клетки, прочие - по одной; урон стихии оружия - цветом стихии, число,
- * сдвинутое строками копии, - голубое; [mapLevel] - уровень карты без базы своей плиткой. Свойство без характеристики остаётся фразой.
+ * Плитки базы ([ItemView.tiles]) под именем и плашками, до строк - одна сетка полной и короткой карточки: по [TILE_COLUMNS] клетки в ряд,
+ * широкая плитка - на две клетки. Свойство без характеристики остаётся фразой.
  */
-@Composable private fun BaseTiles(item: ItemView, look: RelicLook, mapLevel: Int? = null) {
-    val tiles = item.figures.map { BaseTile(it.text, statTitle(it.stat), figureInk(it), if (HitRange.of(it.stat) == HitRange.PHYSICAL && it.ends != null) 2 else 1) } +
-        listOfNotNull(mapLevel?.let { BaseTile(it.toString(), ui("card.map_level_short"), FigureInk, 1) })
-    if (tiles.isNotEmpty()) {
+@Composable private fun BaseTiles(item: ItemView, look: RelicLook) {
+    val rows = remember(item) { tileRows(item.tiles) }
+    if (rows.isNotEmpty()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-            tileRows(tiles).forEach { row ->
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-                    row.forEach { BaseTileCell(it, look, Modifier.weight(it.span.toFloat()).fillMaxHeight()) }
-                    val rest = TILE_COLUMNS - row.sumOf { it.span }
+            rows.forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                    row.forEach { BaseTileCell(it, look, Modifier.weight(span(it).toFloat())) }
+                    val rest = TILE_COLUMNS - row.sumOf(::span)
                     if (rest > 0) Spacer(Modifier.weight(rest.toFloat()))
                 }
             }
@@ -440,38 +440,49 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
     item.base.filter { property -> property.values.all { it.stat.isBlank() } }.forEach { BasePropertyLine(it) }
 }
 
-/** Плитка базы: число [value] цветом [ink], подпись [label], ширина [span] клеток сетки. */
-private class BaseTile(val value: String, val label: String, val ink: Color, val span: Int)
+/** Клеток сетки под плиткой [tile]: широкая - две. */
+private fun span(tile: BaseTile): Int = if (tile.wide) 2 else 1
 
 /** Плитки по рядам сетки: следующая плитка, что не влезает в остаток ряда, начинает новый. */
 private fun tileRows(tiles: List<BaseTile>): List<List<BaseTile>> = tiles.fold(mutableListOf<MutableList<BaseTile>>()) { rows, tile ->
-    if (rows.isEmpty() || rows.last().sumOf { it.span } + tile.span > TILE_COLUMNS) rows += mutableListOf<BaseTile>()
+    if (rows.isEmpty() || rows.last().sumOf(::span) + span(tile) > TILE_COLUMNS) rows += mutableListOf<BaseTile>()
     rows.last() += tile
     rows
 }
 
-/** Цвет числа базы [value]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
-private fun figureInk(value: PropertyValue): Color = DamageType.of(value.stat)?.takeIf { it != DamageType.PHYSICAL }?.let { damageTint(it) } ?: if (value.augmented) Rune else FigureInk
+/** Цвет числа плитки [tile]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
+private fun tileInk(tile: BaseTile): Color = when (tile.ink) {
+    TileInk.DAMAGE -> damageTint(tile.range?.let { DamageType.of(it.hit) })
+    TileInk.AUGMENTED -> Rune
+    TileInk.PLAIN -> FigureInk
+}
 
-/** Клетка плитки базы: число крупно по центру (не влезает - ужимается, не режется), под ним подпись заглавными. */
+/** Клетка плитки базы: число крупно по центру (не влезает - ужимается, не режется), под ним подпись. */
 @Composable private fun BaseTileCell(tile: BaseTile, look: RelicLook, modifier: Modifier) {
-    val shape = RoundedCornerShape(10.dp)
     Column(
-        modifier.background(Color.White.copy(alpha = .04f), shape).border(1.dp, Bronze, shape).padding(horizontal = 6.dp, vertical = 7.dp),
+        modifier.heightIn(min = TILE_MIN_HEIGHT).background(TILE_GROUND, TILE_SHAPE).border(1.dp, Bronze, TILE_SHAPE).padding(horizontal = 6.dp, vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        val figure = MaterialTheme.typography.titleMedium
         BasicText(
             tile.value,
-            style = figure.copy(color = tile.ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center),
+            style = MaterialTheme.typography.titleMedium.copy(color = tileInk(tile), fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center),
             maxLines = 1,
             softWrap = false,
-            autoSize = TextAutoSize.StepBased(minFontSize = FIGURE_MIN, maxFontSize = figure.fontSize, stepSize = FIGURE_STEP),
+            autoSize = FIGURE_SIZE,
         )
-        Text(tile.label.uppercase(), color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .5.sp, textAlign = TextAlign.Center, maxLines = 2)
+        Text(tile.label, color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .5.sp, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
+
+/** Форма плитки базы. */
+private val TILE_SHAPE = RoundedCornerShape(10.dp)
+
+/** Фон плитки базы. */
+private val TILE_GROUND = Color.White.copy(alpha = .04f)
+
+/** Наименьшая высота плитки базы - по плитке с подписью в две строки: плитки ряда одной высоты без замера соседей. */
+private val TILE_MIN_HEIGHT = 62.dp
 
 /** Клеток в ряду сетки плиток базы. */
 private const val TILE_COLUMNS = 3
@@ -591,6 +602,8 @@ val LocalFlaskBonuses = compositionLocalOf<FlaskBonuses?> { null }
 private val LEGEND_CORNER_TOP = 14.dp
 private val LEGEND_CORNER_SIDE = 22.dp
 
-/** Наименьший кегль числа базы у гнезда и шаг его уменьшения: длинный диапазон («120–245») сжимается, а не обрезается. */
-private val FIGURE_MIN = 10.sp
-private val FIGURE_STEP = 0.5.sp
+/**
+ * Кегль числа плитки базы: от кегля `titleMedium` темы вниз до 10sp шагом 0.5sp - длинный диапазон («120–245») сжимается, а не
+ * обрезается.
+ */
+private val FIGURE_SIZE = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = 15.sp, stepSize = 0.5.sp)

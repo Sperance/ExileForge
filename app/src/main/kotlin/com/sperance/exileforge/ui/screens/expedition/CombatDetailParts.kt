@@ -46,7 +46,6 @@ import com.sperance.exileforge.core.sheet.StatTrace
 import com.sperance.exileforge.core.sheet.TraceExplainer
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.noteLine
 import com.sperance.exileforge.ui.theme.*

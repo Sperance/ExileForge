@@ -200,6 +200,15 @@ data class PropertyValue(
     val baseText: String get() = baseEnds?.let { rangeNumber(stat, it) } ?: statNumber(stat, base)
 }
 
+/**
+ * Плитка числа базы карточки ([ItemView.tiles]): число [value], подпись [label] уже заглавными, вид урона [range] (не урон - null),
+ * [wide] - плитка на две клетки сетки, цвет числа - [ink].
+ */
+data class BaseTile(val value: String, val label: String, val range: HitRange?, val wide: Boolean, val ink: TileInk)
+
+/** Цвет числа плитки базы: [DAMAGE] - цветом вида урона плитки (стихия), [AUGMENTED] - число, сдвинутое строками копии, [PLAIN] - прочее. */
+enum class TileInk { PLAIN, AUGMENTED, DAMAGE }
+
 /** One line of an item's base, ready to be drawn; [template] is the dictionary's sentence with a `{0}` per value, or empty. */
 data class BaseProperty(val code: String, val template: String, val values: List<PropertyValue>) {
     val augmented: Boolean get() = values.any { it.augmented }
@@ -336,6 +345,25 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         val damage = own.indexOfFirst { HitRange.of(it.stat) != null }
         if (damage < 0) added + own else own.take(damage + 1) + added + own.drop(damage + 1)
     }
+
+    /**
+     * Плитки базы карточки - одни у полной и короткой: числа базы ([figures]), урон базы оружия диапазоном - широкой плиткой, урон стихий -
+     * цветом стихии; у карты без чисел базы - её уровень плиткой ([levelTiled]).
+     */
+    val tiles: List<BaseTile> by lazy {
+        figures.map { figure ->
+            val range = HitRange.of(figure.stat)
+            val ink = when {
+                range != null && range != HitRange.PHYSICAL -> TileInk.DAMAGE
+                figure.augmented -> TileInk.AUGMENTED
+                else -> TileInk.PLAIN
+            }
+            BaseTile(figure.text, statTitle(figure.stat).uppercase(), range, wide = range == HitRange.PHYSICAL && figure.ends != null, ink)
+        } + listOfNotNull(mapLevel.takeIf { levelTiled }?.let { BaseTile(it.toString(), ui("card.map_level_short").uppercase(), null, wide = false, TileInk.PLAIN) })
+    }
+
+    /** Уровень карты стоит плиткой базы ([tiles]), а не плашкой: карта без тира и без чисел базы. */
+    val levelTiled: Boolean get() = mapLevel != null && figures.isEmpty()
 
     /** База копии с её локальными строками и качеством по характеристике ([SheetCalculator.itemBase]). */
     private val folded: Map<String, Double> by lazy { SheetCalculator(index).itemBase(template, item) }

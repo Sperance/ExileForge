@@ -27,15 +27,6 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
  */
 internal fun tickTint(ailment: Ailment?, type: DamageType?, onHero: Boolean = false): Color = if (ailment == Ailment.POISONED) ailmentTint(ailment) else damageTint(type, onHero)
 
-/** Each damage type's colour, on a number and in the log alike. */
-internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = when (type) {
-    DamageType.FIRE -> Ember
-    DamageType.COLD -> ShieldCyan
-    DamageType.LIGHTNING -> Color(0xFFFFD34A)
-    DamageType.CHAOS -> Elder
-    else -> if (onHero) LifeRed else Parchment
-}
-
 /** Значок стихии у числа удара по герою: текстом, не эмодзи; у физики - без значка. */
 internal fun damageGlyph(type: DamageType): String? = when (type) {
     DamageType.FIRE -> "✹"

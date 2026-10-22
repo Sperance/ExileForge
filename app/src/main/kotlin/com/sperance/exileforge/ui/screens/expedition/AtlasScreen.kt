@@ -116,13 +116,13 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var refunding by remember { mutableStateOf<String?>(null) }
     var summary by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
-    var centerOn by remember { mutableIntStateOf(0) }
+    var centerOn by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         } else {
             val taken = state.allocated.toSet()
-            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), centerOn, onSelect = model::selectAtlasNode)
+            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), centerOn, { centerOn = null }, onSelect = model::selectAtlasNode)
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
@@ -142,7 +142,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         if (searching && index != null) {
             AtlasSearch(index, state?.allocated?.toSet().orEmpty(), { searching = false }) { code ->
                 model.selectAtlasNode(code)
-                centerOn++
+                centerOn = code
             }
         }
         val regrets = game.hero?.count(Orb.ORB_OF_REGRET.name) ?: 0L

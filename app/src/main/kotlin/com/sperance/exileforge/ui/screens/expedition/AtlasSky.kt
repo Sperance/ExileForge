@@ -32,6 +32,7 @@ import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.flow.first
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -48,10 +49,18 @@ import kotlin.math.sin
  * стоит без анимаций и вне экрана; нити, кольца дорог и подписи ветвей рисуются заново лишь со сдвигом, масштабом или взятием. Тумана нет:
  * всё небо видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг
  * касания, жест не перезапускается каждый кадр. Атлас - колесо вокруг старта: пунктирные кольца - кольцевые дороги раскладки, у каждой
- * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев. Каждый новый [centerOn] (найденный поиском узел) ставит выбранную
- * звезду [selected] посреди открытого листом места.
+ * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев. Разовая просьба [centerOn] (узел, найденный поиском) ставит его
+ * звезду посреди открытого листом места, как только небо измерено, и гасится [onCentered]; смена размера неба её не повторяет.
  */
-@Composable internal fun Sky(index: ContentIndex, taken: Set<String>, selected: String, modifier: Modifier, centerOn: Int = 0, onSelect: (String) -> Unit) {
+@Composable internal fun Sky(
+    index: ContentIndex,
+    taken: Set<String>,
+    selected: String,
+    modifier: Modifier,
+    centerOn: String? = null,
+    onCentered: () -> Unit = {},
+    onSelect: (String) -> Unit,
+) {
     val graph = index.atlasGraph
     val nodes = index.atlas.nodes
     val bounds = remember(nodes) { SkyBounds.of(nodes) }
@@ -62,13 +71,15 @@ import kotlin.math.sin
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
     var area by remember { mutableStateOf(IntSize.Zero) }
-    LaunchedEffect(centerOn, area) {
-        if (centerOn == 0 || area == IntSize.Zero) return@LaunchedEffect
-        val node = graph.node(selected) ?: return@LaunchedEffect
-        val width = area.width.toFloat()
-        val height = area.height.toFloat()
+    val centered by rememberUpdatedState(onCentered)
+    LaunchedEffect(centerOn) {
+        val node = centerOn?.let(graph::node) ?: return@LaunchedEffect
+        val sized = snapshotFlow { area }.first { it != IntSize.Zero }
+        val width = sized.width.toFloat()
+        val height = sized.height.toFloat()
         val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(node)
         pan = Placement(bounds, width, height, floor, margin, scale, Offset(width / 2 - at.x, (height - floor) / 2 - at.y)).held()
+        centered()
     }
     val clock = com.sperance.exileforge.ui.components.decorTime()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.lockedText
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
@@ -112,7 +112,7 @@ import org.koin.compose.viewmodel.koinViewModel
             ) {
                 val open = game.unlocked(Feature.RIFT)
                 ForgeButton(onClick = vm::openRift, state = ButtonState.of(idle && open), modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
-                    Text(if (open) ui("rift.open") else ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(index.rules)), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (open) ui("rift.open") else Feature.RIFT.lockedText(index.rules), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

@@ -45,7 +45,8 @@ const val LOCKED_TILE_ALPHA = .45f
  * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [alert] - что-то ждёт взгляда без числа (точка в
  * углу; есть число - точка ждёт), [lockedUntil] - уровень открытия, пока герой ниже него (плитка тусклая, с замком, вместо строк -
  * «откроется с N»). [chores] - строки дел, что ждут действия («Можно продлить: 1»), каждая с жёлтой точкой дела ([ChoreDot]), на месте
- * [news]. Без [onOpen] - заглушка будущего места: пунктирная рамка, тускло, не нажимается.
+ * [news]. [badgeTip] - что значит счётчик: касание счётчика (зона 44 dp в углу) открывает его окном. Без [onOpen] - заглушка будущего
+ * места: пунктирная рамка, тускло, не нажимается.
  */
 @Immutable data class HubTile(
     val title: String,
@@ -57,6 +58,7 @@ const val LOCKED_TILE_ALPHA = .45f
     val lockedUntil: Int? = null,
     val chores: List<String> = emptyList(),
     val alert: Boolean = false,
+    val badgeTip: String? = null,
     val onOpen: (() -> Unit)?,
 )
 
@@ -109,14 +111,19 @@ const val LOCKED_TILE_ALPHA = .45f
         when {
             !hot -> Unit
 
-            tile.badge > 0 -> Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            tile.badge > 0 -> Tipped(tile.badgeTip?.let { tip -> { Tip(body = tip, tint = tile.accent) } }, Modifier.align(Alignment.TopEnd).sizeIn(minWidth = BADGE_ZONE, minHeight = BADGE_ZONE), Alignment.TopEnd) {
+                Box(Modifier.background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                    Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
             }
 
             else -> Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(8.dp).background(GoldBright, CircleShape))
         }
     }
 }
+
+/** Зона касания счётчика плитки: квадрат в её углу, счётчик - в его углу. */
+private val BADGE_ZONE = 44.dp
 
 /** Строка дела плитки: жёлтая точка и текст. */
 @Composable private fun ChoreLine(text: String) {

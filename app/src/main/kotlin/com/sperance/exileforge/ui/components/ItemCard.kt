@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.stateTitle
+import com.sperance.exileforge.core.display.statsOf
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.FlaskBonuses
@@ -63,18 +64,30 @@ import com.sperance.exileforge.ui.theme.*
  * so there is no label to put on the left of a number any more. The glyph is the characteristic
  * the modifier's first effect changes.
  *
- * Замена значения - цена узла, не бонус: строка цветом потери.
+ * Замена значения - цена узла, не бонус: строка цветом потери. [explains] false - строка внутри выбираемого касанием (вариант узла):
+ * она не нажимается, её характеристики объясняет знак в углу ([StatNoteCorner]).
  */
-@Composable fun ModifierLine(index: ContentIndex, line: Line) {
+@Composable fun ModifierLine(index: ContentIndex, line: Line, explains: Boolean = true) {
     val penalty = index.modifier(line.code)?.let { modifierText(index).penalty(it) } == true
-    ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue)
+    val stats = remember(index, line.code, explains) { if (explains) index.statsOf(line.code) else emptyList() }
+    ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue, stats, index)
 }
 
-/** A modifier's sentence already worded, under the glyph of what it changes; [tint] - цвет текста (штраф - потерей). */
-@Composable fun ModifierLine(text: String, glyph: Glyph = Glyph.INFO, tint: Color = ModBlue) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(glyph.vector, null, tint = if (tint == ModBlue) Rune else tint, modifier = Modifier.size(16.dp))
-        Text(text, color = tint, style = MaterialTheme.typography.bodyMedium)
+/**
+ * A modifier's sentence already worded, under the glyph of what it changes; [tint] - цвет текста (штраф - потерей). Строка объясняет
+ * характеристики [stats], что она двигает ([StatNoted]: касание - окно с их описанием).
+ */
+@Composable fun ModifierLine(
+    text: String,
+    glyph: Glyph = Glyph.INFO,
+    tint: Color = ModBlue,
+    stats: List<String> = emptyList(),
+    index: ContentIndex? = null,
+) {
+    val ink = if (tint == ModBlue) Rune else tint
+    StatNoted(stats, index, Modifier.fillMaxWidth(), ink) {
+        Icon(glyph.vector, null, tint = ink, modifier = Modifier.padding(end = 10.dp).size(16.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }
 
@@ -186,7 +199,7 @@ fun ItemCard(
             ShortLines(rolled.take(SHORT_LINES))
             if (rolled.size > SHORT_LINES) MutedText(ui("card.more_properties", rolled.size - SHORT_LINES), style = MaterialTheme.typography.labelMedium)
         }
-        FatedSlot(item.item)
+        FatedSlot(item.item, explained = detailed)
         if (detailed && item.slot.isFlask) FlaskYours(look)
         if (detailed) {
             item.item.maker?.let { maker ->
@@ -205,7 +218,7 @@ fun ItemCard(
             }
         }
     }
-    opened?.let { ModifierInfoSheet(it) { opened = null } }
+    opened?.let { ModifierInfoSheet(it, item.index) { opened = null } }
 }
 
 /** Значки состояний копии, замок и «ждёт отправки»; у полной карточки ([tipped]) касание значка - подсказка, что он значит. */

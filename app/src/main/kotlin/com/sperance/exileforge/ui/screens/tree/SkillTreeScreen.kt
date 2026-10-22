@@ -39,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.PickList
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
@@ -48,6 +50,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
@@ -147,23 +150,25 @@ fun SkillTreePanel(
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
     var tag by remember { mutableStateOf<String?>(null) }
     val query = rawQuery.trim()
-    val found = remember(index, query, game.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
-    val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
+    val search = remember(index, game.lang) { PickList(PickOptions.nodes(index)) }
+    val matches = remember(search, query) { if (query.length < 2) null else search.found(query).mapNotNull { it.key } }
+    val highlight = remember(index, tag, matches) { tag?.let { nodesTagged(index, it) }.orEmpty() + matches.orEmpty().mapTo(HashSet()) { it.code } }
     var filtersOpen by remember { mutableStateOf(false) }
-    val filtering = tag != null || query.length >= 2
+    val filtering = tag != null || matches != null
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
         TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
             onSelect(code)
             nodeOpen = true
         }
-        Text(
-            ui("tree.points", tree.available, tree.total),
-            color = Gold,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp).background(Abyss.copy(alpha = .85f), PILL)
-                .border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
-        )
+        Tipped({ pointsTip(index, tree, hero.info.bonusPoints) }, Modifier.align(Alignment.TopStart).padding(8.dp)) {
+            Text(
+                ui("tree.points", tree.available, tree.total),
+                color = Gold,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
         Column(
             Modifier.align(Alignment.TopEnd).padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -193,8 +198,6 @@ fun SkillTreePanel(
                     )
                 }
             }
-            Spacer(Modifier.height(16.dp))
-            MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, onClick = view::reset)
         }
         if (nodeOpen) {
             val shape = RoundedCornerShape(12.dp)
@@ -237,7 +240,7 @@ fun SkillTreePanel(
 
     if (filtersOpen) {
         ForgeSheet(onDismissRequest = { filtersOpen = false }) {
-            TreeFilters(rawQuery, onQuery, found.size.takeIf { query.length >= 2 }, tag, onTag = { tag = it })
+            TreeFilters(rawQuery, onQuery, matches?.size, tag, onTag = { tag = it })
         }
     }
 
@@ -263,7 +266,7 @@ fun SkillTreePanel(
                 }
                 item { TreeTotals(game, tree) }
                 item {
-                    TreeSearch(game, rawQuery, selected, nodes) { code ->
+                    TreeSearch(game, matches, selected) { code ->
                         onSelect(code)
                         detailsOpen = false
                         nodeOpen = true
@@ -274,7 +277,7 @@ fun SkillTreePanel(
     }
 }
 
-/** Where the map looks: the zoom and the pan, held by the panel so its «back to the whole tree» button can reset them. */
+/** Where the map looks: the zoom and the pan, held by the panel so the tree keeps its view while the panel lives. */
 @Stable internal class TreeView {
     var scale by mutableFloatStateOf(1f)
     var pan by mutableStateOf(Offset.Zero)
@@ -288,6 +291,27 @@ fun SkillTreePanel(
 }
 
 internal val PILL = RoundedCornerShape(16.dp)
+
+/**
+ * Подсказка очков древа: всего, потрачено и свободно ([tree]), сколько очков даёт уровень героя и каждый `bonusEvery`-й уровень
+ * (правила классов), очки из наград [bonus]; нулевых строк нет.
+ */
+internal fun pointsTip(index: ContentIndex, tree: TreeState, bonus: Int): Tip {
+    val classes = index.classes
+    return Tip(
+        ui("tree.points_tip.title"),
+        ui("tree.points_tip.body"),
+        Gold,
+        listOfNotNull(
+            ui("tree.points_total") to "${tree.total}",
+            ui("tree.points_spent") to "${tree.spent}",
+            ui("tree.points_available") to "${tree.available}",
+            ui("tree.points_tip.per_level") to "+${classes.pointsPerLevel}",
+            classes.bonusEvery.takeIf { it > 0 }?.let { ui("tree.points_tip.bonus", it) to "+1" },
+            bonus.takeIf { it > 0 }?.let { ui("tree.points_tip.rewards") to "+$it" },
+        ),
+    )
+}
 
 /** Кнопка поверх древа: круглая тональная компактная иконка-кнопка, со счётчиком [badge] в углу. */
 @Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, onClick: () -> Unit) {

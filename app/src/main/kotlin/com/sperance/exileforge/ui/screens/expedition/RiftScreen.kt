@@ -44,7 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.lockedText
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.TrialPhase
@@ -357,7 +357,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 @Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, onEnter: () -> Unit) {
     val free = board.free > 0
     val why = when {
-        !game.unlocked(Feature.RIFT) -> listOf(ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(game.index?.rules)))
+        !game.unlocked(Feature.RIFT) -> listOf(Feature.RIFT.lockedText(game.index?.rules))
         !free && keys < 1 -> listOf(ui("rift.start_locked"), itemDescription(RiftRules.KEY, game.index)).filter(String::isNotBlank)
         else -> null
     }

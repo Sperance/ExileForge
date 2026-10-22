@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
@@ -31,7 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,8 +55,12 @@ import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
+import com.sperance.exileforge.core.app.lockedText
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.EngineRules
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.solid
 import com.sperance.exileforge.ui.nav.Route
@@ -64,14 +72,55 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.depthPanel
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Кнопка нижней панели: номер вкладки, ключ подписи и значок. */
-private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector) {
+/**
+ * Из чего вкладки панели читают свой знак: игра [game], досчёт ремёсел после отлучки, ещё не показанный листом, [craftsAway] и
+ * приглашения в гильдию [invites].
+ */
+private class BarState(val game: GameUi, val craftsAway: Boolean, val invites: Int)
+
+/** Знак в углу вкладки панели; [reason] - почему он стоит, его называет долгое нажатие на вкладку. */
+private sealed interface BarBadge {
+    fun reason(): String
+
+    /** Раздел [feature] закрыт уровнем героя: замок; уровень открытия - по правилам [rules]. */
+    class Locked(val feature: Feature, val rules: EngineRules?) : BarBadge {
+        override fun reason(): String = feature.lockedText(rules)
+    }
+
+    /** Сколько ждёт решения: число [count]; [key] - ключ причины с этим числом. */
+    class Free(val count: Int, val key: String) : BarBadge {
+        override fun reason(): String = ui(key, count)
+    }
+
+    /** Что-то ждёт взгляда без числа: точка; [key] - ключ причины. */
+    class Alert(val key: String) : BarBadge {
+        override fun reason(): String = ui(key)
+    }
+}
+
+/** Число [count] с причиной [key]; ноль - знака нет. */
+private fun free(count: Int, key: String): BarBadge? = if (count > 0) BarBadge.Free(count, key) else null
+
+/** Точка с причиной [key], пока [on]. */
+private fun alert(on: Boolean, key: String): BarBadge? = if (on) BarBadge.Alert(key) else null
+
+/**
+ * Кнопка нижней панели: номер вкладки, ключ подписи, значок и [waits] - что ждёт на ней (число или точка); замок закрытого уровнем
+ * раздела ставит [badge] сам.
+ */
+private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector, private val waits: (BarState) -> BarBadge? = { null }) {
     HERO(TAB_HERO, "nav.hero", ForgeGlyphs.Helm),
-    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil),
-    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords),
+    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, { free(it.game.freeTreePoints, "nav.reason.tree_points") ?: alert(it.craftsAway, "nav.reason.crafts_away") }),
+    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords, { free(it.game.freeAtlasPoints, "nav.reason.atlas_points") }),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
-    GUILD(TAB_GUILD, "nav.guild", ForgeGlyphs.Banner),
+    GUILD(TAB_GUILD, "nav.guild", ForgeGlyphs.Banner, { free(it.invites, "nav.reason.guild_invites") }),
     ;
+
+    /** Знак вкладки в [state]: замок, пока раздел закрыт уровнем героя, иначе то, что ждёт на ней; ничего - null. */
+    fun badge(state: BarState): BarBadge? {
+        val feature = Feature.ofTab(tab)
+        return if (feature != null && !state.game.unlocked(feature)) BarBadge.Locked(feature, state.game.index?.rules) else waits(state)
+    }
 
     companion object {
         fun of(tab: Int): BarTab = entries.first { it.tab == tab }
@@ -87,8 +136,8 @@ private const val CAPSULE_GROW = 2.4f
  * той же кривой, что и сдвиг экрана. Пять вкладок у всех; закрытая уровнем героя - с замком, касание открывает её экран замка. Вкладка,
  * нажатая снова изнутри, возвращает к своему корню.
  *
- * Число в углу - что ждёт там решения: свободные очки там, откуда их тратят (атлас - «Поход», дерево - «Развитие»), приглашения в
- * гильдию - «Гильдия». Досчёт ремёсел после отлучки, ещё не показанный листом, - точка на «Развитии»; есть число - точка ждёт.
+ * Знак в углу вкладки - её [BarTab.badge]: замок, число того, что ждёт там решения, или точка (есть число - точка ждёт). Долгое
+ * нажатие на вкладку со знаком называет причину окном у неё.
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
@@ -101,26 +150,20 @@ private const val CAPSULE_GROW = 2.4f
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val state = remember(game, craftsAway, invites) { BarState(game, craftsAway, invites) }
         PLAYER_TABS.forEach { index ->
-            val free = when (index) {
-                TAB_EXPEDITION -> game.freeAtlasPoints
-                TAB_PROGRESS -> game.freeTreePoints
-                TAB_GUILD -> invites
-                else -> 0
-            }
-            BarCapsule(
-                BarTab.of(index),
-                selected = route.root?.tab == index,
-                locked = !game.unlocked(Feature.ofTab(index)),
-                free = free,
-                alert = index == TAB_PROGRESS && craftsAway,
-            ) { shell.tab(index) }
+            val tab = BarTab.of(index)
+            BarCapsule(tab, selected = route.root?.tab == index, badge = tab.badge(state)) { shell.tab(index) }
         }
     }
 }
 
-/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число [free] или точка [alert]. */
-@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, onClick: () -> Unit) {
+/**
+ * Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу знак [badge] - замок, число или точка.
+ * Долгое нажатие открывает причину знака ([BarBadge.reason], собирается при открытии); нет знака - долгого нажатия нет.
+ */
+@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, badge: BarBadge?, onClick: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
     val tint by animateColorAsState(if (selected) Gold else Muted, tween(TAB_SHIFT_MS, easing = TabShiftEasing), label = "capsuleTint")
@@ -130,17 +173,22 @@ private const val CAPSULE_GROW = 2.4f
         Modifier.weight(1f + (CAPSULE_GROW - 1f) * grow).height(48.dp).clip(shape)
             .background(PanelRaised.copy(alpha = grow))
             .border(1.dp, Gold.copy(alpha = .4f * grow), shape)
-            .selectable(selected, role = Role.Tab, onClick = onClick),
+            .combinedClickable(
+                role = Role.Tab,
+                onLongClickLabel = badge?.let { ui("hint.hold.info") },
+                onLongClick = badge?.let { { open = true } },
+                onClick = onClick,
+            )
+            .semantics { this.selected = selected },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
         BadgedBox(badge = {
-            if (locked) {
-                Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
-            } else if (free > 0) {
-                Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
-            } else if (alert) {
-                Badge(containerColor = GoldBright)
+            when (badge) {
+                is BarBadge.Locked -> Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
+                is BarBadge.Free -> Badge(containerColor = GoldBright, contentColor = Ink) { Text(badge.count.toString(), fontSize = 9.sp) }
+                is BarBadge.Alert -> Badge(containerColor = GoldBright)
+                null -> Unit
             }
         }) {
             val scale = 1f + .08f * grow
@@ -155,6 +203,7 @@ private const val CAPSULE_GROW = 2.4f
                 Icon(tab.icon, label, tint = tint, modifier = Modifier.size(22.dp))
             }
         }
+        if (open && badge != null) TipCallout(Tip(body = badge.reason())) { open = false }
         AnimatedVisibility(
             selected,
             enter = expandHorizontally(tween(TAB_SHIFT_MS, easing = TabShiftEasing)) + fadeIn(spec),

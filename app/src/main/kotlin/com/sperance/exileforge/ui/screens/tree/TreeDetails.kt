@@ -52,6 +52,7 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
+import com.sperance.exileforge.core.display.statsOf
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.refusalText
@@ -165,8 +166,14 @@ import kotlin.math.sin
                 allocated -> at == chosen
                 else -> false
             }
-            OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = at }) {
-                option.forEach { line -> ModifierLine(index, line) }
+            val stats = remember(index, option) { option.flatMap { index.statsOf(it.code) } }
+            OptionCard(
+                on,
+                enabled = (!allocated && node.code in reachable) || (rechoosable && enabled),
+                onClick = { picked = at },
+                corner = { StatNoteCorner(stats, index) },
+            ) {
+                option.forEach { line -> ModifierLine(index, line, explains = false) }
             }
         }
         if (rechoosable) {
@@ -297,17 +304,24 @@ private fun partText(row: String, part: StatPart, index: ContentIndex?): String 
 
 private const val PART_GLUE = " · "
 
-/** A mastery's or an attribute node's option: a framed card, gold when it is the one. */
-@Composable internal fun OptionCard(on: Boolean, enabled: Boolean, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+/**
+ * A mastery's or an attribute node's option: a framed card, gold when it is the one. [corner] - знак поверх правого верхнего угла
+ * (пояснение характеристик варианта): строки отступают от него и высоты не меняют.
+ */
+@Composable internal fun OptionCard(on: Boolean, enabled: Boolean, onClick: () -> Unit, corner: @Composable BoxScope.() -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    Column(
+    Box(
         Modifier.fillMaxWidth().clip(shape).background(if (on) Gold.copy(alpha = .12f) else Abyss)
             .border(if (on) 1.5.dp else 1.dp, if (on) Gold else Bronze.copy(alpha = .5f), shape)
-            .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        content = content,
-    )
+            .clickable(enabled = enabled, onClick = onClick),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 10.dp, top = 10.dp, bottom = 10.dp, end = OPTION_CORNER), verticalArrangement = Arrangement.spacedBy(4.dp), content = content)
+        corner()
+    }
 }
+
+/** Правый отступ строк варианта узла: место знака в его углу. */
+private val OPTION_CORNER = 24.dp
 
 /**
  * The tree's bonuses as the rules sum them (behind «Итого» as well as in the details).

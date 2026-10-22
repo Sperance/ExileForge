@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
@@ -47,7 +48,10 @@ private const val LIMIT_BRANCH = "ECONOMY"
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var amount by remember { mutableStateOf("") }
     val form = GiveForm(amount.toLongOrNull() ?: 0L, me?.dayLeft, game.goldBill(amount.toLongOrNull() ?: 0L))
-    TrailData(ui("guild.treasury_trail", compactNumber(guild.treasuryGold.toDouble())))
+    TrailData(
+        ui("guild.treasury_trail", compactNumber(guild.treasuryGold.toDouble())),
+        Tip(ui("guild.treasury_tip.title"), ui("guild.treasury_tip.body"), Gold, listOf(ui("guild.treasury_tip.gold") to groupedNumber(guild.treasuryGold))),
+    )
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item { GivePanel(game, me, form, amount, onAmount = { amount = it }) { vm.contribute(form.amount) { amount = "" } } }
         me?.let { item { RankPanel(game.index?.guilds, it) } }

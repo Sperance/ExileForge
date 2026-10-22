@@ -42,7 +42,6 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statPercent
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Op
@@ -229,10 +228,9 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                     section.empty?.let { MutedText(ui(it)) }
                     return@forEach
                 }
-                val tint = if (section == MapSection.MAP) ModBlue else Rune
                 Engraved(ui(section.title))
                 lines.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), tint = tint) }) { ModifierLine(effectText(stat, value, run.index), Glyph.ofStat(stat)) }
+                    ModifierLine(effectText(stat, value, run.index), Glyph.ofStat(stat), stats = listOf(stat), index = run.index)
                 }
             }
         }

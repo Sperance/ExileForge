@@ -42,6 +42,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.fate.BoonState
 import com.sperance.exileforge.core.fate.FateSight
 import com.sperance.exileforge.core.fate.FatedLine
+import com.sperance.exileforge.core.fate.boonStats
 import com.sperance.exileforge.core.fate.boonText
 import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -64,13 +65,16 @@ val LocalFateSight = compositionLocalOf<FateSight?> { null }
     CompositionLocalProvider(LocalFateSight provides sight, content = content)
 }
 
-/** Судьбоносная строка вещи [item] в её карточке: печать, пока строка не раскрыта, иначе строка со своим состоянием. */
-@Composable fun FatedSlot(item: ItemInstance, modifier: Modifier = Modifier) {
+/**
+ * Судьбоносная строка вещи [item] в её карточке: печать, пока строка не раскрыта, иначе строка со своим состоянием. [explained] -
+ * строка объясняет свои характеристики касанием (полная карточка); в короткой, что сама выбирается касанием, строка не нажимается.
+ */
+@Composable fun FatedSlot(item: ItemInstance, explained: Boolean, modifier: Modifier = Modifier) {
     val desecration = item.desecration ?: return
     val sight = LocalFateSight.current ?: return
     when (val line = sight.line(item)) {
         null -> RuneSeal(pending = desecration.offers.isNotEmpty(), modifier)
-        else -> FatedRow(sight, line, modifier)
+        else -> FatedRow(sight, line, explained, modifier)
     }
 }
 
@@ -159,8 +163,11 @@ private fun caption(line: FatedLine): String = when (line.state) {
     BoonState.OUTDONE -> ui("fate.boon_outdone", line.rival?.let { slotTitle(it) }.orEmpty())
 }
 
-/** Раскрытая строка: ✦, текст словами сервера, плашка тира и подпись состояния. */
-@Composable private fun FatedRow(sight: FateSight, line: FatedLine, modifier: Modifier) {
+/**
+ * Раскрытая строка: ✦, текст словами сервера, плашка тира и подпись состояния; строка листа при [explained] объясняет свои
+ * характеристики ([StatNoted]).
+ */
+@Composable private fun FatedRow(sight: FateSight, line: FatedLine, explained: Boolean, modifier: Modifier) {
     val look = look(line.state)
     val shape = RoundedCornerShape(10.dp)
     Column(
@@ -173,7 +180,8 @@ private fun caption(line: FatedLine): String = when (line.state) {
             }
             .padding(start = 12.dp, end = 10.dp, top = 8.dp, bottom = 8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        val stats = remember(sight.index, line.boon, explained) { if (explained) boonStats(sight.index, line.boon) else emptyList() }
+        StatNoted(stats, sight.index, tint = look.ink) {
             Text("$SIGIL ${boonText(sight.index, line.boon)}", color = look.ink, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             TierChip(line.boon.tier, look.ink)
         }

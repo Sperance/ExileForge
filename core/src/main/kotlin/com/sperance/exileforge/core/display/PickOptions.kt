@@ -116,8 +116,14 @@ object PickOptions {
         else -> emptyList()
     }
 
-    /** Узлы древа [nodes] по порядку, ключ - код: поиск находит узел по имени и по коду. */
-    fun nodes(nodes: List<TreeNode>): List<PickOption<String>> = nodes.map { PickOption(it.code, nodeTitle(it.code), terms = listOf(it.code)) }
+    /**
+     * Узлы древа [nodes] по порядку, ключ - сам узел: поиск находит узел по имени и по видимому тексту его строк и вариантов выбора с
+     * числами ([lineText]); кодов узлов и имён характеристик в словах поиска нет. Список собирается на язык интерфейса: экран держит
+     * его на язык, а не на каждый запрос.
+     */
+    fun nodes(index: ContentIndex, nodes: List<TreeNode> = index.content.tree.nodes): List<PickOption<TreeNode>> = nodes.map { node ->
+        PickOption(node, nodeTitle(node.code), terms = (node.lines + node.options.flatten()).map { lineText(index, it) })
+    }
 
     /** Виды награды кода по порядку правил. */
     fun redemptionKinds(): List<PickOption<RedemptionKind>> = RedemptionKind.entries.map { kind ->

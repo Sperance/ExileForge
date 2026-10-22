@@ -139,7 +139,13 @@ private sealed interface AlbumPick {
             TrailLevel(ui("history.uniques"), onBack = vm::back) {
                 Column(Modifier.fillMaxSize()) {
                     val known = finds
-                    if (album != null && known != null) TrailData(ui("history.count", album.count(known), album.all.size))
+                    if (album != null && known != null) {
+                        val found = album.count(known)
+                        TrailData(
+                            ui("history.count", found, album.all.size),
+                            Tip(ui("history.count_tip.title"), ui("history.count_tip.body"), Gold, listOf(ui("history.count_tip.found") to "$found", ui("history.count_tip.all") to "${album.all.size}")),
+                        )
+                    }
                     if (album == null || known == null) {
                         Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
                         return@Column

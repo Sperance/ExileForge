@@ -43,11 +43,13 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgeMenu
 import com.sperance.exileforge.ui.components.LocalMailOpen
+import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.screens.hero.HeroFateChip
 import com.sperance.exileforge.ui.screens.hero.HeroLine
+import com.sperance.exileforge.ui.screens.hero.heroLevelTip
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -66,13 +68,15 @@ import org.koin.compose.viewmodel.koinViewModel
  * The account sits in its corner, apart from the bottom bar. Настройки - своя шестерёнка ([SettingsButton]), почта - свой конверт
  * ([MailBadge]); отчёт об ошибке открывают аккорд громкости и строка настроек.
  *
- * На вкладке «Герой» шапка игры и строка героя - одна строка. Знак игры открывает аккаунт; загруженный герой называет себя сам.
+ * На вкладке «Герой» шапка игры и строка героя - одна строка. Знак игры открывает аккаунт; загруженный герой называет себя сам, касание
+ * имени - опыт до следующего уровня ([heroLevelTip]).
  */
 @Composable internal fun ForgeBanner(game: GameUi, route: Route) {
     val feedback by koinViewModel<FeedbackViewModel>().model.feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
-    val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }
+    val header = rememberHeroHeader(game)
+    val hero = header?.takeIf { route.tab == TAB_HERO }
     if (hero != null) {
         val visit = remember(shell) { { building: Building -> shell.building(building) } }
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }, counter = { HeroFateChip(shell.fate, visit) }) {
@@ -98,13 +102,15 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright, maxLines = 1, softWrap = false)
             val named = game.heroInfo != null || game.heroRow != null
-            Text(
-                if (named) game.heroName + ui("app.hero_level", game.heroLevel) else ui("app.title"),
-                style = MaterialTheme.typography.labelSmall,
-                color = Muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Tipped(header?.let { { heroLevelTip(it) } }) {
+                Text(
+                    if (named) game.heroName + ui("app.hero_level", game.heroLevel) else ui("app.title"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
         MailBadge(feedback.unread)

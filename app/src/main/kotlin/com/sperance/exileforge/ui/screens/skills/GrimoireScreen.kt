@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
@@ -48,6 +49,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.round
 import kotlin.math.roundToInt
 
 /** The grimoire's two sections (the owner's mockup A «Гримуар»): the class's skills, and the belt. */
@@ -94,15 +96,16 @@ internal sealed interface Pick {
     val pages = remember(book, classCode) { book?.ofClass(classCode).orEmpty() }
     if (hero != null && body != null && index != null) {
         val loadout = remember(skills, index, classCode, hero.stats) { Loadout.of(skills, index, classCode, emptyList(), hero.stats) }
-        val reserved = loadout.reserve(ReservePool.MANA, body).percent
-        val lifeReserved = loadout.reserve(ReservePool.LIFE, body).percent
+        val mana = loadout.reserve(ReservePool.MANA, body)
+        val life = loadout.reserve(ReservePool.LIFE, body)
         TrailData(
             listOfNotNull(
                 ui("skills.data_level", level),
                 ui("skills.data_mana", number(body.maxMana)),
-                ui("skills.data_reserve", number(reserved)).takeIf { reserved > 0 },
-                ui("skills.data_life", number(lifeReserved)).takeIf { lifeReserved > 0 },
+                ui("skills.data_reserve", number(mana.percent)).takeIf { mana.percent > 0 },
+                ui("skills.data_life", number(life.percent)).takeIf { life.percent > 0 },
             ).joinToString(" · "),
+            remember(index, level, body, mana, life) { trailTip(index, level, body.maxMana, mana, life) },
         )
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -199,6 +202,32 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /**
+ * Подсказка данных цепочки Гримуара: что значат знаки строки, уровень героя, открытые активные и пассивные ячейки из всех и уровень
+ * следующей ячейки каждого вида ([SkillRules.nextSlotLevel]), максимум маны, резерв маны аурами [mana] и здоровья [life] - долей и
+ * числом; нулевого резерва нет.
+ */
+private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: PoolReserve, life: PoolReserve): Tip {
+    val rules = index.skillRules
+    fun next(kind: SkillKind): String? = rules.nextSlotLevel(kind, level)?.let { ui("skills.opens_at", it) }
+    fun share(reserve: PoolReserve): String = ui("skills.data_tip.share", number(reserve.percent), number(round(reserve.held)))
+    return Tip(
+        ui("skills.data_tip.title"),
+        ui("skills.data_tip.body"),
+        ManaBlue,
+        listOfNotNull(
+            ui("skills.data_tip.level") to "$level",
+            ui("skills.data_tip.actives") to ui("skills.data_tip.open", rules.activeSlots(level), rules.slots(SkillKind.ACTIVE).size),
+            ui("skills.data_tip.passives") to ui("skills.data_tip.open", rules.passiveSlots(level), rules.slots(SkillKind.PASSIVE).size),
+            next(SkillKind.ACTIVE)?.let { ui("skills.data_tip.next_active") to it },
+            next(SkillKind.PASSIVE)?.let { ui("skills.data_tip.next_passive") to it },
+            ui("skills.data_tip.mana") to number(maxMana),
+            (ui("skills.data_tip.reserve") to share(mana)).takeIf { mana.percent > 0 },
+            (ui("skills.data_tip.life") to share(life)).takeIf { life.percent > 0 },
+        ),
+    )
+}
+
+/**
  * Ячейки умений: активные и пассивные - одна сетка в две колонки, ячейка -
  * строка [SLOT_ROW] (иконка [SLOT_ICON] с уровнем внутри, имя и строка условия или резерва). Ряд с нечётным числом ячеек
  * дополняется пустым местом - ширина ячеек одна у обоих разделов. Касание пустой или пассивной ячейки - выбор умения, занятой
@@ -206,12 +235,13 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
  * подсказка «Осмотра» под панелью.
  */
 @Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
-    val rules = index.skills.rules
+    val rules = index.skillRules
     val inspect = rememberSkillInspect()
     ForgePanel {
-        val actives = rules.activeSlots.indices.map { skills.active.getOrNull(it) }
-        Engraved(ui("skills.actives", actives.count { it != null }, index.skillRules.activeSlots(level)))
-        SlotGrid(rules.activeSlots) { at, opens, modifier ->
+        val activeSlots = rules.slots(SkillKind.ACTIVE)
+        val actives = activeSlots.indices.map { skills.active.getOrNull(it) }
+        Engraved(ui("skills.actives", actives.count { it != null }, rules.activeSlots(level)))
+        SlotGrid(activeSlots) { at, opens, modifier ->
             val slot = actives[at]
             val skill = slot?.let { index.skills.byCode[it.skill] }
             SlotTile(
@@ -226,9 +256,10 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                 onPeek = slot?.let { { inspect(SkillPeek(it.skill, condition = it.condition)) } },
             )
         }
-        val passives = rules.passiveSlots.indices.map { skills.passive.getOrNull(it) }
-        Engraved(ui("skills.passives", passives.count { it != null }, index.skillRules.passiveSlots(level)))
-        SlotGrid(rules.passiveSlots) { at, opens, modifier ->
+        val passiveSlots = rules.slots(SkillKind.PASSIVE)
+        val passives = passiveSlots.indices.map { skills.passive.getOrNull(it) }
+        Engraved(ui("skills.passives", passives.count { it != null }, rules.passiveSlots(level)))
+        SlotGrid(passiveSlots) { at, opens, modifier ->
             val skill = passives[at]?.let { index.skills.byCode[it] }
             SlotTile(
                 skill,

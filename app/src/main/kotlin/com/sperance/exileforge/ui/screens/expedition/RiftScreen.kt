@@ -61,6 +61,9 @@ import com.sperance.exileforge.core.expedition.RiftState
 import com.sperance.exileforge.core.expedition.RiftToll
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.network.Link
+import com.sperance.exileforge.core.network.LinkState
+import com.sperance.exileforge.core.session.CallState
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftMutator
@@ -144,22 +147,25 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     RiftNodeKind.ELITE, RiftNodeKind.CHAMPION -> RiftColors.Hot
     RiftNodeKind.GUARDIAN -> RiftColors.Warn
     RiftNodeKind.ALTAR -> RiftColors.Chaos
-    RiftNodeKind.REST, RiftNodeKind.TREASURE, RiftNodeKind.FORGE -> RiftColors.Rift
+    RiftNodeKind.REST -> RiftColors.Honor
+    RiftNodeKind.TREASURE -> RiftColors.Pick
+    RiftNodeKind.FORGE -> RiftColors.Bronze
 }
 
 /**
  * Разлом недели на весь экран. До забега - входное меню «Врата»: портал, неделя, стражи, мутаторы и вход; во
- * время забега - карта «Восхождение» с тонким HUD, предложение узла всплывает снизу. Пока идёт бой, экран - арена; назад
- * закрывает Разлом, забег ждёт на сервере до конца недели.
+ * время забега - карта «Восхождение» с тонким HUD, предложение узла всплывает снизу. Пока идёт бой, экран - арена. «Назад» на Вратах
+ * закрывает Разлом, в забеге - спрашивает «Покинуть Разлом?» (удержанием): закрыть экран, не кончив забег, нельзя.
  */
 @Composable fun RiftScreen() {
     val model = koinViewModel<ExpeditionViewModel>()
     val game by model.game.collectAsStateWithLifecycle()
     val state by model.riftState.collectAsStateWithLifecycle()
-    CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state) }
+    val step by model.riftStep.collectAsStateWithLifecycle()
+    CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state, step) }
 }
 
-@Composable private fun RiftBody(game: GameUi, model: ExpeditionViewModel, state: RiftState) {
+@Composable private fun RiftBody(game: GameUi, model: ExpeditionViewModel, state: RiftState, step: CallState) {
     val arena = state.arena
     if (arena != null) return RiftFight(game, model, arena, state.delivery)
     val index = game.index ?: return
@@ -173,7 +179,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine, chart) else RiftRunView(game, model, rules, board, engine, chart, run, state, idle = !game.busy)
+            if (run == null) RiftGate(game, model, rules, board, engine, chart) else RiftRunView(game, model, rules, board, engine, chart, run, state, step, idle = !game.busy && !step.holds)
         }
         val recap = state.recap?.takeIf { it.shown }
         if (recap != null) RiftRecapSheet(game, recap, model::closeRiftRecap) else state.result?.let { RiftResultSheet(game, model, it) }
@@ -443,15 +449,33 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 /** Что открыто поверх карты забега: дары, проклятия или меню забега. */
 private enum class RunSheet { BOONS, CURSES }
 
-/** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу; [state] - итог последнего боя и открытые сундуки. */
-@Composable private fun RiftRunView(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart, run: RiftRun, state: RiftState, idle: Boolean) {
+/**
+ * Забег: карта на весь экран, HUD сверху, под ним - полоса шага в пути ([RequestStrip]), предложение узла всплывает снизу; [state] - итог
+ * последнего боя и открытые сундуки, [step] - шаг в пути. «Назад» и «Покинуть Разлом» меню - одно подтверждение удержанием.
+ */
+@Composable private fun RiftRunView(
+    game: GameUi,
+    model: ExpeditionViewModel,
+    rules: RiftRules,
+    board: RiftBoard,
+    engine: RiftEngine,
+    chart: RiftChart,
+    run: RiftRun,
+    state: RiftState,
+    step: CallState,
+    idle: Boolean,
+) {
     var looking by remember { mutableStateOf<Int?>(null) }
     var sheet by remember { mutableStateOf<RunSheet?>(null) }
-    BackHandler { model.closeRift() }
+    var leaving by remember { mutableStateOf(false) }
+    BackHandler { leaving = true }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
         RiftAscent(rules, engine, chart, state.walk, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
-        RiftHud(model, rules, board, engine, run, state.toll, state.recap?.takeIf { !it.shown }, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
+        Column(Modifier.align(Alignment.TopCenter)) {
+            RiftHud(model, rules, board, engine, run, state.toll, state.recap?.takeIf { !it.shown }, idle, onLeave = { leaving = true }) { sheet = it }
+            RequestStrip(step.strip(model::retryRiftStep), RiftStripTones)
+        }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
             enter = androidx.compose.animation.slideInVertically { it },
@@ -460,7 +484,13 @@ private enum class RunSheet { BOONS, CURSES }
         ) {
             Column(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp).heightIn(max = 440.dp),
-            ) { offer?.let { OfferPlate(game, rules, engine, run, it, state.coffers, idle, model::riftAct) } }
+            ) { offer?.let { OfferPlate(game, rules, engine, run, it, state.coffers, idle, step, model::riftAct) } }
+        }
+    }
+    if (leaving) {
+        ConfirmSheet(ui("rift.end"), ui("rift.end_hold"), onDismiss = { leaving = false }, danger = true) {
+            leaving = false
+            model.riftAct(RiftAct.End)
         }
     }
     looking?.let(chart::spot)?.let { spot ->
@@ -503,11 +533,11 @@ private enum class RunSheet { BOONS, CURSES }
     toll: RiftToll?,
     recap: RiftRecap?,
     idle: Boolean,
-    modifier: Modifier,
+    onLeave: () -> Unit,
     onSheet: (RunSheet) -> Unit,
 ) {
     Column(
-        modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
+        Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
             .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -525,7 +555,7 @@ private enum class RunSheet { BOONS, CURSES }
             RiftChip(ui("rift.curses_n", run.curses.size), RiftColors.Warn) { onSheet(RunSheet.CURSES) }
             RiftChip(ui("rift.sight", engine.sight(run)), RiftColors.Muted)
             Spacer(Modifier.weight(1f))
-            RiftMenu(model, rules, board, idle)
+            RiftMenu(rules, board, idle, onLeave)
         }
     }
 }
@@ -644,14 +674,12 @@ private val RiftMenuPalette = MenuPalette(
 
 /**
  * Меню забега Разлома (общее [RunMenu]) в палитре Разлома: срок недели у заголовка, мутаторы недели теми же строками, что на Вратах;
- * свои пункты - покинуть Разлом (удержанием в листе) и закрыть Разлом, у каждого под именем - что будет с забегом.
+ * свой пункт - «Покинуть Разлом» ([onLeave]: подтверждение удержанием), под именем - что будет с забегом.
  */
-@Composable private fun RiftMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean) {
-    var ending by remember { mutableStateOf(false) }
+@Composable private fun RiftMenu(rules: RiftRules, board: RiftBoard, idle: Boolean, onLeave: () -> Unit) {
     RunMenu(
         items = listOf(
-            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), ui("rift.end_confirm"), danger = true, enabled = idle) { ending = true },
-            RunMenuItem(Icons.Outlined.Close, ui("rift.close"), ui("rift.close_note")) { model.closeRift() },
+            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), ui("rift.end_confirm"), danger = true, enabled = idle, onClick = onLeave),
         ),
         hold = {},
         extra = {
@@ -673,13 +701,10 @@ private val RiftMenuPalette = MenuPalette(
         palette = RiftMenuPalette,
         trigger = { onClick -> RiftChip("☰", RiftColors.Muted, onClick) },
     )
-    if (ending) {
-        ConfirmSheet(ui("rift.end"), ui("rift.end_hold"), onDismiss = { ending = false }, danger = true) {
-            ending = false
-            model.riftAct(RiftAct.End)
-        }
-    }
 }
+
+/** Краски полосы шага в палитре Разлома. */
+private val RiftStripTones = StripTones(line = RiftColors.Rift, track = RiftColors.Line, restored = RiftColors.Soft, muted = RiftColors.Muted)
 
 /** Имя дара [code], со ступенью [grade] - если она есть. */
 private fun boonName(code: String, grade: Int): String = loc("rift.boon.$code.name") + if (grade > 0) " · ${ui("rift.grade", grade)}" else ""
@@ -832,8 +857,11 @@ private fun OfferPick.label(act: RiftAct?, ready: String, prompt: String, incomp
     else -> ready
 }
 
-/** Подвал предложения [offer] при выделении [pick]: ход есть, только когда выбраны и вариант, и все его цели. */
-private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: OfferPick): OfferFooter {
+/**
+ * Подвал предложения [offer] при выделении [pick]: ход есть, только когда выбраны и вариант, и все его цели. Отдых пропускается только
+ * при полной Чести ([RiftEngine.canSkipRest]).
+ */
+private fun offerFooter(rules: RiftRules, engine: RiftEngine, run: RiftRun, offer: RiftOffer, pick: OfferPick): OfferFooter {
     val option = pick.option
     val target = pick.targets.firstOrNull()
     val take = (option as? OfferOption.Take)?.let { if (run.boons.size < rules.nodes.slots) RiftAct.Take(it.index) else target?.let { slot -> RiftAct.Take(it.index, slot) } }
@@ -861,7 +889,7 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
             val choice = (option as? OfferOption.Rest)?.choice
             val act = choice?.let { rest -> if (rest == RiftRest.HEAL) RiftAct.Rest(rest) else target?.let { RiftAct.Rest(rest, it) } }
             val incomplete = if (choice == RiftRest.CLEANSE) ui("rift.rest_pick_curse") else ui("rift.rest_pick_boon")
-            OfferFooter(pick.label(act, ui("rift.rest_take"), ui("rift.rest_pick"), incomplete), CommitTone.MEND, act)
+            OfferFooter(pick.label(act, ui("rift.rest_take"), ui("rift.rest_pick"), incomplete), CommitTone.MEND, act, skip.takeIf { engine.canSkipRest(run) })
         }
 
         RiftOffer.Contract -> {
@@ -886,6 +914,7 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
     offer: RiftOffer,
     coffers: Map<Int, Reward>,
     idle: Boolean,
+    step: CallState,
     onAct: (RiftAct) -> Unit,
 ) {
     val pick = remember(run.at, offer) { OfferPick() }
@@ -929,18 +958,21 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
                 }
             }
         }
-        OfferFooterBar(offerFooter(rules, run, offer, pick), idle, onAct)
+        OfferFooterBar(offerFooter(rules, engine, run, offer, pick), idle, step, onAct)
     }
 }
 
-/** Подвал плашки узла под списком: главная кнопка удержания во всю ширину и рядом красная «уйти» ([OfferFooter]). */
-@Composable private fun OfferFooterBar(footer: OfferFooter, idle: Boolean, onAct: (RiftAct) -> Unit) {
+/**
+ * Подвал плашки узла под списком: главная кнопка удержания во всю ширину и рядом красная «уйти» ([OfferFooter]); кнопка, чей шаг [step]
+ * ждёт ответа дольше [com.sperance.exileforge.core.session.CallTimes.SPINNER_MS], крутит спиннер.
+ */
+@Composable private fun OfferFooterBar(footer: OfferFooter, idle: Boolean, step: CallState, onAct: (RiftAct) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeButton(
             onClick = { footer.act?.let(onAct) },
             modifier = Modifier.weight(1f),
             size = ButtonSize.Wide,
-            state = ButtonState.of(idle && footer.act != null),
+            state = ButtonState.of(idle && footer.act != null, busy = footer.act != null && step.spins(footer.act)),
             accent = footer.tone.accent,
             hold = footer.tone.hold,
         ) { Text(footer.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -949,7 +981,7 @@ private fun offerFooter(rules: RiftRules, run: RiftRun, offer: RiftOffer, pick: 
                 onClick = { onAct(leave.act) },
                 kind = ButtonKind.Danger,
                 size = ButtonSize.Wide,
-                state = ButtonState.of(idle),
+                state = ButtonState.of(idle, busy = step.spins(leave.act)),
                 icon = Icons.Outlined.Close,
                 hold = Hold(),
             ) { Text(leave.label, maxLines = 1) }
@@ -1198,7 +1230,8 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
 }
 
 /**
- * Бой узла: арена, как у испытаний, и плашка с волной и условием Чемпиона.
+ * Бой узла: арена, как у испытаний, и плашка с волной и условием Чемпиона. Нет связи - та же полоса, что на карте, под свитком Чести
+ * (после боя - сверху экрана), без «Повторить»: бой идёт на устройстве, а итог досылается сам ([arenaStrip]).
  *
  * Посреди боя уйти нельзя: назад ставит паузу; досье стража перед боем, «В бой» начинает бой.
  */
@@ -1206,12 +1239,18 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
     val shell: ShellViewModel = koinViewModel()
     val hud by arena.hud.collectAsState()
     val clock = rememberSimClock(arena)
+    val strip = arenaStrip(game.link, delivery)
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
             ArenaOverlay(
                 game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, pulse = arena.pulse,
-                top = { HonorScroll(hud.honor, hud.maxHonor, hud.loss, Modifier.fillMaxWidth()) },
+                top = {
+                    Column {
+                        HonorScroll(hud.honor, hud.maxHonor, hud.loss, Modifier.fillMaxWidth())
+                        RequestStrip(strip, RiftStripTones)
+                    }
+                },
             )
         }
         val shape = RoundedCornerShape(10.dp)
@@ -1247,8 +1286,20 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
                 }
             }
         }
-        if (hud.phase != TrialPhase.FIGHT) DeliveryPlate(hud.phase == TrialPhase.DONE, delivery, onLeave = model::leaveRiftRefused)
+        if (hud.phase != TrialPhase.FIGHT) {
+            DeliveryPlate(hud.phase == TrialPhase.DONE, delivery, onLeave = model::leaveRiftRefused)
+            RequestStrip(strip, RiftStripTones, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+        }
     }
+}
+
+/**
+ * Полоса связи арены: нет связи (значок связи игры) или итог боя уходит не с первой попытки - «Нет связи», бой продолжится, когда она
+ * вернётся; повтора кнопкой нет - итог досылается сам.
+ */
+private fun arenaStrip(link: Link, delivery: RiftDelivery?): StripState {
+    val retrying = (delivery as? RiftDelivery.Sending)?.let { it.attempt > 1 } == true
+    return if (link.state is LinkState.Offline || retrying) StripState.Offline(ui("rift.arena_offline"), onRetry = null) else StripState.None
 }
 
 /**

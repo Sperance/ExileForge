@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.expedition.ExpeditionActions
+import com.sperance.exileforge.core.expedition.RiftActions
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.guild.GuildActions
@@ -51,5 +52,6 @@ class Actions(
     val heroSync: HeroSync,
     val expedition: ExpeditionActions,
     val trial: TrialActions,
+    val rift: RiftActions,
     val town: TownActions,
 )

@@ -114,6 +114,7 @@ class CharacterActions(
             loader.ensureContent(fresh = true)
             trace.step(StartStage.SESSION, "start.step.hero") { heroSync.readHero() }
             expedition.resume(id)
+            rift.resume()
         }
     }
 

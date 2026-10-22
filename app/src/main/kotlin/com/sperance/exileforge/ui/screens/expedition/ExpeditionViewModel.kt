@@ -111,9 +111,12 @@ class ExpeditionViewModel(
 
     /** Разлом недели. */
     val riftState: StateFlow<RiftState> = rift.state
+
+    /** Шаг забега Разлома в пути: ожидание, «нет связи», «связь восстановлена». */
+    val riftStep: StateFlow<com.sperance.exileforge.core.session.CallState> = rift.step
+    fun retryRiftStep() = rift.retryStep()
     fun openRift() = rift.open()
     fun closeRift() = rift.close()
-    fun refreshRift() = rift.refresh()
     fun startRift() = rift.start()
     fun riftAct(act: com.sperance.exileforge.rules.rift.RiftAct) = rift.act(act)
     fun riftGo(node: Int) = rift.go(node)

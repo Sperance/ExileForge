@@ -9,14 +9,17 @@ import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
+import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.model.campaign.RiftReport
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.quests.StoryOverlay
+import com.sperance.exileforge.core.session.CallState
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
+import com.sperance.exileforge.core.session.PatientCall
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
@@ -132,11 +135,28 @@ class RiftActions(
     private val mutable = MutableStateFlow(RiftState())
     val state: StateFlow<RiftState> = mutable.asStateFlow()
 
+    /**
+     * Шаг забега в пути ([act], [go]): уходит под одним ключом, сам повторяется при сбое связи, после попыток ждёт «Повторить»
+     * ([retryStep]); прошёл после сбоя - доска перечитывается. Отказ сервера - строка отказа и свежая доска: сервер мог принять
+     * прежний шаг, чей ответ потерялся.
+     */
+    private val steps = PatientCall(scope)
+    val step: StateFlow<CallState> = steps.state
+
     /** «Разлом недели»: экран открывается, доска читается. */
     fun open() {
         story.clear()
+        steps.drop()
         mutable.value = RiftState(open = true)
         refresh()
+    }
+
+    /**
+     * Вход в героя: открытый забег Разлома открывает Разлом сразу - закрытое приложение и обрыв связи забег не кончают, кончает его
+     * только «Покинуть Разлом».
+     */
+    fun resume() {
+        if (heroes.state.value.hero?.campaign?.trials?.rift?.run != null && !mutable.value.open) open()
     }
 
     /** Доска заново - и бой, если забег стоит на бою. */
@@ -144,9 +164,13 @@ class RiftActions(
         commands.task(touches = setOf(Reads.HERO)) { show(api.trials.riftBoard(heroes.heroId)) }
     }
 
-    /** Экран закрыт: бой посреди не бросается - забег ждёт на сервере, вернуться можно в любой момент недели. */
+    /**
+     * Экран закрыт - только без забега (Врата): с открытым забегом экран не закрывается, выход из него - «Покинуть Разлом»
+     * ([RiftAct.End]).
+     */
     fun close() {
-        mutable.value.arena?.takeIf { it.hud.value.phase == com.sperance.exileforge.core.campaign.TrialPhase.FIGHT }?.let { return }
+        if (mutable.value.board?.progress?.run != null) return
+        steps.drop()
         mutable.value = RiftState()
         heroSync.ensure()
     }
@@ -163,13 +187,29 @@ class RiftActions(
     /** Шаг забега [act] по нажатию игрока: ответ - новая доска, у сундука Владыки - его содержимое, а у конца - итог и сундук. */
     fun act(act: RiftAct) {
         val run = mutable.value.board?.progress?.run ?: return
-        commands.task(writing = true, touches = setOf(Reads.HERO)) {
-            val report = api.trials.riftAct(heroes.heroId, run.id, act)
+        val heroId = heroes.heroId
+        sendStep(act) { key ->
+            val report = api.trials.riftAct(heroId, run.id, act, key)
             val opened = (act as? RiftAct.Open)?.coffer
             val coffer = report.coffer
             if (opened != null && coffer != null) mutable.update { it.copy(coffers = it.coffers + (opened to coffer)) }
             land(report)
         }
+    }
+
+    /** «Повторить» после «Нет связи»: потерянный шаг уходит снова тем же ключом. */
+    fun retryStep() = steps.retry()
+
+    /** Шаг [tag] через [steps]; пока идёт команда раннера (чтение доски, вход), шаг не начинается. */
+    private fun sendStep(tag: Any?, send: suspend (String) -> Unit): Boolean {
+        if (commands.busy) return false
+        return steps.send(PatientCall.Request(tag, refused = ::refused, restored = ::refresh, send = send))
+    }
+
+    /** Сервер отказал шагу: строка отказа, доска - заново. */
+    private fun refused(failure: ApiFailure) {
+        commands.refuse(Phrase { refusalLine(failure) })
+        refresh()
     }
 
     /**
@@ -185,9 +225,10 @@ class RiftActions(
         val started = TimeSource.Monotonic.markNow()
         val walk = RiftWalk(chart.here?.id, node).takeIf { prefs.settings.value.animations }
         walk?.let { step -> mutable.update { it.copy(walk = step) } }
-        val sent = commands.task(writing = true, touches = setOf(Reads.HERO)) {
+        val heroId = heroes.heroId
+        val sent = sendStep(RiftAct.Move(node)) { key ->
             try {
-                val report = api.trials.riftAct(heroes.heroId, run.id, RiftAct.Move(node))
+                val report = api.trials.riftAct(heroId, run.id, RiftAct.Move(node), key)
                 if (walk != null) delay(RiftWalk.STEP_MS.milliseconds - started.elapsedNow())
                 land(report)
             } finally {

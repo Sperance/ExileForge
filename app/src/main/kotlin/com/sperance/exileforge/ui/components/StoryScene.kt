@@ -44,8 +44,8 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Сюжетный экран: палитра Предначертания, жар снизу и угли,
  * заголовок Cinzel, абзацы [paragraphs] печатаются по буквам один за другим. Касание дописывает абзац, касание по дописанному -
- * следующий, после последнего - [onDone]. «Пропустить» видно, если [skippable], и не раньше [skipAfterMs]. Без анимаций
- * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета; тосты над сценой - общего слоя
+ * следующий, после последнего - [onDone]. «Пропустить» и «назад» ([onSkip], по умолчанию - [onDone]) работают, если [skippable], и не
+ * раньше [skipAfterMs]. Без анимаций (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета; тосты над сценой - общего слоя
  * ([ToastLayer]), сцена лишь снимает отступ шапки под ней ([ToastBelow]).
  *
  * Счёт напечатанных букв абзаца сбрасывается синхронно в `advance()`, иначе новый абзац мигнёт целиком.
@@ -57,6 +57,7 @@ import org.koin.compose.viewmodel.koinViewModel
     skippable: Boolean,
     onDone: () -> Unit,
     skipAfterMs: Long = 0,
+    onSkip: () -> Unit = onDone,
 ) {
     ToastBelow()
     val moving = LocalMotion.current
@@ -92,7 +93,7 @@ import org.koin.compose.viewmodel.koinViewModel
             else -> onDone()
         }
     }
-    BackHandler(enabled = skippable && skipReady, onBack = onDone)
+    BackHandler(enabled = skippable && skipReady, onBack = onSkip)
     Box(
         Modifier.fillMaxSize().background(FateInk.Ground.last()).ashGround()
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = ::advance),
@@ -117,7 +118,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 color = FateInk.Text,
                 style = relicName(12),
                 modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(16.dp)
-                    .border(1.dp, FateInk.Rim, shape).clickable(onClick = onDone).padding(horizontal = 12.dp, vertical = 5.dp),
+                    .border(1.dp, FateInk.Rim, shape).clickable(onClick = onSkip).padding(horizontal = 12.dp, vertical = 5.dp),
             )
         }
         Text(

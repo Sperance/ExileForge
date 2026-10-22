@@ -3199,6 +3199,8 @@
   "story.title": "Story",
   "story.card_chapter": "{0} · step {1} of {2}",
   "story.card_ready": "Ready to claim",
+  "story.ready_to_turn_in": "Story step ready to turn in",
+  "story.chapters_done": "Finished chapters",
   "story.button": "Story",
   "story.open_all": "Whole story",
   "story.card_law": "Throne taken — choose its law",

@@ -10,6 +10,9 @@ import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.core.quests.Quests
+import com.sperance.exileforge.core.quests.RunTurnIns
+import com.sperance.exileforge.core.quests.StoryAfter
+import com.sperance.exileforge.core.quests.storyReady
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
@@ -68,7 +71,20 @@ class QuestActions(
         if (heroes.onScreen(id)) quests { it.copy(guild = guild) }
     }
 
-    fun claim(questId: String) = board(ui("quest.toast.claimed")) { api.quests.claim(it, questId) }
+    /**
+     * Сдать задание [questId]. Шаг сюжета игрок сдаёт только так, по одному: после сдачи его текст «после» встаёт поверх игры
+     * ([QuestRepository.story]) - глава и шаг берутся с доски до сдачи.
+     */
+    fun claim(questId: String) = storyAfter(questId).let { after ->
+        command(ui("quest.toast.claimed")) { id ->
+            show(id, api.quests.claim(id, questId))
+            if (after != null && heroes.onScreen(id)) repository.tell(after)
+        }
+    }
+
+    /** Перечитать текст «после» уже сданного шага [step] главы [chapter] - то же окно, что после сдачи. */
+    fun reread(chapter: Int, step: String) = repository.tell(StoryAfter(chapter, step))
+
     fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
 
     /** Невзятый листок [offerId] снят с доски: место заполнится само по своему таймеру. */
@@ -96,33 +112,42 @@ class QuestActions(
 
     /**
      * После похода: всё, что поход закончил, сдаётся разом - личные квесты и доля героя в
-     * гильдейских. Сдаёт сам сервер в ответе журнала, что закрыл заход ([turnIns], доски гильдии - [guild]); не сдал -
-     * сдача отдельным запросом, как прежде. Сданное уходит в [shown] - строки итогов карты; не взявшие его итоги (уже
-     * закрыты) - тост. Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на доске, а концу похода не место для отказа.
+     * гильдейских, но не шаг сюжета: его игрок сдаёт сам. Сдаёт сам сервер в ответе журнала, что закрыл заход ([turnIns], доски
+     * гильдии - [guild]); не сдал - сдача отдельным запросом, как прежде. Сданное и готовый к сдаче шаг сюжета уходят в [shown] -
+     * итоги карты; не взявшие их итоги (уже закрыты) - тост. Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на
+     * доске, а концу похода не место для отказа.
      *
      * Заголовки - шаблоны над целью; цели берутся с досок, какими они стояли до сдачи.
      */
-    fun turnIn(heroId: String, turnIns: QuestClaimAll?, guild: GuildQuests?, shown: (List<QuestTurnIn>) -> Boolean) {
+    fun turnIn(heroId: String, turnIns: QuestClaimAll?, guild: GuildQuests?, shown: (RunTurnIns) -> Boolean) {
         scope.launch {
             val targets = repository.state.value.targets()
             val result = turnIns ?: quietly { api.quests.claimAll(heroId) } ?: return@launch
             if (!heroes.onScreen(heroId)) return@launch
             val boards = settle(heroId, result, guild, targets)
-            if (result.claimed.isEmpty()) return@launch
+            val ready = result.board.storyReady
+            if (result.claimed.isEmpty() && !ready) return@launch
             val named = targets + Quests(guild = boards).targets()
-            if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards, it.kind, it.run) })) notices.toast(claimedLine(result.claimed, named))
+            val lines = RunTurnIns(result.claimed.map { QuestTurnIn(title(it, named), it.rewards, it.kind, it.run) }, ready)
+            if (!shown(lines)) notices.toast(turnInLine(result.claimed, named, ready))
         }
     }
 
     /**
-     * «Сдать всё» доски заданий: всё готовое разом - тот же запрос, что сдача после похода, но командой экрана (по одной за раз,
-     * отказ - тостом); тост - что сдано и награды суммой.
+     * «Сдать всё» доски заданий: всё готовое разом, кроме шага сюжета, - тот же запрос, что сдача после похода, но командой экрана
+     * (по одной за раз, отказ - тостом); тост - что сдано и награды суммой, и что шаг сюжета ждёт своей сдачи.
      */
     fun claimAll() = command({ line: String -> line }) { id ->
         val targets = repository.state.value.targets()
         val result = api.quests.claimAll(id)
         val boards = if (heroes.onScreen(id)) settle(id, result, null, targets) else null
-        if (result.claimed.isEmpty()) "" else claimedLine(result.claimed, targets + Quests(guild = boards).targets())
+        turnInLine(result.claimed, targets + Quests(guild = boards).targets(), result.board.storyReady)
+    }
+
+    /** Шаг сюжета [questId] с доски, как она стоит до сдачи: глава и код шага; не шаг сюжета - null. */
+    private fun storyAfter(questId: String): StoryAfter? {
+        val board = repository.state.value.board ?: return null
+        return board.story?.takeIf { it.id == questId }?.let { StoryAfter(board.chapter, it.goal) }
     }
 
     /**
@@ -172,6 +197,12 @@ class QuestActions(
         StoryBookOutcome.LEARNED -> ui("story.book.learned", SkillText.title(taken.skill))
         StoryBookOutcome.KNOWN, StoryBookOutcome.UNMET -> ui("story.book.toast", SkillText.title(taken.skill))
     }
+
+    /** Тост сдачи разом: что сдано ([claimedLine]) и, если [storyReady], что шаг сюжета готов к сдаче; ничего - пусто. */
+    private fun turnInLine(claimed: List<QuestClaimed>, targets: Map<String, Long>, storyReady: Boolean): String = listOfNotNull(
+        claimed.takeIf { it.isNotEmpty() }?.let { claimedLine(it, targets) },
+        ui("story.ready_to_turn_in").takeIf { storyReady },
+    ).joinToString("\n")
 
     /** Что сдано, одной строкой: первые заголовки, сколько ещё, и награды суммой. */
     private fun claimedLine(claimed: List<QuestClaimed>, targets: Map<String, Long>): String {

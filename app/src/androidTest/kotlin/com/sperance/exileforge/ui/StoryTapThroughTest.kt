@@ -12,12 +12,8 @@ import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestRepository
-import com.sperance.exileforge.core.quests.Quests
+import com.sperance.exileforge.core.quests.StoryAfter
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.rules.content.Quest
-import com.sperance.exileforge.rules.content.QuestBoard
-import com.sperance.exileforge.rules.content.QuestKind
-import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.PrologueGate
 import com.sperance.exileforge.ui.screens.quests.StoryAfterHost
@@ -29,7 +25,7 @@ import org.junit.Test
 import org.koin.core.context.GlobalContext
 
 /**
- * Сюжет проходится касаниями до конца: пролог перед созданием героя открывает то, что за ним, а продолжение выполненного шага
+ * Сюжет проходится касаниями до конца: пролог перед созданием героя открывает то, что за ним, а продолжение сданного шага
  * сюжета, дочитанное касаниями, уходит само. Без анимаций абзац виден сразу - касание листает абзацы.
  */
 class StoryTapThroughTest {
@@ -56,16 +52,14 @@ class StoryTapThroughTest {
     @Test fun theStepContinuationIsTappedThrough() {
         val index = TestWorld.index
         val step = index.quests.story.first().steps.first()
-        GlobalContext.get().get<QuestRepository>().update {
-            Quests(board = QuestBoard(story = Quest("story-tap", QuestKind.STORY, step.code, step.counter, Rarity.COMMON, target = 1, progress = 1), chapter = 0))
-        }
-        val game = GameUi(world = World(content = index, contentHash = index.hash), holding = HeroHolding(heroId = "story-tap-${System.nanoTime()}"))
+        GlobalContext.get().get<QuestRepository>().tell(StoryAfter(chapter = 0, step = step.code))
+        val game = GameUi(world = World(content = index, contentHash = index.hash), holding = HeroHolding(heroId = "story-tap"))
         compose.setContent {
             CompositionLocalProvider(LocalMotion provides false) {
                 ForgeTheme { StoryAfterHost(game) }
             }
         }
-        check(scene()) { "the continuation of a finished step did not open" }
+        check(scene()) { "the continuation of a turned-in step did not open" }
         tapUntil { !scene() }
     }
 

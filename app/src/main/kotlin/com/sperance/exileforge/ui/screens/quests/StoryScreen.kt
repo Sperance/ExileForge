@@ -40,8 +40,10 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.StoryBooks
+import com.sperance.exileforge.rules.content.StoryChapter
 import com.sperance.exileforge.rules.content.ThroneLaws
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.*
@@ -53,7 +55,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Весь сюжет: глава, её шаги - пройденные, текущий заданием и будущие; «назад» - на карту «Похода».
  *
  * Сюжет - свой экран «Похода», открытый с первого уровня. «Девять тронов»: у главы вступление, за её финал - эпилог и выбор закона трона
- * ([LawChoice]), взятые законы - под главой.
+ * ([LawChoice]), взятые законы - под главой. Шаг сюжета сдаётся только здесь и строкой главы на доске заданий, по одному; сданные шаги
+ * этой и пройденных глав ([DoneChapters]) касанием открывают их текст «после» заново.
  */
 @Composable fun StoryScreen() {
     val vm = koinViewModel<QuestViewModel>()
@@ -120,11 +123,11 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Глава сюжета на доске заданий - одна строка 48dp: том, цель шага и «глава · шаг N из M», прогресс «12 / 30» (готово - «Готово к
- * сдаче»), шеврон и тонкая полоса прогресса по низу; нажатие - весь сюжет. Ждёт выбор за пройденную главу - та же строка становится
- * плашкой выбора: знак закона или книги, зов выбрать и имя главы. Сюжет пройден и выбора нет - строки нет.
+ * Глава сюжета на доске заданий - одна строка 48dp: том, цель шага и «глава · шаг N из M», прогресс «12 / 30» (готово - кнопка сдачи
+ * [claim] шага), шеврон и тонкая полоса прогресса по низу; нажатие - весь сюжет. Ждёт выбор за пройденную главу - та же строка
+ * становится плашкой выбора: знак закона или книги, зов выбрать и имя главы. Сюжет пройден и выбора нет - строки нет.
  */
-@Composable fun StoryLine(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+@Composable fun StoryLine(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit, claim: @Composable (Quest) -> Unit) {
     val index = game.index ?: return
     board ?: return
     val laws = game.heroInfo?.laws.orEmpty()
@@ -164,7 +167,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
             if (step != null) {
                 if (step.done && !step.claimed) {
-                    Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    claim(step)
                 } else {
                     MutedText(ui("quest.progress", number(step.progress.toDouble()), number(step.target.toDouble())), style = MaterialTheme.typography.labelSmall)
                 }
@@ -315,6 +318,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
                 MutedText(ui("quest.story_done_text"))
             }
         }
+        item(key = "done") { DoneChapters(chapters, vm::reread) }
         item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
         item(key = "codex") { StoryCodex(chapters, chapters.size) }
         return
@@ -331,14 +335,37 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
         val current = board.story?.takeIf { index == board.step && it.goal == step.code }
         when {
             current != null -> QuestRow(current) { ClaimButton(vm, busy, current) }
-            index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital)
+            index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital) { vm.reread(board.chapter, step.code) }
             else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
         }
     }
+    item(key = "done") { DoneChapters(chapters.take(board.chapter), vm::reread) }
     item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
     item(key = "codex") { StoryCodex(chapters, board.chapter + 1) }
 }
 
-@Composable private fun StepLine(text: String, color: Color) {
-    Text(text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 4.dp))
+/** Строка шага главы; сданный шаг [onRead] - касанием перечитать его текст «после». */
+@Composable private fun StepLine(text: String, color: Color, onRead: (() -> Unit)? = null) {
+    val read = onRead?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier
+    Text(text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = read.padding(horizontal = 4.dp, vertical = 2.dp))
+}
+
+/**
+ * Пройденные главы [chapters] (с первой), свёрнутые заголовком, как кодекс: имя главы и её шаги - касание шага перечитывает его текст
+ * «после» ([onRead]: номер главы и код шага). Пройденных нет - панели нет.
+ */
+@Composable private fun DoneChapters(chapters: List<StoryChapter>, onRead: (Int, String) -> Unit) {
+    if (chapters.isEmpty()) return
+    var open by remember { mutableStateOf(false) }
+    ForgePanel {
+        Row(Modifier.fillMaxWidth().clickable(role = Role.Button) { open = !open }, horizontalArrangement = Arrangement.SpaceBetween) {
+            Engraved(ui("story.chapters_done"))
+            Text(ui(if (open) "common.collapse" else "common.expand"), color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+        if (!open) return@ForgePanel
+        chapters.forEachIndexed { number, chapter ->
+            Text(loc(LocaleKey.chapterTitle(chapter.region)), color = GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+            chapter.steps.forEach { step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital) { onRead(number, step.code) } }
+        }
+    }
 }

@@ -27,6 +27,7 @@ data class UnfinishedRun(val runId: String, val zone: MapCode)
  * к продаже посреди захода: в итогах карты они уже отмечены, хранятся в журнале захода на устройстве и переживают перезапуск. [forced] - механики, что тестировщик ставит на новые заходы
  * насильно: выбор держится между зонами. Заход на экране: [quests] - доска заданий, снятая на входе (лист «Задания»
  * карты считает от неё и счёта захода - перечитанная доска уже несёт его события), [turnedIn] - задания, сданные после карты,
+ * [storyReady] - после карты шаг сюжета выполнен и ждёт ручной сдачи,
  * [atlasPoints] - ключи очков Атласа, что принесли ответы захода или испытания, [potion] - зелье, выпитое на входе. [wearable] - id вещей,
  * что в заходе на экране можно надеть, по счёту сервера на входе и ответам журнала: набор, в котором герой вошёл, и находки захода.
  */
@@ -41,6 +42,7 @@ data class Expedition(
     val forced: Set<MapMechanic> = emptySet(),
     val quests: Quests? = null,
     val turnedIn: List<QuestTurnIn> = emptyList(),
+    val storyReady: Boolean = false,
     val atlasPoints: List<String> = emptyList(),
     val potion: String? = null,
     val wearable: Set<String> = emptySet(),

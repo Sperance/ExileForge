@@ -98,6 +98,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * and piece the server granted for it, folded under its count. The run in numbers is one line with the way into the whole
  * run's sheet. The loot is the server's roll: while some of it is on its way the screen says so, asks for it at once and
  * fills in as the answers arrive. A piece opens its comparison with what is worn, a stack its description.
+ * Выполненный, но не сданный шаг сюжета - строкой «Шаг сюжета готов к сдаче» под плитками: сдаёт его игрок сам.
  * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N и вернуться» на месте возврата в лагерь.
  *
  * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе и отложенная продажа сервера (добыча, что продаёт фильтр героя: в заходе
@@ -162,6 +163,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MapFigures(tally)
             RewardTiles(rewardTiles(tally, gold, experience, state.turnedIn, state.atlasPoints))
+            if (state.storyReady) Text(ui("story.ready_to_turn_in"), color = Vital, style = MaterialTheme.typography.bodySmall)
             if (tally.end == MapEnd.FELL) {
                 val lost = hud.fall?.takeIf { it > 0 }
                 if (lost != null) {

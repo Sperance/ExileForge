@@ -344,7 +344,7 @@ class ExpeditionActions(
         expedition {
             it.copy(
                 runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = marks,
-                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion, wearable = started.wearable.toSet(),
+                quests = board, turnedIn = emptyList(), storyReady = false, atlasPoints = emptyList(), potion = potion, wearable = started.wearable.toSet(),
             )
         }
         mutableRun.value = ExpeditionRun.start(
@@ -542,16 +542,16 @@ class ExpeditionActions(
     /**
      * Поход закрыт и журнал сведён; [report] - ответ, что закрыл заход: с ним сервер сдал задания.
      *
-     * Чего сервер не ответил, того не ответит. Поход сдаётся целиком: сервером в закрывшем ответе или отдельным запросом; сданное - блоком
-     * в итогах карты, закрытые итоги - тостом.
+     * Чего сервер не ответил, того не ответит. Поход сдаётся целиком, кроме шага сюжета: сервером в закрывшем ответе или отдельным
+     * запросом; сданное и готовый к сдаче шаг сюжета - в итогах карты, закрытые итоги - тостом.
      */
     private suspend fun done(j: RunJournal, report: RunReport? = null) {
         if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
         journals.clear(j.heroId)
-        quests.turnIn(j.heroId, report?.turnIns, report?.guildQuests) { turnedIn ->
+        quests.turnIn(j.heroId, report?.turnIns, report?.guildQuests) { turnIns ->
             val shown = mutableRun.value?.journal?.runId == j.runId
-            if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnedIn) }
+            if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnIns.quests, storyReady = turnIns.storyReady) }
             shown
         }
     }

@@ -3199,6 +3199,8 @@
   "story.title": "Сюжет",
   "story.card_chapter": "{0} · шаг {1} из {2}",
   "story.card_ready": "Готово к сдаче",
+  "story.ready_to_turn_in": "Шаг сюжета готов к сдаче",
+  "story.chapters_done": "Пройденные главы",
   "story.button": "Сюжет",
   "story.open_all": "Весь сюжет",
   "story.card_law": "Трон взят — выберите его закон",

@@ -50,7 +50,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * expedition's own screen; its chapter heads the board as a line) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
  *
- * Глава сюжета - строкой 48dp ([StoryLine]), ждущий выбор закона или книги - она же плашкой выбора; срок сброса дня и недели - справа в
+ * Глава сюжета - строкой 48dp ([StoryLine]) со своей «Сдать» у готового шага (шаг сюжета сдаётся только так, «Сдать всё» его не
+ * берёт), ждущий выбор закона или книги - она же плашкой выбора; срок сброса дня и недели - справа в
  * цепочке «Город › Доска заданий» ([TrailData]), касание - пояснение, как задания засчитываются; вкладки - сегментами с числом
  * готовых к сдаче; готовых два и больше по всем вкладкам - внизу «Сдать всё» с их числом. «Сдать» - низкая пилюля, отказ и сброс - значки.
  */
@@ -67,7 +68,7 @@ fun QuestsScreen() {
     val busy = activity.busy
     board?.let { ResetData(current, it) }
     Column(Modifier.fillMaxSize()) {
-        StoryLine(game, board, Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp), onOpen = vm::openStory)
+        StoryLine(game, board, Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp), onOpen = vm::openStory) { ClaimButton(vm, busy, it) }
         Segments(
             QuestTab.entries,
             current,

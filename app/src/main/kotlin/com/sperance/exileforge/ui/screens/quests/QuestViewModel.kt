@@ -58,6 +58,9 @@ class QuestViewModel(
     fun book(chapter: Int, code: String) = actions.book(chapter, code)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 
+    /** Перечитать текст «после» сданного шага [step] главы [chapter]. */
+    fun reread(chapter: Int, step: String) = actions.reread(chapter, step)
+
     /** Весь сюжет - экран над картой «Похода». */
     fun openStory() = navigator.tab(Route.Story)
     fun back() = navigator.back()

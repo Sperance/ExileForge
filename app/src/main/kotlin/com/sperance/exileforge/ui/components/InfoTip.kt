@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import com.sperance.exileforge.core.display.fullIfShortened
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -57,6 +58,15 @@ data class Tip(val title: String? = null, val body: String = "", val tint: Color
         content()
         if (open && tip != null) TipCallout(tip()) { open = false }
     }
+}
+
+/**
+ * Короткое число [value] ([com.sperance.exileforge.core.display.compactNumber]) в [content]: касание открывает подсказку с полным
+ * числом, если короткая запись его сократила ([fullIfShortened]); несокращённое не нажимается.
+ */
+@Composable fun FullNumberTipped(value: Long, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    val full = fullIfShortened(value)
+    Tipped(full?.let { { Tip(body = it) } }, modifier, content = content)
 }
 
 /**

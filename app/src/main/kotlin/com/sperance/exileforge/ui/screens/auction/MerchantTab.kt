@@ -12,7 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.fullIfShortened
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
@@ -112,13 +113,16 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
 
 /**
  * Данные цепочки торговца: «8 450 золота · ↻ 2:14» - золото героя [money] и часы с минутами до нового товара [refreshAt] по часам
- * сервера, тикает живыми часами экрана; касание - когда товар обновится.
+ * сервера, тикает живыми часами экрана; золото - короткой записью ([compactNumber]); касание - когда товар обновится и, если золото
+ * сокращено, его полное число.
  */
 @Composable private fun MerchantTrail(money: Long?, refreshAt: Long?) {
     val leftMs = rememberServerLeft(refreshAt ?: 0, TRAIL_TICK_MS)
     val left = refreshAt?.takeIf { it > 0 }?.let { countdown(leftMs / 1_000) }
-    val data = listOfNotNull(money?.let { ui("merchant.gold_amount", number(it.toDouble())) }, left?.let { ui("merchant.trail_renews", it) }).joinToString(" · ")
-    if (data.isNotEmpty()) TrailData(data, left?.let { Tip(ui("merchant.renews", it)) })
+    val data = listOfNotNull(money?.let { ui("merchant.gold_amount", compactNumber(it)) }, left?.let { ui("merchant.trail_renews", it) }).joinToString(" · ")
+    val full = money?.let(::fullIfShortened)?.let { ui("gold.have") to it }
+    val tip = if (left != null || full != null) Tip(left?.let { ui("merchant.renews", it) }, facts = listOfNotNull(full)) else null
+    if (data.isNotEmpty()) TrailData(data, tip)
 }
 
 /** Такт часов цепочки торговца. */

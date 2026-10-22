@@ -28,7 +28,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.forge.BatchLimit
 import com.sperance.exileforge.core.forge.EngraveLine
@@ -183,7 +183,7 @@ private fun batchReason(game: GameUi, batch: QualityBatch, count: Int): String =
 } else {
     when (batch.limit) {
         BatchLimit.CAP -> ui("forge.batch_why_cap", batch.climb.cap, ui(pluralKey("forge.batch.need", batch.need), batch.need))
-        BatchLimit.GOLD -> ui("forge.batch_why_gold", number((game.hero?.money ?: 0L).toDouble()), orbsApplied(batch.max), batch.need)
+        BatchLimit.GOLD -> ui("forge.batch_why_gold", compactNumber(game.hero?.money ?: 0L), orbsApplied(batch.max), batch.need)
         BatchLimit.ORBS -> ui("forge.batch_why_orbs", ui(pluralKey("forge.batch.orbs", batch.max), batch.max))
         BatchLimit.OMENS -> ui("forge.batch_why_omens", batch.max)
     }

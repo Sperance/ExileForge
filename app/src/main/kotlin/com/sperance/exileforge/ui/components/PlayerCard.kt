@@ -189,7 +189,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 /**
  * Корешок свитка: уровень серифом, знак класса в рамке лучшего титула состязаний (без титула - золото), имя класса, Мощь.
  *
- * Мощь «⚜ 12.5k» под классом - сервер считает её из листа при выдаче карточки.
+ * Мощь «⚜ 150к» под классом - сервер считает её из листа при выдаче карточки.
  */
 @Composable private fun Spine(game: GameUi, card: PlayerCard, modifier: Modifier) {
     val shape = RoundedCornerShape(14.dp)

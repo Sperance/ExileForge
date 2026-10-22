@@ -67,8 +67,8 @@ fun MightStanding.tint(): Color = when (this) {
 /**
  * Печать Мощи: кольцо, где дуга натиска ([MightReading.offenseShare], Ember) и стойкости (Rune) делят круг, ⚜ в середине.
  *
- * Мощь: печать - кольцо долей «натиск / стойкость» с ⚜ внутри; на листе героя - чип «⚜ 12.5k», у врага - мелко с числом
- * цвета его стойки, в списках - строка «⚜ 12.5k». Не прогноз боя.
+ * Мощь: печать - кольцо долей «натиск / стойкость» с ⚜ внутри; на листе героя - чип «⚜ 150к», у врага - мелко с числом
+ * цвета его стойки, в списках - строка «⚜ 150к». Не прогноз боя.
  */
 @Composable fun MightSeal(reading: MightReading, modifier: Modifier = Modifier, size: Dp = 92.dp) {
     val offense = reading.offenseShare.toFloat().coerceIn(0f, 1f)
@@ -87,7 +87,7 @@ fun MightStanding.tint(): Color = when (this) {
 }
 
 /**
- * Мощь героя на его листе: чип «⚜ 12.5k» высотой 28dp в строке с номером героя - одно число, без черты долей. Касание открывает
+ * Мощь героя на его листе: чип «⚜ 150к» высотой 28dp в строке с номером героя - одно число, без черты долей. Касание открывает
  * разбор ([MightBreakdown]). [reading] null - Мощь ещё не посчитана: «…» вместо числа, без разбора.
  */
 @Composable fun MightMark(reading: MightReading?, modifier: Modifier = Modifier) {
@@ -110,7 +110,7 @@ fun MightStanding.tint(): Color = when (this) {
 
 /**
  * Разбор Мощи героя: «⚜ Мощь» и число целиком, одна короткая строка, что это за число, и одной строкой натиск и стойкость
- * своими цветами: «⚔ Натиск 12.5k · 🛡 Стойкость 40k».
+ * своими цветами: «⚔ Натиск 150к · 🛡 Стойкость 40k».
  */
 @Composable private fun ColumnScope.MightBreakdown(reading: MightReading) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -144,7 +144,7 @@ private fun AnnotatedString.Builder.side(glyph: String, name: String, value: Str
     }
 }
 
-/** Мощь строкой списка «⚜ 12.5k»: карточка игрока, состав гильдии; ноль - сервер ещё не посчитал её: «⚜ …». */
+/** Мощь строкой списка «⚜ 150к»: карточка игрока, состав гильдии; ноль - сервер ещё не посчитал её: «⚜ …». */
 @Composable fun MightLine(value: Double, modifier: Modifier = Modifier, tint: Color = Caution, fontSize: TextUnit = 11.sp) {
     Text(if (value > 0) mightLine(value) else ui("might.short", PENDING), color = tint, fontSize = fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = modifier)
 }

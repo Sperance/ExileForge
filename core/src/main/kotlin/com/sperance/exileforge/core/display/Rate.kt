@@ -50,7 +50,7 @@ object Rate {
         else -> signedNumber(precision.round(value), precision::format)
     }
 
-    /** Готовое число [figure] (с процентом или коротким числом) с единицей в секунду: «5%/с», «12.5k/с». */
+    /** Готовое число [figure] (с процентом или коротким числом) с единицей в секунду: «5%/с», «150к/с». */
     fun of(figure: String): String = ui("unit.per_second", figure)
 
     /** Единица отдельно, без числа. */

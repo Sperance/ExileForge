@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.SellLot
 import com.sperance.exileforge.rules.content.AutoSell
@@ -93,7 +93,7 @@ internal fun StashWindow(game: GameUi, rules: AutoSell, lots: List<SellLot>, mod
                 hold = Hold(),
             ) {
                 Text(ui("autosell.sell_now", matching.size), Modifier.weight(1f, fill = false), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (matching.isNotEmpty()) ButtonFigure("+" + number(matching.sumOf(SellLot::price).toDouble()))
+                if (matching.isNotEmpty()) ButtonFigure("+" + compactNumber(matching.sumOf(SellLot::price)))
             }
             StashPlacesBar(game, model)
         }

@@ -21,8 +21,11 @@ import com.sperance.exileforge.ui.theme.*
 /** Whether a line of the ledger is taken away, handed over, or only said. */
 enum class Tone { PLAIN, SPEND, GAIN }
 
-/** One line of what an action costs and brings: «Спишется — 4 × Сфера хаоса». */
-data class LedgerLine(val label: String, val value: String, val tone: Tone = Tone.PLAIN)
+/**
+ * One line of what an action costs and brings: «Спишется — 4 × Сфера хаоса». [full] - значение с полным числом, когда [value] его
+ * сократил («150к золота» → «150 340 золота»): касание значения показывает его; null - значение не нажимается.
+ */
+data class LedgerLine(val label: String, val value: String, val tone: Tone = Tone.PLAIN, val full: String? = null)
 
 /**
  * "Are you sure" for the handful of things that cannot be taken back cheaply.
@@ -117,7 +120,7 @@ fun ConfirmSheet(
 /** Ширина полосы редкости подтверждения вдоль левого края листа. */
 private val SPINE = 5.dp
 
-/** The account of an action, one line each, with what leaves and what arrives in their colours. */
+/** The account of an action, one line each, with what leaves and what arrives in their colours; сокращённое число - касанием полное. */
 @Composable private fun Ledger(lines: List<LedgerLine>) {
     Column(Modifier.fillMaxWidth().background(Color.Black.copy(alpha = .25f)).border(1.dp, Muted.copy(alpha = .20f))) {
         lines.forEachIndexed { index, line ->
@@ -128,17 +131,18 @@ private val SPINE = 5.dp
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MutedText(line.label)
-                Text(
-                    line.value,
-                    color = when (line.tone) {
-                        Tone.SPEND -> LifeRed
-                        Tone.GAIN -> Vital
-                        Tone.PLAIN -> Parchment
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f),
-                )
+                Tipped(line.full?.let { full -> { Tip(body = full) } }, Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    Text(
+                        line.value,
+                        color = when (line.tone) {
+                            Tone.SPEND -> LifeRed
+                            Tone.GAIN -> Vital
+                            Tone.PLAIN -> Parchment
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.End,
+                    )
+                }
             }
         }
     }

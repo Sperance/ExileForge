@@ -45,6 +45,7 @@ import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.core.campaign.run.strideText
 import com.sperance.exileforge.core.campaign.run.trapThreat
 import com.sperance.exileforge.core.display.Rate
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.modifierLine
@@ -227,7 +228,7 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
         tone = GoldBright,
         name = ui("feature.merchant.title"),
         facts = listOfNotNull(
-            FeatureFact(ui("feature.merchant.gold", number(money.toDouble())), GoldBright),
+            FeatureFact(ui("feature.merchant.gold", compactNumber(money)), GoldBright),
             FeatureFact(ui("feature.merchant.left", left), Parchment),
             FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() },
             game.index?.campaign?.features?.merchant?.markup?.takeIf { it < 1 }?.let { FeatureFact(ui("feature.merchant.discount", number((1 - it) * 100)), Vital) },

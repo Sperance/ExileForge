@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.foundableAt
@@ -75,7 +75,7 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
                 state = ButtonState.of(!game.busy && refusal == null),
                 icon = ForgeGlyphs.Banner,
                 hold = Hold(),
-            ) { Text(bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble()))) }
+            ) { Text(bill?.payLabel(ui("guild.found_for", compactNumber(price))) ?: ui("guild.found_for", compactNumber(price))) }
         },
     ) {
         Engraved(ui("guild.found_title"))

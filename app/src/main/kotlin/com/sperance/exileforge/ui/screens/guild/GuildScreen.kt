@@ -43,7 +43,7 @@ import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.display.GuildText
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildInviteView
@@ -333,7 +333,7 @@ private enum class JoinBlock(val icon: ImageVector, val key: String) {
 @Composable private fun ApplyFoot(price: Long) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(Icons.Outlined.Info, null, tint = Muted, modifier = Modifier.size(14.dp))
-        Text(ui("guild.apply_note", number(price.toDouble())), color = Muted, style = MaterialTheme.typography.labelSmall)
+        Text(ui("guild.apply_note", compactNumber(price)), color = Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 

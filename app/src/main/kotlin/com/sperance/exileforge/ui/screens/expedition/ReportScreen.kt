@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.campaign.run.PhaseMark
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.monsterTitle
@@ -321,7 +322,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     }
     Caption(ui("expedition.report_reward"))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip(ui("expedition.loot_gold", reward.gold), GoldBright)
+        Chip(ui("expedition.loot_gold", compactNumber(reward.gold)), GoldBright)
         Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
     }
     if (hud.rewardAwaiting > 0) {
@@ -378,7 +379,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     Caption(ui("expedition.report_run"))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Chip(ui("expedition.report_kills", hud.kills))
-        Chip(ui("expedition.loot_gold", hud.gold), GoldBright)
+        Chip(ui("expedition.loot_gold", compactNumber(hud.gold)), GoldBright)
         Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
     }
     if (hud.awaiting > 0) Receiving()

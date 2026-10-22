@@ -10,6 +10,6 @@ import com.sperance.exileforge.core.model.trade.Shortfall
 fun Shortfall.text(): String? = if (isEmpty) {
     null
 } else {
-    val parts = items.map { (code, missing) -> ui("shortfall.item", missing, itemTitle(code)) } + listOfNotNull(gold.takeIf { it > 0 }?.let { ui("shortfall.gold", it) })
+    val parts = items.map { (code, missing) -> ui("shortfall.item", missing, itemTitle(code)) } + listOfNotNull(gold.takeIf { it > 0 }?.let { ui("shortfall.gold", compactNumber(it)) })
     ui("shortfall.line", parts.joinToString(", "))
 }

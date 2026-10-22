@@ -30,8 +30,8 @@ fun receivedText(received: Received, perOrb: Int): String? {
     val sold = received.overflowSold
     val auto = received.autoSold
     val parts = listOfNotNull(
-        ui("stash.received", received.overflowed, sold.count, sold.gold).takeIf { received.overflowed > 0 || sold.count > 0 },
-        ui("stash.auto_sold", auto.count, auto.gold).takeIf { auto.count > 0 },
+        ui("stash.received", received.overflowed, sold.count, compactNumber(sold.gold)).takeIf { received.overflowed > 0 || sold.count > 0 },
+        ui("stash.auto_sold", auto.count, compactNumber(auto.gold)).takeIf { auto.count > 0 },
     )
     if (parts.isEmpty()) return null
     return withShards(parts.joinToString(" · "), ShardYield.merged(sold.shards + auto.shards), perOrb)

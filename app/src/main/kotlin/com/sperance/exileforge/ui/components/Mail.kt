@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mailBody
@@ -58,7 +59,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает; у золота её нет. */
 fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
-    if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold) to null)
+    if (mail.attachment.gold > 0) add(ui("mail.gold", compactNumber(mail.attachment.gold)) to null)
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
     mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}") to Inspect.Copy(it)) }
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }

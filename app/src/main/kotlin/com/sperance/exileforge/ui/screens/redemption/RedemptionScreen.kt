@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.PickOptions
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -113,7 +114,7 @@ private fun rewardLine(reward: RedemptionReward): String {
     val amount = if (reward.quantity % 1.0 == 0.0) reward.quantity.toLong().toString() else reward.quantity.toString()
     return when (reward) {
         is RedemptionReward.Experience -> ui("redemption.line_experience", amount)
-        is RedemptionReward.Gold -> ui("redemption.line_gold", amount)
+        is RedemptionReward.Gold -> ui("redemption.line_gold", compactNumber(amount))
         is RedemptionReward.Item -> "${ui("enum.reward.ITEM")} · ${itemTitle(reward.code)} · ${ui("auction.pieces", amount)}"
         is RedemptionReward.Equipment -> "${ui("enum.reward.EQUIPMENT")} · ${equipmentTitle(reward.template)} · ${ui("auction.pieces", amount)}"
     }

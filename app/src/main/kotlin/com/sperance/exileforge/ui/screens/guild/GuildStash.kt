@@ -45,8 +45,8 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.PickOptions
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.filter.ItemShelf
@@ -297,7 +297,7 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
         bill?.affordable == false -> bill.shortText()
         else -> null
     }
-    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = number(price.toDouble()).takeIf { price > 0 }) { onTake() }
+    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = compactNumber(price).takeIf { price > 0 }) { onTake() }
     val open = { inspect(entry.item?.let { Inspect.Copy(it, action) } ?: Inspect.Stack(entry.code, action)) }
     val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { bill?.takeIf { price > 0 }?.let { GoldCost(it) } ?: GoldPrice(price) }
     val by = listOf(ui("guild.stash_by", entry.by))

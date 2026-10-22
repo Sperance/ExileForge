@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ChestOpening
@@ -38,7 +39,7 @@ import com.sperance.exileforge.ui.theme.Parchment
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(itemTitle(opening.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Engraved(ui("chest.inside"))
-            if (opening.gold > 0) Line(game, null, ui("chest.gold", opening.gold))
+            if (opening.gold > 0) Line(game, null, ui("chest.gold", compactNumber(opening.gold)))
             opening.items.forEach { (code, amount) -> Line(game, code, "${itemTitle(code)} ×$amount") }
             gear.forEach { (item, piece) -> ItemCard(piece, enabled = false, detailed = true, seals = game.itemSeals(item)) }
             if (opening.gold <= 0 && opening.items.isEmpty() && opening.equipment.isEmpty()) MutedText(ui("chest.empty"))

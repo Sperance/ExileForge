@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.LootKind
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.expedition.presentLoot
@@ -105,7 +106,7 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (gold > 0) Text(ui("expedition.loot_gold", gold), color = GoldBright)
+                if (gold > 0) Text(ui("expedition.loot_gold", compactNumber(gold)), color = GoldBright)
                 if (experience > 0) Text(ui("expedition.loot_experience", number(experience)), color = Rune)
                 Text(ui("expedition.bag.kept"), color = Muted, style = MaterialTheme.typography.labelSmall)
             }

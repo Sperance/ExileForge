@@ -22,7 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.fullIfShortened
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.SellLot
 import com.sperance.exileforge.core.market.SellPreset
@@ -172,19 +173,22 @@ val SellPick.total: Long get() = picked.sumOf { it.price }
         confirm = ui("sell.valuable_confirm"),
         onDismiss = onDismiss,
         subtitle = ui("sell.valuable_sub", valuable.size, lots.size),
-        ledger = valuable.map { LedgerLine(it.piece.title, "+" + number(it.price.toDouble()), Tone.GAIN) } + LedgerLine(ui("sell.valuable_total", lots.size), "+" + number(lots.sumOf { it.price }.toDouble()), Tone.GAIN),
+        ledger = valuable.map { gainLine(it.piece.title, it.price) } + gainLine(ui("sell.valuable_total", lots.size), lots.sumOf { it.price }),
         note = ui("sell.valuable_note"),
         danger = true,
         onConfirm = onConfirm,
     )
 }
 
+/** Строка выручки золотом [gold]: «+150к» короткой записью, сокращённое - с полным числом по касанию. */
+private fun gainLine(label: String, gold: Long): LedgerLine = LedgerLine(label, "+" + compactNumber(gold), Tone.GAIN, fullIfShortened(gold)?.let { "+$it" })
+
 @Composable private fun SellRow(pick: SellPick, picked: List<SellLot>, enabled: Boolean, verb: String, onCancel: (() -> Unit)?, onSell: (List<String>) -> Unit) {
     PickDock(
         label = if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size),
         icon = ForgeGlyphs.Coins,
         enabled = enabled && picked.isNotEmpty(),
-        figure = ("+" + number(pick.total.toDouble())).takeIf { picked.isNotEmpty() },
+        figure = ("+" + compactNumber(pick.total)).takeIf { picked.isNotEmpty() },
         onCancel = onCancel,
     ) { onSell(picked.map { it.id }) }
 }

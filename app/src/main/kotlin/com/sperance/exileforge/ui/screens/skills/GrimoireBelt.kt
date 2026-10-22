@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -190,7 +191,7 @@ internal fun Exchange(
         ) {
             Text(ui("skills.exchange_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MutedText(ui("skills.exchange_rule", rule.books, number(price.toDouble())), Modifier.weight(1f))
+                MutedText(ui("skills.exchange_rule", rule.books, compactNumber(price)), Modifier.weight(1f))
                 bill?.let { GoldCost(it) }
             }
             HoldHint(HoldSubject.SKILL)

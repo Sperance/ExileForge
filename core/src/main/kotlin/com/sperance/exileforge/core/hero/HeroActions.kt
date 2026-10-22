@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.hero
 
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.display.shardsText
@@ -206,7 +207,7 @@ class HeroActions(
     fun sellForGold(itemId: String, unequip: Boolean = false, onSold: () -> Unit = {}) = heroCommand { id ->
         val sold = api.hero.sell(id, itemId, unequip)
         onSold()
-        notices.toast(withShards(ui("toast.sold", sold.gold), sold.shards, perOrb))
+        notices.toast(withShards(ui("toast.sold", compactNumber(sold.gold)), sold.shards, perOrb))
     }
 
     /** Продажа пачкой: выбор тайника и «по правилам»; сколько и за сколько - тостом. */
@@ -215,7 +216,7 @@ class HeroActions(
     /** Та же продажа пачкой внутри идущей команды - «Продать и вернуться» конца захода, уже вне захода. */
     suspend fun sellBatch(heroId: String, itemIds: Collection<String>) {
         val sold = api.hero.sellMany(heroId, itemIds.toList())
-        notices.toast(withShards(ui("toast.sold_many", sold.itemIds.size, sold.gold), sold.shards, perOrb))
+        notices.toast(withShards(ui("toast.sold_many", sold.itemIds.size, compactNumber(sold.gold)), sold.shards, perOrb))
     }
 
     /** Сколько осколков склеиваются в сферу - для строки осколков в тосте. */

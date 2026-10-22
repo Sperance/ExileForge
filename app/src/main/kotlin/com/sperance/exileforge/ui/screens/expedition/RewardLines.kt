@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.expedition.presentLoot
@@ -43,7 +44,7 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
-            if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
+            if (reward.gold > 0) Text(ui("expedition.loot_gold", compactNumber(reward.gold)), color = GoldBright)
         }
         reward.items.forEach { (code, amount) ->
             Row(Modifier.clickable { inspect(Inspect.Stack(code)) }, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

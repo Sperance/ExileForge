@@ -126,7 +126,7 @@ private val HallBoard.tab: StoneTab
         HallBoard.UNIQUES -> StoneTab(ui("hall.board.UNIQUES"), ForgeGlyphs.Gem, ModeHue.Uniques)
     }
 
-/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (строкой «⚜ 12.5k»), находки. */
+/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (строкой «⚜ 150к»), находки. */
 private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.RIFT -> ui("hall.value.RIFT", number(value.toDouble()))
     HallBoard.TOWER -> ui("hall.value.TOWER", value)

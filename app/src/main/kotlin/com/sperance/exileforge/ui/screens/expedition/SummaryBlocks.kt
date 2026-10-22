@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.BoostSource
 import com.sperance.exileforge.core.campaign.LootBreakdown
 import com.sperance.exileforge.core.display.atlasPointSource
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.signedNumber
@@ -221,7 +222,7 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
 @Composable
 private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
     FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (reward.gold > 0) Chip(ui("quest.toast.gold", number(reward.gold.toDouble())), GoldBright)
+        if (reward.gold > 0) Chip(ui("quest.toast.gold", compactNumber(reward.gold)), GoldBright)
         if (reward.experience > 0) Chip(ui("quest.toast.experience", number(reward.experience)), Rune)
         reward.orbs.forEach { (code, amount) -> Chip(ui("quest.toast.orb", itemTitle(code), amount), Brass) }
     }

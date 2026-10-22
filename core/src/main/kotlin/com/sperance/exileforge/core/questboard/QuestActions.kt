@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.questboard
 
 import com.sperance.exileforge.core.display.SkillText
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -212,7 +213,7 @@ class QuestActions(
         val rewards = claimed.map { it.rewards }
         val orbs = rewards.flatMap { it.orbs.entries }.groupBy({ it.key }, { it.value }).mapValues { it.value.sum() }
         val parts = listOfNotNull(
-            rewards.sumOf { it.gold }.takeIf { it > 0 }?.let { ui("quest.toast.gold", number(it.toDouble())) },
+            rewards.sumOf { it.gold }.takeIf { it > 0 }?.let { ui("quest.toast.gold", compactNumber(it)) },
             rewards.sumOf { it.experience }.takeIf { it > 0 }?.let { ui("quest.toast.experience", number(it)) },
         ) + orbs.map { (code, amount) -> ui("quest.toast.orb", itemTitle(code), amount) }
         return ui("quest.toast.claimed_all", claimed.size, named) + parts.joinToString(" · ").takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty()

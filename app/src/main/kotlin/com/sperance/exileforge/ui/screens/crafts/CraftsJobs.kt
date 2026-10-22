@@ -228,10 +228,9 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 CraftsGlossaryButton(crafts?.rules)
             }
             val picksItem = work.job.targetsItem && targets.isNotEmpty()
-            val picksTool = profession.tool.isNotBlank()
             val most = crafts?.crafting?.maxAdditives ?: 0
             val picksAdditives = crafts != null && most > 0 && variants.any { crafts.crafting.additives(it.job).isNotEmpty() }
-            if (work.options.isNotEmpty() || picksItem || picksTool || picksAdditives) Engraved(ui("crafts.choose"))
+            if (work.options.isNotEmpty() || picksItem || picksAdditives) Engraved(ui("crafts.choose"))
             if (work.options.isNotEmpty()) {
                 val options = remember(game.lang, game.hero?.bag, game.index, work, choices, profession.level) {
                     if (smith) PickOptions.smiths { bagCount(game, it) } else PickOptions.jobChoices(work, choices, profession, game.index) { bagCount(game, it) }
@@ -242,7 +241,6 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 val options = remember(game.lang, targets) { PickOptions.copies(targets) }
                 ForgePicker(ui("crafts.pick_target"), item.ifEmpty { null }, options, hint = ui("crafts.pick_item"), hold = HoldSubject.ITEM, onPeek = { id -> targets.firstOrNull { it.id == id }?.let { inspect(Inspect.Copy(it.item)) } }) { target = it.orEmpty() }
             }
-            if (picksTool) ToolChoice(game, vm, profession)
             val random = job.choice == SmithChoice.RANDOM.name
             if (picksAdditives && crafts != null) AdditivesChoice(game, crafts.crafting.additives(job.job), if (random) emptyList() else additives, most, enabled = !random) { additives = it }
             val sheet = JobSheetState(game, crafts, profession, work, choices, targets, item, current)
@@ -369,8 +367,9 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
 }
 
 /**
- * Полоса-формула: вход цикла (с примесями [additives]) ячейками «есть/нужно» через «+» - у работы без входа инструмент профессии, -
- * стрелка, выход «×1» (с лишней добычей - «×1–N») и находки с шансом. Касание ячейки - [onOpen] с карточкой материала или выхода.
+ * Полоса-формула: вход цикла (с примесями [additives]) ячейками «есть/нужно» через «+» и стрелка - у работы без входа их нет, -
+ * выход «×1» (с лишней добычей - «×1–N») и находки с шансом. Касание ячейки - [onOpen] с карточкой материала или выхода. Инструмента
+ * в формуле нет - он в окне профессии.
  */
 @Composable private fun RecipeFormula(game: GameUi, profession: ProfessionView, job: JobView, additives: List<String>, onOpen: (Inspect?) -> Unit) {
     val inputs = Work.perCycle(job.job, additives)
@@ -379,19 +378,15 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        if (inputs.isEmpty()) {
-            FormulaSlot(ui("crafts.formula_tool"), Muted, frame = Bronze) { ToolIcon(game, profession, 28) }
-        } else {
-            inputs.entries.forEachIndexed { i, (code, amount) ->
-                if (i > 0) FormulaPlus()
-                val have = bagCount(game, code)
-                val enough = have >= amount
-                FormulaSlot(ui("crafts.ratio", compactNumber(have.toDouble()), amount), if (enough) Parchment else LifeRed, frame = if (enough) Bronze else LifeRed, onClick = { onOpen(Inspect.Stack(code)) }) {
-                    StackCell(game.index, code, 1, size = 40.dp)
-                }
+        inputs.entries.forEachIndexed { i, (code, amount) ->
+            if (i > 0) FormulaPlus()
+            val have = bagCount(game, code)
+            val enough = have >= amount
+            FormulaSlot(ui("crafts.ratio", compactNumber(have.toDouble()), amount), if (enough) Parchment else LifeRed, frame = if (enough) Bronze else LifeRed, onClick = { onOpen(Inspect.Stack(code)) }) {
+                StackCell(game.index, code, 1, size = 40.dp)
             }
         }
-        FormulaArrow()
+        if (inputs.isNotEmpty()) FormulaArrow()
         FormulaSlot(JobRates.yieldRange(profession.bonus), Parchment, frame = Bronze, size = 56, onClick = resultCard(game, job)?.let { card -> { onOpen(card) } }) { JobIcon(job, Modifier.size(36.dp)) }
         job.extra.forEach { find ->
             FormulaPlus()
@@ -485,12 +480,6 @@ private class ToolPick(val options: List<PickOption<String>>, val worn: String?,
         val options = PickOptions.copies(tools) { view -> if (view.id == worn) emptyList() else game.unmetFor(view.code) }
         ToolPick(options, worn) { id -> tools.firstOrNull { it.id == id }?.let { inspect(Inspect.Copy(it.item)) } }
     }
-}
-
-/** Строка выбора инструмента профессии в листе работы: выбранный - надетый, выбор другого надевает его. */
-@Composable private fun ToolChoice(game: GameUi, vm: CraftsViewModel, profession: ProfessionView) {
-    val pick = rememberToolPick(game, profession)
-    ForgePicker(ui("crafts.tool"), pick.worn, pick.options, enabled = !game.busy, empty = pick.empty, hold = HoldSubject.ITEM, onPeek = pick.peek) { id -> id?.takeIf { it != pick.worn }?.let(vm::equipTool) }
 }
 
 /**

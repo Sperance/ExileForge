@@ -11,8 +11,8 @@ import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.StoryAfter
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.PrologueGate
@@ -52,7 +52,7 @@ class StoryTapThroughTest {
     @Test fun theStepContinuationIsTappedThrough() {
         val index = TestWorld.index
         val step = index.quests.story.first().steps.first()
-        GlobalContext.get().get<QuestRepository>().tell(StoryAfter(chapter = 0, step = step.code))
+        GlobalContext.get().get<StoryOverlay>().show(StoryAfter(chapter = 0, step = step.code))
         val game = GameUi(world = World(content = index, contentHash = index.hash), holding = HeroHolding(heroId = "story-tap"))
         compose.setContent {
             CompositionLocalProvider(LocalMotion provides false) {

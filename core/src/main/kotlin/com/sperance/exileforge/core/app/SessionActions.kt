@@ -491,6 +491,7 @@ class SessionActions(
         feedbacks.clear()
         heroes.clear()
         boards.clear()
+        story.clear()
         markets.clear()
         guilds.clear()
         commands.clearFailure()

@@ -60,6 +60,7 @@ import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.player.PlayerCardModel
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ConnectionEventsHub
@@ -154,6 +155,7 @@ val appModule = module {
     single { FeedbackRepository() }
     single { HeroRepository() }
     single { QuestRepository() }
+    single { StoryOverlay() }
     single { MarketRepository() }
     singleOf(::MarketActions)
     single { GuildRepository() }
@@ -165,9 +167,9 @@ val appModule = module {
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
-    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), lazy { get<HeroActions>() }, get(named(APP_SCOPE))) }
-    single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
-    single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), lazy { get<HeroActions>() }, get(), get(named(APP_SCOPE))) }
+    single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { ContentLoader() }
@@ -193,7 +195,7 @@ val appModule = module {
             scope = get(named(APP_SCOPE)),
         )
     }
-    single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     single { TownActions(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     singleOf(::Actions)

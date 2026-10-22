@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.town.TownActions
 import com.sperance.exileforge.core.world.WorldRepository
@@ -28,6 +29,8 @@ class Repositories(
     val world: WorldRepository,
     val heroes: HeroRepository,
     val boards: QuestRepository,
+    /** Окно сюжета поверх игры: смена героя и выход его закрывают вместе с досками. */
+    val story: StoryOverlay,
     val markets: MarketRepository,
     val guilds: GuildRepository,
     val feedbacks: FeedbackRepository,

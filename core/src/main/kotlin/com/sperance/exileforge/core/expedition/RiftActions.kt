@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.refusalLine
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -122,6 +123,8 @@ class RiftActions(
     private val commands: CommandRunner,
     private val notices: Notices,
     private val prefs: PreferencesRepository,
+    /** Окно сюжета поверх игры: уход в заход его закрывает - окно считается показанным. */
+    private val story: StoryOverlay,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -130,6 +133,7 @@ class RiftActions(
 
     /** «Разлом недели»: экран открывается, доска читается. */
     fun open() {
+        story.clear()
         mutable.value = RiftState(open = true)
         refresh()
     }

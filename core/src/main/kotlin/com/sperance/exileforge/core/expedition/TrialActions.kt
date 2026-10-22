@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.campaign.TrialStart
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -44,6 +45,8 @@ class TrialActions(
     private val commands: CommandRunner,
     private val notices: Notices,
     private val prefs: PreferencesRepository,
+    /** Окно сюжета поверх игры: уход в заход его закрывает - окно считается показанным. */
+    private val story: StoryOverlay,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -95,6 +98,7 @@ class TrialActions(
             pending.clear()
             batch = null
         }
+        story.clear()
         mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.campaign.trials.towerPicks, onEvent = ::recorded, speed = prefs.fightSpeed(index.rules.fight))
     }
 

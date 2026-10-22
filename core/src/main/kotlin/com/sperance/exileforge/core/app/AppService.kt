@@ -22,6 +22,7 @@ abstract class AppService(
     protected val world get() = repositories.world
     protected val heroes get() = repositories.heroes
     protected val boards get() = repositories.boards
+    protected val story get() = repositories.story
     protected val markets get() = repositories.markets
     protected val guilds get() = repositories.guilds
     protected val feedbacks get() = repositories.feedbacks

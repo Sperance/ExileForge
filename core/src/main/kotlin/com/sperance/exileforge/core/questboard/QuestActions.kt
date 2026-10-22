@@ -12,7 +12,7 @@ import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.quests.RunTurnIns
 import com.sperance.exileforge.core.quests.StoryAfter
-import com.sperance.exileforge.core.quests.storyReady
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
  */
 class QuestActions(
     private val repository: QuestRepository,
+    private val story: StoryOverlay,
     private val heroes: HeroRepository,
     private val connection: ServerConnection,
     private val commands: CommandRunner,
@@ -73,17 +74,17 @@ class QuestActions(
 
     /**
      * Сдать задание [questId]. Шаг сюжета игрок сдаёт только так, по одному: после сдачи его текст «после» встаёт поверх игры
-     * ([QuestRepository.story]) - глава и шаг берутся с доски до сдачи.
+     * ([StoryOverlay]) - глава и шаг берутся с доски до сдачи.
      */
     fun claim(questId: String) = storyAfter(questId).let { after ->
         command(ui("quest.toast.claimed")) { id ->
             show(id, api.quests.claim(id, questId))
-            if (after != null && heroes.onScreen(id)) repository.tell(after)
+            if (after != null && heroes.onScreen(id)) story.show(after)
         }
     }
 
     /** Перечитать текст «после» уже сданного шага [step] главы [chapter] - то же окно, что после сдачи. */
-    fun reread(chapter: Int, step: String) = repository.tell(StoryAfter(chapter, step))
+    fun reread(chapter: Int, step: String) = story.show(StoryAfter(chapter, step))
 
     fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
 
@@ -125,7 +126,7 @@ class QuestActions(
             val result = turnIns ?: quietly { api.quests.claimAll(heroId) } ?: return@launch
             if (!heroes.onScreen(heroId)) return@launch
             val boards = settle(heroId, result, guild, targets)
-            val ready = result.board.storyReady
+            val ready = result.board.awaitsHand
             if (result.claimed.isEmpty() && !ready) return@launch
             val named = targets + Quests(guild = boards).targets()
             val lines = RunTurnIns(result.claimed.map { QuestTurnIn(title(it, named), it.rewards, it.kind, it.run) }, ready)
@@ -141,7 +142,7 @@ class QuestActions(
         val targets = repository.state.value.targets()
         val result = api.quests.claimAll(id)
         val boards = if (heroes.onScreen(id)) settle(id, result, null, targets) else null
-        turnInLine(result.claimed, targets + Quests(guild = boards).targets(), result.board.storyReady)
+        turnInLine(result.claimed, targets + Quests(guild = boards).targets(), result.board.awaitsHand)
     }
 
     /** Шаг сюжета [questId] с доски, как она стоит до сдачи: глава и код шага; не шаг сюжета - null. */

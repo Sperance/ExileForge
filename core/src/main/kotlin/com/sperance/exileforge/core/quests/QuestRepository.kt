@@ -37,37 +37,14 @@ data class QuestTurnIn(val title: String, val rewards: QuestReward, val kind: Qu
  */
 data class RunTurnIns(val quests: List<QuestTurnIn>, val storyReady: Boolean)
 
-/** Шаг сюжета [step] главы [chapter], чей текст «после» ждёт показа поверх игры. */
-data class StoryAfter(val chapter: Int, val step: String)
-
-/** Шаг сюжета на доске выполнен, но ещё не сдан. */
-val QuestBoard.storyReady: Boolean get() = story?.let { it.done && !it.claimed } == true
-
-/**
- * Единственный источник правды о квестах. [story] - текст «после» сданного или перечитываемого шага сюжета к показу; живёт только
- * в памяти: окно, закрытое любым путём, уже показано.
- */
+/** Единственный источник правды о квестах; окно сюжета поверх игры - [StoryOverlay]. */
 class QuestRepository {
     private val mutable = MutableStateFlow(Quests())
     val state: StateFlow<Quests> = mutable
 
-    private val pending = MutableStateFlow<StoryAfter?>(null)
-    val story: StateFlow<StoryAfter?> = pending
-
     fun update(transform: (Quests) -> Quests) = mutable.update(transform)
-
-    /** Показать текст «после» шага [after]. */
-    fun tell(after: StoryAfter) {
-        pending.value = after
-    }
-
-    /** Окно шага [after] закрыто; к показу уже стоит другой шаг - он остаётся. */
-    fun told(after: StoryAfter) {
-        pending.compareAndSet(after, null)
-    }
 
     fun clear() {
         update { Quests() }
-        pending.value = null
     }
 }

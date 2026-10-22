@@ -104,6 +104,7 @@ class CharacterActions(
         run {
             heroes.select(id)
             boards.clear()
+            story.clear()
             expeditions.clear()
             screens.reset(Landing.HERO)
             warmupActions.clear()
@@ -126,6 +127,7 @@ class CharacterActions(
             crafts.drop()
             heroes.clear()
             boards.clear()
+            story.clear()
             markets.clear()
             guilds.clear()
             screens.reset(Landing.CHARACTERS)

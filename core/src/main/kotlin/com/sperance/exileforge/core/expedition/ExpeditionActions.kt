@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.questboard.QuestActions
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
@@ -105,6 +106,8 @@ class ExpeditionActions(
     private val screens: Screens,
     /** Действия героя - продажа добычи по концу захода; лениво: они сами держат поход. */
     private val heroActions: Lazy<HeroActions>,
+    /** Окно сюжета поверх игры: уход в заход его закрывает - окно считается показанным. */
+    private val story: StoryOverlay,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -347,6 +350,7 @@ class ExpeditionActions(
                 quests = board, turnedIn = emptyList(), storyReady = false, atlasPoints = emptyList(), potion = potion, wearable = started.wearable.toSet(),
             )
         }
+        story.clear()
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, callbacks = callbacks,

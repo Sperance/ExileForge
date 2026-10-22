@@ -1,17 +1,17 @@
 package com.sperance.exileforge.ui.screens.quests
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.StoryAfter
+import com.sperance.exileforge.core.quests.StoryOverlay
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.StoryScene
@@ -19,31 +19,30 @@ import com.sperance.exileforge.ui.components.storyParagraphs
 import org.koin.compose.koinInject
 
 /**
- * Продолжение сюжета поверх игры: шаг, который игрок сдал или перечитывает из «Всего сюжета» ([QuestRepository.story]), - сюжетный
+ * Продолжение сюжета поверх игры: шаг, который игрок сдал или перечитывает из «Всего сюжета» ([StoryOverlay]), - сюжетный
  * экран с его текстом «после» (`quest.story.<шаг>.after`). У финала главы за ним второй страницей - эпилог главы
- * (`quest.chapter_outro.<регион>`); «Пропустить» закрывает обе. Окно, ушедшее с экрана любым путём (дочитано, пропущено, заход,
- * выход), считается показанным: на устройстве ничего не хранится. Тосты видны и поверх сцены - их слой общий
- * ([com.sperance.exileforge.ui.components.ToastLayer]).
+ * (`quest.chapter_outro.<регион>`); «Пропустить» закрывает обе. Закрывает окно только игрок («Дальше» на последней странице,
+ * «Пропустить»); уход в заход и смена героя закрывают его в [StoryOverlay], а пересоздание экрана окно не теряет. Тосты видны
+ * и поверх сцены - их слой общий ([com.sperance.exileforge.ui.components.ToastLayer]).
  */
 @Composable fun StoryAfterHost(game: GameUi) {
-    val quests = koinInject<QuestRepository>()
-    val after by quests.story.collectAsStateWithLifecycle()
+    val story = koinInject<StoryOverlay>()
+    val after by story.shown.collectAsStateWithLifecycle()
     val shown = after ?: return
-    DisposableEffect(shown) { onDispose { quests.told(shown) } }
     val pages = remember(shown, game.index) { storyPages(game, shown) }
     if (pages.isEmpty()) {
-        LaunchedEffect(shown) { quests.told(shown) }
+        LaunchedEffect(shown) { story.dismiss(shown) }
         return
     }
-    var page by remember(shown) { mutableIntStateOf(0) }
+    var page by rememberSaveable(shown) { mutableIntStateOf(0) }
     val current = pages[page.coerceAtMost(pages.lastIndex)]
     StoryScene(
         kicker = current.kicker,
         title = current.title,
         paragraphs = current.paragraphs,
         skippable = true,
-        onDone = { if (page < pages.lastIndex) page++ else quests.told(shown) },
-        onSkip = { quests.told(shown) },
+        onDone = { if (page < pages.lastIndex) page++ else story.dismiss(shown) },
+        onSkip = { story.dismiss(shown) },
     )
 }
 

@@ -125,7 +125,7 @@ private fun readyCount(tab: QuestTab, board: QuestBoard?): Int = when (tab) {
     QuestTab.DAILY -> board?.daily
     QuestTab.WEEKLY -> board?.weekly
     QuestTab.CONTRACTS -> board?.contracts
-}.orEmpty().count { it.done && !it.claimed }
+}.orEmpty().count { it.claimedTogether }
 
 /** Задания дня не меняются за золото: что выпало, то и задание дня. */
 private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {

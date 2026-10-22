@@ -152,7 +152,7 @@ private fun contestTile(board: ContestBoard?, now: Long, open: () -> Unit): HubT
 }
 
 /** Задания доски, что ждут награды. */
-private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (board.daily + board.weekly + board.contracts).count { it.done && !it.claimed } } ?: 0
+private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (board.daily + board.weekly + board.contracts).count { it.claimedTogether } } ?: 0
 
 /** Строки дел рынка на плитке: «Можно продлить: 1», «Ставка перебита: 2», «Можно продать: 1» - только непустые. */
 private fun choreLines(chores: MarketChores): List<String> = MarketDue.entries.mapNotNull { due -> chores.count(due).takeIf { it > 0 }?.let { ui("auction.due.${due.name}", it) } }

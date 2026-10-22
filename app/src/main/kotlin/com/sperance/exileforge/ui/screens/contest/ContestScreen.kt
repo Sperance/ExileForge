@@ -106,10 +106,11 @@ fun ContestScreen() {
         return
     }
     var prizes by remember { mutableStateOf<ContestStand?>(null) }
-    val stands = board.stands.sortedBy { it.kind }
+    val stands = remember(board.stands) { board.stands.sortedBy { it.kind } }
+    val tabs = remember(stands) { stands.map(::kindTab) }
     val stand = stands.firstOrNull { it.kind == kind } ?: stands.firstOrNull()
     Column(Modifier.fillMaxSize()) {
-        StoneTabs(stands.map(::kindTab), stands.indexOf(stand), { kind = stands[it].kind }, scrollable = false)
+        StoneTabs(tabs, stands.indexOf(stand), { kind = stands[it].kind }, scrollable = false)
         PullToRefreshBox(isRefreshing = Reads.CONTESTS in activity.loading, onRefresh = { vm.load(force = true) }, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 stand?.let { shown -> StandPanels(game, rules, shown, onTable = { vm.open(ContestPick(shown.kind)) }, onPrizes = { prizes = shown }) }
@@ -122,10 +123,9 @@ fun ContestScreen() {
 /** Вкладка периода: у суток - солнце цветом предостережения, у недели - луна цветом золотой медали; точка - у героя сейчас приз. */
 private fun kindTab(stand: ContestStand): StoneTab {
     val label = ui("contest.kind_short.${stand.kind.name}")
-    val prized = stand.place in 1L..stand.prized
     return when (stand.kind) {
-        ContestKind.DAY -> StoneTab(label, Icons.Outlined.WbSunny, Caution, prized)
-        ContestKind.WEEK -> StoneTab(label, Icons.Outlined.DarkMode, medalOf(1), prized)
+        ContestKind.DAY -> StoneTab(label, Icons.Outlined.WbSunny, Caution, stand.prizedNow)
+        ContestKind.WEEK -> StoneTab(label, Icons.Outlined.DarkMode, medalOf(1), stand.prizedNow)
     }
 }
 
@@ -138,7 +138,7 @@ private fun StandPanels(game: GameUi, rules: ContestRules, stand: ContestStand, 
     MetricPanel(game, stand)
     ForgePanel {
         OwnStanding(stand)
-        if (stand.own != null && stand.place > 0) PrizeNow(rules, stand, stand.place.toInt())
+        if (stand.ownPlace != null) PrizeNow(rules, stand)
     }
     LeaguePanel(rules, stand, onTable, onPrizes)
 }
@@ -420,13 +420,13 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
  */
 @Composable private fun OwnBar(game: GameUi, rules: ContestRules, stand: ContestStand, mine: Int?) {
     val own = stand.own
+    val place = stand.ownPlace
     Column(Modifier.fillMaxWidth().background(Abyss).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         when {
-            own != null && stand.place > 0 -> {
-                val place = stand.place.toInt()
+            own != null && place != null -> {
                 MutedText(ui("contest.own_bar", place, stand.size, contestValue(stand.metric, own.value)), style = MaterialTheme.typography.labelMedium)
                 if (place > PODIUM.size) TableRow(game, rules, stand, own, place, own = true)
-                PrizeNow(rules, stand, place)
+                PrizeNow(rules, stand)
             }
 
             mine != null && mine != stand.league -> MutedText(ui("contest.other_league", leagueLabel(rules, mine)))
@@ -439,16 +439,20 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
     }
 }
 
-/** Строка «Приз сейчас» героя на месте [place]: подпись слева, приз места справа. */
-@Composable private fun PrizeNow(rules: ContestRules, stand: ContestStand, place: Int) {
+/** Строка «Приз сейчас» героя на его месте ([ContestStand.ownPlace]): подпись слева, приз места справа. */
+@Composable private fun PrizeNow(rules: ContestRules, stand: ContestStand) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MutedText(ui("contest.prize_label"), style = MaterialTheme.typography.labelMedium)
-        Text(ownPrize(rules, stand, place), color = GoldBright, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+        Text(ownPrize(rules, stand), color = GoldBright, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
     }
 }
 
-/** Нынешний приз места [place]: «×8 сфер, титул «…», серебряная рамка» или что приза пока нет. */
-private fun ownPrize(rules: ContestRules, stand: ContestStand, place: Int): String {
+/**
+ * Нынешний приз героя: «×8 сфер, титул «…», серебряная рамка» или что приза пока нет - по тому же правилу, что точка вкладки
+ * ([ContestStand.prizedNow]).
+ */
+private fun ownPrize(rules: ContestRules, stand: ContestStand): String {
+    val place = stand.ownPlace?.takeIf { stand.prizedNow } ?: return ui("contest.prize_none")
     val prize = rules.prize(stand.kind, place, stand.size.toInt()) ?: return ui("contest.prize_none")
     if (!rules.honoured(place)) return ui("contest.prize_now", prize.orbs)
     return ui("contest.prize_now_honour", prize.orbs, contestTitle(stand.metric, stand.kind), ui("contest.frame.$place"))

@@ -43,11 +43,11 @@ data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
         }
 
         /**
-         * Пояс героя: фляги надетого [equipped] по местам [Slot.FLASKS] (null - место пусто) с условиями пояса [conditions]
-         * тех же мест. Те же фляги, что берёт Мощь сервера (`FlaskSheet.belt`), - для захода и для листа героя.
+         * Пояс героя: фляги надетого [equipped] по местам правила [FlaskSheet.slots] (null - место пусто) с условиями пояса
+         * [conditions] тех же мест. Те же фляги, что берёт Мощь сервера (`FlaskSheet.belt`), - для захода и для листа героя.
          */
-        fun belt(index: ContentIndex, equipped: Collection<ItemInstance>, conditions: List<SlotCondition?>): List<BeltFlask?> = Slot.FLASKS.mapIndexed { n, slot ->
-            equipped.firstOrNull { it.slot == slot && !it.socketed }?.let { item -> index.template(item.template)?.let { of(item, it, index, conditions.getOrNull(n)) } }
+        fun belt(index: ContentIndex, equipped: Collection<ItemInstance>, conditions: List<SlotCondition?>): List<BeltFlask?> = FlaskSheet.slots(index, equipped).mapIndexed { n, slot ->
+            slot?.let { (item, template) -> of(item, template, index, conditions.getOrNull(n)) }
         }
 
         /** When a flask is drunk by itself unless the belt says otherwise: a life flask at half life, a mana flask low on mana, the rest at the start. */

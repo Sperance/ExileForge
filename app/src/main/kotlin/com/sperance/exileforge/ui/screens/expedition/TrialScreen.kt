@@ -125,7 +125,8 @@ import org.koin.compose.viewmodel.koinViewModel
             color = if (hud.limit > 0 && hud.elapsed > hud.limit) Muted else Parchment,
             style = MaterialTheme.typography.labelSmall,
         )
-        hud.mods.flatMap { it.lines }.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+        val lines = remember(hud.mods) { hud.mods.flatMap { it.lines } }
+        lines.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
         if (hud.awaiting > 0) Receiving()
     }
 }

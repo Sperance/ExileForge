@@ -59,7 +59,6 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
-import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.Slot
@@ -706,8 +705,7 @@ class ExpeditionRun(
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
-            val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
-            val own = MapEffects.sum(MapStat.resistPenalty(penalty), if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
+            val own = MapEffects.sum(index.campaign.resistPenaltyLines(location.code, onMap = context.active != null), if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
             val effects = MapEffects.sum(base, own)
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))

@@ -287,24 +287,33 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
             MutedText(ui("bag.owned", owned), style = MaterialTheme.typography.labelSmall)
         }
     }
-    val description = itemDescription(code, game.index).takeIf { it.isNotBlank() }
+    val description = remember(code, game.lang, game.index) { itemDescription(code, game.index).takeIf { it.isNotBlank() } }
+    val details = remember(code, game.lang, game.index) { itemDetails(code, game.index) }
     val book = game.index?.skills?.byBook(code)
     if (book != null) {
         val inspect = rememberSkillInspect()
-        LoreChip(description ?: ui("bag.book_skill", SkillText.title(book.code)), Rune) { inspect(SkillPeek(book.code)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { LoreChip(description ?: ui("bag.book_skill", SkillText.title(book.code)), Rune) { inspect(SkillPeek(book.code)) } }
+            DetailsMark(details)
+        }
     } else {
-        description?.let { StackDescription(it, itemDetails(code, game.index)) }
+        description?.let { StackDescription(it, details) }
     }
     game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
 }
 
-/** Короткое описание стопки [text]; подробное [details] (правила и оговорки) - под знаком ⓘ «Подробнее» справа, без него знака нет. */
+/** Короткое описание стопки [text]; подробное [details] (правила и оговорки) - под знаком ⓘ «Подробнее» справа ([DetailsMark]). */
 @Composable private fun StackDescription(text: String, details: String) {
     Row(verticalAlignment = Alignment.Top) {
         Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (details.isNotBlank()) InfoMark(ui("bag.details"), { Tip(ui("bag.details"), details) })
+        DetailsMark(details)
     }
+}
+
+/** Знак ⓘ «Подробнее» с подробным описанием стопки [details]; пустое - знака нет. */
+@Composable private fun DetailsMark(details: String) {
+    if (details.isNotBlank()) InfoMark(ui("bag.details"), { Tip(ui("bag.details"), details) })
 }
 
 /** Руна умения: семейство, действие с силой рун героя [power] и виды умений, куда она встаёт. */

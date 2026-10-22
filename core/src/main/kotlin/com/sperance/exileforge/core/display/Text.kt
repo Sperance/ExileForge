@@ -64,9 +64,29 @@ fun itemDescription(code: String, index: ContentIndex?): String = index.numbered
 
 /**
  * Подробное описание стопки [code] (`item.<код>.details`): правила и оговорки сверх короткого [itemDescription], числа правил
- * подставляет [index]; у стопки без него, без контента или без числа - пусто.
+ * подставляет [index]; у книги умения - лестница её опыта ([bookLadder]); у стопки без него, без контента или без числа - пусто.
  */
-fun itemDetails(code: String, index: ContentIndex?): String = index.numberedText(locOr(LocaleKey.itemDetails(code), "")).orEmpty()
+fun itemDetails(code: String, index: ContentIndex?): String {
+    if (index?.skills?.byBook(code) != null) return bookLadder(index)
+    return index.numberedText(locOr(LocaleKey.itemDetails(code), "")).orEmpty()
+}
+
+/**
+ * Сколько опыта даёт книга изученному умению - ступени `skills.progress.bookShares` словами: «ур. 1–4 — 30%, …, с ур. 20 — 2%»;
+ * последняя ступень - открытой. Числа берутся из контента, текст их не держит.
+ */
+fun bookLadder(index: ContentIndex, lang: Lang = uiLanguage): String {
+    val steps = index.skills.rules.progress.bookShares
+    val parts = steps.mapIndexed { at, step ->
+        val next = steps.getOrNull(at + 1)?.from
+        val levels = if (next != null) ui(lang, "bag.book_range", step.from, next - 1) else ui(lang, "bag.book_from", step.from)
+        ui(lang, "bag.book_step", levels, fineNumber(step.share * PERCENT))
+    }
+    return ui(lang, "bag.book_ladder", parts.joinToString(", "))
+}
+
+/** Доля в процентах. */
+private const val PERCENT = 100.0
 
 /** Действие сферы или оттиска [code] одной фразой (`enum.orb.<код>.rule`) - итог рецепта кузницы; у прочих стопок пусто. */
 fun itemRule(code: String): String = uiOr(uiLanguage, "enum.orb.$code.rule", "")

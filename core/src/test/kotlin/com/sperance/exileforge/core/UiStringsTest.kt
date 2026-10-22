@@ -245,6 +245,7 @@ class UiStringsTest {
             Ailment.entries.forEach {
                 add("enum.ailment.${it.name}")
                 add("fight.effect.${it.name}")
+                add("fight.act.${it.name}")
             }
             Ailment.entries.filter { it.hurts }.forEach { add("fight.flow.stalled.${it.name}") }
             DamageType.entries.forEach { add("enum.damage.${it.name}") }

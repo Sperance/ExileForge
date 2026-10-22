@@ -47,16 +47,16 @@ import com.sperance.exileforge.ui.theme.*
     charges: List<ChargeView> = emptyList(),
     fates: List<FateGlow> = emptyList(),
 ) {
-    var open by remember { mutableStateOf(false) }
+    var open by remember { mutableStateOf<ShelfFocus?>(null) }
     val timed = timedShelf(held, ailments, effects, charges)
     val lasting = effects.filter { it.lasting }.map { Shelved.Effect(it) } + fates.map { Shelved.Fate(it) }
     val all = timed + lasting
     if (all.isEmpty()) {
         MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
     } else {
-        EffectShelf(all, 30.dp, { open = true }, Modifier.fillMaxWidth())
+        EffectShelf(all, 30.dp, { open = ShelfFocus(it?.key) }, Modifier.fillMaxWidth())
     }
-    if (open) EffectsSheet(title, timed, lasting, null) { open = false }
+    open?.let { focus -> EffectsSheet(title, timed, lasting, null, focus.key) { open = null } }
 }
 
 /** Эффекты стороны боя для ленты и листа: временные ([timedShelf]) и на весь бой ([lasting]). */
@@ -114,7 +114,7 @@ private val RibbonChip = RoundedCornerShape(4.dp)
  * Действующий рычаг дара: ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
  * в углу - стаки; подсказка - имя дара и что он делает сейчас (`fight.fate_state.<рычаг>`).
  */
-@Composable internal fun FateTile(view: FateGlow, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
+@Composable internal fun FateTile(view: FateGlow, bearing: Bearing, side: Dp = 30.dp, tip: (() -> Tip)?) {
     val title = locOr("fate.${view.fate}.name", view.fate)
     Tipped(
         tip,
@@ -138,7 +138,7 @@ private val RibbonChip = RoundedCornerShape(4.dp)
 private const val FATE_GLYPH = "✦"
 
 /** A kind of the hero's charges: the drawing of its maximum and the count held. */
-@Composable internal fun ChargeTile(view: ChargeView, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
+@Composable internal fun ChargeTile(view: ChargeView, bearing: Bearing, side: Dp = 30.dp, tip: (() -> Tip)?) {
     val title = ui("fight.charge.${view.kind.name}")
     Tipped(
         tip,
@@ -166,13 +166,13 @@ private fun curseLore(view: EffectView): Lore = when (val origin = view.origin) 
  * полным здоровьем, - погасшая бутыль под знаком «стоп».
  *
  * Бафф правил (Натиск, Укрепление) назван и нарисован по виду, умения - по умению, глоток - бутылью; бафф Предначертания называется даром.
- * Проклятие открывает лист; проклятие со слоями пишет их число «×N» в углу.
+ * Проклятие открывает лист; проклятие со слоями пишет их число «×N» в углу; без [tip] плитка касаний не ловит.
  */
-@Composable internal fun EffectTile(view: EffectView, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
+@Composable internal fun EffectTile(view: EffectView, bearing: Bearing, side: Dp = 30.dp, tip: (() -> Tip)?) {
     val tint = effectTint(view)
     val buff = view.buff
     val title = effectTitle(view)
-    val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
+    val lore = LocalLore.current?.takeIf { tip != null && view.kind == EffectKind.CURSE && buff == null }
     Tipped(
         tip.takeIf { lore == null },
         Modifier.then(if (lore != null) Modifier.clickable { lore(curseLore(view)) } else Modifier).shelfTile(tint, bearing, side)
@@ -209,7 +209,7 @@ private fun DrawScope.haltGlyph(tint: Color) {
     drawRect(tint, Offset(size.width - bar, 0f), Size(bar, size.height))
 }
 
-@Composable internal fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
+@Composable internal fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, bearing: Bearing, side: Dp = 30.dp, tip: (() -> Tip)?) {
     Tipped(
         tip,
         Modifier.shelfTile(tint, bearing, side).semantics { contentDescription = label },

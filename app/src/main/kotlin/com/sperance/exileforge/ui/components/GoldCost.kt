@@ -34,6 +34,7 @@ import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.LifeRed
+import com.sperance.exileforge.ui.theme.LossText
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
@@ -55,7 +56,7 @@ import com.sperance.exileforge.ui.theme.Parchment
         Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(12.dp))
         Text(
             buildAnnotatedString {
-                withStyle(SpanStyle(color = if (bill.affordable) GoldBright else LifeRed, fontWeight = FontWeight.SemiBold)) { append(compactNumber(bill.price.toDouble())) }
+                withStyle(SpanStyle(color = if (bill.affordable) GoldBright else LossText, fontWeight = FontWeight.SemiBold)) { append(compactNumber(bill.price.toDouble())) }
                 if (purse) withStyle(SpanStyle(color = Muted)) { append(" / " + compactNumber(bill.have.toDouble())) }
             },
             fontFamily = FontFamily.Monospace,

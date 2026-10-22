@@ -67,7 +67,7 @@ import kotlin.math.sin
     onCommand: (RunCommand) -> Unit = {},
 ) {
     val hero = game.heroInfo
-    var effectsOpen by remember { mutableStateOf(false) }
+    var effectsOpen by remember { mutableStateOf<ShelfFocus?>(null) }
     var lastingOpen by remember { mutableStateOf(false) }
     val live = fight.outcome == null
 
@@ -80,7 +80,7 @@ import kotlin.math.sin
     val timed = timedShelf(fight.heroHeld, fight.heroAilments, fight.heroEffects, fight.heroCharges, fight.heroPowers, holder)
     val shelf = timed.filter { it.onShelf }
     val lasting = lastingShelf(fight, mods, holder)
-    val openEffects = { effectsOpen = true }
+    val openEffects = { effectsOpen = ShelfFocus(null) }
     Column(
         modifier.fillMaxWidth().graphicsLayer {
             translationY = -acting() * 10.dp.toPx()
@@ -153,11 +153,11 @@ import kotlin.math.sin
             when {
                 timed.isEmpty() -> if (lasting.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
                 shelf.isEmpty() -> MutedText(ui("fight.effects_count", timed.size), style = MaterialTheme.typography.labelSmall)
-                else -> EffectShelf(shelf, 30.dp, openEffects, Modifier.weight(1f))
+                else -> EffectShelf(shelf, 30.dp, { effectsOpen = ShelfFocus(it?.key) }, Modifier.weight(1f))
             }
         }
     }
-    if (effectsOpen) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), fight.heroFlow) { effectsOpen = false }
+    effectsOpen?.let { focus -> EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), fight.heroFlow, focus.key) { effectsOpen = null } }
     if (lastingOpen) LastingSheet(lasting) { lastingOpen = false }
 }
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -150,8 +152,12 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     fun flash() = if (foe.alive) strikeFlash(fight, frame.now(fight), Side.MONSTER, foe.index) else 0f
     val focused = fight.focus == foe.index
     val shape = RoundedCornerShape(8.dp)
-    var effectsOpen by remember { mutableStateOf(false) }
+    var effectsOpen by remember { mutableStateOf<ShelfFocus?>(null) }
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
+    val shelves = rememberFoeShelves(foe.ailments, foe.held, foe.effects)
+    val shelf = remember(shelves) { shelves.timed + shelves.lasting }
+    val tile = if (large) 16.dp else 14.dp
+    val inset = if (narrow) 5.dp else 6.dp
     Box(
         modifier.graphicsLayer {
             translationY = acting() * 10.dp.toPx()
@@ -184,7 +190,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             }.clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
+                Modifier.fillMaxWidth().padding(inset),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
                 horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
             ) {
@@ -249,12 +255,9 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 }
                 if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                 SwingBar({ swing() }, foe.held, Modifier.fillMaxWidth()) { if (acting() > 0f) LifeRed else SwingRed }
-                val tile = if (large) 16.dp else 14.dp
-                if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
-                    val shelf = timedShelf(foe.held, foe.ailments, foe.effects) + foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }
-                    EffectShelf(shelf, tile, { effectsOpen = true }, Modifier.fillMaxWidth().height(tile), gap = 2.dp)
-                }
+                if (shelf.isNotEmpty()) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, Modifier.fillMaxWidth().height(tile), gap = SHELF_GAP)
             }
+            if (shelf.isNotEmpty()) ShelfTouch(shelf, tile, inset, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
             if (narrow && foe.monster.level > 0) {
                 Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
             }
@@ -282,11 +285,32 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             )
         }
     }
-    if (effectsOpen) {
-        val timed = timedShelf(foe.held, foe.ailments, foe.effects)
-        EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), timed, foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }, null) { effectsOpen = false }
-    }
+    effectsOpen?.let { focus -> EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), shelves.timed, shelves.lasting, null, focus.key) { effectsOpen = null } }
 }
+
+/**
+ * Зона касания полки эффектов врага - нижние [SHELF_TOUCH] карточки (полоса здоровья, замах и полка): плитки по 14-16 dp пальцу
+ * не попасть, а вся карточка выбирает цель. Касание открывает лист эффектов ([onOpen]) на плитке под пальцем по горизонтали
+ * ([pickAt]: полка [shelf] с плитками [tile] начинается на отступе [inset] карточки), мимо плиток и на «+N» - сверху.
+ */
+@Composable private fun ShelfTouch(shelf: List<Shelved>, tile: Dp, inset: Dp, modifier: Modifier, onOpen: (Shelved?) -> Unit) {
+    val pick by rememberUpdatedState(onOpen)
+    val items by rememberUpdatedState(shelf)
+    Box(
+        modifier.fillMaxWidth().height(SHELF_TOUCH).pointerInput(tile, inset) {
+            val start = inset.toPx()
+            detectTapGestures { at ->
+                pick(items.pickAt(at.x - start, size.width - 2 * start.toInt(), tile.roundToPx(), SHELF_GAP.roundToPx()))
+            }
+        },
+    )
+}
+
+/** Высота зоны касания полки эффектов врага. */
+private val SHELF_TOUCH = 44.dp
+
+/** Промежуток между плитками полки врага. */
+private val SHELF_GAP = 2.dp
 
 /** С какой доли замаха врага проступает плашка «→ по вам» и за какую долю она набирает силу. */
 private const val AIM_FROM = .55f

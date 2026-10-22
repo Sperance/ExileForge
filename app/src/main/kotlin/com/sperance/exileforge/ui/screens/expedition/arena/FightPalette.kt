@@ -68,6 +68,16 @@ internal fun ailmentTip(view: AilmentView) = Tip(
     ),
 )
 
+/**
+ * Что недуг делает сейчас - действие с числом его силы: «Горит: 42 урона/с», «Замедлен: −30% скорости действий», «Получает на 15%
+ * больше урона»; заморозка - без числа. Силы нет - null.
+ */
+internal fun ailmentAct(view: AilmentView): String? = when {
+    view.ailment == Ailment.FROZEN -> ui("fight.act.FROZEN")
+    view.strength > 0 -> ui("fight.act.${view.ailment.name}", fineNumber(view.strength))
+    else -> null
+}
+
 /** Как окно недуга [ailment] пишет его силу [value]: урон в секунду, доля или срезанное восстановление запаса. */
 private fun strengthFact(ailment: Ailment, value: Double): String = when (ailment) {
     Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING, Ailment.DRAINED -> ui("fight.fact_dps", Rate.perSecond(value))

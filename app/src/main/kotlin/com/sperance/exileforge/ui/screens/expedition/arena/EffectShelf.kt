@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -119,6 +121,24 @@ internal sealed interface Shelved {
     }
 }
 
+/** Открытый лист эффектов: [key] - плитка, которой коснулись ([Shelved.key]); null - лист открыт сверху («+N», вся полка). */
+@Immutable
+internal class ShelfFocus(val key: String?)
+
+/**
+ * Опознание плитки между снимками боя: тот же недуг, эффект того же источника, тот же заряд - один ключ, хотя числа плитки идут.
+ * По нему лист эффектов находит плитку, которой коснулись.
+ */
+internal val Shelved.key: String get() = when (this) {
+    Shelved.Stun -> "stun"
+    is Shelved.Sick -> "sick:${view.ailment.name}"
+    is Shelved.Effect -> "effect:${view.kind.name}:${view.source}:${view.buff?.name}:${view.flask?.name}"
+    is Shelved.Charge -> "charge:${view.kind.name}"
+    is Shelved.Fate -> "fate:${view.fate}"
+    is Shelved.Mod -> "mod:${mod.source.kind.name}:${mod.source.ref}"
+    is Shelved.Power -> "power:${view.stat}"
+}
+
 /**
  * Строка листа эффектов: имя цветом эффекта, откуда он, что делает и сколько ему осталось ([seconds] null - весь бой); [state] - что
  * писать вместо срока (глоток прерван).
@@ -187,9 +207,20 @@ internal val Shelved.lastingGroup: LastingGroup get() = when (this) {
     else -> LastingGroup.ITEMS
 }
 
-@Composable internal fun ShelfTile(item: Shelved, side: Dp) {
-    val index = LocalContentIndex.current
-    val tip = { item.tip(index) }
+/**
+ * Плитка эффекта стороной [side]: касание - её выноска ([tip]) или, с [onPick], выбор плитки (лист эффектов на ней); значки внутри
+ * тогда касаний не ловят.
+ */
+@Composable internal fun ShelfTile(item: Shelved, side: Dp, onPick: (() -> Unit)? = null) {
+    if (onPick != null) {
+        Box(Modifier.clickable(onClick = onPick)) { ShelfTileFace(item, side, null) }
+    } else {
+        val index = LocalContentIndex.current
+        ShelfTileFace(item, side) { item.tip(index) }
+    }
+}
+
+@Composable private fun ShelfTileFace(item: Shelved, side: Dp, tip: (() -> Tip)?) {
     when (item) {
         Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), item.bearing, side, tip)
         is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), item.bearing, side, tip)
@@ -220,9 +251,7 @@ internal fun Shelved.tip(index: ContentIndex?): Tip {
 internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
     Shelved.Stun -> ShelfRow(ui("expedition.stunned"), GoldBright, ui("fight.src.stun"), listOf(ui("fight.effect.STUN")), null)
 
-    is Shelved.Sick -> ailmentTip(view).let { tip ->
-        ShelfRow(ailmentLabel(view), tip.tint, ui("fight.src.ailment"), listOf(tip.body) + tip.facts.filter { it.first != ui("fight.fact_left") }.map { (k, v) -> "$k: $v" }, view.seconds)
-    }
+    is Shelved.Sick -> ShelfRow(ailmentLabel(view), ailmentTint(view.ailment), ui("fight.src.ailment"), listOfNotNull(ailmentAct(view), ui("fight.effect.${view.ailment.name}")), view.seconds)
 
     is Shelved.Effect -> ShelfRow(
         effectTitle(view),
@@ -241,7 +270,7 @@ internal fun Shelved.row(index: ContentIndex?): ShelfRow = when (this) {
         ),
         when {
             view.halted -> listOf(ui("fight.flask_halted"))
-            view.source == INTIMIDATED -> listOf(ui("fight.intimidated_hint"))
+            view.source == INTIMIDATED -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value, index) } + ui("fight.intimidated_hint")
             view.kind == EffectKind.MARK -> listOf(ui("fight.mark_hint"))
             else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value, index) }
         },
@@ -320,7 +349,7 @@ private fun powerBadge(view: PowerView): String? = if (view.standing) {
  * Сила уникального предмета: значок силы цветом уникальной редкости. У силы-события затемнение - оставшаяся перезарядка
  * ([PowerView.cooling]), срабатывание - вспышка плитки ([PowerView.flash], отклик боя - всегда), в углу - [powerBadge].
  */
-@Composable private fun PowerTile(view: PowerView, bearing: Bearing, side: Dp, tip: () -> Tip) {
+@Composable private fun PowerTile(view: PowerView, bearing: Bearing, side: Dp, tip: (() -> Tip)?) {
     val title = statTitle(view.stat)
     Tipped(tip, Modifier.shelfTile(UniqueTint, bearing, side).semantics { contentDescription = title }) {
         StatIcon(view.stat, UniqueTint, Modifier.fillMaxSize().padding(side / 6))
@@ -375,7 +404,7 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 }
 
 /** Строка карты на герое: пунктирная плитка - значок первого сдвинутого стата цветом вреда или пользы ([bearing]). */
-@Composable private fun MapModTile(mod: HeroMapMod, bearing: Bearing, side: Dp, tip: () -> Tip) {
+@Composable private fun MapModTile(mod: HeroMapMod, bearing: Bearing, side: Dp, tip: (() -> Tip)?) {
     val tint = bearing.tint
     val shape = RoundedCornerShape(4.dp)
     val title = modTitle(mod)
@@ -400,21 +429,35 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 }
 
 /**
+ * Сколько плиток из [count] встаёт на полку длиной [room] при плитке [side] и промежутке [gap] (пиксели): не влезли все - на одну
+ * меньше, последней встаёт «+N».
+ */
+internal fun shelfShown(count: Int, room: Int, side: Int, gap: Int): Int {
+    val fit = if (room == Constraints.Infinity) count else ((room + gap) / (side + gap)).coerceAtLeast(1)
+    return if (count > fit) fit - 1 else count
+}
+
+/** Плитка полки длиной [room] под точкой [x] от её начала (пиксели, как у [shelfShown]); «+N» и место за плитками - null. */
+internal fun List<Shelved>.pickAt(x: Float, room: Int, side: Int, gap: Int): Shelved? {
+    if (x < 0) return null
+    val at = (x / (side + gap)).toInt()
+    return getOrNull(at)?.takeIf { at < shelfShown(size, room, side, gap) }
+}
+
+/**
  * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание плитки - её подробная выноска ([tip]), касание «+N» - лист эффектов ([onOpen]).
+ * «+N» последней. Касание плитки - лист эффектов на ней ([onOpen] с плиткой), касание «+N» - лист сверху ([onOpen] с null).
  * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
-@Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
+@Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: (Shelved?) -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
     SubcomposeLayout(modifier) { constraints ->
         val sidePx = side.roundToPx()
         val gapPx = gap.roundToPx()
-        val room = if (vertical) constraints.maxHeight else constraints.maxWidth
-        val fit = if (room == Constraints.Infinity) items.size else ((room + gapPx) / (sidePx + gapPx)).coerceAtLeast(1)
-        val over = items.size > fit
-        val shown = if (over) fit - 1 else items.size
+        val shown = shelfShown(items.size, if (vertical) constraints.maxHeight else constraints.maxWidth, sidePx, gapPx)
+        val over = shown < items.size
         val tile = Constraints.fixed(sidePx, sidePx)
-        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) }.first().measure(tile) } +
-            (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side, onOpen) }.first().measure(tile)) else emptyList())
+        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) { onOpen(items[i]) } }.first().measure(tile) } +
+            (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side) { onOpen(null) } }.first().measure(tile)) else emptyList())
         val length = if (tiles.isEmpty()) 0 else tiles.size * sidePx + (tiles.size - 1) * gapPx
         val width = (if (vertical) sidePx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
         val height = (if (vertical) length else sidePx).coerceIn(constraints.minHeight, constraints.maxHeight)
@@ -495,12 +538,20 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
 /**
  * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
  * разбор (один раз - своей строкой в группе он не повторяется). Эффекты героя на весь бой - свой лист [LastingSheet].
+ * [focus] - ключ плитки, которой коснулись ([Shelved.key]): лист открывается прокрученным к её строке, строка подсвечена.
  * Читается вживую: таймеры идут, бой не стоит.
  */
-@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, onDismiss: () -> Unit) {
+@Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, focus: String? = null, onDismiss: () -> Unit) {
+    val scroll = rememberScrollState()
+    var focusAt by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(focusAt) { focusAt?.let { scroll.scrollTo((it - FOCUS_MARGIN_PX).coerceAtLeast(0)) } }
+    val row: @Composable (Shelved) -> Unit = { item ->
+        val lit = focus != null && item.key == focus
+        SheetRow(item, lit, if (lit) Modifier.onPlaced { if (focusAt == null) focusAt = it.positionInParent().y.roundToInt() } else Modifier)
+    }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
+            Modifier.fillMaxWidth().verticalScroll(scroll).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium)
@@ -508,15 +559,18 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
             if (timed.isEmpty() && lasting.isEmpty() && flow == null) MutedText(ui("fight.no_states"))
             if (timed.isNotEmpty()) {
                 ShelfGroup(ui("fight.shelf.timed", timed.size))
-                timed.forEach { SheetRow(it) }
+                timed.forEach { row(it) }
             }
             if (lasting.isNotEmpty()) {
                 ShelfGroup(ui("fight.shelf.lasting", lasting.size))
-                lasting.forEach { SheetRow(it) }
+                lasting.forEach { row(it) }
             }
         }
     }
 }
+
+/** Сколько пикселей над строкой, к которой прокручен лист эффектов, остаётся видно: заголовок группы над ней. */
+private const val FOCUS_MARGIN_PX = 96
 
 @Composable private fun ShelfGroup(text: String) = Text(
     text.uppercase(),
@@ -569,13 +623,20 @@ internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
     }
 }
 
-@Composable private fun SheetRow(item: Shelved) {
+/** Строка листа эффектов; [lit] - плитка, которой коснулись: строка в золотой подсветке. */
+@Composable private fun SheetRow(item: Shelved, lit: Boolean = false, modifier: Modifier = Modifier) {
     val row = item.row(LocalContentIndex.current)
-    EffectRow({ ShelfTile(item, 30.dp) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
+    EffectRow({ ShelfTileFace(item, 30.dp, null) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"), lit, modifier)
 }
 
-@Composable private fun EffectRow(tile: @Composable () -> Unit, row: ShelfRow, time: String) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+@Composable private fun EffectRow(tile: @Composable () -> Unit, row: ShelfRow, time: String, lit: Boolean, modifier: Modifier) {
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        modifier.fillMaxWidth().then(if (lit) Modifier.background(Gold.copy(alpha = .1f), shape).border(1.dp, Gold.copy(alpha = .6f), shape) else Modifier)
+            .padding(horizontal = if (lit) 6.dp else 0.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
         tile()
         Column(Modifier.weight(1f)) {
             Text(row.title, color = row.tint, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)

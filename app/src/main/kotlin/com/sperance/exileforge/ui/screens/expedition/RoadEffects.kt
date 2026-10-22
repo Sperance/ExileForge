@@ -25,12 +25,14 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.screens.expedition.arena.AllEffects
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectShelf
 import com.sperance.exileforge.ui.screens.expedition.arena.EffectsSheet
+import com.sperance.exileforge.ui.screens.expedition.arena.ShelfFocus
+import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.onShelf
 import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
 
 /**
  * Что герой несёт на карте: недуги - из боя и от ловушек, баффы и проклятия, заряды -
- * плитками той же полки, что в бою ([EffectShelf]: стаки и секунды, касание плитки - её выноска). Слева «≡ N» - лист всех
+ * плитками той же полки, что в бою ([EffectShelf]: стаки и секунды, касание плитки - лист на ней). Слева «≡ N» - лист всех
  * эффектов ([EffectsSheet]) с итогом здоровья в секунду; его же открывает «+N». Ничего не несёт - полки нет, а её высота стоит: низ
  * панели карты не прыгает, когда недуг лёг или сошёл.
  *
@@ -40,14 +42,14 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
     val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
     val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
     val shelf = remember(timed) { timed.filter { it.onShelf } }
-    var open by remember { mutableStateOf(false) }
+    var open by remember { mutableStateOf<ShelfFocus?>(null) }
     Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (timed.isNotEmpty()) {
-            AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = true }
-            EffectShelf(shelf, TILE, { open = true }, Modifier.weight(1f))
+            AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = ShelfFocus(null) }
+            EffectShelf(shelf, TILE, { open = ShelfFocus(it?.key) }, Modifier.weight(1f))
         }
     }
-    if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow) { open = false }
+    open?.let { focus -> EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow, focus.key) { open = null } }
 }
 
 /** Несомое героя одним значением. */

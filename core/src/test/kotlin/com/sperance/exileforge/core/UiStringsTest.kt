@@ -268,6 +268,7 @@ class UiStringsTest {
             AtlasPoints.KINDS.forEach { add("expedition.key_$it") }
             com.sperance.exileforge.core.campaign.run.LootKind.entries.forEach { add("expedition.bag.from.${it.name}") }
             com.sperance.exileforge.core.hero.BagOrder.entries.forEach { add("bag.order.${it.name}") }
+            com.sperance.exileforge.core.display.DpsKind.entries.forEach { add(it.key) }
             AtlasPoints.ALL.forEach { add("atlas.earned.$it") }
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }
             com.sperance.exileforge.core.display.SourceKind.entries.forEach { add("source.${it.name}") }

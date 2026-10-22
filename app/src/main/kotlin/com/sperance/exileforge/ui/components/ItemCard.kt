@@ -45,7 +45,9 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.Term
+import com.sperance.exileforge.core.display.TileGrid
 import com.sperance.exileforge.core.display.TileInk
+import com.sperance.exileforge.core.display.TileLayout
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
@@ -424,17 +426,17 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 }
 
 /**
- * Плитки базы короткой карточки ([ItemView.tiles]) под именем и плашками, до строк: по [TILE_COLUMNS] клетки в ряд, широкая плитка - на
- * две клетки. Свойство без характеристики остаётся фразой.
+ * Плитки базы короткой карточки ([ItemView.tiles]) под именем и плашками, до строк: по [TileLayout.ROW] клетки в ряд ([TileGrid] без
+ * выравнивания), широкая плитка - на две клетки, неполный ряд - с пустыми клетками. Свойство без характеристики остаётся фразой.
  */
 @Composable private fun BaseTiles(item: ItemView, look: RelicLook) {
-    val rows = remember(item) { tileRows(item.tiles) }
+    val rows = remember(item) { TileGrid.rows(item.tiles, TileLayout.ROW, balanced = false) }
     if (rows.isNotEmpty()) {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-                    row.forEach { BaseTileCell(it, look, Modifier.weight(span(it).toFloat())) }
-                    val rest = TILE_COLUMNS - row.sumOf(::span)
+                    row.forEach { BaseTileCell(it, look, Modifier.weight(it.span.toFloat())) }
+                    val rest = TileLayout.ROW - row.sumOf { it.span }
                     if (rest > 0) Spacer(Modifier.weight(rest.toFloat()))
                 }
             }
@@ -522,19 +524,10 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
             softWrap = false,
             autoSize = FIGURE_SIZE,
         )
-        Text(figure.label, color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
+        Text(ui(figure.kind.key), color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
 
-/** Клеток сетки под плиткой [tile]: широкая - две. */
-private fun span(tile: BaseTile): Int = if (tile.wide) 2 else 1
-
-/** Плитки по рядам сетки: следующая плитка, что не влезает в остаток ряда, начинает новый. */
-private fun tileRows(tiles: List<BaseTile>): List<List<BaseTile>> = tiles.fold(mutableListOf<MutableList<BaseTile>>()) { rows, tile ->
-    if (rows.isEmpty() || rows.last().sumOf(::span) + span(tile) > TILE_COLUMNS) rows += mutableListOf<BaseTile>()
-    rows.last() += tile
-    rows
-}
 
 /** Цвет числа плитки [tile]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
 private fun tileInk(tile: BaseTile): Color = when (tile.ink) {
@@ -569,9 +562,6 @@ private val TILE_GROUND = Color.White.copy(alpha = .04f)
 
 /** Наименьшая высота плитки базы - по плитке с подписью в две строки: плитки ряда одной высоты без замера соседей. */
 private val TILE_MIN_HEIGHT = 62.dp
-
-/** Клеток в ряду сетки плиток базы короткой карточки. */
-private const val TILE_COLUMNS = 3
 
 /** Подстрок урона в ряду блока урона полной карточки. */
 private const val ELEMENT_COLUMNS = 2

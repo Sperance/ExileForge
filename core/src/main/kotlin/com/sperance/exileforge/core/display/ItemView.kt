@@ -206,25 +206,41 @@ data class PropertyValue(
  * Плитка числа базы карточки ([ItemView.tiles]): число [value], подпись [label] уже заглавными, вид урона [range] (не урон - null),
  * [wide] - плитка на две клетки сетки, цвет числа - [ink].
  */
-data class BaseTile(val value: String, val label: String, val range: HitRange?, val wide: Boolean, val ink: TileInk)
+data class BaseTile(val value: String, val label: String, val range: HitRange?, val wide: Boolean, val ink: TileInk) {
+    /** Клеток сетки под плиткой: широкая - две. */
+    val span: Int get() = if (wide) 2 else 1
+}
+
+/**
+ * Раскладка плиток базы по рядам - одна для полной и короткой карточки: ряд берёт плитки по порядку, пока их клетки ([BaseTile.span])
+ * влезают в [columns]; с [balanced] одинокая узкая плитка последнего ряда забирает одну у ряда из узких перед ним (4 - 2 + 2,
+ * 7 - 3 + 2 + 2), и ряды без пустых клеток растягивают свои плитки; без него ряд неполон, остаток - пустые клетки.
+ */
+object TileGrid {
+    fun rows(tiles: List<BaseTile>, columns: Int, balanced: Boolean): List<List<BaseTile>> {
+        val rows = tiles.fold(mutableListOf<MutableList<BaseTile>>()) { rows, tile ->
+            if (rows.isEmpty() || rows.last().sumOf { it.span } + tile.span > columns) rows += mutableListOf<BaseTile>()
+            rows.last() += tile
+            rows
+        }
+        val last = rows.lastOrNull()
+        val before = rows.getOrNull(rows.size - 2)
+        if (!balanced || last == null || before == null || last.size != 1 || last.single().wide || before.size < 2 || before.any { it.wide }) return rows
+        return rows.dropLast(2) + listOf(before.dropLast(1), listOf(before.last()) + last)
+    }
+}
 
 /**
  * Раскладка плиток базы полной карточки ([ItemView.tileLayout]): блок урона [damage] во всю ширину (null - урона у вещи нет) и
  * прочие плитки [rest] рядами без пустых клеток ([rows]).
  */
 data class TileLayout(val damage: DamageBlock?, val rest: List<BaseTile>) {
-    /**
-     * Прочие плитки рядами: по [ROW] в ряд, ряд растягивает свои плитки на всю ширину; одинокая плитка последнего ряда
-     * забирает одну у ряда перед ним - 4 плитки встают 2 + 2, 5 - 3 + 2, 7 - 3 + 2 + 2.
-     */
-    val rows: List<List<BaseTile>> by lazy {
-        val rows = rest.chunked(ROW)
-        if (rows.size > 1 && rows.last().size == 1) rows.dropLast(2) + rows.takeLast(2).flatten().chunked(PAIR) else rows
-    }
+    /** Прочие плитки рядами по [ROW] клетки без пустых клеток ([TileGrid] с выравниванием): 4 плитки - 2 + 2, 5 - 3 + 2. */
+    val rows: List<List<BaseTile>> by lazy { TileGrid.rows(rest, ROW, balanced = true) }
 
-    private companion object {
+    companion object {
+        /** Клеток в ряду плиток базы карточки. */
         const val ROW = 3
-        const val PAIR = 2
     }
 }
 
@@ -234,8 +250,15 @@ data class TileLayout(val damage: DamageBlock?, val rest: List<BaseTile>) {
  */
 data class DamageBlock(val main: BaseTile, val elements: List<BaseTile>, val dps: List<DpsFigure>)
 
-/** Урон в секунду блока урона: подпись [label] и число [value]. */
-data class DpsFigure(val label: String, val value: String)
+/** Урон в секунду блока урона: вид [kind] и число [value]. */
+data class DpsFigure(val kind: DpsKind, val value: String)
+
+/** Вид урона в секунду блока урона; [key] - подпись в словаре клиента. */
+enum class DpsKind(val key: String) {
+    PHYSICAL("card.dps_physical"),
+    ELEMENTAL("card.dps_elemental"),
+    TOTAL("card.dps_total"),
+}
 
 /** Цвет числа плитки базы: [DAMAGE] - цветом вида урона плитки (стихия), [AUGMENTED] - число, сдвинутое строками копии, [PLAIN] - прочее. */
 enum class TileInk { PLAIN, AUGMENTED, DAMAGE }
@@ -410,9 +433,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         val physical = perSecond[HitRange.PHYSICAL] ?: 0.0
         val elemental = ELEMENTAL.sumOf { perSecond[it] ?: 0.0 }
         listOfNotNull(
-            physical.takeIf { it > 0 }?.let { DpsFigure(ui("card.dps_physical"), fineNumber(it)) },
-            elemental.takeIf { it > 0 }?.let { DpsFigure(ui("card.dps_elemental"), fineNumber(it)) },
-            perSecond.takeIf { it.size > 1 }?.let { DpsFigure(ui("card.dps_total"), fineNumber(it.values.sum())) },
+            physical.takeIf { it > 0 }?.let { DpsFigure(DpsKind.PHYSICAL, fineNumber(it)) },
+            elemental.takeIf { it > 0 }?.let { DpsFigure(DpsKind.ELEMENTAL, fineNumber(it)) },
+            perSecond.takeIf { it.size > 1 }?.let { DpsFigure(DpsKind.TOTAL, fineNumber(it.values.sum())) },
         )
     }
 

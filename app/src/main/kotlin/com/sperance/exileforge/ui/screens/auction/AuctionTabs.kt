@@ -161,7 +161,7 @@ internal fun lotColor(lot: AuctionLot) = rarityColor(lot.rarity?.name.orEmpty())
 internal fun sellerName(lot: AuctionLot): String = lot.sellerName.ifBlank { "…${lot.sellerId.takeLast(6)}" }
 
 /** The requirements the lot's template misses against the hero's sheet; empty for a stack, and for a wearable copy. */
-internal fun lotUnmet(game: GameUi, lot: AuctionLot): List<String> = lot.equipment?.let { game.unmetFor(it.template) }.orEmpty()
+internal fun lotUnmet(game: GameUi, lot: AuctionLot): List<String> = lot.equipment?.let { game.unmetFor(it) }.orEmpty()
 
 /** A stack lot's facts: how many, or what kind of goods when it is one. */
 internal fun stackFacts(lang: Lang, lot: AuctionLot): List<String> = listOf(if (lot.amount > 1) ui("auction.pieces", lot.amount) else lotKindTitle(lot.kind, lang))
@@ -213,7 +213,7 @@ internal fun LotSheet(
                         detailed = true,
                         priced = false,
                         totals = wearTotals(game, copy, rememberWearChoice(game, copy)),
-                        unmet = game.unmetNeeds(copy.template),
+                        unmet = game.unmetNeeds(copy),
                         seals = game.itemSeals(copy),
                     )
                 }

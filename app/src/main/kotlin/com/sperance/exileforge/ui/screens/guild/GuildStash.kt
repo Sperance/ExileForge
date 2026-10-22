@@ -307,7 +307,7 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
     val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { bill?.takeIf { price > 0 }?.let { GoldCost(it) } ?: GoldPrice(price) }
     val by = listOf(ui("guild.stash_by", entry.by))
     if (view != null) {
-        ItemTradeRow(view, enabled = true, unmet = game.unmetFor(view.code), extra = by, onClick = open, price = tag)
+        ItemTradeRow(view, enabled = true, unmet = game.unmetFor(view.item), extra = by, onClick = open, price = tag)
     } else {
         TradeRow(
             itemTitle(entry.code),

@@ -98,7 +98,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             if (offers.isNotEmpty()) item(key = "filter") { ItemSearchBar(filterState, ui("merchant.search"), game.lang, onFilter = { filtering = true }) }
             if (offers.isNotEmpty() && shelf != null && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
             items(visible, key = { it.first.id }) { (offer, view) ->
-                ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
+                ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item), onClick = { chosen = offer }) { game.goldBill(offer.price)?.let { GoldCost(it, purse = false) } ?: GoldPrice(offer.price) }
             }
         }
     }
@@ -154,7 +154,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item)) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item), seals = game.itemSeals(item)) }
             }
             OrnateDivider()
             Row(

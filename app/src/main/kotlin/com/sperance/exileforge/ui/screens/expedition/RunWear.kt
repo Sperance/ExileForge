@@ -89,7 +89,7 @@ internal fun runWearAction(game: GameUi, vm: ExpeditionViewModel, item: ItemInst
         twin -> ui("hero.unique_worn")
         else -> null
     }
-    val can = reason == null && game.unmetFor(item.template).isEmpty() && !game.busy && (game.ownsCharacter || game.isAdmin)
+    val can = reason == null && game.unmetFor(item).isEmpty() && !game.busy && (game.ownsCharacter || game.isAdmin)
     val notes: (@Composable ColumnScope.() -> Unit)? = if (reason == null) ({ RunWearNotes(game, vm, item.id, place) }) else null
     return InspectAction(ui(if (wearing.lock == GearLock.FIGHT) "expedition.wear_after_fight" else "hero.equip"), enabled = can, reason = reason, notes = notes) {
         then()

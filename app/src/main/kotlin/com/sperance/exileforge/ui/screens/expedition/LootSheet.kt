@@ -73,7 +73,7 @@ internal fun LootSheet(
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
             Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val shown = remember(item, game.hero) { game.hero?.item(item.id)?.takeIf { it.serial != item.item.serial }?.let { ItemView(it, item.template, item.index) } ?: item }
-                ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(dressed, item.item, choice), unmet = dressed.unmetNeeds(item.code), seals = game.itemSeals(item.item))
+                ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(dressed, item.item, choice), unmet = dressed.unmetNeeds(item.item), seals = game.itemSeals(item.item))
                 when (stand) {
                     LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
                     LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))

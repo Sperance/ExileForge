@@ -162,7 +162,7 @@ class GearVerdicts {
         if (item.equipped || item.socketed) return emptyList()
         val slot = index.template(item.template)?.slot ?: return emptyList()
         if (slot.isJewelLike) return emptyList()
-        val wearable = Sheets.unmet(index, item.template, hero.level, hero.stats).isEmpty()
+        val wearable = Sheets.unmet(index, item, hero.level, hero.stats).isEmpty()
         val worn = hero.equipped
         return EquipSlots.places(slot).map { place ->
             val verdict = when {

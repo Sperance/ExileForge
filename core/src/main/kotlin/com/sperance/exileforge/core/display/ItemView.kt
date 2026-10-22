@@ -30,6 +30,7 @@ import com.sperance.exileforge.rules.sheet.AmplifiedLine
 import com.sperance.exileforge.rules.sheet.Amplify
 import com.sperance.exileforge.rules.sheet.DamageRange
 import com.sperance.exileforge.rules.sheet.FlaskSheet
+import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.WeaponDamage
@@ -263,7 +264,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val mapLevel: Int? get() = areaLevel?.takeIf { item.mapTier <= 0 }
 
     val trade: String? get() = tradeName(code, equipment = true)
-    val requirements: List<ItemNeed> get() = itemRequirements(template)
+    val requirements: List<ItemNeed> get() = itemRequirements(template, Requirements.level(index, template, item))
     val visualKind: ItemVisualKind get() = itemVisualKind(template)
 
     private val text by lazy { modifierText(index) }
@@ -472,12 +473,11 @@ enum class NeedKind(val word: String?) {
 data class ItemNeed(val kind: NeedKind, val text: String)
 
 /**
- * What a hero must reach before an item counts, shortened for a line; level 1 is not a requirement at all.
- *
- * Классовую уникалку носит только свой класс.
+ * Что герою нужно, чтобы вещь работала, коротко для строки: уровень [level] (у копии - [Requirements.level], у шаблона - база;
+ * первый уровень не требование) и атрибуты шаблона [template]. Классовую уникалку носит только свой класс.
  */
-fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
-    template.requiredLevel.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, "$it ${ui(lang, "req.short.requiredLevel")}") },
+fun itemRequirements(template: ItemTemplate, level: Int = template.requiredLevel, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
+    level.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, "$it ${ui(lang, "req.short.requiredLevel")}") },
     template.requiredStrength.takeIf { it > 0 }?.let { ItemNeed(NeedKind.STRENGTH, "$it ${ui(lang, "req.short.requiredStrength")}") },
     template.requiredDexterity.takeIf { it > 0 }?.let { ItemNeed(NeedKind.DEXTERITY, "$it ${ui(lang, "req.short.requiredDexterity")}") },
     template.requiredIntelligence.takeIf { it > 0 }?.let { ItemNeed(NeedKind.INTELLIGENCE, "$it ${ui(lang, "req.short.requiredIntelligence")}") },

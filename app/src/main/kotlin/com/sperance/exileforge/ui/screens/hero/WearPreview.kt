@@ -84,7 +84,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
  * боя, что сдвиги.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, choice: WearChoice, look: RelicLook) {
-    val unmet = game.unmetFor(item.template)
+    val unmet = game.unmetFor(item)
     val selected = choice.selected
     val place = choice.target
     val apart = game.index?.template(item.template)?.slot?.let { it.isFlask || it.isTool } == true

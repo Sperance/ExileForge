@@ -67,7 +67,7 @@ internal fun RunSlotPicker(game: GameUi, vm: ExpeditionViewModel, place: BodyPla
     val inspect = rememberInspect()
     val (found, stash) = remember(hero, game.index, place, wearing.wearable) {
         hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
-            .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
+            .sortedWith(compareBy({ game.unmetFor(it.item).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
             .partition { it.id in wearing.wearable }
     }
     val worn = remember(hero, game.index, place) { place.wornIn(hero.equipped)?.let { game.view(it) } }
@@ -78,7 +78,7 @@ internal fun RunSlotPicker(game: GameUi, vm: ExpeditionViewModel, place: BodyPla
             worn?.let { piece -> item(key = "worn") { WornLootRow(piece) } }
             item(key = "found") { Text(ui("expedition.wear_pick_found", found.size), color = Vital, style = MaterialTheme.typography.labelLarge) }
             items(found, key = { it.id }) { piece ->
-                ItemRow(piece, unwearable = game.unmetFor(piece.code), price = game.sellPrice(piece.item), verdict = rememberGearVerdict(game, piece.item, place.place)) {
+                ItemRow(piece, unwearable = game.unmetFor(piece.item), price = game.sellPrice(piece.item), verdict = rememberGearVerdict(game, piece.item, place.place)) {
                     inspect(Inspect.Copy(piece.item, runWearAction(game, vm, piece.item, place.place, wearing, then = onDismiss)))
                 }
             }

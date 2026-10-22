@@ -89,11 +89,11 @@ internal object HeroLens {
     /** Места [item] с тем, что там надето, и вердиктом каждого; пусто - вещь не надеть. */
     fun wearPlaces(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<WearPlace> = verdicts.places(index, hero, item)
 
-    /** The requirements the template [code] misses against the sheet, in the rules' words; empty means it can be worn. */
-    fun unmet(index: ContentIndex?, hero: HeroView?, code: String): List<String> {
+    /** Чего копии [item] не хватает против листа героя, словами правил ([Sheets.unmet]); пусто - можно надеть. */
+    fun unmet(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<String> {
         index ?: return emptyList()
         hero ?: return emptyList()
-        return Sheets.unmet(index, code, hero.level, hero.stats)
+        return Sheets.unmet(index, item, hero.level, hero.stats)
     }
 
     /** What the hero's auras hold of the pool [pool], as the fight holds it (лист боя); null until the hero's sheet is here. */
@@ -178,16 +178,16 @@ fun HeroView.socketing(index: ContentIndex, jewel: ItemInstance, socket: String)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
-fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
+fun GameUi.unmetFor(item: ItemInstance): List<String> = HeroLens.unmet(index, hero, item)
 
 /** Вещи тайника героя, что встают на место [place]: не в гнёздах, слотом под это место; пусто - нечем заменить. */
 fun GameUi.placeCandidates(place: BodyPlace): List<ItemView> = hero?.stash.orEmpty().filter { !it.socketed }.mapNotNull { view(it) }.filter { place.takes(it.slot) }
 
-/** Какие требования вещи [code] герой не выполняет - по чипу карточки; героя или шаблона нет - null (без отметок). */
-fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {
+/** Какие требования копии [item] герой не выполняет - по чипу карточки; героя или шаблона нет - null (без отметок). */
+fun GameUi.unmetNeeds(item: ItemInstance): Set<NeedKind>? {
     val hero = hero ?: return null
-    val template = index?.template(code) ?: return null
-    return unmetNeeds(template, hero.heroClass, unmetFor(code))
+    val template = index?.template(item.template) ?: return null
+    return unmetNeeds(template, hero.heroClass, unmetFor(item))
 }
 fun GameUi.reserve(pool: ReservePool): PoolReserve? = HeroLens.reserve(hero, pool)
 

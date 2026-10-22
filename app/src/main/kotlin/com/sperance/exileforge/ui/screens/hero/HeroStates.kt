@@ -106,7 +106,7 @@ import com.sperance.exileforge.ui.components.accountRole
     return remember(visible, hero?.level, hero?.stats, game.index, waiting) {
         visible.map { piece ->
             val worn = piece.equipped || piece.socketed
-            StashLine(piece, worn, game.unmetFor(piece.code), game.sellPrice(piece.item).takeUnless { worn }, piece.id in waiting)
+            StashLine(piece, worn, game.unmetFor(piece.item), game.sellPrice(piece.item).takeUnless { worn }, piece.id in waiting)
         }
     }
 }

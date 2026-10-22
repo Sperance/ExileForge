@@ -124,7 +124,7 @@ fun wearOffer(game: GameUi, model: HeroViewModel, shell: ShellViewModel, item: I
             }
         }
 
-        else -> WearOffer(ui("hero.equip"), can && game.unmetFor(item.template).isEmpty() && !twin) { place ->
+        else -> WearOffer(ui("hero.equip"), can && game.unmetFor(item).isEmpty() && !twin) { place ->
             onDone()
             model.equip(item.id, place)
         }

@@ -525,7 +525,7 @@ internal fun percent(value: Double): String = if (value % 1.0 == 0.0) value.toLo
             detailed = true,
             priced = false,
             totals = wearTotals(game, copy, rememberWearChoice(game, copy)),
-            unmet = game.unmetNeeds(copy.template),
+            unmet = game.unmetNeeds(copy),
             seals = game.itemSeals(copy),
         )
     } else {

@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.sheet.gearVerdict
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.QualityKind
 import kotlinx.serialization.Serializable
 
@@ -197,7 +198,7 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
 
 /**
  * Что фильтр предметов спрашивает о герое на экране: [heroName] - для «сделано мной», [heroLevel] - для «Около моего» вилки уровня,
- * [unmet] - чего шаблону не хватает до «могу надеть», [better] - улучшит ли вещь героя на своём месте («лучше надетого»,
+ * [unmet] - чего копии не хватает до «могу надеть», [better] - улучшит ли вещь героя на своём месте («лучше надетого»,
  * [GearVerdict.better][com.sperance.exileforge.core.character.GearVerdict.better]).
  */
 interface ItemJudge {
@@ -205,7 +206,7 @@ interface ItemJudge {
 
     val heroLevel: Int
 
-    fun unmet(code: String): List<String>
+    fun unmet(item: ItemInstance): List<String>
 
     fun better(piece: ItemView): Boolean
 }
@@ -276,7 +277,7 @@ data class ItemFilter(
             (!on(FilterFacet.MOD) || mod == null || piece.hasModStat(mod)) &&
             (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == judge.heroName) &&
             (!on(FilterFacet.CRAFTED) || !crafted || piece.item.origin != null) &&
-            (!on(FilterFacet.WEARABLE) || !wearable || judge.unmet(piece.code).isEmpty()) &&
+            (!on(FilterFacet.WEARABLE) || !wearable || judge.unmet(piece.item).isEmpty()) &&
             !hides(piece, shelf) &&
             (!on(FilterFacet.BETTER) || !better || judge.better(piece))
     }
@@ -330,7 +331,7 @@ val GameUi.itemJudge: ItemJudge get() {
 
         override val heroLevel: Int = game.heroLevel
 
-        override fun unmet(code: String): List<String> = game.unmetFor(code)
+        override fun unmet(item: ItemInstance): List<String> = game.unmetFor(item)
 
         override fun better(piece: ItemView): Boolean = game.gearVerdict(piece.item)?.better == true
     }

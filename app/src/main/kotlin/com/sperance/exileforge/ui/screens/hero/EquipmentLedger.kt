@@ -238,18 +238,18 @@ private fun EmptyNote(text: String) {
 fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = game.hero ?: return
     val inspect = rememberInspect()
-    val (fitting, unmetByCode) = remember(hero.items, hero.level, hero.stats, game.index, place) {
+    val (fitting, unmetById) = remember(hero.items, hero.level, hero.stats, game.index, place) {
         val pieces = game.placeCandidates(place)
-        val unmet = pieces.map { it.code }.distinct().associateWith { game.unmetFor(it) }
+        val unmet = pieces.associate { it.id to game.unmetFor(it.item) }
         val price = pieces.associate { it.id to it.sellPrice() }
-        pieces.sortedWith(compareBy({ unmet.getValue(it.code).isNotEmpty() }, { -price.getValue(it.id) })) to unmet
+        pieces.sortedWith(compareBy({ unmet.getValue(it.id).isNotEmpty() }, { -price.getValue(it.id) })) to unmet
     }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("hero.slot_pick", slotTitle(place.code, game.lang))) }
             if (fitting.isEmpty()) item { InfoCard(ui("hero.slot_pick_empty"), ui("hero.slot_pick_hint")) }
             items(fitting, key = { it.id }) { piece ->
-                val unmet = unmetByCode.getValue(piece.code)
+                val unmet = unmetById.getValue(piece.id)
                 ItemRow(
                     piece,
                     unwearable = unmet,

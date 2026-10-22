@@ -481,7 +481,7 @@ private class ToolPick(val options: List<PickOption<String>>, val worn: String?,
     val inspect = rememberInspect()
     val worn = profession.equipped?.id
     return remember(game.lang, game.hero, tools, inspect) {
-        val options = PickOptions.copies(tools) { view -> if (view.id == worn) emptyList() else game.unmetFor(view.code) }
+        val options = PickOptions.copies(tools) { view -> if (view.id == worn) emptyList() else game.unmetFor(view.item) }
         ToolPick(options, worn) { id -> tools.firstOrNull { it.id == id }?.let { inspect(Inspect.Copy(it.item)) } }
     }
 }

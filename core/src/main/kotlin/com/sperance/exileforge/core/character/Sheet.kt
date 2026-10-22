@@ -158,8 +158,11 @@ object Sheets {
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, result.stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, items.filter { it.equipped }))))
     }
 
-    /** What an item's requirements miss for a hero with [stats], in the rules' words; empty means it can be worn. */
-    fun unmet(index: ContentIndex, templateCode: String, level: Int, stats: Map<String, Double>): List<String> = index.template(templateCode)?.let { Requirements.unmet(it, level, stats) }.orEmpty()
+    /**
+     * Чего копии [item] не хватает у героя уровня [level] с листом [stats], словами правил: уровень копии ([Requirements.level])
+     * и атрибуты шаблона; пусто - можно надеть.
+     */
+    fun unmet(index: ContentIndex, item: ItemInstance, level: Int, stats: Map<String, Double>): List<String> = index.template(item.template)?.let { Requirements.unmet(it, level, stats, Requirements.level(index, it, item)) }.orEmpty()
 
     /**
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a

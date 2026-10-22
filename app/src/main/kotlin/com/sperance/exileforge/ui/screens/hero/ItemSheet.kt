@@ -82,7 +82,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         waiting = waiting,
                         totals = wearTotals(game, instance, wear),
                         seals = game.itemSeals(instance),
-                        unmet = game.unmetNeeds(instance.template),
+                        unmet = game.unmetNeeds(instance),
                     )
                 }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }

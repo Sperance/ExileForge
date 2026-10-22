@@ -152,7 +152,7 @@ private val NO_CHOICE = InspectChoice(null)
         OwnItemActions(game, item, shown.forge, onDismiss)
     }
     CardSheet(onDismiss, footer.takeIf { acts }) {
-        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item.template), seals = game.itemSeals(item))
+        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item), seals = game.itemSeals(item))
     }
 }
 

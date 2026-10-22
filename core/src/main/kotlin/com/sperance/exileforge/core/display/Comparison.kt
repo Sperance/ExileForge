@@ -138,7 +138,7 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
                 if (low == high) signed(low) { number(it) } else ui("compare.range", signed(low) { number(it) }, signed(high) { number(it) }),
                 StatPolarity.better(index, change.stat, change.change),
                 StatPriority.rank(change.stat),
-                share(was.first + was.second, will.first + will.second),
+                share(was.min + was.max, will.min + will.max),
             )
         }
 

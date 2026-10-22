@@ -224,7 +224,7 @@ class SessionActions(
             read(Reads.HERO, silent = true) {
                 loader.ensureContent(fresh = true)
                 heroSync.readHero()
-                expedition.resume(heroId)
+                resumeRuns(heroId)
             }
             connectionActions.wake(now = true)
         }

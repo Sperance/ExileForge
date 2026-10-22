@@ -266,6 +266,8 @@ data class EffectView(
     val halted: Boolean = false,
     /** Чей это эффект, когда его источник - не умение: тотем, ярость боя; null - имя по коду источника. */
     val origin: EffectOrigin? = null,
+    /** Слоёв проклятия со слоями ([com.sperance.exileforge.rules.content.SkillCurse.layers]): плитка пишет «×N» с двух; иначе 1. */
+    val layers: Int = 1,
 ) {
     /** Лежит весь бой: носимый с начала бафф ([Battle.wear]) или пассивное умение - полка «на весь бой», не таймер. */
     val lasting: Boolean get() = passive || seconds >= Battle.FOREVER / 2

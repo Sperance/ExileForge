@@ -113,7 +113,7 @@ class CharacterActions(
             store.saveLastHero(sessions.state.value.server, id)
             loader.ensureContent(fresh = true)
             trace.step(StartStage.SESSION, "start.step.hero") { heroSync.readHero() }
-            expedition.resume(id)
+            resumeRuns(id)
         }
     }
 

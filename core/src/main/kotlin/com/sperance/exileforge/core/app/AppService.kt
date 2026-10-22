@@ -38,6 +38,7 @@ abstract class AppService(
     protected val heroSync get() = actions.heroSync
     protected val expedition get() = actions.expedition
     protected val trial get() = actions.trial
+    protected val rift get() = actions.rift
     protected val town get() = actions.town
 
     /** Текущий сервер: заменяется при смене адреса и при входе. */
@@ -47,6 +48,15 @@ abstract class AppService(
 
     /** Герой на экране, как его называет каждый маршрут героя. */
     protected val heroId: String get() = heroes.heroId
+
+    /**
+     * Вход в героя [id]: незаконченные заходы с прошлого запуска возвращаются - журнал похода досылается, незакрытый поход
+     * предлагается продолжить, открытый забег Разлома открывает Разлом сразу.
+     */
+    protected suspend fun resumeRuns(id: String) {
+        expedition.resume(id)
+        rift.resume()
+    }
 
     /** Ответ про другого героя не рисуется. */
     protected fun onScreen(id: String): Boolean = heroes.onScreen(id)

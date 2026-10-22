@@ -16,13 +16,16 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.RiftActions
 import com.sperance.exileforge.core.expedition.RiftState
+import com.sperance.exileforge.core.expedition.RiftStep
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.session.Activity
+import com.sperance.exileforge.core.session.CallState
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.WorldPoint
+import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
@@ -111,12 +114,22 @@ class ExpeditionViewModel(
 
     /** Разлом недели. */
     val riftState: StateFlow<RiftState> = rift.state
+
+    /** Шаг Разлома в пути: ожидание, «нет связи», «связь восстановлена». */
+    val riftStep: StateFlow<CallState<RiftStep>> = rift.step
+
+    /** Итог боя Разлома в пути. */
+    val riftDelivery: StateFlow<CallState<RiftAct.Fight>> = rift.delivery
+
+    /** Кнопки забега живы ([RiftActions.canAct]). */
+    val riftCanAct: StateFlow<Boolean> = rift.canAct
+    fun retryRiftStep() = rift.retryStep()
     fun openRift() = rift.open()
-    fun closeRift() = rift.close()
-    fun refreshRift() = rift.refresh()
+    fun closeRift() = rift.closeGate()
     fun startRift() = rift.start()
-    fun riftAct(act: com.sperance.exileforge.rules.rift.RiftAct) = rift.act(act)
+    fun riftAct(act: RiftAct) = rift.act(act)
     fun riftGo(node: Int) = rift.go(node)
+    fun leaveRift() = rift.leave()
     fun riftCommand(command: RunCommand) = rift.send(command)
     fun dismissRiftResult() = rift.dismissResult()
     fun dismissRiftToll() = rift.dismissToll()

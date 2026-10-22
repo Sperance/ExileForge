@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -110,7 +111,8 @@ object ForgeSheetDefaults {
  * вернётся с запасом [HYSTERESIS], - поле с фокусом остаётся видно. Решает раскладка ([SheetFramePolicy]): клавиатура и размеры не
  * перекомпоновывают лист. [contentModifier] ложится на всё содержимое листа под ручкой (полоса редкости подтверждения).
  *
- * Закрытие доходит до вызывающего один раз, сколько бы раз о нём ни сказали жест, затемнение и «назад».
+ * Закрытие доходит до вызывающего один раз, сколько бы раз о нём ни сказали жест, затемнение и «назад». Лист с [held] держится: ни
+ * жест, ни затемнение, ни «назад» его не закрывают и ручки у него нет - закрывает только его кнопка (итог, который нельзя пропустить).
  *
  * Аккорд громкости работает и поверх листа: у листа своё окно.
  */
@@ -126,6 +128,7 @@ fun ForgeSheet(
     header: (@Composable ColumnScope.() -> Unit)? = null,
     footer: (@Composable RowScope.() -> Unit)? = null,
     contentModifier: Modifier = Modifier,
+    held: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val dismiss by rememberUpdatedState(onDismissRequest)
@@ -139,10 +142,11 @@ fun ForgeSheet(
             }
         },
         modifier = modifier,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !held || it != SheetValue.Hidden }),
+        sheetGesturesEnabled = !held,
         shape = shape,
         containerColor = containerColor,
-        dragHandle = dragHandle,
+        dragHandle = dragHandle.takeUnless { held },
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
         ChordOverWindow()

@@ -69,17 +69,24 @@ private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {
     monsterSkill(me, skill)
 }
 
-/** Есть ли у монстра [me] повод применить готовое умение [skill]: лечение - раненым, благо и проклятие - если ещё не лежат. */
+/** Слоёв проклятия умения [code] на бойце: 0 - не лежит; предел слоёв (`SkillCurse.layers`, не меньше 1) держит проверка контента. */
+internal fun Fighter.curseLayers(code: String): Int = effects.firstOrNull { it.kind == EffectKind.CURSE && it.source == code }?.stacks ?: 0
+
+/**
+ * Есть ли у монстра [me] повод применить готовое умение [skill]: лечение - раненым, благо - если ещё не лежит, проклятие - если не
+ * лежит или его слоёв меньше предела ([com.sperance.exileforge.rules.content.SkillCurse.layers]).
+ */
 internal fun Battle.wanted(me: Fighter, skill: MonsterSkill): Boolean = when {
     skill.heal != null -> me.life < me.body.maxLife * 0.6
     skill.buff != null -> me.effects.none { it.source == skill.code }
-    skill.curse != null -> !heroFighter.body.immuneCurse && heroFighter.effects.none { it.source == skill.code }
+    skill.curse != null -> !heroFighter.body.immuneCurse && skill.curse?.let { heroFighter.curseLayers(skill.code) < it.layers } == true
     skill.manaBurn > 0 && skill.hit == null -> heroFighter.mana > 0
     else -> true
 }
 
 /**
  * What a monster's skill does: a share of its own swing in the skill's element, a buff, a curse, a heal, a burn of the hero's mana.
+ * Проклятие со слоями кладёт ещё слой поверх своего же: строки - на число слоёв, срок - заново.
  *
  * Чары заклинателя несут его урон заклинаний в стихии умения. «Эффект кличей» монстра растит только клич, не всякое благо.
  */
@@ -118,7 +125,8 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
         record(Side.MONSTER, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, me.index, skill.code, onSelf = true)
     }
     skill.curse?.let { curse ->
-        lay(hero, TimedEffect(EffectKind.CURSE, skill.code, curse.stats.lines(1), time + curse.duration, curse.duration))
+        val layers = (hero.curseLayers(skill.code) + 1).coerceAtMost(curse.layers)
+        lay(hero, TimedEffect(EffectKind.CURSE, skill.code, curse.stats.lines(1, layers.toDouble()), time + curse.duration, curse.duration, stacks = layers))
         record(Side.MONSTER, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, me.index, skill.code)
     }
     skill.heal?.let { heal ->

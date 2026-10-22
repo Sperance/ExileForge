@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -39,20 +40,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.CallState
-import com.sperance.exileforge.core.session.CallTimes
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Muted
+import kotlinx.coroutines.delay
+
+/** Пороги ожидания запроса для экрана, мс от его начала: спиннер на нажатой кнопке и полоса «Сервер долго отвечает». */
+object CallTimes {
+    const val SPINNER_MS = 1_500L
+    const val SLOW_MS = 8_000L
+}
 
 /**
  * Что показывает полоса запроса ([RequestStrip]): ничего, ожидание с [Waiting.since] (попытка [Waiting.attempt] из [Waiting.attempts],
- * без счёта - null), нет связи с пояснением [Offline.note] и «Повторить» ([Offline.onRetry], без кнопки - null), связь восстановлена.
+ * без счёта - null), нет связи с пояснением [Offline.note] и «Повторить», если [Offline.retry], связь восстановлена.
  */
-sealed interface StripState {
+@Immutable sealed interface StripState {
     data object None : StripState
 
     data class Waiting(val since: Long, val attempt: Int, val attempts: Int?) : StripState
 
-    data class Offline(val note: String, val onRetry: (() -> Unit)?) : StripState
+    data class Offline(val note: String, val retry: Boolean) : StripState
 
     data object Restored : StripState
 }
@@ -63,34 +70,41 @@ sealed interface StripState {
  */
 @Immutable data class StripTones(val line: Color, val track: Color, val restored: Color, val muted: Color = Muted)
 
-/**
- * Полоса шага, что повторяется сам ([CallState]): «нет связи» с «Повторить» ([onRetry]) и пояснением [offlineNote] - по умолчанию
- * «выбор сохранён».
- */
-fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_saved")): StripState = when (this) {
+/** Полоса запроса, что повторяется сам ([CallState]): «нет связи» - с пояснением [offlineNote] и, если [retry], с «Повторить». */
+fun CallState<*>.strip(offlineNote: String, retry: Boolean = true): StripState = when (this) {
     CallState.Idle -> StripState.None
     is CallState.Waiting -> StripState.Waiting(since, attempt, attempts)
-    is CallState.Lost -> StripState.Offline(offlineNote, onRetry)
+    is CallState.Lost -> StripState.Offline(offlineNote, retry)
     CallState.Restored -> StripState.Restored
 }
 
-/**
- * Нажатая кнопка [tag] крутит спиннер: её запрос ждёт ответа дольше [CallTimes.SPINNER_MS]. Часы читаются, только пока запрос этой
- * кнопки в полёте.
- */
-@Composable fun CallState.spins(tag: Any?): Boolean {
-    val waiting = this as? CallState.Waiting ?: return false
-    if (waiting.tag != tag) return false
-    val now by rememberNow(TICK_MS)
-    return now - waiting.since >= CallTimes.SPINNER_MS
+/** Нажатая кнопка [tag] крутит спиннер: её запрос ждёт ответа дольше [CallTimes.SPINNER_MS]. */
+@Composable fun <T> CallState<T>.spins(tag: T): Boolean {
+    val waiting = this as? CallState.Waiting<T> ?: return false
+    return waiting.tag == tag && reached(waiting.since, CallTimes.SPINNER_MS)
 }
 
 /**
- * Полоса состояния запроса под шапкой экрана, во всю ширину. В ожидании - тонкая бегущая линия; с [CallTimes.SLOW_MS] от нажатия -
- * полоса «Сервер долго отвечает · попытка N из M»; нет связи - «Нет связи», пояснение и «Повторить» справа (без повтора - только
- * пояснение); «Связь восстановлена» - коротко, пока её держит модель. Ничего - пустое место нулевой высоты.
+ * Прошло ли [threshold] мс с [since] (мс стены): одна задержка до порога, без тиков - полоса и спиннер не перерисовываются, пока
+ * порог не наступил.
  */
-@Composable fun RequestStrip(state: StripState, tones: StripTones, modifier: Modifier = Modifier) {
+@Composable private fun reached(since: Long, threshold: Long): Boolean {
+    val reached by produceState(System.currentTimeMillis() - since >= threshold, since, threshold) {
+        val left = threshold - (System.currentTimeMillis() - since)
+        if (left > 0) {
+            delay(left)
+            value = true
+        }
+    }
+    return reached
+}
+
+/**
+ * Полоса состояния запроса под шапкой экрана, во всю ширину. В ожидании - тонкая бегущая линия; с [CallTimes.SLOW_MS] от начала -
+ * полоса «Сервер долго отвечает · попытка N из M»; нет связи - «Нет связи», пояснение и «Повторить» ([onRetry]) справа (без повтора -
+ * только пояснение); «Связь восстановлена» - коротко, пока её держит модель. Ничего - пустое место нулевой высоты.
+ */
+@Composable fun RequestStrip(state: StripState, tones: StripTones, modifier: Modifier = Modifier, onRetry: () -> Unit = {}) {
     AnimatedContent(state, modifier.fillMaxWidth(), transitionSpec = { fadeIn() togetherWith fadeOut() }, contentKey = { it::class }, label = "strip") { shown ->
         when (shown) {
             StripState.None -> Spacer(Modifier.fillMaxWidth())
@@ -98,8 +112,8 @@ fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_
             is StripState.Offline -> StatusRow(Alarm, Alarm.copy(alpha = .14f)) {
                 Icon(Icons.Outlined.CloudOff, null, tint = Alarm, modifier = Modifier.size(18.dp))
                 Lines(ui("call.offline"), shown.note, Alarm, tones.muted, Modifier.weight(1f))
-                shown.onRetry?.let { retry ->
-                    ForgeButton(onClick = retry, kind = ButtonKind.Secondary, size = ButtonSize.Compact, accent = Alarm, icon = Icons.Outlined.Refresh) { Text(ui("call.retry"), maxLines = 1) }
+                if (shown.retry) {
+                    ForgeButton(onClick = onRetry, kind = ButtonKind.Secondary, size = ButtonSize.Compact, accent = Alarm, icon = Icons.Outlined.Refresh) { Text(ui("call.retry"), maxLines = 1) }
                 }
             }
 
@@ -113,8 +127,7 @@ fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_
 
 /** Ожидание: до [CallTimes.SLOW_MS] - тонкая бегущая линия, дальше - полоса «Сервер долго отвечает» с попыткой. */
 @Composable private fun WaitingStrip(state: StripState.Waiting, tones: StripTones) {
-    val now by rememberNow(TICK_MS)
-    if (now - state.since < CallTimes.SLOW_MS) {
+    if (!reached(state.since, CallTimes.SLOW_MS)) {
         LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp), color = tones.line, trackColor = tones.track)
         return
     }
@@ -152,6 +165,3 @@ fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_
 
 /** Тон «нет связи»: один на все экраны. */
 private val Alarm = Color(0xFFFF8E74)
-
-/** Такт часов ожидания, мс. */
-private const val TICK_MS = 250L

@@ -54,16 +54,13 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.timeLeft
 import com.sperance.exileforge.core.expedition.RiftChart
-import com.sperance.exileforge.core.expedition.RiftActions
-import com.sperance.exileforge.core.expedition.RiftDelivery
 import com.sperance.exileforge.core.expedition.RiftRecap
 import com.sperance.exileforge.core.expedition.RiftSpot
 import com.sperance.exileforge.core.expedition.RiftState
+import com.sperance.exileforge.core.expedition.RiftStep
 import com.sperance.exileforge.core.expedition.RiftToll
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.network.Link
-import com.sperance.exileforge.core.network.LinkState
 import com.sperance.exileforge.core.session.CallState
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftMetal
@@ -163,12 +160,13 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     val game by model.game.collectAsStateWithLifecycle()
     val state by model.riftState.collectAsStateWithLifecycle()
     val step by model.riftStep.collectAsStateWithLifecycle()
-    CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state, step) }
+    val canAct by model.riftCanAct.collectAsStateWithLifecycle()
+    CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state, step, canAct) }
 }
 
-@Composable private fun RiftBody(game: GameUi, model: ExpeditionViewModel, state: RiftState, step: CallState) {
+@Composable private fun RiftBody(game: GameUi, model: ExpeditionViewModel, state: RiftState, step: CallState<RiftStep>, canAct: Boolean) {
     val arena = state.arena
-    if (arena != null) return RiftFight(game, model, arena, state.delivery)
+    if (arena != null) return RiftFight(game, model, arena, state.deliveryRefused)
     val index = game.index ?: return
     val rules = index.campaign.trials?.rift ?: return
     Box(Modifier.fillMaxSize().background(RiftColors.Ground)) {
@@ -180,7 +178,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
         } else {
             val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
-            if (run == null) RiftGate(game, model, rules, board, engine, chart, step) else RiftRunView(game, model, rules, board, engine, chart, run, state, step, idle = !game.busy && !step.holds)
+            if (run == null) RiftGate(game, model, rules, board, engine, chart, step, canAct) else RiftRunView(game, model, rules, board, engine, chart, run, state, step, idle = canAct)
         }
         val recap = state.recap?.takeIf { it.shown }
         if (recap != null) RiftRecapSheet(game, recap, model::closeRiftRecap) else state.result?.let { RiftResultSheet(game, model, it) }
@@ -196,7 +194,7 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
  * ([GateVein]), вход ([GateEnter]) и «Схема недели» - следующий уровень цепочки ([WeekScheme]). Вход и схема закреплены внизу,
  * над ними листается жила; вход в пути - полоса шага ([RequestStrip]) поверх верха Врат.
  */
-@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart, step: CallState) {
+@Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, chart: RiftChart, step: CallState<RiftStep>, canAct: Boolean) {
     val hero = game.hero ?: return
     var preview by remember { mutableStateOf(false) }
     BackTrailHost(ui("trials.title"), Modifier.statusBarsPadding(), RiftTrail) {
@@ -211,13 +209,14 @@ private val RiftTrail = TrailColors(arrow = RiftColors.Rift, link = RiftColors.M
                         GateVein(rules, board.plan.mutators.mapNotNull(rules.mutatorsByCode::get))
                     }
                     Column(Modifier.padding(vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        GateEnter(game, rules, board, hero.bag[RiftRules.KEY] ?: 0L, step, model::startRift)
+                        GateEnter(game, rules, board, hero.bag[RiftRules.KEY] ?: 0L, step, canAct, model::startRift)
                         ForgeButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, accent = RiftColors.Soft) { Text(ui("rift.preview")) }
                     }
                 }
             }
         }
-        RequestStrip(step.strip(model::retryRiftStep), RiftStripTones)
+        val strip = remember(step) { step.strip(ui("call.offline_saved")) }
+        RequestStrip(strip, RiftStripTones, onRetry = model::retryRiftStep)
     }
 }
 
@@ -362,7 +361,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
  * Закрытый уровнем Разлом или ни бесплатных, ни ключа - кнопка погашена, касание говорит причину (у ключа - и откуда он берётся,
  * описанием предмета).
  */
-@Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, step: CallState, onEnter: () -> Unit) {
+@Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, step: CallState<RiftStep>, canAct: Boolean, onEnter: () -> Unit) {
     val free = board.free > 0
     val why = when {
         !game.unlocked(Feature.RIFT) -> listOf(Feature.RIFT.lockedText(game.index?.rules))
@@ -375,7 +374,7 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
             onClick = onEnter,
             modifier = Modifier.fillMaxWidth(),
             size = ButtonSize.Wide,
-            state = ButtonState.of(!game.busy && !step.holds && why == null, busy = step.spins(RiftActions.START)),
+            state = ButtonState.of(canAct && why == null, busy = step.spins(RiftStep.Start)),
             accent = RiftColors.Rift,
             onDisabledClick = why?.let { { explain = true } },
         ) {
@@ -464,7 +463,7 @@ private enum class RunSheet { BOONS, CURSES }
     chart: RiftChart,
     run: RiftRun,
     state: RiftState,
-    step: CallState,
+    step: CallState<RiftStep>,
     idle: Boolean,
 ) {
     var looking by remember { mutableStateOf<Int?>(null) }
@@ -476,7 +475,8 @@ private enum class RunSheet { BOONS, CURSES }
         RiftAscent(rules, engine, chart, state.walk, idle, top = 156.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it.node.id }
         Column(Modifier.align(Alignment.TopCenter)) {
             RiftHud(model, rules, board, engine, run, state.toll, state.recap?.takeIf { !it.shown }, idle, onLeave = { leaving = true }) { sheet = it }
-            RequestStrip(step.strip(model::retryRiftStep, offlineNote(step)), RiftStripTones)
+            val strip = remember(step) { step.strip(offlineNote(step)) }
+            RequestStrip(strip, RiftStripTones, onRetry = model::retryRiftStep)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
@@ -706,7 +706,10 @@ private val RiftMenuPalette = MenuPalette(
 }
 
 /** Пояснение «нет связи» полосы шага: выход из Разлома - что он не дошёл, прочий шаг - что выбор сохранён. */
-private fun offlineNote(step: CallState): String = ui(if (step.tag == RiftAct.End) "rift.leave_offline" else "call.offline_saved")
+private fun offlineNote(step: CallState<RiftStep>): String = ui(if (step.tag == LEAVING) "rift.leave_offline" else "call.offline_saved")
+
+/** Шаг «Покинуть Разлом». */
+private val LEAVING = RiftStep.Act(RiftAct.End)
 
 /** Краски полосы шага в палитре Разлома. */
 private val RiftStripTones = StripTones(line = RiftColors.Rift, track = RiftColors.Line, restored = RiftColors.Soft, muted = RiftColors.Muted)
@@ -919,7 +922,7 @@ private fun offerFooter(rules: RiftRules, engine: RiftEngine, run: RiftRun, offe
     offer: RiftOffer,
     coffers: Map<Int, Reward>,
     idle: Boolean,
-    step: CallState,
+    step: CallState<RiftStep>,
     onAct: (RiftAct) -> Unit,
 ) {
     val pick = remember(run.at, offer) { OfferPick() }
@@ -969,15 +972,15 @@ private fun offerFooter(rules: RiftRules, engine: RiftEngine, run: RiftRun, offe
 
 /**
  * Подвал плашки узла под списком: главная кнопка удержания во всю ширину и рядом красная «уйти» ([OfferFooter]); кнопка, чей шаг [step]
- * ждёт ответа дольше [com.sperance.exileforge.core.session.CallTimes.SPINNER_MS], крутит спиннер.
+ * ждёт ответа дольше [CallTimes.SPINNER_MS], крутит спиннер.
  */
-@Composable private fun OfferFooterBar(footer: OfferFooter, idle: Boolean, step: CallState, onAct: (RiftAct) -> Unit) {
+@Composable private fun OfferFooterBar(footer: OfferFooter, idle: Boolean, step: CallState<RiftStep>, onAct: (RiftAct) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeButton(
             onClick = { footer.act?.let(onAct) },
             modifier = Modifier.weight(1f),
             size = ButtonSize.Wide,
-            state = ButtonState.of(idle && footer.act != null, busy = footer.act != null && step.spins(footer.act)),
+            state = ButtonState.of(idle && footer.act != null, busy = footer.act?.let { step.spins(RiftStep.Act(it)) } == true),
             accent = footer.tone.accent,
             hold = footer.tone.hold,
         ) { Text(footer.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -986,7 +989,7 @@ private fun offerFooter(rules: RiftRules, engine: RiftEngine, run: RiftRun, offe
                 onClick = { onAct(leave.act) },
                 kind = ButtonKind.Danger,
                 size = ButtonSize.Wide,
-                state = ButtonState.of(idle, busy = step.spins(leave.act)),
+                state = ButtonState.of(idle, busy = step.spins(RiftStep.Act(leave.act))),
                 icon = Icons.Outlined.Close,
                 hold = Hold(),
             ) { Text(leave.label, maxLines = 1) }
@@ -1240,11 +1243,13 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
  *
  * Посреди боя уйти нельзя: назад ставит паузу; досье стража перед боем, «В бой» начинает бой.
  */
-@Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena, delivery: RiftDelivery?) {
+@Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena, refused: String?) {
     val shell: ShellViewModel = koinViewModel()
     val hud by arena.hud.collectAsState()
+    val delivery by model.riftDelivery.collectAsStateWithLifecycle()
     val clock = rememberSimClock(arena)
-    val strip = arenaStrip(game.link, delivery)
+    val offline = game.offline
+    val strip = remember(offline, delivery) { arenaStrip(offline, delivery) }
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
@@ -1292,7 +1297,7 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
             }
         }
         if (hud.phase != TrialPhase.FIGHT) {
-            DeliveryPlate(hud.phase == TrialPhase.DONE, delivery, onLeave = model::leaveRiftRefused)
+            DeliveryPlate(hud.phase == TrialPhase.DONE, refused, delivery, onLeave = model::leaveRiftRefused)
             RequestStrip(strip, RiftStripTones, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
     }
@@ -1302,17 +1307,14 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
  * Полоса связи арены: нет связи (значок связи игры) - «Нет связи», бой продолжится, когда она вернётся; итог боя в пути - ожидание, как
  * у шага на доске (с 8 с - «Сервер долго отвечает» с номером попытки, их счёт не ограничен). Повтора кнопкой нет - итог досылается сам.
  */
-private fun arenaStrip(link: Link, delivery: RiftDelivery?): StripState = when {
-    link.state is LinkState.Offline -> StripState.Offline(ui("rift.arena_offline"), onRetry = null)
-    delivery is RiftDelivery.Sending -> StripState.Waiting(delivery.since, delivery.attempt, attempts = null)
-    else -> StripState.None
-}
+private fun arenaStrip(offline: Boolean, delivery: CallState<RiftAct.Fight>): StripState =
+    if (offline) StripState.Offline(ui("rift.arena_offline"), retry = false) else delivery.strip(ui("rift.arena_offline"), retry = false)
 
 /**
- * Итог кончившегося боя в пути: «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера -
- * его слова и «К карте». Не голый спиннер: потерянный итог держал бы его вечно.
+ * Итог кончившегося боя в пути ([delivery]): «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера
+ * ([refused]) - его слова и «К карте». Не голый спиннер: потерянный итог держал бы его вечно.
  */
-@Composable private fun DeliveryPlate(won: Boolean, delivery: RiftDelivery?, onLeave: () -> Unit) {
+@Composable private fun DeliveryPlate(won: Boolean, refused: String?, delivery: CallState<RiftAct.Fight>, onLeave: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Box(Modifier.fillMaxSize().background(RiftColors.Ground.copy(alpha = .7f)), contentAlignment = Alignment.Center) {
         Column(
@@ -1322,17 +1324,13 @@ private fun arenaStrip(link: Link, delivery: RiftDelivery?): StripState = when {
         ) {
             Text(ui(if (won) "rift.delivery.won" else "rift.delivery.lost"), color = if (won) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.titleMedium)
             FightLogButton()
-            when (delivery) {
-                is RiftDelivery.Refused -> {
-                    Text(ui("rift.delivery.refused", delivery.reason), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-                    ForgeButton(onClick = onLeave, kind = ButtonKind.Secondary, accent = RiftColors.Text) { Text(ui("rift.delivery.leave")) }
-                }
-
-                else -> {
-                    androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift)
-                    val attempt = (delivery as? RiftDelivery.Sending)?.attempt ?: 1
-                    Text(if (attempt > 1) ui("rift.delivery.retry", attempt) else ui("rift.delivery.sending"), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
-                }
+            if (refused != null) {
+                Text(ui("rift.delivery.refused", refused), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                ForgeButton(onClick = onLeave, kind = ButtonKind.Secondary, accent = RiftColors.Text) { Text(ui("rift.delivery.leave")) }
+            } else {
+                androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift)
+                val attempt = (delivery as? CallState.Waiting<RiftAct.Fight>)?.attempt ?: 1
+                Text(if (attempt > 1) ui("rift.delivery.retry", attempt) else ui("rift.delivery.sending"), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
             }
         }
     }

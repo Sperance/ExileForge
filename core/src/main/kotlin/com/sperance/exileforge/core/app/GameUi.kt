@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.model.trade.Shortfall
 import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkRepository
+import com.sperance.exileforge.core.network.LinkState
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notice
@@ -54,6 +55,9 @@ data class GameUi(
     val notice: Notice? = null,
 ) {
     val busy: Boolean get() = activity.held
+
+    /** Связи с сервером нет (значок связи - «нет связи»): режимы, что идут на устройстве, говорят об этом своей полосой. */
+    val offline: Boolean get() = link.state is LinkState.Offline
     val loading: Set<String> get() = activity.loading
     val reading: Boolean get() = activity.reading
 

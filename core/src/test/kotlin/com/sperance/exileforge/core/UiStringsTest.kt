@@ -194,6 +194,7 @@ class UiStringsTest {
                 add("enum.orb.${it.name}.rule")
             }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
+            com.sperance.exileforge.core.feedback.MailCategory.entries.forEach { add("mail.category.${it.name}") }
             com.sperance.exileforge.core.display.LoreTerm.entries.forEach {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")

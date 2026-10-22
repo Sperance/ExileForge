@@ -20,8 +20,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -43,6 +50,7 @@ import com.sperance.exileforge.core.display.mailSubject
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.feedback.LetterDraft
+import com.sperance.exileforge.core.feedback.MailCategory
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
@@ -52,6 +60,7 @@ import com.sperance.exileforge.core.model.feedback.MailLinkKind
 import com.sperance.exileforge.core.model.feedback.MailMute
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.rules.content.MailGate
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
@@ -81,17 +90,46 @@ internal enum class MailBox(val holds: (MailKind) -> Boolean) {
     }
 }
 
-/** Кто написал письмо - строкой: герой, «[TAG] Гильдия · автор», игра или администратор. */
+/**
+ * Кто написал письмо - строкой: герой, «[TAG] Гильдия · автор»; у письма игры и администратора - имя его категории
+ * ([MailCategory]: «Рынок», «Награды», «Администрация»), его печатают цветом категории ([senderTint]).
+ */
 internal fun senderLine(mail: Mail): String {
     val from = mail.from
     val guild = from?.guild
     return when {
         guild != null && mail.kind == MailKind.GUILD -> ui("mail.from_guild", guild.tag, from.name)
         from != null -> from.name
-        mail.kind == MailKind.ADMIN -> ui("mail.sender.admin")
-        else -> ui("mail.sender.game")
+        else -> ui("mail.category.${MailCategory.of(mail).name}")
     }
 }
+
+/** Цвет строки отправителя: у письма героя и гильдии - [person], у письма игры и администратора - цвет его категории. */
+private fun senderTint(mail: Mail, person: Color): Color = if (mail.from != null) person else MailCategory.of(mail).tint
+
+/** Цвет категории письма: им красятся знак, имя категории и кромка письма. */
+private val MailCategory.tint: Color
+    get() = when (this) {
+        MailCategory.MARKET -> Boon
+        MailCategory.PERSONAL -> Parchment
+        MailCategory.GUILD -> Rune
+        MailCategory.ADMIN -> LossText
+        MailCategory.REWARDS -> ModeHue.Uniques
+        MailCategory.REPORTS -> Crafted
+        MailCategory.SYSTEM -> Quiet
+    }
+
+/** Знак категории письма: весы рынка, изгнанник, знамя, щит администрации, кубок, свиток отчёта, созвездие системы. */
+private val MailCategory.glyph: ImageVector
+    get() = when (this) {
+        MailCategory.MARKET -> ForgeGlyphs.Scales
+        MailCategory.PERSONAL -> ForgeGlyphs.Exile
+        MailCategory.GUILD -> ForgeGlyphs.Banner
+        MailCategory.ADMIN -> ForgeGlyphs.Kite
+        MailCategory.REWARDS -> ForgeGlyphs.Trophy
+        MailCategory.REPORTS -> ForgeGlyphs.Scroll
+        MailCategory.SYSTEM -> ForgeGlyphs.Constellation
+    }
 
 /** Сколько целых дней письму осталось; меньше суток - 0. */
 private fun daysLeft(mail: Mail, now: Long = System.currentTimeMillis()): Long = (mail.expiresAt - now).coerceAtLeast(0) / DAY_MS
@@ -106,8 +144,8 @@ internal fun burnText(mail: Mail): String = when {
 }
 
 /**
- * Знак отправителя слева у письма: портрет класса героя, герб гильдии рассылки или руна игры. Один знак на список, письмо и
- * плашку «Кому».
+ * Знак отправителя слева у письма: портрет класса героя, герб гильдии рассылки, у письма игры и администратора - знак его категории
+ * ([CategoryMark]). Один знак на список и письмо.
  */
 @Composable internal fun SenderMark(game: GameUi, mail: Mail, size: Dp = MARK) {
     val from = mail.from
@@ -115,14 +153,21 @@ internal fun burnText(mail: Mail): String = when {
     when {
         guild != null && mail.kind == MailKind.GUILD -> GuildEmblem(guild.emblem, guild.color, size)
         from != null -> ClassPortrait(from.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(size), round = true, ring = Bronze)
-        else -> RuneMark(size)
+        else -> CategoryMark(MailCategory.of(mail), size)
     }
 }
 
-/** Руна игры и администратора: круг в нити руны. */
-@Composable private fun RuneMark(size: Dp) {
-    Box(Modifier.size(size).border(1.dp, Rune, CircleShape), contentAlignment = Alignment.Center) {
-        Text(RUNE, color = Rune, fontSize = (size.value * .42f).sp)
+/** Знак категории [category]: её глиф её цветом на плашке, тонированной тем же цветом, в его кромке; чтение с экрана слышит имя категории. */
+@Composable private fun CategoryMark(category: MailCategory, size: Dp) {
+    val tint = category.tint
+    val shape = RoundedCornerShape(size * MARK_RADIUS)
+    val name = ui("mail.category.${category.name}")
+    Box(
+        Modifier.size(size).background(tint.copy(alpha = PLATE_FILL).compositeOver(Panel), shape).border(1.dp, tint.copy(alpha = PLATE_RIM), shape)
+            .semantics { contentDescription = name },
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(category.glyph, null, tint = tint, modifier = Modifier.size(size * GLYPH_SHARE))
     }
 }
 
@@ -241,19 +286,36 @@ object MailLinks {
     }
 }
 
-/** Строка письма: знак отправителя, кто (у непрочитанного - точка), тема, первая строка; справа время и срок. */
+/**
+ * Строка письма: слева кромка цвета категории ([MailCategory], у прочитанного приглушена), знак отправителя, кто (у непрочитанного -
+ * точка; у письма игры и администратора - имя категории её цветом), тема, первая строка; справа время и срок.
+ */
 @Composable private fun MailRow(game: GameUi, mail: Mail, onOpen: () -> Unit) {
+    val edge = MailCategory.of(mail).tint.let { if (mail.read) it.copy(alpha = READ_EDGE) else it }
     Column(Modifier.fillMaxWidth().clickable(onClick = onOpen)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth()
+                .drawBehind {
+                    val inset = EDGE_INSET.toPx()
+                    drawRoundRect(edge, Offset(0f, inset), Size(EDGE.toPx(), size.height - 2 * inset), CornerRadius(EDGE.toPx() / 2))
+                }
+                .padding(start = 12.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             SenderMark(game, mail)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (!mail.read) Box(Modifier.size(7.dp).background(Gold, CircleShape))
                     Text(
                         senderLine(mail),
-                        color = if (mail.read) Muted else GoldBright,
+                        color = senderTint(mail, if (mail.read) Muted else GoldBright),
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (mail.read) FontWeight.Normal else FontWeight.SemiBold,
+                        fontWeight = when {
+                            !mail.read -> FontWeight.SemiBold
+                            mail.from == null -> FontWeight.Medium
+                            else -> FontWeight.Normal
+                        },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -347,7 +409,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     ) {
         SenderMark(game, mail, PLATE_MARK)
         Column(Modifier.weight(1f).padding(top = 2.dp)) {
-            Text(senderLine(mail), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(senderLine(mail), color = senderTint(mail, GoldBright), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(about, color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         actions?.invoke(this)
@@ -547,8 +609,17 @@ internal fun gateText(gate: MailGate): String = when (gate) {
     MailGate.MUTED -> ui("mail.gate.muted")
 }
 
-/** Знак игры и администратора. */
-private const val RUNE = "ᚱ"
+/** Плашка знака категории: скругление долей стороны, заливка и кромка - доли цвета категории, глиф - доля стороны. */
+private const val MARK_RADIUS = .26f
+private const val PLATE_FILL = .16f
+private const val PLATE_RIM = .35f
+private const val GLYPH_SHARE = .53f
+
+/** Кромка категории у строки письма: ширина, отступ от верха и низа строки и приглушение у прочитанного. */
+private val EDGE = 3.dp
+private val EDGE_INSET = 6.dp
+private const val READ_EDGE = .45f
+
 private val MARK = 34.dp
 private val PLATE_MARK = 44.dp
 private val MORE = 44.dp

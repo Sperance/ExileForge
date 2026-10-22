@@ -97,6 +97,9 @@ fun HeroScreen() {
                                     shown.effects.power.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
                                     Modifier.fillMaxWidth(),
                                     now = now,
+                                    action = shown.visit?.let { visit ->
+                                        { ForgeButton(onClick = { shell.building(visit.building) }, modifier = Modifier.fillMaxWidth()) { Text(visit.label) } }
+                                    },
                                 )
                             }
                         }

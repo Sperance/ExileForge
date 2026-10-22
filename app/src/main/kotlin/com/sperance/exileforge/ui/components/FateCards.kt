@@ -310,9 +310,15 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
  * печать [FateSigil], имя дара [card] Cinzel заглавными и подпись [caption] (что это за дар или что он копит). Касание
  * разворачивает под лентой свиток: узор, описание серифом курсивом и «Изменить нельзя никогда». Одна на карточку игрока, шапку
  * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит. На листе героя свиток несёт блок «Сейчас действует» - [now]: что дар делает с числами на силе и
- * строках дара.
+ * строках дара, - и под ним [action]: кнопку в здание, где тратят счёт дара; null - кнопки нет.
  */
-@Composable fun FateRibbon(card: FateCard, caption: String, modifier: Modifier = Modifier, now: List<String> = emptyList()) {
+@Composable fun FateRibbon(
+    card: FateCard,
+    caption: String,
+    modifier: Modifier = Modifier,
+    now: List<String> = emptyList(),
+    action: (@Composable () -> Unit)? = null,
+) {
     var open by rememberSaveable(card.code) { mutableStateOf(false) }
     val motion = LocalMotion.current
     val shape = RoundedCornerShape(12.dp)
@@ -337,7 +343,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             }
             Text(if (open) "▴" else "▾", color = FateInk.Gold, style = MaterialTheme.typography.labelMedium)
         }
-        if (open) FateUnrolled(card, now)
+        if (open) FateUnrolled(card, now, action)
     }
 }
 
@@ -346,8 +352,11 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
     Text("$SIGIL ${card.title}", modifier, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
-/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now] и предупреждение, что дар навсегда. */
-@Composable private fun FateUnrolled(card: FateCard, now: List<String>) {
+/**
+ * Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now], кнопка [action] и предупреждение, что дар
+ * навсегда.
+ */
+@Composable private fun FateUnrolled(card: FateCard, now: List<String>, action: (@Composable () -> Unit)?) {
     val index = LocalContentIndex.current
     val description = remember(card.code, index) { fateDescription(card, index) }
     Box(Modifier.fillMaxWidth().height(1.dp).background(FateInk.Rim))
@@ -369,6 +378,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             )
         }
         if (now.isNotEmpty()) FateNow(now)
+        action?.invoke()
         Text(ui("fate.ribbon.never"), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
     }
 }

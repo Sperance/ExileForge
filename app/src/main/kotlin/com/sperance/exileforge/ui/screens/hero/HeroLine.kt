@@ -7,10 +7,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -20,23 +16,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.app.Building
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.hero.HeroFate
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
-import com.sperance.exileforge.ui.components.FateChip
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.RoleMark
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.flow.StateFlow
 
 /** Строка героя над текущим состоянием игры; до прочтения героя её нет. */
 @Composable fun HeroLine(game: GameUi, modifier: Modifier = Modifier) {
@@ -47,8 +38,8 @@ import kotlinx.coroutines.flow.StateFlow
  * Герой одной строкой: портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
  * опыта; касание имени и уровня - подсказка опыта до следующего уровня ([heroLevelTip]). Это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
  * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты и меню. Золото
- * - справа под полосой опыта, в строке её подписи, слева от него [counter] (чип счёта дара `FateChip`): длинное имя
- * сокращается многоточием и не выталкивает ни значки, ни число золота, длинная подпись опыта - тоже.
+ * - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не выталкивает ни значки, ни число золота,
+ * длинная подпись опыта - тоже.
  *
  * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается.
  */
@@ -56,7 +47,6 @@ import kotlinx.coroutines.flow.StateFlow
     hero: HeroHeaderState,
     modifier: Modifier = Modifier,
     onPortrait: (() -> Unit)? = null,
-    counter: @Composable RowScope.() -> Unit = {},
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val xp = experienceOf(hero.classes, hero.level, hero.experience)
@@ -91,17 +81,9 @@ import kotlinx.coroutines.flow.StateFlow
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            counter()
             GoldPrice(hero.money)
         }
     }
-}
-
-/** Чип счёта дара героя в шапке ([FateChip]) из потока дара модели [fates]: только у дара со счётом; [onVisit] - в здание счёта. */
-@Composable internal fun HeroFateChip(fates: StateFlow<HeroFate?>, onVisit: (Building) -> Unit) {
-    val fate by fates.collectAsStateWithLifecycle()
-    val shown = fate ?: return
-    shown.tally?.let { FateChip(it, shown.card, shown.visit, onVisit) }
 }
 
 /** Опыт внутри уровня: доля полосы и подпись; [progress] - набрано и нужно в уровне, null - масштаба нет или уровень последний. */

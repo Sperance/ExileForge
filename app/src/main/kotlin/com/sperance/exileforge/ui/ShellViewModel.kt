@@ -25,8 +25,6 @@ import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.reportSheet
 import com.sperance.exileforge.core.guild.GuildRepository
-import com.sperance.exileforge.core.hero.HeroFate
-import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -75,7 +73,6 @@ class ShellViewModel(
     val reach: ServerReach,
     private val foreground: Foreground,
     crafts: CraftsActions,
-    fates: HeroFateModel,
     guilds: GuildRepository,
 ) : ViewModel() {
     init {
@@ -90,8 +87,6 @@ class ShellViewModel(
     val warmup: StateFlow<Warmup?> = warming.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
 
-    /** Дар играемого героя со счётом - чип шапки. */
-    val fate: StateFlow<HeroFate?> = fates.fate
     val arena: StateFlow<TrialArena?> = trial.arena
 
     /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка «Развитие» и плитка ремёсел помечены. */

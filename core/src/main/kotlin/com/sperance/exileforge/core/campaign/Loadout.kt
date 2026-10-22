@@ -43,10 +43,11 @@ data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
         }
 
         /**
-         * Пояс героя: фляги надетого [equipped] по местам правила [FlaskSheet.slots] (null - место пусто) с условиями пояса
-         * [conditions] тех же мест. Те же фляги, что берёт Мощь сервера (`FlaskSheet.belt`), - для захода и для листа героя.
+         * Пояс героя уровня [level]: фляги надетого [equipped] по местам правила [FlaskSheet.slots] (null - место пусто или фляга не
+         * по уровню) с условиями пояса [conditions] тех же мест. Те же фляги, что берёт Мощь сервера (`FlaskSheet.belt`), - для захода
+         * и для листа героя.
          */
-        fun belt(index: ContentIndex, equipped: Collection<ItemInstance>, conditions: List<SlotCondition?>): List<BeltFlask?> = FlaskSheet.slots(index, equipped).mapIndexed { n, slot ->
+        fun belt(index: ContentIndex, equipped: Collection<ItemInstance>, level: Int, conditions: List<SlotCondition?>): List<BeltFlask?> = FlaskSheet.slots(index, equipped, level).mapIndexed { n, slot ->
             slot?.let { (item, template) -> of(item, template, index, conditions.getOrNull(n)) }
         }
 

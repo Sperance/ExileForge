@@ -647,7 +647,7 @@ class ExpeditionActions(
         val sheet = if (items === h.items) h.sheet else Sheets.calculate(i, h.level, h.heroClass, h.tree, items, h.info.laws, h.info.fate)
         val equipped = items.filter { it.equipped && !it.socketed }.associateBy { it.slot!! }
         val fate = FateKit.of(i, h.info.fate, sheet.stats, equipped.values)
-        val kit = Loadout.of(h.skills, i, h.heroClass, BeltFlask.belt(i, equipped.values, h.skills.flasks), sheet.stats, i.powers, i.rules.charges, fate)
+        val kit = Loadout.of(h.skills, i, h.heroClass, BeltFlask.belt(i, equipped.values, h.level, h.skills.flasks), sheet.stats, i.powers, i.rules.charges, fate)
         return HeroGear(sheet.stats, h.level, sheet.model, stance(), kit, i.stats.percent, equipped.mapValues { it.value.id })
     }
 

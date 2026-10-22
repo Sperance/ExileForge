@@ -436,7 +436,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
          */
         fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>): CombatSheet? {
             val model = sheet.model ?: return null
-            val kit = Loadout.of(skills, index, heroClass, BeltFlask.belt(index, equipped, skills.flasks), sheet.stats, index.powers, index.rules.charges, FateKit.of(index, fate, sheet.stats, equipped))
+            val kit = Loadout.of(skills, index, heroClass, BeltFlask.belt(index, equipped, level, skills.flasks), sheet.stats, index.powers, index.rules.charges, FateKit.of(index, fate, sheet.stats, equipped))
             return CombatSheet(index, model, level, kit)
         }
     }

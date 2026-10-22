@@ -145,7 +145,7 @@ class MobKit(val index: ContentIndex) {
         val own = stats(heroClass, level, tree, emptyList())
         return index.templates.values.filter {
             it.unique == unique && it.rarity != Rarity.MYTHICAL && (unique || it.tables.isNotEmpty()) && (it.heroClass == null || it.heroClass == heroClass.code) &&
-                it.dropsAt(level) && !it.slot.isFlask && it.slot != Slot.JEWEL && Requirements.unmet(it, level, own).isEmpty()
+                it.dropsAt(level) && !it.slot.isFlask && it.slot != Slot.JEWEL && Requirements.unmetBase(it, level, own).isEmpty()
         }
     }
 

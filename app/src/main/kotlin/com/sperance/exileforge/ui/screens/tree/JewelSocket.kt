@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.MightShift
+import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.requirementReason
@@ -63,11 +64,12 @@ import kotlinx.coroutines.withContext
 
 /**
  * Самоцвет-кандидат в гнездо: копия [item] и её вид [view]; [free] - правила пустят её сюда (уникальный самоцвет - один на
- * героя). [might] - Мощь героя сейчас и с этим самоцветом в гнезде, [comparison] - сводка героя «было → станет» при той же замене;
- * у самоцвета, что не встанет, сравнения нет.
+ * героя, требования копии выполнены), [unmet] - невыполненные требования словами правил (`Requirements.unmet`). [might] - Мощь
+ * героя сейчас и с этим самоцветом в гнезде, [comparison] - сводка героя «было → станет» при той же замене; у самоцвета, что не
+ * встанет, сравнения нет.
  */
 @Immutable
-internal class JewelOffer(val item: ItemInstance, val view: ItemView, val free: Boolean, val might: MightShift?, val comparison: Comparison) {
+internal class JewelOffer(val item: ItemInstance, val view: ItemView, val free: Boolean, val might: MightShift?, val comparison: Comparison, val unmet: List<String> = emptyList()) {
     /** Замена ослабит героя: Мощь с ней ниже нынешней сверх шума. */
     val worse: Boolean get() = might?.shift == GearVerdict.Shift.DOWN
 }
@@ -88,7 +90,8 @@ internal object JewelOffers {
         val now = hero.might?.value
         return hero.items.filter { candidate(index, it) }.mapNotNull { item ->
             val view = ItemView.of(item, index) ?: return@mapNotNull null
-            if (!hero.jewelFree(index, item, socket)) return@mapNotNull JewelOffer(item, view, false, null, Comparison(emptyList()))
+            val unmet = Sheets.unmet(index, item, hero.level, hero.stats)
+            if (unmet.isNotEmpty() || !hero.jewelFree(index, item, socket)) return@mapNotNull JewelOffer(item, view, false, null, Comparison(emptyList()), unmet)
             val outcome = hero.socketing(index, item, socket)
             val might = now?.let { before -> outcome.might?.let { MightShift(before, it.value) } }
             JewelOffer(item, view, true, might, Comparison.of(outcome.delta, index, sheet = hero.figures.values, level = hero.level))
@@ -242,6 +245,7 @@ internal object JewelOffers {
     ItemRow(
         offer.view,
         note = when {
+            offer.unmet.isNotEmpty() -> offer.unmet.joinToString("\n") { requirementReason(it) }
             !offer.free -> ui("tree.jewel_unique_taken")
             offer.worse -> ui("tree.jewel_worse")
             else -> null

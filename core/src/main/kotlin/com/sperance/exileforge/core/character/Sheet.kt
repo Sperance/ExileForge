@@ -162,7 +162,7 @@ object Sheets {
      * Чего копии [item] не хватает у героя уровня [level] с листом [stats], словами правил: уровень копии ([Requirements.level])
      * и атрибуты шаблона; пусто - можно надеть.
      */
-    fun unmet(index: ContentIndex, item: ItemInstance, level: Int, stats: Map<String, Double>): List<String> = index.template(item.template)?.let { Requirements.unmet(it, level, stats, Requirements.level(index, it, item)) }.orEmpty()
+    fun unmet(index: ContentIndex, item: ItemInstance, level: Int, stats: Map<String, Double>): List<String> = index.template(item.template)?.let { Requirements.unmet(index, item, it, level, stats) }.orEmpty()
 
     /**
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a

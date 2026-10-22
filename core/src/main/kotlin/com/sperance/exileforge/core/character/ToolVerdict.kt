@@ -38,10 +38,10 @@ data class ToolVerdict(val delta: List<StatDelta>, override val score: Double) :
     val shift: Shift get() = Shift.of(score)
 
     companion object {
-        /** Инструмент [tool] против [worn] в гнезде его профессии (null - пусто) при листе героя [sheet] и даре [fate]. */
-        fun of(index: ContentIndex, sheet: Map<String, Double>, tool: ItemInstance, worn: ItemInstance?, fate: FateEffects?): ToolVerdict {
-            val before = WorkBonus.of(index, sheet, worn, fate = fate)
-            val after = WorkBonus.of(index, sheet, tool, fate = fate)
+        /** Инструмент [tool] против [worn] в гнезде его профессии (null - пусто) при листе героя [sheet] уровня [level] и даре [fate]. */
+        fun of(index: ContentIndex, sheet: Map<String, Double>, level: Int, tool: ItemInstance, worn: ItemInstance?, fate: FateEffects?): ToolVerdict {
+            val before = WorkBonus.of(index, sheet, level, worn, fate = fate)
+            val after = WorkBonus.of(index, sheet, level, tool, fate = fate)
             val delta = WorkMeasure.entries.map { StatDelta(it.stat.code, it.read(before), it.read(after)) }.filter { it.change != 0.0 }
             return ToolVerdict(delta, delta.sumOf { gain(index, it) })
         }

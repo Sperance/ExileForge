@@ -168,7 +168,7 @@ class GearVerdicts {
             val verdict = when {
                 !wearable -> null
                 slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])?.copy(might = flaskMight(index, hero, item, place))
-                slot.isTool -> ToolVerdict.of(index, hero.stats, item, worn[place], hero.combat?.fate)
+                slot.isTool -> ToolVerdict.of(index, hero.stats, hero.level, item, worn[place], hero.combat?.fate)
                 else -> hero.combat?.might?.let { might -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, might, place, hero.info.laws, hero.info.fate, hero.skills) }
             }
             WearPlace(place, Sheets.takenOff(index, item, hero.items, place), verdict)

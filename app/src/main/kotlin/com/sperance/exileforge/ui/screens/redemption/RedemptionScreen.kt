@@ -114,7 +114,7 @@ private fun rewardLine(reward: RedemptionReward): String {
     val amount = if (reward.quantity % 1.0 == 0.0) reward.quantity.toLong().toString() else reward.quantity.toString()
     return when (reward) {
         is RedemptionReward.Experience -> ui("redemption.line_experience", amount)
-        is RedemptionReward.Gold -> ui("redemption.line_gold", compactNumber(amount))
+        is RedemptionReward.Gold -> ui("redemption.line_gold", compactNumber(reward.quantity))
         is RedemptionReward.Item -> "${ui("enum.reward.ITEM")} · ${itemTitle(reward.code)} · ${ui("auction.pieces", amount)}"
         is RedemptionReward.Equipment -> "${ui("enum.reward.EQUIPMENT")} · ${equipmentTitle(reward.template)} · ${ui("auction.pieces", amount)}"
     }

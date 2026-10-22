@@ -71,6 +71,7 @@ import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.StackCellSize
 import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.screens.skills.SkillPeek

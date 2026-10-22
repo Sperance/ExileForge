@@ -508,8 +508,11 @@ class HeroSheetTest {
         /** Источник сдвигов листа «под картой» в тесте потока. */
         const val MAP = "MAP_TEST"
 
-        /** Стопки без источника по замыслу контента - код и причина; сейчас таких нет. */
-        val EXEMPT: Map<String, String> = emptyMap()
+        /** Стопки без источника по замыслу контента - код и причина. */
+        val EXEMPT: Map<String, String> = mapOf(
+            "WRIT_OF_OPPRESSION" to "выдаёт только администратор",
+            "DECK_OF_FATE" to "выдаёт только администратор",
+        )
     }
 }
 

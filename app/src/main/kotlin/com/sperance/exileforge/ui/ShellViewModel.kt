@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.expedition.ExpeditionActions
 import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.reportSheet
+import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hero.HeroFate
 import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.i18n.ui
@@ -75,6 +76,7 @@ class ShellViewModel(
     private val foreground: Foreground,
     crafts: CraftsActions,
     fates: HeroFateModel,
+    guilds: GuildRepository,
 ) : ViewModel() {
     init {
         reach.start()
@@ -92,8 +94,11 @@ class ShellViewModel(
     val fate: StateFlow<HeroFate?> = fates.fate
     val arena: StateFlow<TrialArena?> = trial.arena
 
-    /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка ремёсел помечена. */
+    /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка «Развитие» и плитка ремёсел помечены. */
     val craftsAway: StateFlow<Boolean> = crafts.away
+
+    /** Приглашения, что ждут героя вне гильдии: число на вкладке «Гильдия». */
+    val guildInvites: StateFlow<Int> = guilds.state.map { it.invitesWaiting }.stateIn(viewModelScope, SharingStarted.Eagerly, guilds.state.value.invitesWaiting)
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.core.expedition.RiftState> = rift.state

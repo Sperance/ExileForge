@@ -42,10 +42,10 @@ const val LOCKED_TILE_ALPHA = .45f
 
 /**
  * Плитка хаба («Развитие», «Город»): название, значок на квадрате цвета [accent], строка того, что внутри ([note]), и
- * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [lockedUntil] - уровень открытия, пока герой
- * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»). [chores] - строки дел, что ждут действия («Можно продлить: 1»),
- * каждая с жёлтой точкой дела ([ChoreDot]), на месте [news]. Без [onOpen] - заглушка будущего места: пунктирная рамка, тускло, не
- * нажимается.
+ * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [alert] - что-то ждёт взгляда без числа (точка в
+ * углу; есть число - точка ждёт), [lockedUntil] - уровень открытия, пока герой ниже него (плитка тусклая, с замком, вместо строк -
+ * «откроется с N»). [chores] - строки дел, что ждут действия («Можно продлить: 1»), каждая с жёлтой точкой дела ([ChoreDot]), на месте
+ * [news]. Без [onOpen] - заглушка будущего места: пунктирная рамка, тускло, не нажимается.
  */
 @Immutable data class HubTile(
     val title: String,
@@ -56,6 +56,7 @@ const val LOCKED_TILE_ALPHA = .45f
     val badge: Int = 0,
     val lockedUntil: Int? = null,
     val chores: List<String> = emptyList(),
+    val alert: Boolean = false,
     val onOpen: (() -> Unit)?,
 )
 
@@ -70,11 +71,11 @@ const val LOCKED_TILE_ALPHA = .45f
     }
 }
 
-/** Одна плитка: значок на подкрашенном квадрате, имя и строки внизу; в углу - счётчик того, что ждёт, или замок. */
+/** Одна плитка: значок на подкрашенном квадрате, имя и строки внизу; в углу - счётчик того, что ждёт, точка или замок. */
 @Composable fun HubTileCard(tile: HubTile, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     val locked = tile.lockedUntil
-    val hot = tile.badge > 0 && locked == null
+    val hot = (tile.badge > 0 || tile.alert) && locked == null
     val open = tile.onOpen
     val framed = modifier.heightIn(min = HUB_TILE_MIN_HEIGHT).alpha(if (locked != null || open == null) LOCKED_TILE_ALPHA else 1f).clip(shape)
     Box(
@@ -105,10 +106,14 @@ const val LOCKED_TILE_ALPHA = .45f
             }
         }
         if (locked != null) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
-        if (hot) {
-            Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
+        when {
+            !hot -> Unit
+
+            tile.badge > 0 -> Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
                 Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
+
+            else -> Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(8.dp).background(GoldBright, CircleShape))
         }
     }
 }

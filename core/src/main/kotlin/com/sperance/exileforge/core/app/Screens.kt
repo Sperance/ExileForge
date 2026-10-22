@@ -1,10 +1,13 @@
 package com.sperance.exileforge.core.app
 
 /** Экран сверху стека глазами ядра: фаза, номер вкладки и здание Города. */
-data class Spot(val phase: AppPhase, val tab: Int, val building: Building?)
+data class Spot(val phase: AppPhase, val tab: Int, val building: Building?) {
+    /** Раздел, что закрывает этот экран уровнем героя: здания - его здание, прочие - вкладка; не закрывается ничем - null. */
+    val feature: Feature? get() = Feature.ofBuilding(building) ?: Feature.ofTab(tab)
+}
 
 /**
- * Куда модели ядра ведут игрока: фазы входа, корень вкладки героя, Атлас «Похода», аукцион и гильдия Города,
+ * Куда модели ядра ведут игрока: фазы входа, корень вкладки героя, Атлас «Похода», аукцион Города, вкладка «Гильдия»,
  * страницы настроек с письмом администратора и окном модерации.
  */
 enum class Landing { AUTH, CHARACTERS, FATE, HERO, ATLAS, AUCTION, GUILD, HALL, MAIL, MODERATION }

@@ -1,11 +1,19 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.crafts.JobView
+import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.guild.GuildMember
+import com.sperance.exileforge.rules.content.AdditiveEffect
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreAttribute
 import com.sperance.exileforge.rules.content.GuildRank
+import com.sperance.exileforge.rules.content.ItemCode
+import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SmithCategory
+import com.sperance.exileforge.rules.content.SmithChoice
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.rules.reward.RedemptionKind
 
@@ -120,5 +128,118 @@ object PickOptions {
             RedemptionKind.GOLD -> Glyph.CURRENCY
         }
         PickOption(kind, ui("enum.reward.${kind.name}"), glyph = PickGlyph.Sign(glyph))
+    }
+
+    /**
+     * Варианты работы с выбором [work] профессии [profession] - [choices], ключ - выбор варианта (`JobView.choice`). Книги - группами
+     * «Класс · <класс>» и «Общие», прочие работы - без групп; в группе - по уровню открытия, закрытые для профессии
+     * ([ProfessionView.opens]: уровень и открытость варианта по ответу сервера) - в конце с замком и «с ур. N» (уровень не тот) или
+     * «закрыто». Имя - что выйдет: умение книги и ритуала, стопка, база инструмента; справа - сколько этого в сумке ([bag]; у
+     * ритуала - книг его умения), у базы инструмента - её уровень.
+     */
+    fun jobChoices(work: JobView, choices: List<JobView>, profession: ProfessionView, index: ContentIndex?, bag: (String) -> Long): List<PickOption<String>> {
+        val common = { option: JobView -> work.kind == JobKind.BOOK && index?.skills?.byBook(option.choice)?.common == true }
+        return choices.sortedWith(compareBy<JobView>({ common(it) }, { !profession.opens(it) }, { it.level }))
+            .map { option -> jobChoice(work.kind, option, lockOf(profession, option), index, bag) }
+    }
+
+    /** Почему вариант [option] закрыт для профессии [profession]: уровень не тот - «с ур. N», иначе «закрыто»; открыт - null. */
+    private fun lockOf(profession: ProfessionView, option: JobView): String? = when {
+        profession.opens(option) -> null
+        option.level > profession.level -> ui("picker.from_level", option.level)
+        else -> ui("picker.closed")
+    }
+
+    /** Вариант [option] работы вида [kind]; [locked] - почему он закрыт, открыт - null. */
+    private fun jobChoice(kind: JobKind, option: JobView, locked: String?, index: ContentIndex?, bag: (String) -> Long): PickOption<String> {
+        val open = locked == null
+        val code = option.choice
+        val skill = when (kind) {
+            JobKind.BOOK -> index?.skills?.byBook(code)
+            JobKind.EVOLVE -> index?.skills?.byCode?.get(code)
+            else -> null
+        }
+        val template = index?.template(code)?.takeIf { kind == JobKind.TOOL }
+        val item = index?.item(ItemCode(code))
+        val stack = skill?.book ?: code.takeIf { item != null }
+        val held = stack?.let(bag)
+        val kindLine = skill?.let { ui("skills.type.${it.type.name}") }
+        return PickOption(
+            key = code,
+            title = skill?.let { SkillText.title(it.code) } ?: choiceTitle(code),
+            subtitle = listOfNotNull(kindLine, template?.let { rarityTitle(it.rarity) }, ui("picker.from_level", option.level).takeIf { open }).joinToString(" · ").ifEmpty { null },
+            brief = listOfNotNull(kindLine, held?.let { ui("picker.in_bag_short", it) }).joinToString(" · ").ifEmpty { null },
+            glyph = item?.let { PickGlyph.Emblem(bagVisualKind(it)) } ?: template?.let { PickGlyph.Emblem(itemVisualKind(it)) } ?: PickGlyph.Sign(Glyph.LEVEL),
+            accent = template?.let { PickAccent.OfRarity(it.rarity) } ?: skill?.takeIf { kind == JobKind.BOOK }?.let { PickAccent.Band(if (it.common) 1 else 0) },
+            data = template?.let { PickData(it.level.toString(), ui("picker.level")) } ?: held?.let { PickData(it.toString(), ui("picker.in_bag"), lacking = it == 0L) },
+            group = skill?.takeIf { kind == JobKind.BOOK }?.let { if (it.common) ui("crafts.books_common") else ui("crafts.books_class", classTitle(it.heroClass)) },
+            locked = locked,
+        )
+    }
+
+    /**
+     * Выбор кузнеца, ключ - имя [SmithChoice]: группы «Оружие», «Броня» и «Другое» (украшения и случайная ковка), подназвание - какие базы
+     * выйдут, справа - сколько самоцвета выбора в сумке ([bag]; у украшений - того, которого меньше всего), нет - ноль красным.
+     */
+    fun smiths(bag: (String) -> Long): List<PickOption<String>> = SmithChoice.entries.map { choice ->
+        val category = choice.category
+        val gem = choice.gems.minByOrNull(bag)
+        PickOption(
+            key = choice.name,
+            title = choiceTitle(choice.name),
+            subtitle = choice.attribute?.let { ui("crafts.smith_hint", attributeTitle(it)) } ?: ui(if (category != null) "crafts.smith_hint_jewellery" else "crafts.random_hint"),
+            brief = gem?.let { "${itemTitle(it)} · ${ui("picker.in_bag_short", bag(it))}" },
+            glyph = when (category) {
+                SmithCategory.WEAPON -> PickGlyph.Emblem(ItemVisualKind.SWORD)
+                SmithCategory.ARMOUR -> PickGlyph.Emblem(ItemVisualKind.ARMOR)
+                SmithCategory.JEWELLERY -> PickGlyph.Emblem(ItemVisualKind.RING)
+                null -> PickGlyph.Sign(Glyph.CRAFT)
+            },
+            accent = choice.attribute?.let { PickAccent.OfAttribute(it) },
+            data = gem?.let { PickData(bag(it).toString(), itemTitle(it), lacking = bag(it) == 0L) },
+            group = category?.takeIf { it.attributed }?.let { ui("merchant.group.${it.name}") } ?: ui("crafts.smith_group_other"),
+        )
+    }
+
+    /**
+     * Вещи [views] - цель работы над вещью, инструменты профессии; ключ - id копии, полоса - цвет редкости, справа - уровень. Вещь с
+     * невыполненными требованиями [unmet] (причины правил, как у строки вещи) закрыта первой из них и стоит в конце.
+     */
+    fun copies(views: List<ItemView>, unmet: (ItemView) -> List<String> = { emptyList() }): List<PickOption<String>> = views.map { it to unmet(it) }.sortedBy { it.second.isNotEmpty() }.map { (view, needs) ->
+        PickOption(
+            key = view.id,
+            title = view.title,
+            subtitle = "${rarityTitle(view.rarity)} · ${slotTitle(view.slot)}",
+            brief = ui("common.level_short", view.level),
+            glyph = PickGlyph.Emblem(view.visualKind),
+            accent = PickAccent.OfRarity(view.rarity),
+            data = PickData(view.level.toString(), ui("picker.level")),
+            locked = needs.firstOrNull()?.let(::requirementReason),
+        )
+    }
+
+    /**
+     * Добавки работы [offered] (код - эффект), ключ - код стопки: подназвание - что она даст, справа - сколько в сумке ([bag]); которой
+     * нет - закрыта «нет в сумке» и стоит в конце.
+     */
+    fun additives(offered: Map<String, AdditiveEffect>, index: ContentIndex?, bag: (String) -> Long): List<PickOption<String>> = offered.entries
+        .sortedBy { bag(it.key) == 0L }
+        .map { (code, effect) ->
+            val held = bag(code)
+            PickOption(
+                key = code,
+                title = itemTitle(code),
+                subtitle = additiveTitle(effect, index),
+                glyph = index?.item(ItemCode(code))?.let { PickGlyph.Emblem(bagVisualKind(it)) },
+                data = PickData(held.toString(), ui("picker.in_bag")).takeIf { held > 0 },
+                locked = ui("picker.none_in_bag").takeIf { held == 0L },
+            )
+        }
+
+    /** Имя атрибута - главного требования базы. */
+    private fun attributeTitle(attribute: CoreAttribute): String = when (attribute) {
+        CoreAttribute.STRENGTH -> ui("req.strength")
+        CoreAttribute.DEXTERITY -> ui("req.dexterity")
+        CoreAttribute.INTELLIGENCE -> ui("req.intelligence")
     }
 }

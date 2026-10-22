@@ -230,7 +230,7 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 /**
  * A stack's face: its icon, name and English trade name, how many the hero holds, and what it is for.
  *
- * Книга умения: чип открывает карточку её умения.
+ * Книга умения: её описание («Учит умению …») - чип, касание открывает карточку умения; без описания чип называет умение.
  */
 @Composable private fun StackFace(game: GameUi, code: String, owned: Long) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -241,12 +241,15 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
             MutedText(ui("bag.owned", owned), style = MaterialTheme.typography.labelSmall)
         }
     }
-    itemDescription(code, game.index).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
-    game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
-    game.index?.skills?.byBook(code)?.let { skill ->
+    val description = itemDescription(code, game.index).takeIf { it.isNotBlank() }
+    val book = game.index?.skills?.byBook(code)
+    if (book != null) {
         val inspect = rememberSkillInspect()
-        LoreChip(ui("bag.book_skill", SkillText.title(skill.code)), Rune) { inspect(SkillPeek(skill.code)) }
+        LoreChip(description ?: ui("bag.book_skill", SkillText.title(book.code)), Rune) { inspect(SkillPeek(book.code)) }
+    } else {
+        description?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
     }
+    game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
 }
 

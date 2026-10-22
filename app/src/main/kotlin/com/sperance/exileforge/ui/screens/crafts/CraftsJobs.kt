@@ -1,44 +1,32 @@
 package com.sperance.exileforge.ui.screens.crafts
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.JobBlock
@@ -47,50 +35,41 @@ import com.sperance.exileforge.core.crafts.JobLedger
 import com.sperance.exileforge.core.crafts.JobRates
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.additiveTitle
-import com.sperance.exileforge.core.display.choiceTitle
+import com.sperance.exileforge.core.display.PickOption
+import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.clock
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentIcon
-import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.itemDescription
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
-import com.sperance.exileforge.core.display.regionTitle
-import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
-import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
-import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.AdditiveEffect
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.ItemCode
-import com.sperance.exileforge.rules.content.JobInput
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SmithChoice
 import com.sperance.exileforge.rules.roll.Work
-import com.sperance.exileforge.rules.roll.WorkGains
-import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.BagIcon
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
-import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
 
 /** Работы профессии: строка работы, лист запуска с выбором и добавками, выбор инструмента. */
 /**
@@ -209,17 +188,18 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
 }
 
 /**
- * Лист работы формулой рецепта: имя и «профессия · с ур. N», выбор варианта (и вещи у Осквернения), полоса-формула «вход + вход → выход
- * + находки» (касание материала или выхода - карточка), что получится - имя, сведения и описание (касание - карточка), поля работы списком
- * с разбором по источникам ([JobFields]), добавки работы с их эффектом, у нехватки - где материал добывается,
- * и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион, инструмент или нехватка на цикл.
+ * Лист работы формулой рецепта: имя и «профессия · с ур. N», выборы листа - строки общего выбора ([ForgePicker]): вариант работы (книга,
+ * эссенция, материал, база инструмента, умение ритуала, руна - [jobChoiceLabel]; у ковки - кузнец), вещь у Осквернения, инструмент
+ * профессии, добавки работы ([ForgeMultiPicker]); ниже полоса-формула «вход + вход → выход + находки» (касание материала или выхода -
+ * карточка), что получится - имя, сведения и описание (касание - карточка), поля работы списком с разбором по источникам ([JobFields]),
+ * у нехватки - где материал добывается, и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион,
+ * инструмент или нехватка на цикл.
  *
  * Имя работы и блок под выбором ([JobBody]) держат высоту самого высокого варианта ([TallestOf]): смена варианта не двигает верх
- * листа, что встаёт по низу. Работа с выбором запускается одним из вариантов; недоступный виден с замком. Кузнец открывается в
- * последнем режиме этого героя на устройстве, иначе «Случайно»; случайная ковка примесей не берёт - её строки на два тира ниже.
- * Осквернение выбирает вещь тайника, что пропустят правила.
+ * листа, что встаёт по низу. Вариант, до которого профессия не доросла, в шторке закрыт; долгое нажатие на вариант - карточка того,
+ * что он даст (умение книги и ритуала - карточка умения). Кузнец открывается в последнем режиме этого героя на устройстве, иначе
+ * «Случайно»; случайная ковка примесей не берёт - её строки на два тира ниже. Осквернение выбирает вещь тайника, что пропустят правила.
  */
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, profession: ProfessionView, work: JobView, current: Boolean, onDismiss: () -> Unit) {
     val crafts = held.state
@@ -227,7 +207,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     val choices = remember(game, work) { choices(game, work) }
     val smith = work.kind == JobKind.EQUIPMENT
     var picked by remember(work.code) {
-        mutableStateOf(if (smith) SmithChoice.RANDOM.name else (choices.firstOrNull { it.level <= profession.level } ?: choices.firstOrNull())?.choice.orEmpty())
+        mutableStateOf(if (smith) SmithChoice.RANDOM.name else (choices.firstOrNull(profession::opens) ?: choices.firstOrNull())?.choice.orEmpty())
     }
     LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
@@ -236,6 +216,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     var target by remember(work.code) { mutableStateOf("") }
     val item = target.takeIf { id -> targets.any { it.id == id } }.orEmpty()
     val inspect = rememberInspect()
+    val peek = rememberChoicePeek(game, work.kind)
     var help by remember { mutableStateOf<String?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -246,36 +227,28 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 }
                 CraftsGlossaryButton(crafts?.rules)
             }
+            val picksItem = work.job.targetsItem && targets.isNotEmpty()
+            val picksTool = profession.tool.isNotBlank()
+            val most = crafts?.crafting?.maxAdditives ?: 0
+            val picksAdditives = crafts != null && most > 0 && variants.any { crafts.crafting.additives(it.job).isNotEmpty() }
+            if (work.options.isNotEmpty() || picksItem || picksTool || picksAdditives) Engraved(ui("crafts.choose"))
             if (work.options.isNotEmpty()) {
-                Engraved(ui("crafts.choose"))
-                if (smith) {
-                    SmithPicker(SmithChoice.of(picked) ?: SmithChoice.RANDOM, { bagCount(game, it) }) { picked = it.name }
-                } else {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        choices.forEach { option ->
-                            ForgeChip(
-                                choiceTitle(option.choice),
-                                option.choice == picked,
-                                { picked = option.choice },
-                                leading = if (!profession.opens(option)) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
-                                mode = ChipMode.Choice,
-                            )
-                        }
-                    }
+                val options = remember(game.lang, game.hero?.bag, game.index, work, choices, profession.level) {
+                    if (smith) PickOptions.smiths { bagCount(game, it) } else PickOptions.jobChoices(work, choices, profession, game.index) { bagCount(game, it) }
                 }
+                ForgePicker(jobChoiceLabel(work.kind), picked, options, hold = choiceHold(work.kind), onPeek = peek.takeIf { !smith }) { key -> key?.let { picked = it } }
             }
-            if (work.job.targetsItem && targets.isNotEmpty()) {
-                Engraved(ui("crafts.pick_item"))
-                HoldHint(HoldSubject.ITEM)
-                targets.forEach { view ->
-                    ItemRow(view, selected = view.id == item, price = game.sellPrice(view.item), onLongClick = { inspect(Inspect.Copy(view.item)) }) { target = view.id }
-                }
+            if (picksItem) {
+                val options = remember(game.lang, targets) { PickOptions.copies(targets) }
+                ForgePicker(ui("crafts.pick_target"), item.ifEmpty { null }, options, hint = ui("crafts.pick_item"), hold = HoldSubject.ITEM, onPeek = { id -> targets.firstOrNull { it.id == id }?.let { inspect(Inspect.Copy(it.item)) } }) { target = it.orEmpty() }
             }
+            if (picksTool) ToolChoice(game, vm, profession)
+            val random = job.choice == SmithChoice.RANDOM.name
+            if (picksAdditives && crafts != null) AdditivesChoice(game, crafts.crafting.additives(job.job), if (random) emptyList() else additives, most, enabled = !random) { additives = it }
             val sheet = JobSheetState(game, crafts, profession, work, choices, targets, item, current)
             val actions = JobSheetActions(
                 onInspect = inspect,
                 onHelp = { help = it },
-                onAdditives = { additives = it },
                 onStop = {
                     onDismiss()
                     vm.stop()
@@ -286,11 +259,62 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 vm.start(variant.code, if (variant.job.targetsItem) item else variant.choice, chosen)
             }
             TallestOf(variants, job) { variant ->
-                JobBody(sheet, variant, if (variant.choice == SmithChoice.RANDOM.name) emptyList() else additives, actions)
+                JobBody(sheet, variant, if (variant.choice == SmithChoice.RANDOM.name) emptyList() else additives.filter { it in crafts?.crafting?.additives(variant.job).orEmpty() }, actions)
             }
         }
     }
     help?.let { key -> crafts?.rules?.let { CraftsGlossaryEntry(it, key) { help = null } } }
+}
+
+/**
+ * Добавки выбранного варианта [offered] строкой выбора нескольких: до [most] штук, [chosen] - отмеченные; [enabled] - вариант их берёт
+ * (случайная ковка - нет: строка стоит погашенной, чтобы лист не прыгал при смене варианта). Строка одна на лист, не на каждый вариант.
+ */
+@Composable private fun AdditivesChoice(game: GameUi, offered: Map<String, AdditiveEffect>, chosen: List<String>, most: Int, enabled: Boolean, onPick: (List<String>) -> Unit) {
+    val inspect = rememberInspect()
+    val options = remember(game.lang, game.hero?.bag, game.index, offered) { PickOptions.additives(offered, game.index) { bagCount(game, it) } }
+    ForgeMultiPicker(
+        ui("crafts.additives", most),
+        chosen,
+        options,
+        most,
+        counted = { ui(pluralKey("crafts.additive_count", it), it) },
+        enabled = enabled && !game.busy,
+        hold = HoldSubject.ITEM,
+        onPeek = { inspect(Inspect.Stack(it)) },
+        onPick = onPick,
+    )
+}
+
+/** Что открывает удержание варианта работы вида [kind]: книга и ритуал - карточку умения, прочее - карточку предмета; у кузнеца - ничего. */
+private fun choiceHold(kind: JobKind): HoldSubject? = when (kind) {
+    JobKind.BOOK, JobKind.EVOLVE -> HoldSubject.SKILL
+    JobKind.EQUIPMENT -> null
+    else -> HoldSubject.ITEM
+}
+
+/**
+ * Карточка того, что даст вариант работы вида [kind] по его выбору: умение книги и ритуала - карточка умения, база инструмента -
+ * витрина шаблона, стопка - её карточка.
+ */
+@Composable private fun rememberChoicePeek(game: GameUi, kind: JobKind): (String) -> Unit {
+    val inspect = rememberInspect()
+    val inspectSkill = rememberSkillInspect()
+    val index = game.index
+    return remember(index, kind, inspect, inspectSkill) {
+        { code: String ->
+            val skill = when (kind) {
+                JobKind.BOOK -> index?.skills?.byBook(code)?.code
+                JobKind.EVOLVE -> code
+                else -> null
+            }
+            when {
+                skill != null -> inspectSkill(SkillPeek(skill))
+                index?.template(code) != null -> inspect(Inspect.Showcase(code))
+                index?.item(ItemCode(code)) != null -> inspect(Inspect.Stack(code))
+            }
+        }
+    }
 }
 
 /**
@@ -309,50 +333,31 @@ private data class JobSheetState(
 )
 
 /**
- * Касания листа работы: [onInspect] - карточка, [onHelp] - статья словаря ремёсел, [onAdditives] - выбор примесей, [onStop] - стоп
- * идущей работы, [onStart] - запуск варианта с примесями.
+ * Касания листа работы: [onInspect] - карточка, [onHelp] - статья словаря ремёсел, [onStop] - стоп идущей работы, [onStart] - запуск
+ * варианта с примесями.
  */
 private class JobSheetActions(
     val onInspect: (Inspect) -> Unit,
     val onHelp: (String) -> Unit,
-    val onAdditives: (List<String>) -> Unit,
     val onStop: () -> Unit,
     val onStart: (JobView, List<String>) -> Unit,
 )
 
 /**
- * Что меняет вариант [job] листа [sheet]: формула, что получится, поля работы, добавки работы ([additives] - уже без них у случайной
- * ковки), короткая заметка и внизу кнопка или причина, почему работу не начать. Идёт в [TallestOf] по всем вариантам: высота блока -
- * по самому высокому, верх листа при смене варианта не двигается; причина и заметка каждого варианта считаются заново лишь при смене
- * того, из чего они сложены.
+ * Что меняет вариант [job] листа [sheet] с добавками [additives] (у случайной ковки - без них): формула, что получится, поля работы, короткая заметка и внизу кнопка или причина, почему работу не начать. Идёт в [TallestOf] по всем вариантам:
+ * высота блока - по самому высокому, верх листа при смене варианта не двигается; причина и заметка каждого варианта считаются заново лишь
+ * при смене того, из чего они сложены.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>, actions: JobSheetActions) {
     val (game, crafts, profession, work, choices, targets, item, current) = sheet
     val onInspect = actions.onInspect
-    val random = job.choice == SmithChoice.RANDOM.name
     val block = remember(game, profession, work, choices, job, additives, targets, item) { JobBlock.of(game, profession, work, choices, job, additives, targets, item) }
     val note = remember(game, job, additives) { shortNote(game, job, additives) }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         RecipeFormula(game, profession, job, additives) { it?.let(onInspect) }
         ResultLine(game, job) { it?.let(onInspect) }
         crafts?.rules?.let { rules -> JobFields(remember(game.lang, rules, profession.level, profession.layers, profession.equipped, job) { JobLedger.of(rules, profession, job) }, job.code, actions.onHelp) }
-        val offered = crafts?.crafting?.additives(job.job).orEmpty()
-        if (offered.isNotEmpty() && !random && crafts != null && crafts.crafting.maxAdditives > 0) {
-            Engraved(ui("crafts.additives", crafts.crafting.maxAdditives))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                offered.forEach { (code, effect) ->
-                    val on = code in additives
-                    ForgeChip(
-                        ui("crafts.additive_chip", bagCount(game, code), itemTitle(code), additiveTitle(effect, game.index)),
-                        on,
-                        { actions.onAdditives(if (on) additives - code else additives + code) },
-                        state = ButtonState.of(on || (bagCount(game, code) > 0 && additives.size < crafts.crafting.maxAdditives)),
-                    )
-                }
-            }
-        }
         note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         Spacer(Modifier.height(4.dp))
         when {
@@ -424,9 +429,15 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
     }
 }
 
-/** Что получится: имя выхода, сведения (в сумке или уровень) и описание стопки; касание - [onOpen] с его карточкой, если она есть. */
+/**
+ * Что получится: имя выхода, сведения (в сумке или уровень) и описание стопки; касание - [onOpen] с его карточкой, если она есть, у
+ * ритуала тира - карточка умения.
+ */
 @Composable private fun ResultLine(game: GameUi, job: JobView, onOpen: (Inspect?) -> Unit) {
     val card = resultCard(game, job)
+    val skill = (job.job as? Job.Evolve)?.skill?.takeIf { it.isNotEmpty() }
+    val inspectSkill = rememberSkillInspect()
+    val open: (() -> Unit)? = card?.let { { onOpen(it) } } ?: skill?.let { { inspectSkill(SkillPeek(it)) } }
     val output = job.output
     val meta = when (card) {
         is Inspect.Stack -> ui("crafts.result_bag", compactNumber(bagCount(game, output).toDouble()))
@@ -435,7 +446,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
     }
     val description = if (card is Inspect.Stack) itemDescription(output, game.index) else ""
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = card != null, role = Role.Button) { onOpen(card) }.padding(vertical = 2.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = open != null, role = Role.Button) { open?.invoke() }.padding(vertical = 2.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -443,29 +454,53 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
             if (meta.isNotEmpty()) Text(meta, color = Muted, style = MaterialTheme.typography.labelSmall)
             if (description.isNotEmpty()) Text(description, color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
-        if (card != null) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
+        if (open != null) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
 }
 
-/** The stash's tools of this profession — the copies whose template sits in the profession's tool slot; касание открывает карточку, её кнопка кладёт инструмент в слот. */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ToolPicker(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onPick: (String) -> Unit) {
-    val slot = Slot.of(profession.tool)
-    val tools = remember(game.hero?.items, game.index, slot) {
-        game.hero?.stash.orEmpty().filter { !it.socketed }
-            .mapNotNull { instance -> game.view(instance)?.takeIf { slot != null && it.slot == slot }?.let { instance to it } }
-    }
+/**
+ * Инструменты профессии [profession]: надетый первым, затем копии тайника, чей шаблон встаёт в слот её инструмента (не в гнезде).
+ */
+private fun toolViews(game: GameUi, profession: ProfessionView): List<ItemView> {
+    val slot = Slot.of(profession.tool) ?: return emptyList()
+    val stash = game.hero?.stash.orEmpty().filter { !it.socketed }.mapNotNull { instance -> game.view(instance)?.takeIf { it.slot == slot } }
+    return listOfNotNull(profession.equipped?.let { game.view(it) }) + stash
+}
+
+/** Выбор инструмента профессии: варианты [options], надетый [worn] и его карточка по долгому нажатию [peek]. */
+private class ToolPick(val options: List<PickOption<String>>, val worn: String?, val peek: (String) -> Unit) {
+    /** Что сказать, когда инструментов нет: где их взять. */
+    val empty: PickEmpty get() = PickEmpty(ui("crafts.no_tools"), ui("crafts.no_tools_hint"))
+}
+
+/**
+ * Выбор инструмента профессии [profession] из её инструментов ([toolViews]): тот, чьих требований герой не выполняет, закрыт первым из
+ * них (надетый - нет); пересобирается, только когда сдвинулись вещи героя.
+ */
+@Composable private fun rememberToolPick(game: GameUi, profession: ProfessionView): ToolPick {
+    val tools = remember(game.hero?.items, game.index, profession.tool, profession.equipped) { toolViews(game, profession) }
     val inspect = rememberInspect()
-    ForgeSheet(onDismissRequest = onDismiss) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.7f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item { Engraved(ui("crafts.pick_tool")) }
-            if (tools.isEmpty()) item { InfoCard(ui("crafts.no_tools"), ui("crafts.no_tools_hint")) }
-            items(tools, key = { it.first.id }) { (instance, view) ->
-                ItemRow(view, unwearable = game.unmetFor(instance.template), price = game.sellPrice(instance)) {
-                    inspect(Inspect.Copy(instance, InspectAction(ui("hero.equip"), enabled = !game.busy) { onPick(instance.id) }))
-                }
-            }
-        }
+    val worn = profession.equipped?.id
+    return remember(game.lang, game.hero, tools, inspect) {
+        val options = PickOptions.copies(tools) { view -> if (view.id == worn) emptyList() else game.unmetFor(view.code) }
+        ToolPick(options, worn) { id -> tools.firstOrNull { it.id == id }?.let { inspect(Inspect.Copy(it.item)) } }
+    }
+}
+
+/** Строка выбора инструмента профессии в листе работы: выбранный - надетый, выбор другого надевает его. */
+@Composable private fun ToolChoice(game: GameUi, vm: CraftsViewModel, profession: ProfessionView) {
+    val pick = rememberToolPick(game, profession)
+    ForgePicker(ui("crafts.tool"), pick.worn, pick.options, enabled = !game.busy, empty = pick.empty, hold = HoldSubject.ITEM, onPeek = pick.peek) { id -> id?.takeIf { it != pick.worn }?.let(vm::equipTool) }
+}
+
+/**
+ * Смена инструмента профессии сама по себе (кнопка шапки окна профессии и «Сменить инструмент»): шторка общего выбора ([ForgePickSheet])
+ * со всеми её инструментами; выбор другого - [onPick] с id копии, долгое нажатие - карточка копии.
+ */
+@Composable
+internal fun ToolPickSheet(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val pick = rememberToolPick(game, profession)
+    ForgePickSheet(ui("crafts.tool"), pick.worn, pick.options, empty = pick.empty, hold = HoldSubject.ITEM, onDismiss = onDismiss, onPeek = pick.peek) { id ->
+        if (id != null && id != pick.worn) onPick(id) else onDismiss()
     }
 }

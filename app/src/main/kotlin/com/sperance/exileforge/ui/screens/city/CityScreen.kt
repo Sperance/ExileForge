@@ -18,8 +18,6 @@ import com.sperance.exileforge.core.app.TAB_CITY
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.reachable
 import com.sperance.exileforge.core.app.unlocked
-import com.sperance.exileforge.core.display.GuildText
-import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketChores
@@ -34,8 +32,6 @@ import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.auction.MarketViewModel
 import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
-import com.sperance.exileforge.ui.screens.guild.GuildScreen
-import com.sperance.exileforge.ui.screens.guild.GuildViewModel
 import com.sperance.exileforge.ui.screens.hall.HallScreen
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
@@ -44,8 +40,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The City: a square of buildings — the quest board, the merchant, the auction, the guild,
- * «История» (с Летописью внутри) and «Доска славы».
+ * The City: a square of buildings — the quest board, the merchant, the auction,
+ * «История» (с Летописью внутри) and «Доска славы»; гильдия - своя вкладка панели.
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * Each building explains itself on its first visit.
  */
@@ -61,7 +57,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 Building.QUESTS -> QuestsScreen()
                 Building.MERCHANT -> MerchantScreen()
                 Building.AUCTION -> AuctionScreen()
-                Building.GUILD -> GuildScreen()
                 Building.HISTORY -> HistoryScreen()
                 Building.HALL -> HallScreen()
             }
@@ -75,7 +70,6 @@ private val Building.titleKey: String
         Building.QUESTS -> "quest.title"
         Building.MERCHANT -> "merchant.title"
         Building.AUCTION -> "nav.auction"
-        Building.GUILD -> "guild.title"
         Building.HISTORY -> "history.title"
         Building.HALL -> "hall.title"
     }
@@ -91,15 +85,12 @@ private val Building.titleKey: String
     val heroModel: HeroViewModel = koinViewModel()
     val quests = koinViewModel<QuestViewModel>()
     val market = koinViewModel<MarketViewModel>()
-    val guild = koinViewModel<GuildViewModel>()
     val board by quests.quests.collectAsStateWithLifecycle()
     val trade by market.market.collectAsStateWithLifecycle()
-    val guilds by guild.guilds.collectAsStateWithLifecycle()
     val auction = game.reachable(Feature.AUCTION)
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()
-            guild.open()
             quests.open()
         }
     }
@@ -110,7 +101,7 @@ private val Building.titleKey: String
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         HubGrid(
-            cityTiles(game, board, trade, chores, guilds) { building ->
+            cityTiles(game, board, trade, chores) { building ->
                 if (building == Building.AUCTION) market.attend(chores.first)
                 shell.building(building)
             },
@@ -121,17 +112,16 @@ private val Building.titleKey: String
 
 /**
  * Здания площади плитками хаба (как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
- * награды заданий, приглашения в гильдию, дела рынка ([chores]: лоты к продлению, перебитые ставки, торги, что можно продать) - у рынка
- * ещё и строкой на каждое дело.
+ * награды заданий, дела рынка ([chores]: лоты к продлению, перебитые ставки, торги, что можно продать) - у рынка ещё и строкой на
+ * каждое дело.
  */
-private fun cityTiles(game: GameUi, board: Quests, trade: Market, chores: MarketChores, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
+private fun cityTiles(game: GameUi, board: Quests, trade: Market, chores: MarketChores, open: (Building) -> Unit): List<HubTile> {
     fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0, lines: List<String> = emptyList()) =
         HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building), chores = lines) { open(building) }
     return listOf(
         tile(Building.QUESTS, ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
         tile(Building.MERCHANT, ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),
         tile(Building.AUCTION, ForgeGlyphs.Orb, Gold, auctionNews(trade), chores.total, choreLines(chores)),
-        tile(Building.GUILD, ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
         tile(Building.HISTORY, ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
         tile(Building.HALL, ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
     )
@@ -155,12 +145,6 @@ private fun merchantNews(merchant: MerchantStock?): String = merchant?.takeIf { 
 private fun auctionNews(market: Market): String = market.locked
     ?: market.slots?.let { ui("city.auction_lots", market.myLots.count { lot -> lot.onSale }, it.limit) }
     ?: ui("city.auction_idle")
-
-private fun guildNews(guilds: Guilds): String {
-    val mine = guilds.mine ?: return ui("city.guild_idle")
-    mine.guild?.let { return ui("city.guild_in", GuildText.title(it.name, it.tag), it.level) }
-    return if (mine.invites.isNotEmpty()) ui("city.guild_invites", mine.invites.size) else ui("city.guild_none")
-}
 
 /** The level a building opens at, while the hero is below it. */
 private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level(index?.rules)

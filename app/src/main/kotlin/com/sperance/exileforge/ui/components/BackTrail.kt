@@ -33,17 +33,12 @@ private val TRAIL_HEIGHT = 40.dp
 @Immutable
 data class TrailColors(val arrow: Color = Gold, val link: Color = Muted, val here: Color = Parchment, val data: Color = Rune)
 
-/**
- * Звено цепочки: подпись уровня (вложенный уровень может её уточнить - [TrailTitle]), данные экрана справа в строке ([TrailData]) и как
- * с него уйти на уровень выше.
- */
+/** Звено цепочки: подпись уровня, данные экрана справа в строке ([TrailData]) и как с него уйти на уровень выше. */
 @Stable
 private class TrailEntry(label: String, val back: State<() -> Unit>) {
     var label by mutableStateOf(label)
-    var title by mutableStateOf<String?>(null)
     var data by mutableStateOf<String?>(null)
     var tip by mutableStateOf<Tip?>(null)
-    val shown: String get() = title ?: label
 }
 
 /** Уровни цепочки одного хозяина по глубине: 1 - первый вложенный, корень - сам хозяин. */
@@ -58,8 +53,8 @@ private class TrailScope(val state: TrailState, val depth: Int)
 private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 
 /**
- * Хозяин цепочки «назад» - экран-хаб ([root] - его имя: «Город», «Развитие», «Поход»): одна строка ~40dp
- * «← Город › Гильдия [TAG] › Состав» над [content]. Вложенные уровни встают в неё сами ([TrailLevel]); пока их нет - строки нет.
+ * Хозяин цепочки «назад» - экран-хаб ([root] - его имя: «Город», «Развитие», «Гильдия [TAG]»): одна строка ~40dp
+ * «← Развитие › Ремёсла › Горное дело» над [content]. Вложенные уровни встают в неё сами ([TrailLevel]); пока их нет - строки нет.
  * Стрелка и системный «назад» - на уровень вверх, нажатие звена - прыжок к нему (уровни глубже закрываются по очереди). [colors] - краски
  * строки.
  */
@@ -97,16 +92,6 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
     CompositionLocalProvider(LocalTrail provides TrailScope(parent.state, depth), content = content)
 }
 
-/** Уточнённая подпись окружающего уровня, пока вызов на экране: гильдия называет себя «Гильдия [TAG]». */
-@Composable fun TrailTitle(title: String) {
-    val scope = LocalTrail.current ?: return
-    val entry = scope.state.levels[scope.depth] ?: return
-    DisposableEffect(entry, title) {
-        entry.title = title
-        onDispose { if (entry.title == title) entry.title = null }
-    }
-}
-
 /**
  * Данные экрана справа в строке цепочки, пока вызов на экране: Гримуар - «Ур. 25 · ✦ 215 · ⛓ 30%», уникальные - «34 / 210». Своей
  * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда; перевод строки в [data] ставит данные столбиком
@@ -139,7 +124,7 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
         val data = levels.last().data
         val tip = levels.last().tip
         Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-            val names = listOf(root) + levels.map { it.shown }
+            val names = listOf(root) + levels.map { it.label }
             names.forEachIndexed { i, name ->
                 if (i > 0) Text(" › ", color = colors.link, style = MaterialTheme.typography.labelLarge)
                 val here = i == names.lastIndex

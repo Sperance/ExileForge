@@ -39,7 +39,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Feature
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_GUILD
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -57,7 +59,21 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The guild, a building of the City. A hero outside one finds a guild, answers an invitation or
+ * Вкладка «Гильдия» - корень своей вкладки панели: до уровня открытия гильдий - экран замка ([FeatureGate]), иначе экран гильдии
+ * под цепочкой «назад» вкладки («← Гильдия [TAG] › Состав»). Вкладка нажата снова - открытый раздел закрывается.
+ */
+@Composable fun GuildTabScreen() {
+    val vm = koinViewModel<GuildViewModel>()
+    val game by vm.game.collectAsStateWithLifecycle()
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
+    OnReselect(TAB_GUILD) { vm.tab(null) }
+    FeatureGate(game, Feature.GUILD) {
+        BackTrailHost(guilds.mine?.guild?.let { GuildText.title(ui("nav.guild"), it.tag) } ?: ui("nav.guild")) { GuildScreen() }
+    }
+}
+
+/**
+ * The guild, its own tab of the bar. A hero outside one finds a guild, answers an invitation or
  * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
  * the screen only says in advance what a button would be refused for, from `guilds.json`.
  */

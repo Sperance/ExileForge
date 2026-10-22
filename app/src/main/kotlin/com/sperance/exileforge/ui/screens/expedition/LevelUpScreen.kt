@@ -215,7 +215,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
 /** Значок раздела на экране повышения: тот же, каким раздел встречает героя в городе и на полосах. */
 private val Feature.glyph: ImageVector get() = when (this) {
     Feature.GRIMOIRE -> ForgeGlyphs.Grimoire
-    Feature.CRAFTS -> ForgeGlyphs.Anvil
+    Feature.CRAFTS -> ForgeGlyphs.Hammer
     Feature.CHRONICLE -> ForgeGlyphs.Tome
     Feature.MERCHANT -> ForgeGlyphs.Coins
     Feature.FORGE -> ForgeGlyphs.Orb

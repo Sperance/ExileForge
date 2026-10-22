@@ -183,8 +183,14 @@ fun rangeNumber(stat: String, ends: DamageRange): String {
     return if (statNumber(stat, low) == statNumber(stat, high)) statNumber(stat, high) else "${statNumber(stat, low)}–${statNumber(stat, high)}"
 }
 
-/** Диапазон урона вида удара [stat] листа [sheet] - «мин–макс» сводки ([HitRanges.range]); не вид удара - null. */
-fun hitRangeText(stat: String, sheet: Map<String, Double>, index: ContentIndex): String? = HitRange.of(stat)?.let { rangeNumber(stat, HitRanges.range(sheet, it, index.stats)) }
+/**
+ * Диапазон урона вида удара [stat] листа [sheet] со средним [mean] (по умолчанию - своё среднее листа) - «мин–макс» сводки
+ * ([HitRanges.range]); не вид удара - null.
+ */
+fun hitRangeText(stat: String, sheet: Map<String, Double>, index: ContentIndex, mean: Double = sheet[stat] ?: 0.0): String? {
+    val range = HitRange.of(stat) ?: return null
+    return rangeNumber(stat, HitRanges.range(sheet, range, index.stats, mean))
+}
 
 /** Процент «больше/меньше» [percent] долей от полного: −40 → «60%». */
 fun multiplierText(percent: Double): String = shareText(100 + percent) + "%"

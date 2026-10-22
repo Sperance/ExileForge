@@ -19,7 +19,7 @@ class FlaskBonuses(private val game: GameUi) {
         FlaskSheet.HERO_BONUSES.mapNotNull { bonus ->
             val breakdown = combat.explain(bonus.code)
             if (breakdown.total == 0.0) return@mapNotNull null
-            val view = explainer.explain(breakdown, emptyList(), combat::holders)
+            val view = explainer.explain(breakdown, emptyList(), combat::holders, combat.stats)
             FlaskBonus(bonus.code, view.total, StatPolarity.better(game.index, bonus.code, breakdown.total), view.cards.flatMap { it.rows })
         }
     }

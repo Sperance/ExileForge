@@ -42,17 +42,17 @@ class TraceExplainer(private val game: GameUi) {
         val percent = index?.stats?.isPercent(stat) == true
         val rows = mutableListOf<TraceRow>()
         when {
-            shot.side == Side.HERO -> hero(stat, origin, rows)
+            shot.side == Side.HERO -> hero(stat, origin, shot.stats, rows)
             shot.side == Side.MONSTER -> monster(shot.index, stat, origin, percent, rows)
         }
         shot.lines.filter { it.line.stat == stat }.forEach { rows += TraceRow(lineTitle(it), sheet.fmt(stat, it.line.value, it.line.op, percent), ui("trace.src.fight")) }
         return StatTrace(stat, statTitle(stat, game.lang), statValue(stat, shot.stats[stat] ?: 0.0, index), rows)
     }
 
-    private fun hero(stat: String, origin: TraceOrigin, rows: MutableList<TraceRow>) {
+    private fun hero(stat: String, origin: TraceOrigin, stats: Map<String, Double>, rows: MutableList<TraceRow>) {
         val explainer = origin.hero.explainer
         if (explainer != null) {
-            sheet.explain(explainer.explain(stat).shifted(origin.hero.shifts()[stat].orEmpty()), emptyList(), explainer::holders).cards
+            sheet.explain(explainer.explain(stat).shifted(origin.hero.shifts()[stat].orEmpty()), emptyList(), explainer::holders, stats).cards
                 .forEach { card -> card.rows.forEach { rows += TraceRow(it.title, it.value, it.note) } }
         }
         val percent = index?.stats?.isPercent(stat) == true

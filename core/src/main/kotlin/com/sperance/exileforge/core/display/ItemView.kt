@@ -325,18 +325,16 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     /**
      * Числа базы крупными фигурами - карточка, строка списка: каждое число базы с характеристикой, а у оружия за уроном базы - урон
-     * стихий, что дали его локальные строки («Огонь 31–57»).
+     * стихий, что дали его локальные строки («Огонь 31–57»); база без урона - урон строк первым. Конец урона в своде лежит и половиной
+     * в среднем вида, так у вида с концом среднее есть всегда.
      */
     val figures: List<PropertyValue> by lazy {
         val own = base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
+        if (weaponWidth == null) return@lazy own
         val shown = own.mapTo(HashSet()) { it.stat }
-        val added = if (weaponWidth == null) {
-            emptyList()
-        } else {
-            HitRange.entries.filter { it.hit !in shown && (folded[it.max] ?: 0.0) > 0 }.map { PropertyValue(it.hit, 0.0, folded[it.hit] ?: 0.0, weaponEnds(it)) }
-        }
-        val after = own.indexOfFirst { HitRange.of(it.stat) != null } + 1
-        own.take(after) + added + own.drop(after)
+        val added = HitRange.entries.filter { it.hit !in shown && (folded[it.max] ?: 0.0) > 0 }.map { PropertyValue(it.hit, 0.0, folded.getValue(it.hit), weaponEnds(it)) }
+        val damage = own.indexOfFirst { HitRange.of(it.stat) != null }
+        if (damage < 0) added + own else own.take(damage + 1) + added + own.drop(damage + 1)
     }
 
     /** База копии с её локальными строками и качеством по характеристике ([SheetCalculator.itemBase]). */

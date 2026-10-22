@@ -124,5 +124,5 @@ fun FlowMeasure.gives(stat: String, figure: String, value: Double): String = ui(
  * «мин–макс» ([hitRangeText], среднее - [value]), прочие - [statValue].
  */
 fun rowValue(stat: String, value: Double, index: ContentIndex? = null, sheet: Map<String, Double>? = null): String = FlowMeasure.of(stat)?.text(stat, value)
-    ?: index?.let { content -> sheet?.let { hitRangeText(stat, it + (stat to value), content) } }
+    ?: index?.let { content -> sheet?.let { hitRangeText(stat, it, content, mean = value) } }
     ?: statValue(stat, value, index)

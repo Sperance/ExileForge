@@ -124,7 +124,10 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
             )
         }
 
-        /** Урон вида удара диапазоном: «12–20 → 15–26», разница - сдвиг концов «+3 / +6» (одинаковый - одним числом); не вид удара - null. */
+        /**
+         * Урон вида удара диапазоном: «12–20 → 15–26», разница - сдвиг концов «+3 / +6» (одинаковый - одним числом); не вид удара - null.
+         * Оценка - по среднему, а без его сдвига (сдвинулась лишь ширина или конец) - по сумме сдвигов концов.
+         */
         private fun rangeLine(change: StatDelta, index: ContentIndex, sheet: Map<String, Double>, after: Map<String, Double>): ComparisonLine? {
             val range = HitRange.of(change.stat) ?: return null
             val was = HitRanges.range(sheet, range, index.stats)
@@ -136,16 +139,16 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
                 rangeNumber(change.stat, was),
                 rangeNumber(change.stat, will),
                 if (low == high) signed(low) { number(it) } else ui("compare.range", signed(low) { number(it) }, signed(high) { number(it) }),
-                StatPolarity.better(index, change.stat, change.change),
+                StatPolarity.better(index, change.stat, if (change.change != 0.0) change.change else low + high),
                 StatPriority.rank(change.stat),
                 share(was.min + was.max, will.min + will.max),
             )
         }
 
-        /** Виды удара, у которых сдвинулась лишь ширина или конец диапазона ([HitRange]), а среднее - нет: строкой урона без перемены среднего. */
+        /** Виды удара, у которых сдвинулась лишь часть диапазона ([HitRange.parts]: ширина или конец), а среднее - нет: строкой урона без перемены среднего. */
         private fun widened(delta: List<StatDelta>, sheet: Map<String, Double>): List<StatDelta> {
             val moved = delta.mapTo(HashSet()) { it.stat }
-            return HitRange.entries.filter { it.hit !in moved && (it.spread in moved || it.min in moved || it.max in moved) }.map { StatDelta(it.hit, sheet[it.hit] ?: 0.0, sheet[it.hit] ?: 0.0) }
+            return HitRange.entries.filter { it.hit !in moved && it.parts.any(moved::contains) }.map { StatDelta(it.hit, sheet[it.hit] ?: 0.0, sheet[it.hit] ?: 0.0) }
         }
 
         /** Сдвиг защиты меньше сотой п.п. - шум округления, без цвета. */

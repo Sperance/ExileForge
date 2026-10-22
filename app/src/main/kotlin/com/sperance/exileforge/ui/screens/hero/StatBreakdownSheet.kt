@@ -104,7 +104,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
     val view = remember(current, combat, shifts, stats, game.lang) {
-        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current), stats)
+        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, stats, combat.lowLife(current), combat.lootApart(current))
     }
     val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }
     val inspect = rememberInspect()

@@ -33,6 +33,7 @@ import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.WorldPart
 import com.sperance.exileforge.rules.sheet.Grant
+import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.sheet.ModifierMath
 import com.sperance.exileforge.rules.sheet.Share
 import com.sperance.exileforge.rules.sheet.Shift
@@ -113,9 +114,9 @@ class StatExplainer(private val game: GameUi) {
         breakdown: StatBreakdown,
         grants: List<Grant>,
         holders: (String) -> List<StatSource>,
+        sheet: Map<String, Double>,
         lowLife: List<Pair<PassiveSource, Double>> = emptyList(),
         apart: List<Pair<WorldPart, WorldKind>> = emptyList(),
-        sheet: Map<String, Double> = emptyMap(),
     ): StatExplanation {
         val stat = breakdown.stat
         val format = formatOf(breakdown)
@@ -155,7 +156,7 @@ class StatExplainer(private val game: GameUi) {
 
     /** Части строки урона вида [range] листа [sheet]: плоские концы - со ссылкой на свой разбор, полуширина - «±N%»; без концов - пусто. */
     private fun parts(range: HitRange, sheet: Map<String, Double>): List<ShareRow> {
-        if ((sheet[range.min] ?: 0.0) == 0.0 && (sheet[range.max] ?: 0.0) == 0.0) return emptyList()
+        if (!HitRanges.ranged(sheet, range)) return emptyList()
         return listOf(range.min, range.max).map { ShareRow(statTitle(it), statNumber(it, sheet[it] ?: 0.0), link = RowLink.Stat(it)) } +
             ShareRow(statTitle(range.spread), ui("stat.range_spread", number(sheet[range.spread] ?: 0.0)))
     }

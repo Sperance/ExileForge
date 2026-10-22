@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,7 +46,6 @@ import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.MightStanding
 import com.sperance.exileforge.core.character.Mights
 import com.sperance.exileforge.core.display.compactNumber
-import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.mightChange
 import com.sperance.exileforge.core.display.mightLine
 import com.sperance.exileforge.core.display.mightStandingText
@@ -108,22 +106,6 @@ fun MightStanding.tint(): Color = when (this) {
         }
         if (open && reading != null) TipCallout(Caution, onClose = { open = false }) { MightBreakdown(reading) }
     }
-}
-
-/** Место героя на доске Мощи своего сервера чипом «№37» рядом с [MightMark], той же высоты; касание - [onClick] (доска славы «Мощь»). */
-@Composable fun MightPlaceMark(place: Long, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(8.dp)
-    Text(
-        ui("might.place", groupedNumber(place)),
-        color = Rune,
-        fontSize = 13.sp,
-        lineHeight = 14.sp,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        softWrap = false,
-        modifier = modifier.height(MARK_HEIGHT).clip(shape).background(Panel).border(1.dp, Bronze, shape)
-            .clickable(onClickLabel = ui("player.might_place"), onClick = onClick).wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 8.dp),
-    )
 }
 
 /**

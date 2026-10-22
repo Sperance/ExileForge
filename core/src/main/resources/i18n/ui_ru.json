@@ -4032,7 +4032,6 @@
   "mail.keep": "Письма игры хранятся 30 дней, письма героев — {0} дн.",
   "mail.empty": "Писем нет.",
   "might.title": "Мощь",
-  "might.place": "№{0}",
   "might.short": "⚜ {0}",
   "might.of": "Мощь {0}",
   "might.offense": "Натиск",

@@ -4032,7 +4032,6 @@
   "mail.keep": "Game letters keep for 30 days, heroes' letters for {0} days.",
   "mail.empty": "No letters.",
   "might.title": "Might",
-  "might.place": "#{0}",
   "might.short": "⚜ {0}",
   "might.of": "Might {0}",
   "might.offense": "Offense",

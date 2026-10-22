@@ -48,7 +48,6 @@ import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.FoldBody
 import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.MightMark
-import com.sperance.exileforge.ui.components.MightPlaceMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
@@ -56,7 +55,6 @@ import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The character's figures: life and shield on top, then everything else the sheet counts, one
@@ -78,17 +76,13 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Строка над сводкой: слева свой номер героя (касание копирует; сервер старше - нет),
  * справа Мощь - чип «⚜ 12.5k» из того же листа боя без карты, что и цифры сводки, с разбором стойкости; ещё не
- * сложен - «…»; рядом - место героя [heroId] на доске Мощи своего сервера отдельным чипом «№37» (своя карточка игрока, касание - доска
- * славы «Мощь» на герое); героя нет на доске - чипа нет.
+ * сложен - «…». Места на доске Мощи здесь нет - оно в карточке игрока и на доске славы.
  */
-@Composable fun NumberAndMight(hero: HeroView, heroId: String) {
-    val vm = koinViewModel<HeroViewModel>()
-    val place by produceState(0L, heroId) { value = heroId.takeIf { it.isNotBlank() }?.let { vm.ownCard(it) }?.mightPlace ?: 0L }
+@Composable fun NumberAndMight(hero: HeroView) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         ShortCodeChip(ui("hero.number_own"), hero.info.number)
         Spacer(Modifier.weight(1f))
         MightMark(hero.might)
-        if (place > 0) MightPlaceMark(place, onClick = { vm.openMightBoard(heroId) })
     }
 }
 

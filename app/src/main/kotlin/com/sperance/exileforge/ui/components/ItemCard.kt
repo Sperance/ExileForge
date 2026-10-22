@@ -30,6 +30,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameSettings
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.CardSeal
@@ -52,9 +53,11 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.FlaskBonuses
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.vector
+import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -144,9 +147,10 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 /**
  * Предмет как страница «Реликвария» (выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
  * под ним что это и плашки уровня, качества и цены; строки - со значком тира, нажатие открывает тир и место ролла.
- * Полная карточка начинается «Медальоном» ([MedallionHead]): база слева от гнезда, кольцо качества роллов и значки состояний
+ * Полная карточка начинается «Медальоном» ([MedallionHead]): гнездо по центру, кольцо качества роллов и значки состояний
  * справа, у легенды гнездо в «Астролябии» 112dp; касание имени - английское имя для поиска на аукционе, касание значка - что он
- * значит. Короткая - значки в углу, гнездо по центру, база крупными числами под разделителем. Уникальная и мифическая вещь -
+ * значит. Короткая - значки в углу, гнездо по центру. У обеих числа базы - плитками под плашками, до разделителя и строк
+ * ([BaseTiles]). Уникальная и мифическая вещь -
  * искры или звёзды, завитки по углам и номер экземпляра. [totals] - итог героя «сейчас → станет» под строками,
  * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
@@ -276,7 +280,7 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
     }
 }
 
-/** Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера и плашки. */
+/** Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера, плашки и плитки базы. */
 @Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
     val legend = look.legend != null
     Row(
@@ -296,25 +300,21 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
     RelicTitle(item, look, if (legend) 23 else 22, maxLines = 2)
     if (item.item.serial > 0) SerialSeal(item.item.serial, look)
     RelicChips(item, look, price)
+    BaseTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
-    BaseFigures(item, look)
 }
 
 /**
- * Шапка полной карточки - «Медальон»: в ряду гнезда слева база (до [MEDALLION_FIGURES] чисел; у карты без базы - уровень карты),
- * в центре гнездо или «Астролябия» 112dp, справа кольцо качества роллов и значки состояний. Ниже имя (касание - английское имя
- * для поиска на аукционе), тип, плашки и разделитель; база сверх ряда гнезда - под разделителем.
+ * Шапка полной карточки - «Медальон»: в центре гнездо или «Астролябия» 112dp с печатью влияния, справа кольцо качества роллов и
+ * значки состояний. Ниже имя (касание - английское имя для поиска на аукционе), тип, плашки и плитки базы ([BaseTiles]; у карты без
+ * базы - уровень карты плиткой), под ними разделитель.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
-    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
-    val mapLevel = item.mapLevel.takeIf { figures.isEmpty() }
+    val mapLevel = item.mapLevel.takeIf { item.figures.isEmpty() }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            figures.take(MEDALLION_FIGURES).forEach { MedallionFigure(it.text, statTitle(it.stat), if (it.augmented) Rune else FigureInk, look) }
-            mapLevel?.let { MedallionFigure(it.toString(), ui("card.map_level_short"), FigureInk, look) }
-        }
+        Spacer(Modifier.weight(1f))
         Box {
             if (look.legend != null) {
                 Astrolabe(look, size = 112.dp, socket = 72.dp) { ItemIcon(item, look.rarity, Modifier.size(48.dp)) }
@@ -339,23 +339,8 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
     }
     SideChips(item)
     RelicChips(item, look, price, noLevel = mapLevel != null, serial = true)
+    BaseTiles(item, look, mapLevel)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
-    BaseFigures(item, look, skip = MEDALLION_FIGURES)
-}
-
-/** Число базы у гнезда «Медальона»: крупно цветом [ink], под ним подпись [label] цветом `muted`, по правому краю. */
-@Composable private fun MedallionFigure(value: String, label: String, ink: Color, look: RelicLook) {
-    Column(horizontalAlignment = Alignment.End) {
-        val figure = MaterialTheme.typography.titleMedium
-        BasicText(
-            value,
-            style = figure.copy(color = ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End),
-            maxLines = 1,
-            softWrap = false,
-            autoSize = TextAutoSize.StepBased(minFontSize = FIGURE_MIN, maxFontSize = figure.fontSize, stepSize = FIGURE_STEP),
-        )
-        Text(label, color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .8.sp, textAlign = TextAlign.End, maxLines = 2)
-    }
 }
 
 /** Номер экземпляра легенды плашкой шапки: Cinzel цветом акцента в золотой нити. */
@@ -368,9 +353,6 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
         Text(ui("relic.serial", serial), color = look.accent, style = TextStyle(fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, letterSpacing = .6.sp), maxLines = 1)
     }
 }
-
-/** Чисел базы в ряду гнезда «Медальона»; остальные - под разделителем. */
-private const val MEDALLION_FIGURES = 3
 
 /** Кегль имени полной карточки. */
 private const val MEDALLION_NAME = 21
@@ -437,25 +419,65 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
 }
 
 /**
- * База вещи крупными числами без первых [skip] (они - у гнезда): по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
- * голубое. Свойство без характеристики остаётся фразой.
+ * Числа базы плитками ([ItemView.figures]) под именем и плашками, до строк - одна сетка полной и короткой карточки: по [TILE_COLUMNS]
+ * клетки в ряд, урон базы оружия - широкой плиткой на две клетки, прочие - по одной; урон стихии оружия - цветом стихии, число,
+ * сдвинутое строками копии, - голубое; [mapLevel] - уровень карты без базы своей плиткой. Свойство без характеристики остаётся фразой.
  */
-@Composable private fun BaseFigures(item: ItemView, look: RelicLook, skip: Int = 0) {
-    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }.drop(skip)
-    val sentences = item.base.filter { property -> property.values.all { it.stat.isBlank() } }
-    figures.chunked(3).forEach { row ->
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            row.forEachIndexed { i, value ->
-                if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(look.gold.copy(alpha = .16f)))
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(value.text, color = if (value.augmented) Rune else FigureInk, fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                    Text(statTitle(value.stat), color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
+@Composable private fun BaseTiles(item: ItemView, look: RelicLook, mapLevel: Int? = null) {
+    val tiles = item.figures.map { BaseTile(it.text, statTitle(it.stat), figureInk(it), if (HitRange.of(it.stat) == HitRange.PHYSICAL && it.ends != null) 2 else 1) } +
+        listOfNotNull(mapLevel?.let { BaseTile(it.toString(), ui("card.map_level_short"), FigureInk, 1) })
+    if (tiles.isNotEmpty()) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+            tileRows(tiles).forEach { row ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
+                    row.forEach { BaseTileCell(it, look, Modifier.weight(it.span.toFloat()).fillMaxHeight()) }
+                    val rest = TILE_COLUMNS - row.sumOf { it.span }
+                    if (rest > 0) Spacer(Modifier.weight(rest.toFloat()))
                 }
             }
         }
     }
-    sentences.forEach { BasePropertyLine(it) }
+    item.base.filter { property -> property.values.all { it.stat.isBlank() } }.forEach { BasePropertyLine(it) }
 }
+
+/** Плитка базы: число [value] цветом [ink], подпись [label], ширина [span] клеток сетки. */
+private class BaseTile(val value: String, val label: String, val ink: Color, val span: Int)
+
+/** Плитки по рядам сетки: следующая плитка, что не влезает в остаток ряда, начинает новый. */
+private fun tileRows(tiles: List<BaseTile>): List<List<BaseTile>> = tiles.fold(mutableListOf<MutableList<BaseTile>>()) { rows, tile ->
+    if (rows.isEmpty() || rows.last().sumOf { it.span } + tile.span > TILE_COLUMNS) rows += mutableListOf<BaseTile>()
+    rows.last() += tile
+    rows
+}
+
+/** Цвет числа базы [value]: урон стихии - цветом стихии, сдвинутое строками копии - голубым, прочее - светлым. */
+private fun figureInk(value: PropertyValue): Color = DamageType.of(value.stat)?.takeIf { it != DamageType.PHYSICAL }?.let { damageTint(it) } ?: if (value.augmented) Rune else FigureInk
+
+/** Клетка плитки базы: число крупно по центру (не влезает - ужимается, не режется), под ним подпись заглавными. */
+@Composable private fun BaseTileCell(tile: BaseTile, look: RelicLook, modifier: Modifier) {
+    val shape = RoundedCornerShape(10.dp)
+    Column(
+        modifier.background(Color.White.copy(alpha = .04f), shape).border(1.dp, Bronze, shape).padding(horizontal = 6.dp, vertical = 7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        val figure = MaterialTheme.typography.titleMedium
+        BasicText(
+            tile.value,
+            style = figure.copy(color = tile.ink, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.Center),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = TextAutoSize.StepBased(minFontSize = FIGURE_MIN, maxFontSize = figure.fontSize, stepSize = FIGURE_STEP),
+        )
+        Text(tile.label.uppercase(), color = look.muted, style = MaterialTheme.typography.labelSmall, letterSpacing = .5.sp, textAlign = TextAlign.Center, maxLines = 2)
+    }
+}
+
+/** Клеток в ряду сетки плиток базы. */
+private const val TILE_COLUMNS = 3
+
+/** Зазор между плитками базы. */
+private val TILE_GAP = 6.dp
 
 /**
  * Свёрнутые строки внизу карточки: требования и термины строк. Требования всегда свёрнуты одной строкой цветом вердикта -

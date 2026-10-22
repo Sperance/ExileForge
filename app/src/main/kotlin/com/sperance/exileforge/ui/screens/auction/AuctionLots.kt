@@ -122,7 +122,7 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
     }
-    market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, now, vm) { openBid = null } }
+    market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, market.feeCut, now, vm) { openBid = null } }
     sections.lotsOf(MyLotKind.AUCTIONS).firstOrNull { it.id == openLot }?.let { lot ->
         OwnBidSheet(game, lot, now, onDismiss = { openLot = null }, onWithdraw = {
             openLot = null

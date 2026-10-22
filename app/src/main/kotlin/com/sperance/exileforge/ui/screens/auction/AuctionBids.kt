@@ -83,14 +83,14 @@ import com.sperance.exileforge.ui.theme.*
         }
         items(page.items, key = { it.id }) { lot -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id } }
     }
-    page.items.firstOrNull { it.id == openLot }?.let { lot -> BidSheetOf(game, lot, now, vm) { openLot = null } }
+    page.items.firstOrNull { it.id == openLot }?.let { lot -> BidSheetOf(game, lot, market.feeCut, now, vm) { openLot = null } }
 }
 
 /**
  * Лист ставки [BidSheet] торгов [lot] из среза игры: правила, герой, счёт золота и товар карточкой, медиана похожих сделок - тихим
- * чтением подсказки цены (одна на вещь за сеанс); команды - модели рынка [vm].
+ * чтением подсказки цены (одна на вещь за сеанс); [cut] - скидка сбора героя; команды - модели рынка [vm].
  */
-@Composable internal fun BidSheetOf(game: GameUi, lot: AuctionLot, now: Long, vm: MarketViewModel, onDismiss: () -> Unit) {
+@Composable internal fun BidSheetOf(game: GameUi, lot: AuctionLot, cut: Double, now: Long, vm: MarketViewModel, onDismiss: () -> Unit) {
     val index = game.index ?: return
     val rules = index.rules.auction
     val hint by produceState<PriceHint?>(null, lot.itemCode, lot.rarity, lot.itemLevel) { value = vm.priceHint(lot) }
@@ -99,6 +99,7 @@ import com.sperance.exileforge.ui.theme.*
         rules,
         index,
         game.hero,
+        cut = cut,
         enabled = !game.busy,
         now = now,
         hint = hint,
@@ -211,13 +212,15 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
  * ([BidTailLine]), шаги «−» / «+» с наименьшей ставкой и шагом, залог «Спишется сейчас» - сферы и сбор против сумки и кошелька
  * ([BidPledge], золото - счёт [goldBill]), у торгов с растущим выкупом - «После ставки выкуп станет N» ([buyoutAfter]), сбор выкупа и кнопки «Поставить N» и «Выкупить за M» - удержанием. Шаг, наименьшая ставка,
  * залог и срок - правила `:core` ([minBid], [bidCost], [endsAfterBid]); своя лидирующая ставка не перебивается, свой лот - только
- * смотреть, лот другого героя своего аккаунта - кнопки погашены и сказано почему ([sameAccount]).
+ * смотреть, лот другого героя своего аккаунта - кнопки погашены и сказано почему ([sameAccount]). Сбор ставок - со скидкой героя [cut]
+ * от древа его гильдии (`AuctionMine.feeCut`).
  */
 @Composable internal fun BidSheet(
     lot: AuctionLot,
     rules: AuctionRules,
     index: ContentIndex,
     hero: HeroView?,
+    cut: Double,
     enabled: Boolean,
     now: Long,
     hint: PriceHint?,
@@ -231,7 +234,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
     val account = lot.sameAccount(hero?.info?.userId)
     val least = lot.minBid(rules)
     var amount by remember(lot.id, least) { mutableLongStateOf(least) }
-    val bidCost = lot.bidCost(index, amount)
+    val bidCost = lot.bidCost(index, amount, cut)
     val bidShort = hero?.shortfall(bidCost)?.text()
     val buyShort = hero?.shortfall(lot.cost)?.text()
     val open = enabled && lot.onSaleAt(now) && !own && !account
@@ -271,7 +274,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
                         MutedText(ui("auction.bid_min_hint", number(least.toDouble())))
                         MutedText(ui("auction.bid_step", percent(rules.bidStep), rules.bidStepMin))
                     }
-                    BidPledge(lot, index, hero, if (lot.leading) null else amount, goldBill)
+                    BidPledge(lot, index, cut, hero, if (lot.leading) null else amount, goldBill)
                     if (bidding && lot.buyoutGrows && !lot.buysOut(amount)) {
                         val after = lot.buyoutAfter(amount)
                         FullNumberTipped(after) { MutedText(ui("auction.buyout_after", compactNumber(after))) }
@@ -304,7 +307,7 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
         },
     ) {
         goods()
-        BidStatus(lot, index, own)
+        BidStatus(lot, index, cut, own)
         BidTerm(lot, rules, now)
         ForgePanel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -329,11 +332,11 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
  * Где ставка героя: перебита - красной плашкой, что его последняя ставка ленты и её сбор вернулись письмом; лидирует - зелёной, что
  * залог (ставка и сбор) лежит в торгах; свой лот - что купить его нельзя. Не ставил - ничего.
  */
-@Composable private fun BidStatus(lot: AuctionLot, index: ContentIndex, own: Boolean) {
+@Composable private fun BidStatus(lot: AuctionLot, index: ContentIndex, cut: Double, own: Boolean) {
     val (title, tint, detail) = when {
         own -> Triple(ui("auction.own_lot"), Caution, null)
-        lot.leading -> Triple(ui("auction.bid_leading"), Vital, ui("auction.status_held", "${number(lot.currentBid.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, lot.currentBid).toDouble())))
-        lot.outbid -> Triple(ui("auction.bid_outbid"), LifeRed, lot.lastOwnBid?.let { ui("auction.status_back", "${number(it.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, it).toDouble())) })
+        lot.leading -> Triple(ui("auction.bid_leading"), Vital, ui("auction.status_held", "${number(lot.currentBid.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, lot.currentBid, cut).toDouble())))
+        lot.outbid -> Triple(ui("auction.bid_outbid"), LifeRed, lot.lastOwnBid?.let { ui("auction.status_back", "${number(it.toDouble())} ${orbTitle(lot)}", number(lot.bidFee(index, it, cut).toDouble())) })
         else -> return
     }
     val shape = RoundedCornerShape(12.dp)
@@ -487,9 +490,9 @@ private const val FEED_SHOWN = 4
  * Залог ставки: «Спишется сейчас» - сферы ставки [amount] против сумки и сбор золотом против кошелька ([goldBill]); своя лидирует
  * ([amount] null) - «Ваш залог в торгах»: что уже лежит в лоте.
  */
-@Composable private fun BidPledge(lot: AuctionLot, index: ContentIndex, hero: HeroView?, amount: Long?, goldBill: (Long) -> GoldBill?) {
+@Composable private fun BidPledge(lot: AuctionLot, index: ContentIndex, cut: Double, hero: HeroView?, amount: Long?, goldBill: (Long) -> GoldBill?) {
     val orbs = amount ?: lot.currentBid
-    val fee = lot.bidFee(index, orbs)
+    val fee = lot.bidFee(index, orbs, cut)
     val have = hero?.count(lot.priceOrb) ?: 0L
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         MutedText(ui(if (amount == null) "auction.pledge_held" else "auction.pledge_now"), Modifier.weight(1f))

@@ -74,8 +74,6 @@ import kotlinx.serialization.Serializable
     val bidding: BidState? = null,
     /** Где ставка героя в этих торгах: лидирует, перебита; null - он не ставил. */
     val standing: BidStanding? = null,
-    /** Скидка сбора герою-покупателю от древа его гильдии, проценты (`AuctionFees.cut`): [fee] уже с ней, ставки считаются с ней. */
-    val feeCut: Double = 0.0,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
@@ -245,6 +243,8 @@ fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enu
     val history: List<AuctionLot> = emptyList(),
     val lot: AuctionLot? = null,
     val bids: List<AuctionLot> = emptyList(),
+    /** Скидка сбора герою-покупателю от древа его гильдии, проценты (`AuctionFees.cut`): сбор чужих открытых лотов уже с ней. */
+    val feeCut: Double = 0.0,
 )
 
 /** The price hint: the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */

@@ -270,7 +270,7 @@ class MarketActions(
     private fun mine(answer: AuctionMine) = market { it.withMine(answer) }
 
     /** Рынок со своим рынком из ответа [answer]: лоты, места, сделки и свои ставки. */
-    private fun Market.withMine(answer: AuctionMine): Market = copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids)
+    private fun Market.withMine(answer: AuctionMine): Market = copy(myLots = answer.lots, slots = answer.slots, history = answer.history, myBids = answer.bids, feeCut = answer.feeCut)
 
     /** Свой рынок героя [id] из входа в Город: рынок открыт, замка по уровню нет. */
     internal fun land(id: String, answer: AuctionMine) {

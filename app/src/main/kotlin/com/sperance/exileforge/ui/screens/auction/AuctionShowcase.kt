@@ -128,7 +128,7 @@ import org.koin.compose.viewmodel.koinViewModel
             icon = { LotIcon(game, lot, 44.dp) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                fee.takeIf { it > 0 }?.let { goldLine(feeLabel(feeRate, lot.feeCut), it, Tone.SPEND) },
+                fee.takeIf { it > 0 }?.let { goldLine(feeLabel(feeRate, market.feeCut), it, Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
                 game.goldBill(fee)?.takeIf { fee > 0 && it.affordable }?.let { goldLine(ui("confirm.left"), it.left) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),

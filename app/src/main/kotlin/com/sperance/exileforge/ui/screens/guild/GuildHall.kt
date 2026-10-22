@@ -65,11 +65,10 @@ import kotlin.math.sin
     val leader = me != null && GuildPolicy.can(me.role, GuildAction.TREE)
     var opened by remember { mutableStateOf<String?>(null) }
     var resetting by remember { mutableStateOf(false) }
-    val free = guild.treePoints
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item(key = "points") { TreePoints(game, guild, rule, leader) { resetting = true } }
         item(key = "rules") { TreeRules(rule, leader) }
-        item(key = "constellation") { Constellation(rule, guild, free.takeIf { leader } ?: 0) { opened = it.code } }
+        item(key = "constellation") { Constellation(rule, guild, leader) { opened = it.code } }
         GuildBranch.entries.forEach { branch ->
             item(key = "ledger-${branch.name}") { BranchLedger(rule, branch, guild.tree) { opened = it.code } }
         }
@@ -82,11 +81,11 @@ import kotlin.math.sin
 
 /**
  * Шапка древа: «свободно / всего» крупно и уровень гильдии; срок «раз в N дней» и живой таймер до следующего сброса видят все участники
- * (первый сброс гильдии - сразу), кнопка сброса - только у главы и открывает лист сброса.
+ * (первый сброс гильдии - сразу), кнопка сброса - только у главы и открывает лист сброса. Часы тикают, только пока сброс ждёт
+ * ([ResetCountdown]): доступный сброс часов не держит.
  */
 @Composable private fun TreePoints(game: GameUi, guild: GuildView, rule: GuildTreeRule, leader: Boolean, onReset: () -> Unit) {
-    val now by rememberNow(RESET_TICK_MS)
-    val ready = now >= guild.respecAt
+    var ready by remember(guild.respecAt) { mutableStateOf(false) }
     ForgePanel {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -104,12 +103,25 @@ import kotlin.math.sin
                 ) { Text(ui("guild.tree_reset")) }
             }
         }
-        Text(
-            ui("guild.tree_reset_rule", rule.respecDays) + " · " + if (ready) ui("guild.tree_reset_ready") else ui("guild.tree_reset_in", resetLeft(guild.respecAt - now)),
-            color = if (ready) Vital else Caution,
-            style = MaterialTheme.typography.labelMedium,
-        )
+        if (ready) ResetLine(rule, null) else ResetCountdown(rule, guild.respecAt) { ready = true }
     }
+}
+
+/** Живой таймер до сброса [at] по часам экрана; срок вышел - [onReady], и таймер уходит из композиции вместе со своим тиком. */
+@Composable private fun ResetCountdown(rule: GuildTreeRule, at: Long, onReady: () -> Unit) {
+    val now by rememberNow(RESET_TICK_MS)
+    val left = at - now
+    if (left <= 0) SideEffect(onReady)
+    ResetLine(rule, left.takeIf { it > 0 })
+}
+
+/** Строка сброса: «раз в N дней» и сколько ждать [left]; null - «доступен сейчас». */
+@Composable private fun ResetLine(rule: GuildTreeRule, left: Long?) {
+    Text(
+        ui("guild.tree_reset_rule", rule.respecDays) + " · " + if (left == null) ui("guild.tree_reset_ready") else ui("guild.tree_reset_in", resetLeft(left)),
+        color = if (left == null) Vital else Caution,
+        style = MaterialTheme.typography.labelMedium,
+    )
 }
 
 /** Правила древа с числами правил - панель [FoldPanel] под шапкой, свёрнутая при каждом входе; глава читает свою версию. */
@@ -135,7 +147,7 @@ private const val RESET_TICK_MS = 1_000L
 private const val ROW_II = 2
 
 /** Ряд вершин ветвей - последний ряд древа. */
-private val GuildTreeRule.crownRow: Int get() = nodes.maxOf { it.row }
+private val GuildTreeRule.crownRow: Int get() = gates.size + 1
 
 /** Узел - вершина ветви: стоит в её последнем ряду. */
 private fun GuildTreeRule.crown(node: GuildNode): Boolean = node.row == crownRow && node.row > 1
@@ -143,15 +155,11 @@ private fun GuildTreeRule.crown(node: GuildNode): Boolean = node.row == crownRow
 /** Состояние узла на круге и в реестре: взят, можно взять (у главы со свободными очками), открыт, закрыт «воротами». */
 private enum class NodeState { TAKEN, AVAILABLE, OPEN, LOCKED }
 
-private fun GuildTreeRule.state(taken: Map<String, Int>, node: GuildNode, free: Int): NodeState {
-    val ranks = taken[node.code] ?: 0
-    val open = open(taken, node)
-    return when {
-        ranks > 0 -> NodeState.TAKEN
-        !open -> NodeState.LOCKED
-        ranks < node.max && free >= node.cost -> NodeState.AVAILABLE
-        else -> NodeState.OPEN
-    }
+private fun GuildTreeRule.state(taken: Map<String, Int>, node: GuildNode, level: Int, leader: Boolean): NodeState = when {
+    (taken[node.code] ?: 0) > 0 -> NodeState.TAKEN
+    !open(taken, node) -> NodeState.LOCKED
+    leader && canTake(taken, level, node.code) -> NodeState.AVAILABLE
+    else -> NodeState.OPEN
 }
 
 /** Цвет ветви: бой - медь, добыча - золото, хозяйство - лёд. */
@@ -171,14 +179,15 @@ private val GuildBranch.angle: Float
     }
 
 /**
- * Раскладка «созвездия» в долях ширины круга: центр, радиусы колец рядов (ряд I, ряд II, вершины) и разлёт двух узлов ряда I от луча.
- * Узел ряда с одним узлом стоит на луче, с несколькими - веером на [SPREAD] градусов.
+ * Раскладка «созвездия» в долях ширины круга: центр, кольца рядов от [FIRST] до [OUTER] поровну по числу рядов правил (ряд I, ряды за
+ * воротами, вершины) и разлёт узлов ряда от луча. Узел ряда с одним узлом стоит на луче, с несколькими - веером на [SPREAD] градусов.
  */
 private object Sky {
     const val WIDTH = 336f
     const val HEIGHT = 396f
     val CENTER = Offset(168f, 214f)
-    val RINGS = listOf(72f, 116f, 166f)
+    const val FIRST = 72f
+    const val OUTER = 166f
     const val ROOT = 40f
     const val SPREAD = 48f
 
@@ -187,9 +196,12 @@ private object Sky {
         return Offset(CENTER.x + radius * cos(a), CENTER.y + radius * sin(a))
     }
 
-    /** Места узлов ветви [branch] на круге в единицах [WIDTH]: ряд - кольцо, узлы ряда - веером вокруг луча. */
-    fun places(rule: GuildTreeRule, branch: GuildBranch): Map<GuildNode, Offset> = rule.nodes.filter { it.branch == branch }.groupBy { it.row }.flatMap { (row, nodes) ->
-        val radius = RINGS[(row - 1).coerceIn(0, RINGS.lastIndex)]
+    /** Радиусы колец [rows] рядов: от [FIRST] до [OUTER] поровну; один ряд - внешнее кольцо. */
+    fun rings(rows: Int): List<Float> = if (rows <= 1) listOf(OUTER) else List(rows) { FIRST + (OUTER - FIRST) * it / (rows - 1) }
+
+    /** Места узлов ветви [branch] на круге в единицах [WIDTH] по кольцам [rings]: ряд - кольцо, узлы ряда - веером вокруг луча. */
+    fun places(rule: GuildTreeRule, branch: GuildBranch, rings: List<Float>): Map<GuildNode, Offset> = rule.nodes.filter { it.branch == branch }.groupBy { it.row }.flatMap { (row, nodes) ->
+        val radius = rings[(row - 1).coerceIn(0, rings.lastIndex)]
         nodes.mapIndexed { i, node ->
             val shift = if (nodes.size < 2) 0f else SPREAD * (i / (nodes.size - 1f) - .5f)
             node to point(branch.angle + shift, radius)
@@ -202,26 +214,27 @@ private object Sky {
  * когда нижний узел взят и верхний ряд открыт, к закрытому ряду - пунктир. Узел - круг с медалью (вершина - ромб), касание 44 dp;
  * над ветвью - её имя и очки в ней.
  */
-@Composable private fun Constellation(rule: GuildTreeRule, guild: GuildView, free: Int, onOpen: (GuildNode) -> Unit) {
+@Composable private fun Constellation(rule: GuildTreeRule, guild: GuildView, leader: Boolean, onOpen: (GuildNode) -> Unit) {
     val taken = guild.tree
-    val places = remember(rule) { GuildBranch.entries.associateWith { Sky.places(rule, it) } }
+    val rings = remember(rule) { Sky.rings(rule.crownRow) }
+    val places = remember(rule) { GuildBranch.entries.associateWith { Sky.places(rule, it, rings) } }
     ForgePanel {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val unit = maxWidth / Sky.WIDTH
             Box(
                 Modifier.fillMaxWidth().height(unit * Sky.HEIGHT).drawBehind {
                     val scale = size.width / Sky.WIDTH
-                    Sky.RINGS.forEachIndexed { i, r ->
-                        drawCircle(SkyRing, radius = r * scale, center = Sky.CENTER * scale, style = Stroke(1.dp.toPx(), pathEffect = if (i == Sky.RINGS.lastIndex) DOTS else null))
+                    rings.forEachIndexed { i, r ->
+                        drawCircle(SkyRing, radius = r * scale, center = Sky.CENTER * scale, style = Stroke(1.dp.toPx(), pathEffect = if (i == rings.lastIndex) DOTS else null))
                     }
                     GuildBranch.entries.forEach { branch -> rays(rule, branch, places.getValue(branch), taken, scale) }
                 },
             ) {
                 GuildBranch.entries.forEach { branch ->
                     places.getValue(branch).forEach { (node, at) ->
-                        SkyNode(node, rule.crown(node), branch.hue, rule.state(taken, node, free), Modifier.place(at, unit, NODE_TOUCH)) { onOpen(node) }
+                        SkyNode(node, rule.crown(node), branch.hue, rule.state(taken, node, guild.level, leader), Modifier.place(at, unit, NODE_TOUCH)) { onOpen(node) }
                     }
-                    val label = Sky.point(branch.angle, Sky.RINGS.last()).let { if (branch == GuildBranch.LOOT) Offset(it.x, 10f) else Offset(it.x, it.y + 34f) }
+                    val label = Sky.point(branch.angle, Sky.OUTER).let { if (branch == GuildBranch.LOOT) Offset(it.x, 10f) else Offset(it.x, it.y + 34f) }
                     BranchMark(branch, rule.inBranch(taken, branch), Modifier.place(Offset(label.x.coerceIn(48f, Sky.WIDTH - 48f), label.y), unit, LABEL_SIZE))
                 }
                 Box(Modifier.place(Sky.CENTER, unit, CREST), contentAlignment = Alignment.Center) { GuildEmblem(guild.emblem, guild.color, CREST) }

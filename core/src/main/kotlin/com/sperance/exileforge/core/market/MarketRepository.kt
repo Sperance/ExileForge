@@ -26,6 +26,8 @@ data class Market(
     /** Почему аукцион закрыт для героя, словами сервера; null - открыт. */
     val locked: String? = null,
     val slots: AuctionSlots? = null,
+    /** Скидка сбора герою-покупателю от древа его гильдии, проценты: ею считаются сборы ставок ([com.sperance.exileforge.core.model.auction.bidFee]). */
+    val feeCut: Double = 0.0,
     /** Витрина не загрузилась: показан отказ с «Повторить», а не пустая витрина. */
     val showcaseFailed: Boolean = false,
     /** Открытые торги, где герой ставил: лидирует или перебит. */

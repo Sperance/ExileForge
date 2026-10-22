@@ -1177,6 +1177,7 @@
   "fight.fact_source": "Source",
   "fight.fact_seconds": "{0} s",
   "fight.fact_stacks": "Stacks",
+  "fight.layers": "×{0}",
   "fight.intimidate_hero": "Intimidation {0}%: a hit with this chance intimidates its target for {1} s. An intimidated enemy deals you {2}% less damage and uses no skills; a boss deals {3}% less and only uses its skills more slowly. The same target again — not sooner than {4} s later (a boss — {5} s).",
   "fight.intimidate": "Intimidation",
   "fight.taunt": "Taunt",

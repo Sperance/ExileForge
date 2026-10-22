@@ -166,7 +166,7 @@ private fun curseLore(view: EffectView): Lore = when (val origin = view.origin) 
  * полным здоровьем, - погасшая бутыль под знаком «стоп».
  *
  * Бафф правил (Натиск, Укрепление) назван и нарисован по виду, умения - по умению, глоток - бутылью; бафф Предначертания называется даром.
- * Проклятие открывает лист.
+ * Проклятие открывает лист; проклятие со слоями пишет их число «×N» в углу.
  */
 @Composable internal fun EffectTile(view: EffectView, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {
     val tint = effectTint(view)
@@ -190,6 +190,15 @@ private fun curseLore(view: EffectView): Lore = when (val origin = view.origin) 
         }
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
         if (view.halted) Canvas(Modifier.fillMaxSize().padding(side / 3)) { haltGlyph(Parchment) }
+        if (view.layers > 1) {
+            Text(
+                ui("fight.layers", view.layers),
+                color = Parchment,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
+            )
+        }
     }
 }
 

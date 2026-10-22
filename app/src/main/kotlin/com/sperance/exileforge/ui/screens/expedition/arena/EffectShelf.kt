@@ -23,6 +23,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -429,32 +431,62 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 }
 
 /**
- * Сколько плиток из [count] встаёт на полку длиной [room] при плитке [side] и промежутке [gap] (пиксели): не влезли все - на одну
- * меньше, последней встаёт «+N».
+ * Где лежат плитки ряда полки - их раскладку пишет сама полка ([EffectShelf] с [ShelfHits]), а зона касания шире полки (низ карточки
+ * врага) спрашивает плитку под пальцем ([at]). Не состояние снимка: читается только касанием, перекомпоновок не вызывает.
  */
-internal fun shelfShown(count: Int, room: Int, side: Int, gap: Int): Int {
-    val fit = if (room == Constraints.Infinity) count else ((room + gap) / (side + gap)).coerceAtLeast(1)
-    return if (count > fit) fit - 1 else count
-}
+internal class ShelfHits {
+    private var items: List<Shelved> = emptyList()
+    private var shown = 0
+    private var pitch = 1
+    private var left = 0f
+    private var zone = 0f
 
-/** Плитка полки длиной [room] под точкой [x] от её начала (пиксели, как у [shelfShown]); «+N» и место за плитками - null. */
-internal fun List<Shelved>.pickAt(x: Float, room: Int, side: Int, gap: Int): Shelved? {
-    if (x < 0) return null
-    val at = (x / (side + gap)).toInt()
-    return getOrNull(at)?.takeIf { at < shelfShown(size, room, side, gap) }
+    internal fun laid(items: List<Shelved>, shown: Int, pitch: Int) {
+        this.items = items
+        this.shown = shown
+        this.pitch = pitch.coerceAtLeast(1)
+    }
+
+    internal fun placed(rootX: Float) {
+        left = rootX
+    }
+
+    /** Зона касания полки встала левым краем на [rootX] окна. */
+    internal fun zonePlaced(rootX: Float) {
+        zone = rootX
+    }
+
+    /** Плитка под точкой [x] зоны касания по горизонтали; «+N» и место мимо плиток - null. */
+    fun at(x: Float): Shelved? {
+        val fromShelf = zone + x - left
+        val i = (fromShelf / pitch).toInt()
+        return if (fromShelf >= 0 && i < shown) items.getOrNull(i) else null
+    }
 }
 
 /**
  * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
  * «+N» последней. Касание плитки - лист эффектов на ней ([onOpen] с плиткой), касание «+N» - лист сверху ([onOpen] с null).
- * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
+ * [hits] - куда полка ряда пишет раскладку плиток для зоны касания шире неё. Подкомпоновка по месту - число «+N» зависит от размера
+ * полки; интринсиков у полки нет, её размер задаёт родитель.
  */
-@Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: (Shelved?) -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
-    SubcomposeLayout(modifier) { constraints ->
+@Composable internal fun EffectShelf(
+    items: List<Shelved>,
+    side: Dp,
+    onOpen: (Shelved?) -> Unit,
+    modifier: Modifier = Modifier,
+    vertical: Boolean = false,
+    gap: Dp = 4.dp,
+    hits: ShelfHits? = null,
+) {
+    SubcomposeLayout(if (hits != null) modifier.onPlaced { hits.placed(it.positionInRoot().x) } else modifier) { constraints ->
         val sidePx = side.roundToPx()
         val gapPx = gap.roundToPx()
-        val shown = shelfShown(items.size, if (vertical) constraints.maxHeight else constraints.maxWidth, sidePx, gapPx)
-        val over = shown < items.size
+        val room = if (vertical) constraints.maxHeight else constraints.maxWidth
+        val fit = if (room == Constraints.Infinity) items.size else ((room + gapPx) / (sidePx + gapPx)).coerceAtLeast(1)
+        val over = items.size > fit
+        val shown = if (over) fit - 1 else items.size
+        hits?.laid(items, shown, sidePx + gapPx)
         val tile = Constraints.fixed(sidePx, sidePx)
         val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) { onOpen(items[i]) } }.first().measure(tile) } +
             (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side) { onOpen(null) } }.first().measure(tile)) else emptyList())
@@ -544,7 +576,8 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
 @Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, focus: String? = null, onDismiss: () -> Unit) {
     val scroll = rememberScrollState()
     var focusAt by remember { mutableStateOf<Int?>(null) }
-    LaunchedEffect(focusAt) { focusAt?.let { scroll.scrollTo((it - FOCUS_MARGIN_PX).coerceAtLeast(0)) } }
+    val margin = with(LocalDensity.current) { FOCUS_MARGIN.roundToPx() }
+    LaunchedEffect(focusAt) { focusAt?.let { scroll.scrollTo((it - margin).coerceAtLeast(0)) } }
     val row: @Composable (Shelved) -> Unit = { item ->
         val lit = focus != null && item.key == focus
         SheetRow(item, lit, if (lit) Modifier.onPlaced { if (focusAt == null) focusAt = it.positionInParent().y.roundToInt() } else Modifier)
@@ -569,8 +602,8 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
     }
 }
 
-/** Сколько пикселей над строкой, к которой прокручен лист эффектов, остаётся видно: заголовок группы над ней. */
-private const val FOCUS_MARGIN_PX = 96
+/** Сколько места над строкой, к которой прокручен лист эффектов, остаётся видно: заголовок группы над ней. */
+private val FOCUS_MARGIN = 36.dp
 
 @Composable private fun ShelfGroup(text: String) = Text(
     text.uppercase(),

@@ -24,6 +24,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -157,7 +159,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     val shelves = rememberFoeShelves(foe.ailments, foe.held, foe.effects)
     val shelf = remember(shelves) { shelves.timed + shelves.lasting }
     val tile = if (large) 16.dp else 14.dp
-    val inset = if (narrow) 5.dp else 6.dp
+    val hits = remember { ShelfHits() }
     Box(
         modifier.graphicsLayer {
             translationY = acting() * 10.dp.toPx()
@@ -190,7 +192,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             }.clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(inset),
+                Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
                 horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
             ) {
@@ -255,9 +257,9 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 }
                 if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                 SwingBar({ swing() }, foe.held, Modifier.fillMaxWidth()) { if (acting() > 0f) LifeRed else SwingRed }
-                if (shelf.isNotEmpty()) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, Modifier.fillMaxWidth().height(tile), gap = SHELF_GAP)
+                if (shelf.isNotEmpty()) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, Modifier.fillMaxWidth().height(tile), gap = 2.dp, hits = hits)
             }
-            if (shelf.isNotEmpty()) ShelfTouch(shelf, tile, inset, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
+            if (shelf.isNotEmpty()) ShelfTouch(hits, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
             if (narrow && foe.monster.level > 0) {
                 Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
             }
@@ -290,27 +292,20 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
 
 /**
  * Зона касания полки эффектов врага - нижние [SHELF_TOUCH] карточки (полоса здоровья, замах и полка): плитки по 14-16 dp пальцу
- * не попасть, а вся карточка выбирает цель. Касание открывает лист эффектов ([onOpen]) на плитке под пальцем по горизонтали
- * ([pickAt]: полка [shelf] с плитками [tile] начинается на отступе [inset] карточки), мимо плиток и на «+N» - сверху.
+ * не попасть, а вся карточка выбирает цель. Касание открывает лист эффектов ([onOpen]) на плитке под пальцем по горизонтали - её
+ * называет раскладка самой полки ([ShelfHits]), мимо плиток и на «+N» - сверху.
  */
-@Composable private fun ShelfTouch(shelf: List<Shelved>, tile: Dp, inset: Dp, modifier: Modifier, onOpen: (Shelved?) -> Unit) {
+@Composable private fun ShelfTouch(hits: ShelfHits, modifier: Modifier, onOpen: (Shelved?) -> Unit) {
     val pick by rememberUpdatedState(onOpen)
-    val items by rememberUpdatedState(shelf)
     Box(
-        modifier.fillMaxWidth().height(SHELF_TOUCH).pointerInput(tile, inset) {
-            val start = inset.toPx()
-            detectTapGestures { at ->
-                pick(items.pickAt(at.x - start, size.width - 2 * start.toInt(), tile.roundToPx(), SHELF_GAP.roundToPx()))
-            }
+        modifier.fillMaxWidth().height(SHELF_TOUCH).onPlaced { hits.zonePlaced(it.positionInRoot().x) }.pointerInput(hits) {
+            detectTapGestures { at -> pick(hits.at(at.x)) }
         },
     )
 }
 
 /** Высота зоны касания полки эффектов врага. */
 private val SHELF_TOUCH = 44.dp
-
-/** Промежуток между плитками полки врага. */
-private val SHELF_GAP = 2.dp
 
 /** С какой доли замаха врага проступает плашка «→ по вам» и за какую долю она набирает силу. */
 private const val AIM_FROM = .55f

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.feedback.MailCategory
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -165,3 +166,6 @@ object MailSchemas {
     private const val CONTEST_VALUE = 7
     private const val CONTEST_UNTIL = 8
 }
+
+/** Имя категории письма словами: «Рынок», «Награды», «Администрация» (`mail.category.<имя>`). */
+fun MailCategory.title(): String = ui("mail.category.$name")

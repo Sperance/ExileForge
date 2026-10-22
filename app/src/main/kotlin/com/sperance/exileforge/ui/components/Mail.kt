@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mailBody
 import com.sperance.exileforge.core.display.mailSubject
+import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.feedback.LetterDraft
@@ -100,7 +101,7 @@ internal fun senderLine(mail: Mail): String {
     return when {
         guild != null && mail.kind == MailKind.GUILD -> ui("mail.from_guild", guild.tag, from.name)
         from != null -> from.name
-        else -> ui("mail.category.${MailCategory.of(mail).name}")
+        else -> MailCategory.of(mail).title()
     }
 }
 
@@ -161,7 +162,7 @@ internal fun burnText(mail: Mail): String = when {
 @Composable private fun CategoryMark(category: MailCategory, size: Dp) {
     val tint = category.tint
     val shape = RoundedCornerShape(size * MARK_RADIUS)
-    val name = ui("mail.category.${category.name}")
+    val name = category.title()
     Box(
         Modifier.size(size).background(tint.copy(alpha = PLATE_FILL).compositeOver(Panel), shape).border(1.dp, tint.copy(alpha = PLATE_RIM), shape)
             .semantics { contentDescription = name },

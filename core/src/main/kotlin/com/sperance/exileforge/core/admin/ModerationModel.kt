@@ -136,7 +136,7 @@ class ModerationModel(
         staff()
         val state = mutable.value
         val answer = api.rows(state.query, state.segment, 0, state.filters.sort, state.filters.fate)
-        mutable.update { if (it.sameList(state)) it.copy(page = answer, searched = state.query) else it }
+        mutable.update { if (it.sameList(state)) it.copy(page = answer.distinctBy(ModerationRow::key), searched = state.query) else it }
     }
 
     /**

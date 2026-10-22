@@ -128,8 +128,11 @@ private const val DAY_MS = 86_400_000L
     /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано или сервер старее. */
     val fate: String? = null,
 ) {
-    /** Ключ строки в списке: герой, а у аккаунта в корзине - его санкция удаления. */
-    val key: String get() = heroId.ifEmpty { sanction?.id ?: userId }
+    /**
+     * Ключ строки в списке: строка корзины - её санкция удаления (у одного героя их может оказаться две, строк тогда две), прочие -
+     * герой, аккаунт без героя - аккаунт. Список держит строки уникальными по нему ([Page.distinctBy], [Page.followedBy]).
+     */
+    val key: String get() = sanction?.takeIf { it.kind == SanctionKind.DELETION }?.id ?: heroId.ifEmpty { userId }
 }
 
 /**

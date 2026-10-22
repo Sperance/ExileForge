@@ -10,6 +10,9 @@ import kotlinx.serialization.Serializable
     /** [next] - следующая страница под этой: строки подряд, строка со стыка страниц - одна по ключу [key]. */
     fun followedBy(next: Page<T>, key: (T) -> Any): Page<T> = next.copy(items = items.followedBy(next.items, key), total = next.total ?: total)
 
+    /** Страница, где строка с повторённым ключом [key] осталась одна - первая: ключ строки списка на экране обязан быть уникален. */
+    fun distinctBy(key: (T) -> Any): Page<T> = copy(items = items.distinctBy(key))
+
     /** Страница без строк, что не проходят [keep], - всего на столько меньше. */
     fun without(keep: (T) -> Boolean): Page<T> {
         val kept = items.filter(keep)
@@ -19,9 +22,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * Строки прочитанных страниц серверного списка и следующая страница [next] под ними: строка, что пришла второй раз на стыке страниц
- * (список сдвинулся между чтениями), остаётся одна - по ключу [key].
+ * (список сдвинулся между чтениями) или дважды внутри [next], остаётся одна - первая по ключу [key].
  */
 fun <T, K> List<T>.followedBy(next: List<T>, key: (T) -> K): List<T> {
     val shown = mapTo(HashSet(), key)
-    return this + next.filterNot { key(it) in shown }
+    return this + next.filter { shown.add(key(it)) }
 }

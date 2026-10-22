@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
@@ -127,7 +128,7 @@ import org.koin.compose.viewmodel.koinViewModel
             icon = { LotIcon(game, lot, 44.dp) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                fee.takeIf { it > 0 }?.let { goldLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), it, Tone.SPEND) },
+                fee.takeIf { it > 0 }?.let { goldLine(feeLabel(feeRate, lot.feeCut), it, Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
                 game.goldBill(fee)?.takeIf { fee > 0 && it.affordable }?.let { goldLine(ui("confirm.left"), it.left) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
@@ -248,4 +249,11 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         onDismiss = onDismiss,
         header = { LevelRangeHeader(draft.level, game.heroLevel) { draft = draft.copy(level = it) } },
     )
+}
+
+/** Подпись сбора в счёте покупки: доля цены лота [rate] (правила), со скидкой грамоты гильдии [cut] - и она; без доли - просто «Сбор». */
+private fun feeLabel(rate: String?, cut: Double): String = when {
+    rate == null -> ui("auction.fee")
+    cut > 0 -> ui("auction.fee_rate_cut", rate, number(cut))
+    else -> ui("auction.fee_rate", rate)
 }

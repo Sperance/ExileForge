@@ -140,6 +140,7 @@ object MapEffects {
         effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add(CoreStat.FLASK_EFFECT.code, -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
         effects[BrewStat.RESIST]?.let { add(CoreStat.ALL_ELEMENTAL_RESISTANCES.code, it) }
+        effects[BrewStat.ALL_RESIST]?.let { v -> listOf(CoreStat.ALL_ELEMENTAL_RESISTANCES.code, CoreStat.RESIST_CHAOS.code).forEach { add(it, v) } }
         effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
         effects[BrewStat.LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
         effects[MapStat.HERO_DAMAGE.code]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }

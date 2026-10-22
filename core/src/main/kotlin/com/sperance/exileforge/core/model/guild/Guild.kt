@@ -40,7 +40,7 @@ import kotlinx.serialization.Serializable
     val rank: String = "",
     val joinedAt: Long = 0,
     val lastSeenAt: Long = 0,
-    /** Суточный потолок вклада с бонусом древа и остаток на сегодня (сервер по `GuildRules.dailyLimit`). */
+    /** Суточный потолок вклада и остаток на сегодня (сервер по `GuildRules.dailyLimit`). */
     val dayLimit: Long = 0,
     val dayLeft: Long = 0,
     /** В сети ли герой (сервер по `rules.onlineMinutes`); [lastSeenAt] - позднее из захода в гильдию и последней команды. */

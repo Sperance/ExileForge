@@ -21,7 +21,6 @@ import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GiveBlock
 import com.sperance.exileforge.core.model.guild.GiveForm
@@ -34,15 +33,12 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
-/** Ветвь древа гильдии, что поднимает суточный предел вклада: её имя - в подсказке предела. */
-private const val LIMIT_BRANCH = "ECONOMY"
-
 /**
  * Вклад в гильдию - только золото: целиком идёт в казну, в опыт гильдии и в личный вклад героя, то есть в его ранг. Три блока,
  * каждое число по разу: казна - в данных цепочки «назад», кошелёк - в строке заголовка формы, предел дня и остаток - одной строкой
  * «Сегодня ещё N из M» с полосой, свой вклад за неделю - только в своей строке таблицы недели. Пояснения - в подсказках ⓘ.
  *
- * Суточный предел и остаток считает сервер (`GuildRules.dailyLimit` с бонусом древа), годность суммы - [GiveForm]. «Макс.» в поле
+ * Суточный предел и остаток считает сервер (`GuildRules.dailyLimit`), годность суммы - [GiveForm]. «Макс.» в поле
  * подставляет, сколько влезает в остаток и в кошелёк. Кнопка снова взводится после удержания, поле чистится только принятым вкладом.
  */
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
@@ -117,7 +113,7 @@ private fun giveLabel(form: GiveForm): String = when (form.block) {
         )
         rules?.let {
             InfoMark(ui("guild.give_limit_about"), Gold) {
-                TipText(ui("guild.give_limit_tip", number(it.contribution.dailyPerLevel.toDouble()), loc("guild.branch.$LIMIT_BRANCH")))
+                TipText(ui("guild.give_limit_tip", number(it.contribution.dailyPerLevel.toDouble())))
                 TipText(ui("guild.give_where_tip"), Muted)
             }
         }

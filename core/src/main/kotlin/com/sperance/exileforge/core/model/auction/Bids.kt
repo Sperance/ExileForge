@@ -51,8 +51,8 @@ fun AuctionLot.buyoutAfter(amount: Long): Long = bidding?.takeIf { it.listed != 
 /** Ставка [amount] - выкуп: не ниже цены выкупа. */
 fun AuctionLot.buysOut(amount: Long): Boolean = amount >= price
 
-/** Сбор золотом за ставку [amount] - та же точка [AuctionFees], что спишет сервер в залог. */
-fun AuctionLot.bidFee(index: ContentIndex, amount: Long): Long = goods?.let { AuctionFees.buyer(index, it, priceOrb, amount) } ?: 0
+/** Сбор золотом за ставку [amount] со скидкой героя [AuctionLot.feeCut] - та же точка [AuctionFees], что спишет сервер в залог. */
+fun AuctionLot.bidFee(index: ContentIndex, amount: Long): Long = goods?.let { AuctionFees.cut(AuctionFees.buyer(index, it, priceOrb, amount), feeCut) } ?: 0
 
 /** Что спишет ставка [amount]: сферы и сбор в залог; ставка от выкупа - цена выкупа и её сбор ([AuctionLot.cost]). */
 fun AuctionLot.bidCost(index: ContentIndex, amount: Long): Cost = if (buysOut(amount)) cost else Cost.item(priceOrb, amount) + Cost.gold(bidFee(index, amount))

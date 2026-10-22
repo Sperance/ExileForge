@@ -74,6 +74,8 @@ import kotlinx.serialization.Serializable
     val bidding: BidState? = null,
     /** Где ставка героя в этих торгах: лидирует, перебита; null - он не ставил. */
     val standing: BidStanding? = null,
+    /** Скидка сбора герою-покупателю от древа его гильдии, проценты (`AuctionFees.cut`): [fee] уже с ней, ставки считаются с ней. */
+    val feeCut: Double = 0.0,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */

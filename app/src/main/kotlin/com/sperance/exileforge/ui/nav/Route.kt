@@ -144,6 +144,13 @@ sealed interface Route : NavKey {
         override val building get() = Building.HALL
     }
 
+    /** Состязания: здание Города - сутки и неделя по лигам, таблица лиги внутри. */
+    @Serializable data object Contests : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.CONTESTS
+    }
+
     /** Найденные уникалки: экран над «Историей», «назад» ведёт в неё. */
     @Serializable data object Uniques : Route {
         override val root: Route get() = City
@@ -185,6 +192,7 @@ sealed interface Route : NavKey {
             Building.AUCTION -> Auction
             Building.HISTORY -> History
             Building.HALL -> Hall
+            Building.CONTESTS -> Contests
             null -> City
         }
     }

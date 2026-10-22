@@ -66,6 +66,8 @@ data class PlayerCard(
     val might: Double = 0.0,
     val mightPlace: Long = 0,
     val mightBoard: Long = 0,
+    /** Действующие титулы и рамки состязаний, лучший первым: лучший - над именем и рамкой портрета, прочие - строками. */
+    val honours: List<com.sperance.exileforge.rules.content.ContestHonour> = emptyList(),
 )
 
 /** Что станет с гильдией после ухода героя: он просто выходит, главенство переходит наследнику или гильдия распускается. */

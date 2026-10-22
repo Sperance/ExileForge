@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
@@ -31,9 +30,6 @@ import com.sperance.exileforge.ui.theme.Vital
 
 /** A title as the dictionary names it; нет строки - заглушка и дыра словаря, не код. */
 fun titleName(code: String): String = loc("title.$code")
-
-/** The three steps of an achievement: bronze, silver, gold — a single one-off step is gold. */
-private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD166))
 
 /** How many of the content's achievements the hero has complete, of how many; null until the hero and the content are read. */
 fun GameUi.chronicleDone(): Pair<Int, Int>? {

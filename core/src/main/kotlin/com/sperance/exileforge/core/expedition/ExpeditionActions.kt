@@ -457,7 +457,7 @@ class ExpeditionActions(
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
-            notices.refused(report.rejected.filter { it !in engages }, report.refusals, pending.associate { it.n to it.kind.refusedKey() })
+            notices.refused(report.rejected.filter { it !in engages }, pending.associate { it.n to it.kind.refusedKey() })
             if (!report.open && j.settled) done(j, report) else journals.now()
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)

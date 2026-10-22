@@ -29,10 +29,10 @@ enum class ForgeSection(val omens: Boolean = false) {
 
 /**
  * The City's buildings: each one a screen of its own behind the square; «История» - прошлое героя,
- * «Летопись» (прежде страница «Развития») - его деяния и титулы, «Доска славы» - таблицы сервера. Гильдия - не здание, а своя
- * вкладка панели ([TAB_GUILD]).
+ * «Летопись» (прежде страница «Развития») - его деяния и титулы, «Доска славы» - таблицы сервера, «Состязания» - сутки и неделя по лигам.
+ * Гильдия - не здание, а своя вкладка панели ([TAB_GUILD]).
  */
-enum class Building { QUESTS, MERCHANT, AUCTION, HISTORY, HALL }
+enum class Building { QUESTS, MERCHANT, AUCTION, HISTORY, HALL, CONTESTS }
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3

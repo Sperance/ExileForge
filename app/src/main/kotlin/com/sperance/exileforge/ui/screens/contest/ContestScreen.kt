@@ -240,7 +240,7 @@ private fun nextStep(stand: ContestStand, own: ContestRow): String {
 }
 
 /** Сколько не хватает мере [mine], чтобы обойти [target]: при равенстве выше раньше достигший, поэтому - строго лучше. */
-private fun gap(metric: ContestMetric, mine: Long, target: Long): Long = if (metric.board.lower) mine - target + 1 else target - mine + 1
+private fun gap(metric: ContestMetric, mine: Long, target: Long): Long = if (metric.lower) mine - target + 1 else target - mine + 1
 
 /**
  * Лист наград лиги стенда [stand]: места - сколько сфер ценной таблицы, у первых мест - ещё титул и рамка; лучшие 10% - по нынешнему
@@ -461,11 +461,19 @@ private fun ownPrize(rules: ContestRules, stand: ContestStand): String {
 /** Класс и уровень героя строки. */
 private fun about(row: ContestRow): String = listOfNotNull(row.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle), ui("hall.level", row.level)).joinToString(" · ")
 
-/** Цвет стенда меры: находки - уголь уникальной, босс - кровь, опыт - руна. */
+/**
+ * Цвет стенда меры: находки и сундуки - уголь уникальной, боссы - кровь, опыт - руна, охота - живая зелень, зоны - бронза, ремёсла -
+ * золото профессий, сферы - золото печати; незнакомая мера - приглушённый.
+ */
 private fun metricHue(metric: ContestMetric): Color = when (metric) {
-    ContestMetric.UNIQUES -> ModeHue.Uniques
-    ContestMetric.BOSS -> ModeHue.Bosses
+    ContestMetric.UNIQUES, ContestMetric.ZONE_CHESTS -> ModeHue.Uniques
+    ContestMetric.BOSS, ContestMetric.BOSS_ANY -> ModeHue.Bosses
     ContestMetric.EXPERIENCE -> Rune
+    ContestMetric.KILL -> Vital
+    ContestMetric.ZONE_RUNS -> ModeHue.Tower
+    ContestMetric.JOB -> ModeHue.Professions
+    ContestMetric.SPENT -> ModeHue.Might
+    ContestMetric.OTHER -> Muted
 }
 
 /** День начала следующего периода в поясе устройства: «27.10». */

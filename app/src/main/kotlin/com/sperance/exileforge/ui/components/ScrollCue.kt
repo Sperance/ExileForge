@@ -14,15 +14,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Ink
@@ -57,14 +57,29 @@ sealed class ScrollCue {
 
 /** Подсказка ряда обычной прокрутки [state]; выбранный элемент отмечает себя [cueSelected]. */
 class RowScrollCue internal constructor(val state: ScrollState) : ScrollCue() {
-    /** Где выбранный элемент в содержимом ряда, px; null - не отмечен. */
-    internal var selected by mutableStateOf<IntRange?>(null)
+    /** Выбранный элемент ряда - его разметка ([cueSelected]); null - не отмечен. */
+    internal var selected by mutableStateOf<LayoutCoordinates?>(null)
+
+    /** Окно ряда - от него меряется место выбранного в содержимом; ставит [scrollCue]. */
+    internal var viewport: LayoutCoordinates? = null
+
+    /**
+     * Где выбранный элемент в прокручиваемом содержимом, px: от окна ряда со сдвигом прокрутки, так что отступы содержимого и ряда учтены;
+     * null - не отмечен или ещё не разложен.
+     */
+    private val span: IntRange?
+        get() {
+            val item = selected?.takeIf { it.isAttached } ?: return null
+            val window = viewport?.takeIf { it.isAttached } ?: return null
+            val start = window.localPositionOf(item, Offset.Zero).x.roundToInt() + state.value
+            return start until start + item.size.width
+        }
 
     override val scroll: ScrollableState get() = state
 
     override val hidden: CueEdge?
         get() {
-            val span = selected ?: return null
+            val span = span ?: return null
             return when {
                 span.first < state.value -> CueEdge.START
                 span.last > state.value + state.viewportSize -> CueEdge.END
@@ -75,7 +90,7 @@ class RowScrollCue internal constructor(val state: ScrollState) : ScrollCue() {
     override val target: Any? get() = selected?.takeIf { state.viewportSize > 0 }
 
     override suspend fun reveal() {
-        val span = selected ?: return
+        val span = span ?: return
         if (hidden == null) return
         state.animateScrollTo(((span.first + span.last - state.viewportSize) / 2).coerceIn(0, state.maxValue))
     }
@@ -133,36 +148,32 @@ class LazyRowScrollCue internal constructor(val state: LazyListState) : ScrollCu
     }
 }
 
-/** Выбранный элемент ряда [cue]: отмечает своё место в содержимом ряда, пока [selected]. */
-fun Modifier.cueSelected(cue: RowScrollCue, selected: Boolean): Modifier = if (selected) {
-    onPlaced { coordinates ->
-        val start = coordinates.positionInParent().x.roundToInt()
-        cue.selected = start until start + coordinates.size.width
-    }
-} else {
-    this
-}
+/** Выбранный элемент ряда [cue]: отмечает себя, пока [selected]; место в содержимом ряд меряет от своего окна. */
+fun Modifier.cueSelected(cue: RowScrollCue, selected: Boolean): Modifier = if (selected) onPlaced { cue.selected = it } else this
 
 /**
  * Подсказка прокрутки [cue] поверх ряда - ставится перед его прокруткой (`horizontalScroll` или ленивым рядом): у края, за которым есть
- * ещё элементы, - затухание в цвет дорожки [track] и шеврон, акцентный с точкой, если за краем выбранный. Читает прокрутку только при
- * отрисовке: листание ряда перерисовывает подсказку, не перекомпонуя экран.
+ * ещё элементы, - затухание в цвет дорожки [track] и шеврон, акцентный с точкой, если за краем выбранный. Кисти затухания строятся раз
+ * на размер ряда; прокрутку подсказка читает только при отрисовке: листание ряда перерисовывает её, не перекомпонуя экран.
  */
-fun Modifier.scrollCue(cue: ScrollCue, track: Color = Ink): Modifier = drawWithContent {
-    drawContent()
-    val hidden = cue.hidden
-    if (cue.scroll.canScrollBackward) cueEdge(CueEdge.START, track, lit = hidden == CueEdge.START)
-    if (cue.scroll.canScrollForward) cueEdge(CueEdge.END, track, lit = hidden == CueEdge.END)
-}
+fun Modifier.scrollCue(cue: ScrollCue, track: Color = Ink): Modifier = then(if (cue is RowScrollCue) Modifier.onPlaced { cue.viewport = it } else Modifier)
+    .drawWithCache {
+        val width = FADE.toPx().coerceAtMost(size.width / 2)
+        val clear = track.copy(alpha = 0f)
+        val startFade = Brush.horizontalGradient(0f to track, SOLID to track, 1f to clear, startX = 0f, endX = width)
+        val endFade = Brush.horizontalGradient(0f to clear, 1f - SOLID to track, 1f to track, startX = size.width - width, endX = size.width)
+        onDrawWithContent {
+            drawContent()
+            val hidden = cue.hidden
+            if (cue.scroll.canScrollBackward) cueEdge(CueEdge.START, startFade, width, lit = hidden == CueEdge.START)
+            if (cue.scroll.canScrollForward) cueEdge(CueEdge.END, endFade, width, lit = hidden == CueEdge.END)
+        }
+    }
 
-/** Край [edge]: затухание в [track] шириной [FADE] и шеврон; [lit] - за краем выбранный: шеврон [Gold] с точкой. */
-private fun DrawScope.cueEdge(edge: CueEdge, track: Color, lit: Boolean) {
+/** Край [edge]: затухание кистью [fade] шириной [width] и шеврон; [lit] - за краем выбранный: шеврон [Gold] с точкой. */
+private fun DrawScope.cueEdge(edge: CueEdge, fade: Brush, width: Float, lit: Boolean) {
     val start = edge == CueEdge.START
-    val width = FADE.toPx().coerceAtMost(size.width / 2)
-    val left = if (start) 0f else size.width - width
-    val clear = track.copy(alpha = 0f)
-    val stops = if (start) arrayOf(0f to track, SOLID to track, 1f to clear) else arrayOf(0f to clear, 1f - SOLID to track, 1f to track)
-    drawRect(Brush.horizontalGradient(*stops, startX = left, endX = left + width), Offset(left, 0f), Size(width, size.height))
+    drawRect(fade, Offset(if (start) 0f else size.width - width, 0f), Size(width, size.height))
     val tint = if (lit) Gold else Quiet
     val arm = CHEVRON.toPx() / 2
     val pad = CHEVRON_PAD.toPx()

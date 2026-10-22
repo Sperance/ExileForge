@@ -224,8 +224,7 @@ class SessionActions(
             read(Reads.HERO, silent = true) {
                 loader.ensureContent(fresh = true)
                 heroSync.readHero()
-                expedition.resume(heroId)
-                rift.resume()
+                resumeRuns(heroId)
             }
             connectionActions.wake(now = true)
         }

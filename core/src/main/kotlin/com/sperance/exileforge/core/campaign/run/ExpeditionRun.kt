@@ -62,7 +62,6 @@ import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.content.SummonLog
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -138,12 +137,6 @@ class ExpeditionRun(
      * захода, ставит стража на пост: выход снова запечатан.
      */
     internal var guardianBack: Long? = null
-
-    /** Призывы стража героем в окне: с призывом этого захода - от них цена следующего. */
-    internal var summons: SummonLog = SummonLog()
-
-    /** Сколько раз стража призвали в этом заходе: не больше `services.summonsPerRun`. */
-    internal var summoned: Int = 0
 
     /** Часы сервера: по ним отдых стража сверяется с тем, что примет сервер. */
     internal var clock: () -> Long = { System.currentTimeMillis() + ServerClock.offset }
@@ -571,25 +564,6 @@ class ExpeditionRun(
         kills.toLong(), mine.size.toLong(), world.alive.toLong(), (crystal?.id ?: -1).toLong(), if (channel == null) 0 else 1, if (exitOffered) 1 else 0,
     )
 
-    /**
-     * Призыв стража до конца его отдыха: страж повержен (раньше или в этом заходе), не в зоне Ваал и не больше
-     * `services.summonsPerRun` за заход; цену ([summonPrice]) спишет сервер, событие журнала - [RunEvent.Summon]. Хватает ли золота,
-     * решает кнопка: правило клиента - мелкая проверка доступа.
-     */
-    internal fun summon() {
-        if (!summonable) return
-        record(RunEvent::Summon) ?: return
-        summons = summons.after(index.campaign.services, clock())
-        summoned++
-        guardianReturns()
-    }
-
-    /** Стража можно призвать сейчас: он повержен, это карта, а не зона Ваал, и заход ещё не исчерпал призывы. */
-    internal val summonable: Boolean get() = phase == RunPhase.MAP && !vaal && bossDown && summoned < index.campaign.services.summonsPerRun
-
-    /** Цена призыва стража сейчас: одна функция правил по уровню района захода и призывам окна ([SummonLog.price]). */
-    internal fun summonPrice(): Long = summons.price(index.campaign.services, run.areaLevel, clock())
-
     /** Отдых стража кончился: он снова на посту. */
     private fun guardianReturns() {
         guardianBack = null
@@ -697,7 +671,6 @@ class ExpeditionRun(
             opened: Collection<Int> = emptyList(),
             features: Collection<FeatureUse> = emptyList(),
             inherited: Map<String, Double> = emptyMap(),
-            summoned: Int = 0,
             bossSlain: Boolean = false,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
             prefs: RunPrefs = RunPrefs.DEFAULT,
@@ -741,8 +714,6 @@ class ExpeditionRun(
                 if (!vaal) world.features.forEach { spot -> spot.resume(it, killed) }
                 world.restore(killed, Run.PACK_SLOTS)
                 if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
-                it.summons = campaign.summons
-                it.summoned = summoned
                 it.speed = prefs.speed
             }
         }

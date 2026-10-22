@@ -258,12 +258,12 @@ class ExpeditionActions(
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
      *
-     * [toBoss] (тестировщик и выше) - сразу бой со стражем.
+     * [toBoss] (тестировщик и выше) - сразу бой со стражем; [summon] - павший страж встаёт на пост за золото перед входом.
      */
-    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && freeProgress)
+    fun startRun(mapCode: String, toBoss: Boolean = false, summon: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && freeProgress, summon = summon)
 
-    /** Заход в зону [mapCode]; [toBoss] - сразу бой со стражем. */
-    fun start(mapCode: MapCode, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss)
+    /** Заход в зону [mapCode]; [toBoss] - сразу бой со стражем, [summon] - с призывом павшего стража. */
+    fun start(mapCode: MapCode, toBoss: Boolean = false, summon: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss, summon)
 
     /**
      * «Продолжить» незаконченный заход: вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
@@ -294,7 +294,7 @@ class ExpeditionActions(
     /**
      * Журнал, которого сервер ещё не взял, не бросается ради нового похода. Новое семя не раньше правил - ожидание, не ошибка.
      */
-    private fun enter(mapCode: MapCode, launch: MapLaunch?, toBoss: Boolean = false) {
+    private fun enter(mapCode: MapCode, launch: MapLaunch?, toBoss: Boolean = false, summon: Boolean = false) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
@@ -316,6 +316,7 @@ class ExpeditionActions(
                     launch?.potion,
                     launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(),
                     forced = repository.state.value.forced,
+                    summon = summon,
                 )
             } catch (e: ApiFailure) {
                 if (e.code != SEED_TOO_SOON) throw e
@@ -355,7 +356,6 @@ class ExpeditionActions(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, callbacks = callbacks,
             killed = started.killed, opened = started.chests, features = started.features,
-            summoned = started.tally.summons,
             bossSlain = started.tally.bosses > 0,
             fateRun = FateRun(started.killed, started.vaalKilled, started.tally.bosses),
             prefs = prefs.runPrefs(i.rules.fight),

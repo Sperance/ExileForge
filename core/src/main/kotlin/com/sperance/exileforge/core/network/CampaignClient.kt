@@ -37,6 +37,7 @@ class CampaignClient internal constructor(private val http: Transport) {
     /**
      * Enters [mapCode], with a map item spent on it or without one. Repeated only under its key ([SafeRetry]): a repeat never opens another run. A [potion]
      * goes into the run and [scarabs] with the map, both spent there. [forced] (сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
+     * [summon] - павший страж встаёт на пост перед входом за золото: без открытого захода (`CP_030`), страж повержен (`CP_031`).
      */
     suspend fun start(
         heroId: String,
@@ -45,6 +46,7 @@ class CampaignClient internal constructor(private val http: Transport) {
         potion: String? = null,
         scarabs: List<String> = emptyList(),
         forced: Set<MapMechanic> = emptySet(),
+        summon: Boolean = false,
     ): RunStart {
         itemId?.let(::requireItemId)
         return http.post(
@@ -56,6 +58,7 @@ class CampaignClient internal constructor(private val http: Transport) {
                 "potion" to potion,
                 "scarabs" to scarabs.joinToString(",").ifEmpty { null },
                 "forced" to forced.joinToString(",") { it.name }.ifEmpty { null },
+                "summon" to "true".takeIf { summon },
             ),
         )
     }

@@ -1,10 +1,12 @@
 package com.sperance.exileforge.core.model.campaign
 
 import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.content.ServiceRule
 import com.sperance.exileforge.rules.content.SummonLog
 import com.sperance.exileforge.rules.content.TrialEventKind
 import com.sperance.exileforge.rules.content.TrialProgress
 import com.sperance.exileforge.rules.content.TrialRun
+import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRun
 import com.sperance.exileforge.rules.roll.AbyssWindow
 import com.sperance.exileforge.rules.roll.ActiveMap
@@ -48,7 +50,28 @@ import kotlinx.serialization.Serializable
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now
+
+    /**
+     * Призыв павшего стража зоны [zone] перед заходом на миг [now] по часам сервера: цена - одна функция правил по уровню района
+     * [areaLevel] нового захода и призывам окна ([SummonLog.price]); null - страж на посту, звать некого. Открытый заход и финал региона
+     * без карты ([mapRun]) - причина [SummonOffer.bar], как её скажет сервер.
+     */
+    fun summonOffer(zone: Zone, rule: ServiceRule, areaLevel: Int, mapRun: Boolean, now: Long): SummonOffer? {
+        if (!bossDown(zone.code, now)) return null
+        val bar = when {
+            run != null -> SummonBar.OPEN_RUN
+            !zone.summonable(mapRun) -> SummonBar.NEEDS_MAP
+            else -> null
+        }
+        return SummonOffer(summons.price(rule, areaLevel, now), summons.repeats(rule, now), bar)
+    }
 }
+
+/** Призыв стража перед заходом: цена [price], [repeats] прежних призывов в окне правил (каждый дорожит следующий), [bar] - почему нельзя сейчас. */
+data class SummonOffer(val price: Long, val repeats: Int, val bar: SummonBar?)
+
+/** Почему стража не призвать перед заходом: открыт прежний заход (`CP_030`) или это финал региона без карты (`CP_031`). */
+enum class SummonBar { OPEN_RUN, NEEDS_MAP }
 
 /** The open run as the server holds it: the seed and the frozen context, and how far the journal was applied. */
 @Serializable data class RunState(

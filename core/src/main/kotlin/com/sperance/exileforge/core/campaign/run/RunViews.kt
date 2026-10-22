@@ -448,8 +448,6 @@ data class RunHud(
     val bossDown: Boolean = false,
     /** Секунды до возвращения отдыхающего стража; null - он не отдыхает: стоит или повержен в этом заходе. */
     val guardianRest: Int? = null,
-    /** Призыв поверженного стража; null - звать некого: страж на посту или это зона Ваал. */
-    val summon: SummonView? = null,
     /** Босс карты убит в этом заходе: «×N» в метке стража; шаг ускорен, только если [hastened]. */
     val swift: Boolean = false,
     /** Множитель шага героя под холодом ([ExpeditionRun.stride]); 1 - холода нет, подписи под жетоном ([strideText]) нет. */
@@ -530,12 +528,6 @@ data class FeatureView(val feature: MapFeature, val taken: List<Int>, val guarde
 
 /** Фонтан, как его читает предложение: какой, доля здоровья и маны и доля ёмкости зарядов фляг, что он даёт. */
 data class FountainView(val id: Int, val heal: Double, val flasks: Double)
-
-/**
- * Призыв стража: [price] - цена сейчас (`SummonLog.price` правил по району захода), [spent] - заход исчерпал
- * свои [perRun] призывов. Хватает ли золота, решает счёт кнопки.
- */
-data class SummonView(val price: Long, val spent: Boolean, val perRun: Int)
 
 /** A crystal of essences as its sheet shows it, what a Vaal orb on it did, and whether that orb's outcome is still the server's to tell. */
 data class CrystalView(

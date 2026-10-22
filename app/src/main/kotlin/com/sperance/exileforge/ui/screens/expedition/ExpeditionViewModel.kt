@@ -82,7 +82,7 @@ class ExpeditionViewModel(
     fun forceAll(on: Boolean) = expedition.forceAll(on)
 
     /** Заход в зону; [toBoss] (тестировщик и выше) - сразу бой со стражем. */
-    fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.startRun(mapCode, toBoss)
+    fun startRun(mapCode: String, toBoss: Boolean = false, summon: Boolean = false) = expedition.startRun(mapCode, toBoss, summon)
     fun continueUnfinished() = expedition.continueUnfinished()
     fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)

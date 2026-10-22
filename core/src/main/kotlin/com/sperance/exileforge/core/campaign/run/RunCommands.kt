@@ -127,8 +127,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.Accept -> accept()
 
-        RunCommand.Summon -> summon()
-
         RunCommand.ToBoss -> if (phase == RunPhase.MAP) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
 
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused

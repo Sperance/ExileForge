@@ -61,9 +61,6 @@ sealed interface RunCommand {
     /** «В бой» с экрана-вызова стража. */
     data object Accept : RunCommand
 
-    /** Призыв поверженного стража за золото: `ExpeditionRun.summon`. */
-    data object Summon : RunCommand
-
     /** Тестировщик: заход начинается сразу боем со стражем, без пути к нему. */
     data object ToBoss : RunCommand
     data object Pause : RunCommand

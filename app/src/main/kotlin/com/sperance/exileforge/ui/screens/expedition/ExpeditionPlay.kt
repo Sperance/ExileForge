@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
@@ -127,7 +126,6 @@ import kotlin.math.roundToInt
                     val hideHint: () -> Unit = remember(run) { { hint = null } }
                     Stick(run, { barBottom }, onTrap = showTrap, onHero = showChill.takeIf { chilled }) { model.runCommand(RunCommand.OfferFountain(it)) }
                     MapBar(
-                        game,
                         run,
                         hud,
                         live,
@@ -279,12 +277,10 @@ private val BELT_FLASK = 40.dp
 /**
  * Шапка карты - пульт и сведения на одной вуали, что гаснет к карте; низ экрана целиком под стик ([Stick]). Первый ряд - пульт:
  * меню захода (выход), имя карты, снаряжение, герой, задания. Ниже слева - метки состояния ([MapMarks]: страж, печать, ворота,
- * Скверна, журнал), призыв павшего стража за золото ([GuardianSummon]), полосы героя с итогом здоровья в секунду, пояс и плитки
- * несомого; справа - мини-карта со своим масштабом и кнопка сумки ([bag]). Нижние панели карты шапку не прячут. Высоту шапки - её низ
+ * Скверна, журнал), полосы героя с итогом здоровья в секунду, пояс и плитки несомого; справа - мини-карта со своим масштабом и кнопка сумки ([bag]). Нижние панели карты шапку не прячут. Высоту шапки - её низ
  * от верха экрана, в пикселях, - она отдаёт [onHeight]: стик под ней не начинается.
  */
 @Composable internal fun MapBar(
-    game: GameUi,
     run: ExpeditionRun,
     hud: RunHud,
     live: State<RunHud>,
@@ -298,7 +294,6 @@ private val BELT_FLASK = 40.dp
     onHeight: (Int) -> Unit = {},
 ) {
     val zone = VaalZones.isZone(run.zone)
-    val expedition: ExpeditionViewModel = koinViewModel()
     Column(
         Modifier.fillMaxWidth().onSizeChanged { onHeight(it.height) }
             .background(Brush.verticalGradient(0f to VeilTop, .72f to VeilMid, 1f to Color.Transparent))
@@ -309,7 +304,6 @@ private val BELT_FLASK = 40.dp
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 MapMarks(run, hud, zone, onRetry)
-                hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
                 MapVitals(live, Modifier.fillMaxWidth())
                 if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
                 RoadEffects(live)

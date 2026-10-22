@@ -6,7 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,8 +38,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * One item of the stash: its card, and what can be done with it.
  *
  * The card scrolls; the actions do not — they sit at the foot of the sheet ([SheetFooter], как у общей карточки), so the thing a
- * player came to do is never below the fold: широкой кнопкой надеть или снять (`wearOffer`) и «⋯» - заменить надетую, замок,
- * аукцион; под ними - ряд действий своей вещи ([OwnItemActions]): «В кузницу» вне боя и продажа торговцу удержанием. Every rule behind them is the
+ * player came to do is never below the fold: широкой кнопкой надеть или снять (`wearOffer`), у надетой на место - «Заменить» (выбор
+ * вещи на это место, [SlotPicker]; гаснет с причиной «Нечем заменить», когда в тайнике под место ничего нет), и «⋯» - снять надетую,
+ * замок, аукцион; под ними - ряд действий своей вещи ([OwnItemActions]): «В кузницу» вне боя и продажа торговцу удержанием. Every rule behind them is the
  * server's, and it checks them again; the client adds the sheet up itself, so wearing
  * is also off for an item whose requirements it misses, and the card says what it would change.
  *
@@ -117,16 +118,18 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 }
             }
             var more by remember(itemId) { mutableStateOf(false) }
-            val wornPlace = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
-            val offer = wearOffer(game, model, shell, instance, can, twin, onDismiss)
+            val wornPlace = game.hero?.equipped?.takeIf { instance.equipped }?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
+            val swappable = remember(game.hero?.items, game.index, wornPlace) { wornPlace?.let { game.placeCandidates(it).isNotEmpty() } == true }
+            val offer = wornPlace?.let { place -> WearOffer(ui("hero.replace"), can && swappable) { replacing = place } } ?: wearOffer(game, model, shell, instance, can, twin, onDismiss)
             val menu: @Composable () -> Unit = {
                 Box {
                     ForgeIconButton(Icons.Outlined.MoreHoriz, ui("common.more"), onClick = { more = true }, kind = ButtonKind.Secondary, size = ButtonSize.Wide)
                     ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
-                        if (instance.equipped && wornPlace != null) {
-                            MenuLine(Icons.Outlined.SwapHoriz, ui("hero.replace"), can) {
+                        if (wornPlace != null) {
+                            MenuLine(Icons.Outlined.RemoveCircleOutline, ui("hero.unequip"), can) {
                                 more = false
-                                replacing = wornPlace
+                                onDismiss()
+                                model.unequip(instance.id)
                             }
                         }
                         MenuLine(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
@@ -152,6 +155,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         ) { Text(offer.label, maxLines = 1) }
                         menu()
                     }
+                    if (wornPlace != null && !swappable) Text(ui("hero.replace_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
                 OwnItemActions(game, instance, onDone = onDismiss) { if (offer == null) menu() }
             }

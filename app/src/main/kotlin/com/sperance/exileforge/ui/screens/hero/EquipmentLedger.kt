@@ -239,7 +239,7 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
     val hero = game.hero ?: return
     val inspect = rememberInspect()
     val (fitting, unmetByCode) = remember(hero.items, hero.level, hero.stats, game.index, place) {
-        val pieces = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
+        val pieces = game.placeCandidates(place)
         val unmet = pieces.map { it.code }.distinct().associateWith { game.unmetFor(it) }
         val price = pieces.associate { it.id to it.sellPrice() }
         pieces.sortedWith(compareBy({ unmet.getValue(it.code).isNotEmpty() }, { -price.getValue(it.id) })) to unmet
@@ -271,3 +271,6 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
         }
     }
 }
+
+/** Вещи тайника, что встают на место [place]: не в гнёздах, слотом под это место; их предлагает [SlotPicker], пусто - нечем заменить. */
+internal fun GameUi.placeCandidates(place: BodyPlace): List<ItemView> = hero?.stash.orEmpty().filter { !it.socketed }.mapNotNull { view(it) }.filter { place.takes(it.slot) }

@@ -1260,6 +1260,7 @@
   "hero.sell_do": "Sell",
   "hero.slot_count": "{0} · {1}",
   "hero.replace": "Replace",
+  "hero.replace_none": "Nothing to swap in",
   "hero.slot_pick": "{0}: what to wear",
   "hero.slot_pick_empty": "Nothing in the stash fits this slot",
   "hero.slot_pick_hint": "Items for this slot come from loot and from the market.",

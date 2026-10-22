@@ -92,7 +92,8 @@ import com.sperance.exileforge.ui.theme.Vital
  * пустое место влияния не печатается. У редкости без мест (обычная, уникальная) чипов нет.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun SideChips(item: ItemView) {
+@Composable
+fun SideChips(item: ItemView) {
     val sides = item.sides ?: return
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SideChip(ui("card.prefixes", sides.prefixes, sides.prefixLimit), null)

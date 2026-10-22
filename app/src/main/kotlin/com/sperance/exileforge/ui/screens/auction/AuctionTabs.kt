@@ -140,6 +140,7 @@ internal const val LOT_TICK_MS = 30_000L
  * The lot's drawing: the server's sprite for its code, the bundled emblem of its kind otherwise — a
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
+
 /** Значок лота стороной [size]: стопка - её ячейкой ([StackCell]), копия - рисунком ([LotIcon]). */
 @Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, size: Dp) {
     if (lot.kind == LotKind.ITEM) StackCell(game.index, lot.itemCode, lot.amount, size = size) else LotIcon(lot, lotVisualKind(game, lot), Modifier.size(size))

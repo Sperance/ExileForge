@@ -158,7 +158,13 @@ internal fun reportDate(createdAt: String): String = createdAt.take(10).split('-
     ) {
         Text(
             if (fresh) ui("feedback.who.fresh", who) else who,
-            color = if (mine && !fresh) Parchment else if (note.author == NoteAuthor.MODERATION) Vital else tint,
+            color = if (mine && !fresh) {
+                Parchment
+            } else if (note.author == NoteAuthor.MODERATION) {
+                Vital
+            } else {
+                tint
+            },
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             maxLines = 1,

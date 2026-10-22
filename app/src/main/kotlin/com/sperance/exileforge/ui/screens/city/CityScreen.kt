@@ -126,8 +126,7 @@ private val Building.titleKey: String
  * каждое дело.
  */
 private fun cityTiles(game: GameUi, board: Quests, trade: Market, chores: MarketChores, open: (Building) -> Unit): List<HubTile> {
-    fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0, lines: List<String> = emptyList()) =
-        HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building), chores = lines) { open(building) }
+    fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0, lines: List<String> = emptyList()) = HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building), chores = lines) { open(building) }
     return listOf(
         tile(Building.QUESTS, ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
         tile(Building.MERCHANT, ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),

@@ -403,7 +403,6 @@ private fun Modifier.dashedBorder(color: Color, shape: androidx.compose.ui.graph
 /** Виды, что уходят в GitHub (как на сервере): ошибка и падение. */
 private val FeedbackKind.exported: Boolean get() = this == FeedbackKind.BUG || this == FeedbackKind.CRASH
 
-
 /** Редкости вещи-вложения письма на выбор. */
 private val MAIL_RARITIES = listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE)
 

@@ -15,11 +15,11 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.castTick
-import com.sperance.exileforge.core.campaign.combat.monsterCast
-import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.intimidate
 import com.sperance.exileforge.core.campaign.combat.intimidatedSkills
 import com.sperance.exileforge.core.campaign.combat.intimidatedTaken
+import com.sperance.exileforge.core.campaign.combat.monsterCast
+import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity

@@ -15,8 +15,7 @@ fun contestKindTitle(kind: ContestKind): String = ui("contest.kind.${kind.name}"
 fun contestMetricTitle(metric: ContestMetric): String = ui("contest.metric.${metric.name}")
 
 /** Мера с боссом периода: «Быстрейший босс · Король Бездны»; у прочих мер - только мера. */
-fun contestMetricLine(metric: ContestMetric, boss: MonsterCode?): String =
-    boss?.let { ui("contest.metric_boss", contestMetricTitle(metric), monsterTitle(it)) } ?: contestMetricTitle(metric)
+fun contestMetricLine(metric: ContestMetric, boss: MonsterCode?): String = boss?.let { ui("contest.metric_boss", contestMetricTitle(metric), monsterTitle(it)) } ?: contestMetricTitle(metric)
 
 /** Титул состязания: «Гроза боссов недели». */
 fun contestTitle(honour: ContestHonour): String = contestTitle(honour.metric, honour.kind)
@@ -51,5 +50,4 @@ fun contestGap(metric: ContestMetric, gap: Long): String = when (metric) {
 }
 
 /** Награда места: «×5» сфер, у первых мест - ещё «титул и рамка». */
-fun prizeLine(prize: PlacePrize, honoured: Boolean): String =
-    if (honoured) ui("contest.prize_honoured", prize.orbs) else ui("contest.prize_orbs", prize.orbs)
+fun prizeLine(prize: PlacePrize, honoured: Boolean): String = if (honoured) ui("contest.prize_honoured", prize.orbs) else ui("contest.prize_orbs", prize.orbs)

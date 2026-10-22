@@ -67,8 +67,7 @@ class FateSight(val index: ContentIndex, private val fate: String?, worn: Collec
 }
 
 /** Характеристики, что двигает судьбоносная строка [boon] - строка листа (`FateBoonDef.Line`); правило и подстройка рычага - пусто. */
-fun boonStats(index: ContentIndex, boon: FateBoon): List<String> =
-    (index.fates.boons.def(boon.fate, boon.boon, boon.tier) as? FateBoonDef.Line)?.let { index.statsOf(it.line) }.orEmpty()
+fun boonStats(index: ContentIndex, boon: FateBoon): List<String> = (index.fates.boons.def(boon.fate, boon.boon, boon.tier) as? FateBoonDef.Line)?.let { index.statsOf(it.line) }.orEmpty()
 
 /**
  * Текст судьбоносной строки [boon] словами сервера (`FateBoons.key`): `{v}` - модуль значения, `{p}` и `{c}` - постоянные правила

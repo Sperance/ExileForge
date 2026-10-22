@@ -35,15 +35,13 @@ class FeedbackClient internal constructor(private val http: Transport) {
      * Страница [page] очереди модерации [queue] под видом и поиском [sight] (текст, переписка, номер Issue, логин автора) в порядке [sort] -
      * отбор и порядок сервера, размер страницы - его `rules.pageSize`; счёт очередей - только у первой страницы.
      */
-    suspend fun queue(sight: QueueSight, queue: FeedbackQueue, sort: FeedbackSort, page: Int): FeedbackQueuePage =
-        http.get("$ADMIN/feedback", sight.params + mapOf("queue" to queue.name, "sort" to sort.name, "page" to page.coerceAtLeast(0).toString()))
+    suspend fun queue(sight: QueueSight, queue: FeedbackQueue, sort: FeedbackSort, page: Int): FeedbackQueuePage = http.get("$ADMIN/feedback", sight.params + mapOf("queue" to queue.name, "sort" to sort.name, "page" to page.coerceAtLeast(0).toString()))
 
     /**
      * Действия модерации с отчётом [id]: ответ - отчёт, как он теперь стоит, с его очередью и свежий счёт очередей под видом и поиском
      * [sight] модерации ([FeedbackMove]).
      */
-    suspend fun setStatus(id: String, status: ReportStatus, reason: String, sight: QueueSight): FeedbackMove =
-        http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
+    suspend fun setStatus(id: String, status: ReportStatus, reason: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
 
     /** Комментарий модерации автору: отчёт - в «Обсуждении», автору письмо. */
     suspend fun comment(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/comment", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))

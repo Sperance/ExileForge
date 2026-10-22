@@ -105,8 +105,11 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                         IdolRows(foe, fight)
                         StatsTab(foe, body, hero, rules)
                     }
+
                     FoeTab.SKILLS -> SkillsTab(foe, body, hero, traits, name)
+
                     FoeTab.PHASES -> ownBoss?.let { PhasesTab(it, totems, name) }
+
                     FoeTab.MODS -> ModsTab(foe, shares)
                 }
             }

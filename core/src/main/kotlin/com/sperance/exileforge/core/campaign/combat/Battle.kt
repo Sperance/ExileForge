@@ -695,11 +695,13 @@ class Battle(
      */
     private fun preferred(foe: Fighter, best: Fighter, rule: TargetRule, type: DamageType): Boolean = when (rule) {
         TargetRule.WEAKEST -> foe.life + foe.shield < best.life + best.shield
+
         TargetRule.EXPOSED -> {
             val resist = foe.body.resist(type)
             val other = best.body.resist(type)
             resist < other || resist == other && foe.life + foe.shield < best.life + best.shield
         }
+
         else -> foe.body.threat > best.body.threat
     }
 

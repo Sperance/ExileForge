@@ -123,7 +123,9 @@ internal fun heroLevelTip(hero: HeroHeaderState): Tip {
             ui("hero.level_tip.xp") to "${groupedNumber(progress.gained)} / ${groupedNumber(progress.needed)}",
             ui("hero.level_tip.left", hero.level + 1) to groupedNumber(progress.left),
         )
+
         hero.classes != null -> listOf(ui("hero.level_tip.xp") to ui("hero.xp_last"))
+
         else -> emptyList()
     }
     return Tip(hero.name, tint = GoldBright, facts = listOf(ui("hero.level_tip.level") to "${hero.level}") + steps)

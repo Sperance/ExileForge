@@ -224,15 +224,10 @@ fun reportPlace(route: Route): ReportPlace {
     val root = route.root ?: route
     val area = when (root.tab) {
         TAB_PROGRESS -> if (route == Route.Crafts) "crafts" else "progress"
-
         TAB_EXPEDITION -> if (route == Route.Atlas) "atlas" else "run"
-
         TAB_CITY -> if (route == Route.Auction) "auction" else "city"
-
         TAB_GUILD -> "guild"
-
         TAB_SETTINGS -> "settings"
-
         else -> "hero"
     }
     val title = barKey(root.tab)?.let(::ui)

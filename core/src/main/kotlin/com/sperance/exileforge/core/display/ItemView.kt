@@ -487,8 +487,7 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
 }.joinToString(" / ").ifBlank { null }
 
 /** Стороны аффиксов одной строкой: «Преф. 2/3 · Суф. 1/3», с занятым местом влияния [influence] - ещё « · Влияние 1/1». */
-fun sidesText(sides: AffixSides, influence: Pair<Int, Int>? = null): String =
-    listOfNotNull(ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit), influence?.let(::influenceSlotText)).joinToString(" · ")
+fun sidesText(sides: AffixSides, influence: Pair<Int, Int>? = null): String = listOfNotNull(ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit), influence?.let(::influenceSlotText)).joinToString(" · ")
 
 /** Место влияния словами: «Влияние 1/1» - занято из всех. */
 fun influenceSlotText(slots: Pair<Int, Int>): String = ui("card.influence_slot", slots.first, slots.second)

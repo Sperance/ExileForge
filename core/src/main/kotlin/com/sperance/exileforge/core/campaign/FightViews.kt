@@ -11,8 +11,8 @@ import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
-import com.sperance.exileforge.core.campaign.combat.passiveViews
 import com.sperance.exileforge.core.campaign.combat.intimidateView
+import com.sperance.exileforge.core.campaign.combat.passiveViews
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.combat.wanted

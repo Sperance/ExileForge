@@ -2,8 +2,8 @@ package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
-import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackMove
+import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail

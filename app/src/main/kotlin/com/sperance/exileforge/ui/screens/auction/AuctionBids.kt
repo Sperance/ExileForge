@@ -249,7 +249,20 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
                         Box(
                             Modifier.weight(1f).height(ButtonSize.Wide.height).background(Abyss, RoundedCornerShape(10.dp)).border(1.dp, if (bidShort != null && bidding) LifeRed else Bronze, RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center,
-                        ) { OrbAmount(lot.priceOrb, amount, big = true, tint = if (!bidding) Muted else if (bidShort != null) LossText else GoldBright) }
+                        ) {
+                            OrbAmount(
+                                lot.priceOrb,
+                                amount,
+                                big = true,
+                                tint = if (!bidding) {
+                                    Muted
+                                } else if (bidShort != null) {
+                                    LossText
+                                } else {
+                                    GoldBright
+                                },
+                            )
+                        }
                         ForgeIconButton(Icons.Outlined.Add, ui("auction.bid_more"), { amount = lot.bidUp(rules, amount) }, kind = ButtonKind.Secondary, state = ButtonState.of(bidding && amount < lot.price), repeatOnHold = true)
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -351,7 +364,8 @@ private fun bidMarks(lot: AuctionLot, due: MarketDue?): List<TradeMark> = listOf
  * лидирует или торги закрыты ему) и медиана похожих сделок [median] из [sales]; под ней края и подписи отметок цветами отметок.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun PriceScale(lot: AuctionLot, mine: Long?, median: Long?, sales: Int) {
+@Composable
+private fun PriceScale(lot: AuctionLot, mine: Long?, median: Long?, sales: Int) {
     val bid = lot.currentBid
     val low = lot.bidding?.minPrice ?: 0L
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -453,6 +467,7 @@ private const val FEED_SHOWN = 4
     val at = stampText(lot.endsAfterBid(rules, now))
     val (text, tint) = when {
         lot.leading -> ui("auction.tail_leading", rules.bidTailHours) to Muted
+
         else -> when (lot.bidTail(rules, now)) {
             BidTail.EXTENDS -> ui("auction.tail_extends", at, rules.bidTailHours) to Muted
             BidTail.SHORTENS -> ui("auction.tail_shortens", at, rules.bidTailHours, lotLeft(lot, now).orEmpty()) to Caution

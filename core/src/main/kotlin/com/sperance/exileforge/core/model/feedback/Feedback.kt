@@ -153,8 +153,7 @@ import kotlinx.serialization.Serializable
  * автор. Выгрузка кладёт переписку и слово первыми комментариями Issue в том же порядке, поэтому с Issue слово берётся только оттуда и
  * дважды не встаёт, даже если сервер прислал его и полем.
  */
-private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> =
-    answers + listOfNotNull(reason.takeIf { it.isNotBlank() && issue == null }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + issue?.notes.orEmpty()
+private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueView?): List<IssueNote> = answers + listOfNotNull(reason.takeIf { it.isNotBlank() && issue == null }?.let { IssueNote(NoteAuthor.MODERATION, it) }) + issue?.notes.orEmpty()
 
 /**
  * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести решением по машине состояний сервера,

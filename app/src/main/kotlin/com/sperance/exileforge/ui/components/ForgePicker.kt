@@ -355,7 +355,7 @@ private fun PickRow(option: PickOption<*>, mark: RowMark, onPick: () -> Unit, on
                 onLongClick = onPeek,
                 onClick = { if (available) onPick() },
             )
-            .alpha(if (available || lit) 1f else DimAlpha)
+            .alpha(if (available || lit) 1f else DIM_ALPHA)
             .padding(start = BarWidth),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -453,9 +453,13 @@ private fun PickRow(option: PickOption<*>, mark: RowMark, onPick: () -> Unit, on
  */
 private fun PickAccent?.paint(fallback: Color = Seam): Color = when (this) {
     null -> fallback
+
     is PickAccent.OfRarity -> rarityColor(rarity.name)
+
     is PickAccent.Step -> Ladder[if (steps <= 1) 0 else (step.toFloat() / (steps - 1) * Ladder.lastIndex).roundToInt().coerceIn(0, Ladder.lastIndex)]
+
     is PickAccent.Band -> Bands[band.mod(Bands.size)]
+
     is PickAccent.OfAttribute -> when (attribute) {
         CoreAttribute.STRENGTH -> LifeRed
         CoreAttribute.DEXTERITY -> Caution
@@ -473,7 +477,7 @@ private val Bands = listOf(ShieldCyan, Crafted, Brass, Vital, Elder, Ember, Rune
 private const val ANY_ROW = "any"
 
 /** Непрозрачность строки, что сейчас не выбрать. */
-private const val DimAlpha = .5f
+private const val DIM_ALPHA = .5f
 
 /** Ширина цветной полосы карточки-строки. */
 private val BarWidth = 5.dp

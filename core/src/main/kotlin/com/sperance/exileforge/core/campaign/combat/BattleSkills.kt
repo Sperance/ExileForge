@@ -367,8 +367,7 @@ internal fun Battle.hex(target: Fighter) {
     curse(kit.curses[random.nextInt(kit.curses.size)], listOf(target))
 }
 
-internal fun Battle.buff(fighter: Fighter, source: String, lines: List<StatLine>, duration: Double, counter: Double = 0.0, origin: EffectOrigin? = null) =
-    lay(fighter, TimedEffect(EffectKind.BUFF, source, lines, time + duration, duration, counter, origin = origin))
+internal fun Battle.buff(fighter: Fighter, source: String, lines: List<StatLine>, duration: Double, counter: Double = 0.0, origin: EffectOrigin? = null) = lay(fighter, TimedEffect(EffectKind.BUFF, source, lines, time + duration, duration, counter, origin = origin))
 
 /** Lays [effect] on [fighter], in place of the same one from the same source, and makes the body again. */
 internal fun Battle.lay(fighter: Fighter, effect: TimedEffect) {

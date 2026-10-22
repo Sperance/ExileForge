@@ -21,8 +21,10 @@ import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.roll.AffixRoller
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.GuardianFloor
+import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
@@ -56,7 +58,8 @@ class MetaCombatTest {
         val verdicts = pairs.entries.parallelStream().map { (pair, found) ->
             val (stat, op) = pair
             val values = found.value.takeIf { it > 0 }?.let(::listOf) ?: probes(stat, op)
-            val moved = values.any { value -> moves(listOf(StatOperation(stat, op, if (op == Op.MORE && index.stats[stat]?.unit == StatUnit.FLAG) 1.0 else value))) }
+            val moved = worn(stat, op, found)?.let { (bare, worn) -> differs(bare, worn) }
+                ?: values.any { value -> moves(listOf(StatOperation(stat, op, if (op == Op.MORE && index.stats[stat]?.unit == StatUnit.FLAG) 1.0 else value))) }
             Triple("$stat:$op", moved, found.carriers)
         }.toList()
         check(verdicts, "характеристики")
@@ -79,7 +82,29 @@ class MetaCombatTest {
     }
 
     /** Меняет ли [extra] хоть одну из эталонных схваток. */
-    private fun moves(extra: List<StatOperation>): Boolean = SCENARIOS.any { scenario -> fight(scenario, emptyList()) != fight(scenario, extra) }
+    private fun moves(extra: List<StatOperation>): Boolean = differs(emptyList(), extra)
+
+    /** Расходится ли хоть одна эталонная схватка с листом героя под строками [without] и под строками [with]. */
+    private fun differs(without: List<StatOperation>, with: List<StatOperation>): Boolean = SCENARIOS.any { scenario -> fight(scenario, without) != fight(scenario, with) }
+
+    /**
+     * Проба пары [stat] × [op], что контент кладёт только локальной строкой вещи (каждое описание с ней - `ModifierDef.local`, носители -
+     * лишь вещи): вне своей вещи такая строка смысла не имеет, и проба - свод базы, что её носит, без строки и с её первым тиром
+     * ([SheetCalculator.foldItem]); пара не такая - null.
+     */
+    private fun worn(stat: String, op: Op, found: Found): Pair<List<StatOperation>, List<StatOperation>>? {
+        if (!ITEM_CARRIERS.containsAll(found.carriers)) return null
+        val defs = index.definitions.filter { def -> def.effects.any { it.stat == stat && it.op == op } }
+        if (defs.isEmpty() || !defs.all { it.local }) return null
+        val roller = AffixRoller(index)
+        val (template, def) = defs.firstNotNullOfOrNull { def ->
+            index.templates.values.firstOrNull { template ->
+                (def.code in template.fixedCodes || index.modifierPool(template.tables).any { it.value.code == def.code }) && roller.bears(template, def)
+            }?.let { it to def }
+        } ?: return null
+        val calc = SheetCalculator(index)
+        return calc.foldItem(template, emptyList()) to calc.foldItem(template, listOf(Roll(def.code, tier = 1, share = 1.0)))
+    }
 
     /**
      * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
@@ -228,6 +253,9 @@ class MetaCombatTest {
 
         /** Уровень стаи: ниже героя - схватка длится десятки секунд, и герой успевает и бить, и терять здоровье. */
         const val FOE_LEVEL = 40
+
+        /** Носители строк вещей в контенте: пара только с них и только локальными строками - строка своей вещи ([worn]). */
+        val ITEM_CARRIERS = setOf("modifiers", "equipment")
 
         /** Носители строк героя в контенте. */
         val CARRIERS = listOf("modifiers.json", "equipment.json", "items.json", "tree.json", "skills.json", "powers.json", "classes.json", "fates.json", "atlas.json")

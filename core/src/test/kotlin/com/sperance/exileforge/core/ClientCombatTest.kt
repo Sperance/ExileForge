@@ -166,7 +166,8 @@ class ClientCombatTest {
     fun hero_hits_roll_within_their_range() {
         val width = 0.3
         fun hits(extra: Map<String, Double>): List<Double> {
-            val b = battle(body(mapOf(HitRange.PHYSICAL.spread to width * 100) + extra), Foe(body(life = 1e12)))
+            val sheet = mapOf(HitRange.PHYSICAL.spread to width * 100, HitRange.PHYSICAL.min to 100 * (1 - width), HitRange.PHYSICAL.max to 100 * (1 + width))
+            val b = battle(body(sheet + extra), Foe(body(life = 1e12)))
             val target = b.foe(0)
             return listOf(false, *Array(200) { true }).map { spread ->
                 val before = target.life

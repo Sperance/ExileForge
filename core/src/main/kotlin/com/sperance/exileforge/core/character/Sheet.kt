@@ -100,13 +100,13 @@ class SheetModel(
     fun growth(lines: List<StatLine> = emptyList()): DamageGrowth = object : DamageGrowth {
         override fun increased(type: String): Double {
             var sum = baseIncreased[type] ?: 0.0
-            for (line in lines) if (line.op == Op.INCREASED && type in StatSpread.targets(line.stat, line.op)) sum += line.value
+            for (line in lines) if (line.op == Op.INCREASED && StatSpread.parts(line.stat, line.op).any { part -> part.stat == type }) sum += line.value
             return sum
         }
 
         override fun more(type: String): Double {
             var product = baseMore[type] ?: 1.0
-            for (line in lines) if (line.op == Op.MORE && type in StatSpread.targets(line.stat, line.op)) product *= 1 + line.value / 100
+            for (line in lines) if (line.op == Op.MORE && StatSpread.parts(line.stat, line.op).any { part -> part.stat == type }) product *= 1 + line.value / 100
             return product
         }
     }

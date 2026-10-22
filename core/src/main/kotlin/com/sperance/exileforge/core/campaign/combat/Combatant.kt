@@ -7,10 +7,9 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.GenericDamage
-import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.sheet.DamageTaken
+import com.sperance.exileforge.rules.sheet.HitDice
 import com.sperance.exileforge.rules.sheet.HitRanges
-import com.sperance.exileforge.rules.sheet.HitRoll
 import com.sperance.exileforge.rules.sheet.StatReader
 import kotlin.math.max
 
@@ -107,24 +106,23 @@ data class Combatant(
 
     /** Насколько сильнее недуг [ailment] на этом бойце (`STOCK_<слово>_TAKEN`; по слову недуга, ниже нуля - слабее). */
     fun ailmentTaken(ailment: Ailment): Double = max(0.0, 1 + stat("STOCK_${ailment.word}_TAKEN") / 100)
-    val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
-        .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
+
+    /** Удар атакой по видам до броска ([HitRanges.parts]): лист без урона атак бьёт без оружия. */
+    val damage: Map<DamageType, Double> = HitRanges.parts(stats, rules).let { parts -> DamageType.entries.associateWith { parts[it.attack] ?: 0.0 } }
     val attackSpeed = stat(CoreStat.ATTACK_SPEED.code).takeIf { it > 0 }?.coerceIn(rules.attackSpeedMin, rules.attackSpeedMax) ?: rules.unarmed.speed
 
     /**
-     * Лист с диапазонами урона атак: есть полуширина хоть одного вида ([HitRange.spread]) или нет урона атак вовсе (удар без оружия).
-     * Лист без них - монстр - бьёт разбросом правил ±`variance`.
+     * Монстр: бьёт уроном атак без концов диапазонов ([HitRanges.ranged]) - разбросом правил ±`variance`. Герой без оружия
+     * бьёт полушириной удара без оружия ([HitRanges.width]).
      */
-    private val ranged: Boolean = HitRange.entries.any { it.spread in stats } || GenericDamage.HITS.none { stat(it) > 0 }
+    private val monster: Boolean = !HitRanges.ranged(stats) && GenericDamage.HITS.any { stat(it) > 0 }
 
-    /** Полуширина броска удара атакой вида [type] долей среднего: диапазон листа ([HitRanges.width]) или разброс правил. */
-    fun hitWidth(type: DamageType): Double = if (ranged) HitRanges.width(stats, type.attack, rules) else rules.variance / 100
+    private val diceByType: Map<DamageType, HitDice> = DamageType.entries.associateWith { type ->
+        HitDice.of(stats, type.attack, rules).let { if (monster) it.copy(width = rules.variance / 100) else it }
+    }
 
-    /** Шанс удачного броска удара атакой в диапазоне, доля ([HitRoll.lucky]). */
-    val luckyDamage: Double = HitRoll.lucky(stats, rules)
-
-    /** Урон атак всегда наибольший в своём диапазоне ([HitRoll.maximal]). */
-    val maximalDamage: Boolean = HitRoll.maximal(stats)
+    /** Бросок удара атакой вида [type] в его диапазоне ([HitDice.of]): полуширина, шанс удачи и наибольший урон листа. */
+    fun dice(type: DamageType): HitDice = diceByType.getValue(type)
 
     /** A limit raised by the sheet's own lines: block, evasion and physical reduction, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))

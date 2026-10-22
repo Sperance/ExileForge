@@ -336,13 +336,13 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
     private val skilled: Set<String> by lazy {
-        val direct = steady.flatMap { it.lines }.flatMap { StatSpread.targets(it.stat, it.op) }
+        val direct = steady.flatMap { it.lines }.flatMap { line -> StatSpread.parts(line.stat, line.op) }.map { it.stat }
         direct.toSet() + moved(read(bare), read(body)).keys
     }
 
     /** Прямые цели строк дара и шаги его преобразований листа. */
     private val fated: Set<String> by lazy {
-        val direct = model.operations.filter { it.source?.kind == SourceKind.FATE }.flatMap { StatSpread.targets(it.stat, it.op) }
+        val direct = model.operations.filter { it.source?.kind == SourceKind.FATE }.flatMap { operation -> StatSpread.parts(operation.stat, operation.op) }.map { it.stat }
         direct.toSet() + model.reshapes(steady.flatMap { it.lines }).keys
     }
 
@@ -390,7 +390,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     fun lowLife(stat: String): List<Pair<PassiveSource, Double>> {
         val steadyLines = steady.flatMap { it.lines }
         val now = model.with(steadyLines)[stat] ?: 0.0
-        return passives.filter { passive -> passive.lowLife && passive.lines.any { stat in StatSpread.targets(it.stat, it.op) } }
+        return passives.filter { passive -> passive.lowLife && passive.lines.any { StatSpread.parts(it.stat, it.op).any { part -> part.stat == stat } } }
             .map { passive -> passive to (model.with(steadyLines + passive.lines)[stat] ?: 0.0) - now }
     }
 

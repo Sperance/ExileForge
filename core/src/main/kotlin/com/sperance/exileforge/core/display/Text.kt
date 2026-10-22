@@ -27,6 +27,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.sheet.DamageRange
 import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
@@ -177,7 +178,7 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
 }
 
 /** Диапазон урона «мин–макс» вида [stat] концами [ends] (целыми); сошедшиеся концы - одно число. */
-fun rangeNumber(stat: String, ends: Pair<Double, Double>): String {
+fun rangeNumber(stat: String, ends: DamageRange): String {
     val (low, high) = ends
     return if (statNumber(stat, low) == statNumber(stat, high)) statNumber(stat, high) else "${statNumber(stat, low)}–${statNumber(stat, high)}"
 }

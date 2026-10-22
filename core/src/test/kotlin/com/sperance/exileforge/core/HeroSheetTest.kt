@@ -53,7 +53,6 @@ import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
-import com.sperance.exileforge.rules.sheet.WeaponDamage
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
@@ -247,7 +246,7 @@ class HeroSheetTest {
             else -> moved.toList()
         }
         if (rows.isEmpty()) return listOf("не двигает строку сводки")
-        val from = if (kind == Shown.HERO) StatSpread.targets(effect.stat, effect.op) else emptyList()
+        val from = if (kind == Shown.HERO) StatSpread.parts(effect.stat, effect.op).map { it.stat } else emptyList()
         return listOfNotNull("разбор не называет вещь".takeIf { rows.none { row -> (readFrom(row) + from).any { after.names(it) } } }) +
             rows.filter { abs(after.combat.explain(it).total - (after.values[it] ?: 0.0)) > TOTAL }.map { "разбор $it не сходится с цифрой" } +
             rows.flatMap { row -> Lang.entries.filter { lang -> UiStrings.table(lang).let { it["stat.desc.$row"].isNullOrBlank() || it[StatDetail.key(row)].isNullOrBlank() } }.map { "${it.code}: нет описания $row" } }
@@ -306,7 +305,7 @@ class HeroSheetTest {
     private fun own(def: ModifierDef, slot: Slot, table: Map<String, String>): Boolean = LocaleKey.modifierName(def.code) in table || def.variant != VariantKind.NATURAL && LocaleKey.modifierName(def.family) in table ||
         def.effects.indices.all { i ->
             val effect = def.effects[i]
-            val weapon = WeaponDamage.local(def, effect, slot)
+            val weapon = def.ownWeapon(effect, slot)
             (HitRange.ofEnd(effect.stat)?.let { ModifierText.rangeKey(it, weapon) } ?: ModifierText.templateKey(effect, ModifierText.negative(def, def.slot(i)), slot.isFlask && FlaskSheet.local(def, effect), weapon)) in table
         }
 

@@ -13,7 +13,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillEvent
-import com.sperance.exileforge.rules.sheet.HitRoll
+import com.sperance.exileforge.rules.sheet.HitDice
 import kotlin.math.max
 import kotlin.math.min
 
@@ -273,13 +273,14 @@ private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType
 }
 
 /**
- * Урон [damage] удара [me] с листом [body], брошенный в диапазоне каждого вида ([HitRoll.factor]) полушириной листа
- * ([Combatant.hitWidth]); удачный бросок - лучший из двух: шанс листа ([Combatant.luckyDamage]) или удача рода Предначертания
- * ([fateLuckySpread]); урон всегда наибольший ([Combatant.maximalDamage]) - верхний конец.
+ * Урон [damage] удара [me] с листом [body], брошенный в диапазоне каждого вида ([Combatant.dice]). Удача - одна на удар: шанс листа
+ * ([HitDice.luckyChance]) или удача рода Предначертания ([fateLuckySpread]) делает удачным бросок всех видов удара.
  */
 private fun Battle.rolled(me: Fighter, body: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
-    val lucky = fateLuckySpread(me) || body.luckyDamage > 0 && draw() < body.luckyDamage
-    return damage.mapValues { (type, value) -> value * HitRoll.factor(body.hitWidth(type), lucky, body.maximalDamage) { random.nextDouble() } }
+    val dice = damage.mapValues { (type, _) -> body.dice(type) }
+    val chance = dice.values.firstOrNull()?.luckyChance ?: 0.0
+    val lucky = if (fateLuckySpread(me) || chance > 0 && draw() < chance) 1.0 else 0.0
+    return damage.mapValues { (type, value) -> value * dice.getValue(type).copy(luckyChance = lucky).roll { random.nextDouble() } }
 }
 
 /** Характеристики броска удара в диапазоне: полуширины видов, удача и наибольший урон - разбор множителя [FactorKey.SPREAD]. */

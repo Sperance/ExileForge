@@ -129,8 +129,8 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
             val range = HitRange.of(change.stat) ?: return null
             val was = HitRanges.range(sheet, range, index.stats)
             val will = HitRanges.range(after, range, index.stats)
-            val low = will.first - was.first
-            val high = will.second - was.second
+            val low = will.min - was.min
+            val high = will.max - was.max
             return ComparisonLine(
                 statTitle(change.stat),
                 rangeNumber(change.stat, was),

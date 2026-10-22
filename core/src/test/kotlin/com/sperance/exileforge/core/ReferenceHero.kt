@@ -60,7 +60,7 @@ internal object SummaryProbe {
      * которых они объявлены, и то, что бой читает вместе с ними ([FightReading]).
      */
     fun rows(stat: String, op: Op, registry: StatRegistry): Set<String> {
-        val targets = StatSpread.targets(stat, op)
+        val targets = StatSpread.parts(stat, op).map { it.stat }
         return (targets + targets.map(registry::row) + FightReading.entries.filter { it.from in targets }.map { it.stat }).toSet()
     }
 }

@@ -28,6 +28,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.sheet.AmplifiedLine
 import com.sperance.exileforge.rules.sheet.Amplify
+import com.sperance.exileforge.rules.sheet.DamageRange
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -191,8 +192,8 @@ data class PropertyValue(
     val stat: String,
     val base: Double,
     val total: Double,
-    val ends: Pair<Double, Double>? = null,
-    val baseEnds: Pair<Double, Double>? = null,
+    val ends: DamageRange? = null,
+    val baseEnds: DamageRange? = null,
 ) {
     val augmented: Boolean get() = if (ends != null) ends != baseEnds else round(total * 10) != round(base * 10)
     val text: String get() = ends?.let { rangeNumber(stat, it) } ?: statNumber(stat, total)
@@ -344,11 +345,14 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** Полуширина урона базы оружия долей среднего ([WeaponDamage.width]); не оружие - null. */
     private val weaponWidth: Double? by lazy { WeaponDamage.width(template, index.rules.weapons) }
 
-    /** Концы урона вида [range] оружия с локальными строками, целые (`StatRegistry.settle`). */
-    private fun weaponEnds(range: HitRange): Pair<Double, Double> = index.stats.settle(range.min, folded[range.min] ?: 0.0) to index.stats.settle(range.max, folded[range.max] ?: 0.0)
+    /** Концы урона вида [range] оружия с локальными строками. */
+    private fun weaponEnds(range: HitRange): DamageRange = rounded(range, DamageRange(folded[range.min] ?: 0.0, folded[range.max] ?: 0.0))
 
-    /** Концы урона базы [mean] вида [range] по ширине оружия, целые. */
-    private fun baseEnds(range: HitRange, mean: Double): Pair<Double, Double> = WeaponDamage.ends(mean, weaponWidth ?: 0.0).let { (low, high) -> index.stats.settle(range.min, low) to index.stats.settle(range.max, high) }
+    /** Концы урона базы [mean] вида [range] по ширине оружия ([WeaponDamage.ends]). */
+    private fun baseEnds(range: HitRange, mean: Double): DamageRange = rounded(range, WeaponDamage.ends(mean, weaponWidth ?: 0.0))
+
+    /** Концы [ends] вида [range], округлённые реестром ([com.sperance.exileforge.rules.content.StatRegistry.rounded]). */
+    private fun rounded(range: HitRange, ends: DamageRange): DamageRange = DamageRange(index.stats.rounded(range.min, ends.min), index.stats.rounded(range.max, ends.max))
 
     /** Качество роллов: только строки с вилкой - фиксированная строка не «идеальна», ей некуда было выпасть. */
     val summary: RollSummary by lazy {

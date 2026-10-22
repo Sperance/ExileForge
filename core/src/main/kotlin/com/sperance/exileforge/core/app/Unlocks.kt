@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.app
 
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.EngineRules
 
 /**
@@ -47,6 +48,9 @@ fun GameUi.reachable(feature: Feature?): Boolean = feature == null || index != n
 
 /** Уровень, с которого раздел открыт, по таблице `unlocks` ([EngineRules.unlockLevel]); без правил - первый. */
 fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1
+
+/** Почему раздел закрыт: «<раздел> - с N уровня» (`unlock.locked`), уровень - [level] по правилам [rules]. */
+fun Feature.lockedText(rules: EngineRules?): String = ui("unlock.locked", ui(title), level(rules))
 
 /**
  * С какого уровня героя можно взять в гильдию: открытие гильдий (`unlocks` → `GUILD`) и порог самой гильдии

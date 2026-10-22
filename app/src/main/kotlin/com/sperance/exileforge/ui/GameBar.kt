@@ -55,9 +55,10 @@ import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
-import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.lockedText
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.EngineRules
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -71,17 +72,52 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.depthPanel
 import org.koin.compose.viewmodel.koinViewModel
 
+/** Из чего вкладки панели читают свой знак: игра [game] и досчёт ремёсел после отлучки, ещё не показанный листом, [craftsAway]. */
+private class BarState(val game: GameUi, val craftsAway: Boolean)
+
+/** Знак в углу вкладки панели; [reason] - почему он стоит, его называет долгое нажатие на вкладку. */
+private sealed interface BarBadge {
+    fun reason(): String
+
+    /** Раздел [feature] закрыт уровнем героя: замок; уровень открытия - по правилам [rules]. */
+    class Locked(val feature: Feature, val rules: EngineRules?) : BarBadge {
+        override fun reason(): String = feature.lockedText(rules)
+    }
+
+    /** Сколько ждёт решения: число [count]; [key] - ключ причины с этим числом. */
+    class Free(val count: Int, val key: String) : BarBadge {
+        override fun reason(): String = ui(key, count)
+    }
+
+    /** Что-то ждёт взгляда без числа: точка; [key] - ключ причины. */
+    class Alert(val key: String) : BarBadge {
+        override fun reason(): String = ui(key)
+    }
+}
+
+/** Число [count] с причиной [key]; ноль - знака нет. */
+private fun free(count: Int, key: String): BarBadge? = if (count > 0) BarBadge.Free(count, key) else null
+
+/** Точка с причиной [key], пока [on]. */
+private fun alert(on: Boolean, key: String): BarBadge? = if (on) BarBadge.Alert(key) else null
+
 /**
- * Кнопка нижней панели: номер вкладки, ключ подписи и значок; [freeReason] - ключ причины числа свободных очков в углу, [alertReason] -
- * ключ причины точки (долгое нажатие на вкладку называет их).
+ * Кнопка нижней панели: номер вкладки, ключ подписи, значок и [waits] - что ждёт на ней (число или точка); замок закрытого уровнем
+ * раздела ставит [badge] сам.
  */
-private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector, val freeReason: String? = null, val alertReason: String? = null) {
+private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector, private val waits: (BarState) -> BarBadge? = { null }) {
     HERO(TAB_HERO, "nav.hero", ForgeGlyphs.Helm),
-    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, freeReason = "nav.reason.tree_points"),
-    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords, freeReason = "nav.reason.atlas_points"),
+    PROGRESS(TAB_PROGRESS, "nav.progress", ForgeGlyphs.Sigil, { free(it.game.freeTreePoints, "nav.reason.tree_points") }),
+    EXPEDITION(TAB_EXPEDITION, "nav.expedition", ForgeGlyphs.Swords, { free(it.game.freeAtlasPoints, "nav.reason.atlas_points") }),
     CITY(TAB_CITY, "nav.city", ForgeGlyphs.Keep),
-    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil, alertReason = "nav.reason.crafts_away"),
+    CRAFTS(TAB_CRAFTS, "nav.crafts", ForgeGlyphs.Anvil, { alert(it.craftsAway, "nav.reason.crafts_away") }),
     ;
+
+    /** Знак вкладки в [state]: замок, пока раздел закрыт уровнем героя, иначе то, что ждёт на ней; ничего - null. */
+    fun badge(state: BarState): BarBadge? {
+        val feature = Feature.ofTab(tab)
+        return if (feature != null && !state.game.unlocked(feature)) BarBadge.Locked(feature, state.game.index?.rules) else waits(state)
+    }
 
     companion object {
         fun of(tab: Int): BarTab = entries.first { it.tab == tab }
@@ -97,8 +133,8 @@ private const val CAPSULE_GROW = 2.4f
  * той же кривой, что и сдвиг экрана. Пять вкладок у всех. Вкладка, нажатая снова
  * изнутри, возвращает к своему корню.
  *
- * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие»; досчёт ремёсел после отлучки, ещё не показанный
- * листом, - точкой на «Ремёслах». Долгое нажатие на вкладку с замком, числом или точкой называет причину окном у неё.
+ * Знак в углу вкладки - её [BarTab.badge]: замок, число того, что ждёт решения там, где его тратят, или точка. Долгое нажатие на
+ * вкладку со знаком называет причину окном у неё.
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
@@ -110,32 +146,19 @@ private const val CAPSULE_GROW = 2.4f
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        val state = remember(game, craftsAway) { BarState(game, craftsAway) }
         PLAYER_TABS.forEach { index ->
-            val free = when (index) {
-                TAB_EXPEDITION -> game.freeAtlasPoints
-                TAB_PROGRESS -> game.freeTreePoints
-                else -> 0
-            }
             val tab = BarTab.of(index)
-            val feature = Feature.ofTab(index)
-            val locked = !game.unlocked(feature)
-            val alert = index == TAB_CRAFTS && craftsAway
-            val reason = when {
-                locked -> feature?.let { ui("unlock.locked", ui(it.title), it.level(game.index?.rules)) }
-                free > 0 -> tab.freeReason?.let { ui(it, free) }
-                alert -> tab.alertReason?.let { ui(it) }
-                else -> null
-            }
-            BarCapsule(tab, selected = route.root?.tab == index, locked = locked, free = free, alert = alert, reason = reason) { shell.tab(index) }
+            BarCapsule(tab, selected = route.root?.tab == index, badge = tab.badge(state)) { shell.tab(index) }
         }
     }
 }
 
 /**
- * Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу замок, число очков или точка [alert].
- * Долгое нажатие открывает [reason] - почему в углу знак; нет причины - долгого нажатия нет.
+ * Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; в углу знак [badge] - замок, число или точка.
+ * Долгое нажатие открывает причину знака ([BarBadge.reason], собирается при открытии); нет знака - долгого нажатия нет.
  */
-@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, alert: Boolean, reason: String?, onClick: () -> Unit) {
+@Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, badge: BarBadge?, onClick: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
@@ -148,8 +171,8 @@ private const val CAPSULE_GROW = 2.4f
             .border(1.dp, Gold.copy(alpha = .4f * grow), shape)
             .combinedClickable(
                 role = Role.Tab,
-                onLongClickLabel = reason?.let { ui("hint.hold.info") },
-                onLongClick = reason?.let { { open = true } },
+                onLongClickLabel = badge?.let { ui("hint.hold.info") },
+                onLongClick = badge?.let { { open = true } },
                 onClick = onClick,
             )
             .semantics { this.selected = selected },
@@ -157,12 +180,11 @@ private const val CAPSULE_GROW = 2.4f
         horizontalArrangement = Arrangement.Center,
     ) {
         BadgedBox(badge = {
-            if (locked) {
-                Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
-            } else if (free > 0) {
-                Badge(containerColor = GoldBright, contentColor = Ink) { Text(free.toString(), fontSize = 9.sp) }
-            } else if (alert) {
-                Badge(containerColor = GoldBright)
+            when (badge) {
+                is BarBadge.Locked -> Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
+                is BarBadge.Free -> Badge(containerColor = GoldBright, contentColor = Ink) { Text(badge.count.toString(), fontSize = 9.sp) }
+                is BarBadge.Alert -> Badge(containerColor = GoldBright)
+                null -> Unit
             }
         }) {
             val scale = 1f + .08f * grow
@@ -177,7 +199,7 @@ private const val CAPSULE_GROW = 2.4f
                 Icon(tab.icon, label, tint = tint, modifier = Modifier.size(22.dp))
             }
         }
-        if (open && reason != null) TipCallout(Tip(body = reason)) { open = false }
+        if (open && badge != null) TipCallout(Tip(body = badge.reason())) { open = false }
         AnimatedVisibility(
             selected,
             enter = expandHorizontally(tween(TAB_SHIFT_MS, easing = TabShiftEasing)) + fadeIn(spec),

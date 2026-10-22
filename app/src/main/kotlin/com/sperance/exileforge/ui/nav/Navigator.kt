@@ -8,8 +8,8 @@ import com.sperance.exileforge.core.app.PLAYER_TABS
 import com.sperance.exileforge.core.app.Screens
 import com.sperance.exileforge.core.app.Spot
 import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.lockedText
 import com.sperance.exileforge.core.hero.HeroRepository
-import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.ui.screens.server.SettingsPage
@@ -66,9 +66,9 @@ class Navigator(
         val holding = heroes.state.value
         if (sessions.state.value.freeProgress(holding)) return true
         val level = holding.hero?.level ?: sessions.state.value.characters.firstOrNull { it.id == holding.heroId }?.level ?: 1
-        val needed = feature.level(world.state.value.content?.rules)
-        if (level >= needed) return true
-        notices.toast(ui("unlock.locked", ui(feature.title), needed))
+        val rules = world.state.value.content?.rules
+        if (level >= feature.level(rules)) return true
+        notices.toast(feature.lockedText(rules))
         return false
     }
 

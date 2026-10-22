@@ -42,7 +42,7 @@ const val LOCKED_TILE_ALPHA = .45f
 
 /**
  * Плитка хаба («Развитие», «Город»): название, значок на квадрате цвета [accent], строка того, что внутри ([note]), и
- * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [alert] - что-то ждёт взгляда без числа (точка в
+ * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [alert] - что-то ждёт взгляда без числа (точка [ChoreDot] в
  * углу; есть число - точка ждёт), [lockedUntil] - уровень открытия, пока герой ниже него (плитка тусклая, с замком, вместо строк -
  * «откроется с N»). [chores] - строки дел, что ждут действия («Можно продлить: 1»), каждая с жёлтой точкой дела ([ChoreDot]), на месте
  * [news]. [badgeTip] - что значит счётчик: касание счётчика (зона 44 dp в углу) открывает его окном. Без [onOpen] - заглушка будущего
@@ -117,7 +117,7 @@ const val LOCKED_TILE_ALPHA = .45f
                 }
             }
 
-            else -> Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(8.dp).background(GoldBright, CircleShape))
+            else -> ChoreDot(Modifier.align(Alignment.TopEnd).padding(4.dp))
         }
     }
 }

@@ -64,6 +64,7 @@ import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.solid
 import com.sperance.exileforge.ui.nav.Route
+import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
@@ -187,7 +188,7 @@ private const val CAPSULE_GROW = 2.4f
             when (badge) {
                 is BarBadge.Locked -> Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(12.dp))
                 is BarBadge.Free -> Badge(containerColor = GoldBright, contentColor = Ink) { Text(badge.count.toString(), fontSize = 9.sp) }
-                is BarBadge.Alert -> Badge(containerColor = GoldBright)
+                is BarBadge.Alert -> Badge(containerColor = Caution)
                 null -> Unit
             }
         }) {

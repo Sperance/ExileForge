@@ -1,13 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,7 +27,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -43,9 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.crafts.Crafts
@@ -74,7 +64,6 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -189,11 +178,12 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         if (work.stopped) {
             StoppedWork(work, enabled = !game.busy, onResume = vm::resume)
         } else {
-            CycleBar(work, offset, crafts.last)
+            CycleBar(work, offset)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 CycleClock(work, offset)
                 val rules = crafts.state?.rules
-                if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, Modifier.weight(1f))
+                val grown = rememberGrown(crafts.last)
+                if (profession != null && job != null && rules != null) HourChips(job, remember(rules, profession, job) { JobRates.hourYields(rules, profession, job) }, grown, Modifier.weight(1f))
             }
             if (profession != null && job != null) LevelEta(profession, job, work, offset)
         }
@@ -215,32 +205,38 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
 
 /**
  * Выход в час фишками справа от часов цикла: иконка и число, у первой - «/ч»; больше [HOUR_CHIPS] - первые и «+N», касание «+N»
- * раскрывает все с переносом. Касание фишки стопки - карточка материала.
+ * раскрывает все с переносом. Касание фишки стопки - карточка материала. Стопка, что выросла на последнем пересчёте ([grown]: код -
+ * сколько), коротко подсвечена: фишка в зелёной кромке пишет «+N» вместо выхода в час.
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun HourChips(job: JobView, yields: List<HourYield>, modifier: Modifier) {
+internal fun HourChips(job: JobView, yields: List<HourYield>, grown: Map<String, Long>, modifier: Modifier) {
     val inspect = rememberInspect()
     var all by remember(yields.size) { mutableStateOf(false) }
     val shown = if (all || yields.size <= HOUR_CHIPS) yields else yields.take(HOUR_CHIPS - 1)
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         shown.forEachIndexed { i, piece ->
             val code = piece.code
-            HourChip(onClick = code?.let { { inspect(Inspect.Stack(it)) } }) {
+            val gained = code?.let(grown::get)
+            HourChip(onClick = code?.let { { inspect(Inspect.Stack(it)) } }, lit = gained != null) {
                 if (code != null) BagIcon(code, Modifier.size(14.dp)) else JobIcon(job, Modifier.size(14.dp))
-                Text(fineNumber(piece.amount), color = Vital, style = HourFigure, maxLines = 1, softWrap = false)
-                if (i == 0) Text(ui("crafts.per_hour_unit"), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+                if (gained != null) {
+                    Text(ui("crafts.grown", gained), color = Vital, style = HourFigure, maxLines = 1, softWrap = false)
+                } else {
+                    Text(fineNumber(piece.amount), color = Vital, style = HourFigure, maxLines = 1, softWrap = false)
+                    if (i == 0) Text(ui("crafts.per_hour_unit"), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+                }
             }
         }
-        if (shown.size < yields.size) HourChip(onClick = { all = true }) { Text("+${yields.size - shown.size}", color = Parchment, style = HourFigure, maxLines = 1, softWrap = false) }
+        if (shown.size < yields.size) HourChip(onClick = { all = true }, lit = false) { Text("+${yields.size - shown.size}", color = Parchment, style = HourFigure, maxLines = 1, softWrap = false) }
     }
 }
 
-/** Фишка выхода в час: тёмная плашка в тонкой рамке; [onClick] null - не нажимается. */
-@Composable private fun HourChip(onClick: (() -> Unit)?, content: @Composable RowScope.() -> Unit) {
+/** Фишка выхода в час: тёмная плашка в тонкой рамке, [lit] - в зелёной подсветке выросшей стопки; [onClick] null - не нажимается. */
+@Composable private fun HourChip(onClick: (() -> Unit)?, lit: Boolean, content: @Composable RowScope.() -> Unit) {
     val shape = RoundedCornerShape(6.dp)
     Row(
-        Modifier.clip(shape).background(Abyss, shape).border(1.dp, PanelRaised, shape)
+        Modifier.clip(shape).background(if (lit) Vital.copy(alpha = LIT_FILL) else Abyss, shape).border(1.dp, if (lit) Vital else PanelRaised, shape)
             .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier).padding(horizontal = 6.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -254,6 +250,9 @@ private val HourFigure: androidx.compose.ui.text.TextStyle
 
 /** Сколько фишек выхода в час видно до «+N» (вместе с ней). */
 private const val HOUR_CHIPS = 3
+
+/** Заливка фишки выросшей стопки - доля зелёного. */
+private const val LIT_FILL = .18f
 
 /**
  * Работа, что встала по отлучке игрока: вместо полосы цикла - «В работе 12 ч 00 мин · остановлено» (время в работе печатает только эта
@@ -295,22 +294,18 @@ private const val HOUR_CHIPS = 3
  * A cycle's bar, filled smoothly: it reads the device's clock, set by the server's through [offset], and only
  * the bar is redrawn — the screen around it is not recomposed. Часы полосы тикают не каждый кадр, а с шагом
  * в один пиксель её ширины ([cycleStepMs]): на глаз так же плавно, а экран ремёсел не держит полный FPS.
- * Полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
- * всплывает, что принёс пересчёт на границе цикла ([last]).
+ * Полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу.
  */
-@Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6) {
+@Composable internal fun CycleBar(work: WorkView, offset: Long, height: Int = 6) {
     var widthPx by remember { mutableIntStateOf(0) }
     val step = cycleStepMs(work.cycleMillis, widthPx)
     val now by rememberNow(step)
-    Box(Modifier.fillMaxWidth()) {
-        LinearProgressIndicator(
-            progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
-            modifier = Modifier.fillMaxWidth().height(height.dp).onSizeChanged { widthPx = it.width },
-            color = Gold,
-            trackColor = PanelRaised,
-        )
-        HarvestPopup(last)
-    }
+    LinearProgressIndicator(
+        progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
+        modifier = Modifier.fillMaxWidth().height(height.dp).onSizeChanged { widthPx = it.width },
+        color = Gold,
+        trackColor = PanelRaised,
+    )
 }
 
 /** Идущий цикл часами - «3:41 / 5:19» одной строкой цифрами одной ширины - несколько раз в секунду: перерисовывается только текст, не полоса. */
@@ -326,42 +321,22 @@ private const val HOUR_CHIPS = 3
 }
 
 /**
- * Всплывашка сбора над полосой цикла: что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
- * на [HARVEST_SHOWN] мс; окно всплывашки живёт, только пока надпись видна или гаснет. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
+ * Что принёс последний пересчёт сервера ([last]) - выросшие стопки по коду - на [HARVEST_SHOWN] мс, затем пусто; сбор, что уже был при
+ * открытии экрана, не подсвечивается. Его читают фишки выхода плашки работы ([HourChips]).
  */
-@Composable private fun HarvestPopup(last: Harvest?) {
+@Composable private fun rememberGrown(last: Harvest?): Map<String, Long> {
     val seen = remember { last?.seq ?: 0L }
-    var text by remember { mutableStateOf("") }
-    val shown = remember { MutableTransitionState(false) }
+    var grown by remember { mutableStateOf(emptyMap<String, Long>()) }
     LaunchedEffect(last?.seq) {
         val fresh = last?.takeIf { it.seq > seen } ?: return@LaunchedEffect
-        text = harvestLine(fresh.gains)
-        shown.targetState = true
+        grown = fresh.gains.items.filterValues { it > 0 }
         delay(HARVEST_SHOWN)
-        shown.targetState = false
+        grown = emptyMap()
     }
-    if (!shown.currentState && !shown.targetState) return
-    val motion = LocalMotion.current
-    val lift = with(LocalDensity.current) { 30.dp.roundToPx() }
-    Popup(alignment = Alignment.TopCenter, offset = IntOffset(0, -lift)) {
-        AnimatedVisibility(
-            shown,
-            enter = if (motion) fadeIn() + slideInVertically { it / 2 } else EnterTransition.None,
-            exit = if (motion) fadeOut() else ExitTransition.None,
-        ) {
-            Text(
-                text,
-                color = Vital,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                modifier = Modifier.background(Abyss, RoundedCornerShape(50)).border(1.dp, Vital.copy(alpha = .5f), RoundedCornerShape(50))
-                    .padding(horizontal = 10.dp, vertical = 3.dp),
-            )
-        }
-    }
+    return grown
 }
 
-/** Сколько всплывашка сбора держится над полосой цикла. */
+/** Сколько фишка выросшей стопки держит «+N». */
 private const val HARVEST_SHOWN = 2_500L
 
 /** Шаг часов полосы цикла: время одного пикселя её ширины, в пределах [CYCLE_STEP_MIN]..[CYCLE_STEP_MAX] мс. */

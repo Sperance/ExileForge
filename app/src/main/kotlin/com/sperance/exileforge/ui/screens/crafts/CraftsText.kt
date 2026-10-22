@@ -45,7 +45,6 @@ import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.roman
@@ -66,7 +65,6 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.Desecrations
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Work
-import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -85,16 +83,6 @@ fun jobTitle(code: String): String = com.sperance.exileforge.core.display.jobTit
 
 /** The work under way by name, with its choice. */
 fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.workTitle(work.job, work.choice)
-
-/** Всплывашка сбора у полосы цикла: добыча, сделанное и голод сумки, с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
-fun harvestLine(gains: WorkGains): String = (gainParts(gains) + listOfNotNull(gains.experience.takeIf { it > 0 }?.let { ui("crafts.experience_gain", number(it)) }))
-    .joinToString(" · ").ifBlank { ui("crafts.harvest_empty") }
-
-private fun gainParts(gains: WorkGains): List<String> = listOfNotNull(
-    gains.items.entries.joinToString { (code, amount) -> ui("crafts.gain", amount, itemTitle(code)) }.ifBlank { null },
-    gains.equipment.takeIf { it.isNotEmpty() }?.let { pieces -> ui("crafts.made", pieces.joinToString { equipmentTitle(it.template) }) },
-    ui("crafts.starved").takeIf { gains.starved },
-)
 
 /** How many of a stack the bag holds, by the item's code — a material, an orb, an essence or a book; 0 before the hero is read. */
 fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L

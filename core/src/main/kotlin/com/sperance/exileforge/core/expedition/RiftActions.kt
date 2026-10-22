@@ -107,8 +107,8 @@ data class RiftToll(val before: Double, val after: Double, val key: RiftMetal?) 
 
 /** Итог боя Разлома в пути: уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
 sealed interface RiftDelivery {
-    /** Отправка; [attempt] - какая по счёту (с 2 - нет связи, повтор). */
-    data class Sending(val attempt: Int) : RiftDelivery
+    /** Отправка с [since] (мс стены, конец боя); [attempt] - какая по счёту (с 2 - нет связи, повтор). */
+    data class Sending(val attempt: Int, val since: Long) : RiftDelivery
 
     /** Сервер итог не принял: [reason] - его слова; забег стоит на бою, «К карте» перечитывает доску. */
     data class Refused(val reason: String) : RiftDelivery
@@ -276,9 +276,10 @@ class RiftActions(
         mutable.update { it.copy(lastFight = it.arena?.report ?: it.lastFight) }
         sending?.cancel()
         sending = scope.launch {
+            val since = System.currentTimeMillis()
             var attempt = 1
             while (true) {
-                mutable.update { it.copy(delivery = RiftDelivery.Sending(attempt)) }
+                mutable.update { it.copy(delivery = RiftDelivery.Sending(attempt, since)) }
                 try {
                     val report = api.trials.riftAct(heroId, run.id, end, key)
                     val after = report.board.progress.run?.takeIf { it.id == run.id && end.won }

@@ -120,7 +120,7 @@ fun CallState.strip(onRetry: () -> Unit, offlineNote: String = ui("call.offline_
     }
     StatusRow(Caution, Caution.copy(alpha = .12f)) {
         CircularProgressIndicator(Modifier.size(16.dp), color = Caution, strokeWidth = 2.dp)
-        val attempt = state.attempts?.let { ui("call.attempt", state.attempt, it) }.orEmpty()
+        val attempt = state.attempts?.let { ui("call.attempt", state.attempt, it) } ?: ui("call.attempt_open", state.attempt)
         Lines(ui("call.slow"), attempt, Caution, tones.muted, Modifier.weight(1f))
     }
 }

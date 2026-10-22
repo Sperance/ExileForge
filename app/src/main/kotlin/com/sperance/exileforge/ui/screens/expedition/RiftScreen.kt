@@ -1299,12 +1299,13 @@ private fun PickTargets(pick: OfferPick, hint: String, items: List<PickTarget>, 
 }
 
 /**
- * Полоса связи арены: нет связи (значок связи игры) или итог боя уходит не с первой попытки - «Нет связи», бой продолжится, когда она
- * вернётся; повтора кнопкой нет - итог досылается сам.
+ * Полоса связи арены: нет связи (значок связи игры) - «Нет связи», бой продолжится, когда она вернётся; итог боя в пути - ожидание, как
+ * у шага на доске (с 8 с - «Сервер долго отвечает» с номером попытки, их счёт не ограничен). Повтора кнопкой нет - итог досылается сам.
  */
-private fun arenaStrip(link: Link, delivery: RiftDelivery?): StripState {
-    val retrying = (delivery as? RiftDelivery.Sending)?.let { it.attempt > 1 } == true
-    return if (link.state is LinkState.Offline || retrying) StripState.Offline(ui("rift.arena_offline"), onRetry = null) else StripState.None
+private fun arenaStrip(link: Link, delivery: RiftDelivery?): StripState = when {
+    link.state is LinkState.Offline -> StripState.Offline(ui("rift.arena_offline"), onRetry = null)
+    delivery is RiftDelivery.Sending -> StripState.Waiting(delivery.since, delivery.attempt, attempts = null)
+    else -> StripState.None
 }
 
 /**

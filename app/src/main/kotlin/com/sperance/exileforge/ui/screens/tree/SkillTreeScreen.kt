@@ -151,10 +151,10 @@ fun SkillTreePanel(
     var tag by remember { mutableStateOf<String?>(null) }
     val query = rawQuery.trim()
     val search = remember(index, game.lang) { PickList(PickOptions.nodes(index)) }
-    val found = remember(search, query) { if (query.length < 2) emptySet() else search.found(query).mapNotNullTo(HashSet()) { it.key } }
-    val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
+    val matches = remember(search, query) { if (query.length < 2) null else search.found(query).mapNotNull { it.key } }
+    val highlight = remember(index, tag, matches) { tag?.let { nodesTagged(index, it) }.orEmpty() + matches.orEmpty().mapTo(HashSet()) { it.code } }
     var filtersOpen by remember { mutableStateOf(false) }
-    val filtering = tag != null || query.length >= 2
+    val filtering = tag != null || matches != null
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
         TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
@@ -240,7 +240,7 @@ fun SkillTreePanel(
 
     if (filtersOpen) {
         ForgeSheet(onDismissRequest = { filtersOpen = false }) {
-            TreeFilters(rawQuery, onQuery, found.size.takeIf { query.length >= 2 }, tag, onTag = { tag = it })
+            TreeFilters(rawQuery, onQuery, matches?.size, tag, onTag = { tag = it })
         }
     }
 
@@ -266,7 +266,7 @@ fun SkillTreePanel(
                 }
                 item { TreeTotals(game, tree) }
                 item {
-                    TreeSearch(game, rawQuery, selected, nodes, search) { code ->
+                    TreeSearch(game, matches, selected) { code ->
                         onSelect(code)
                         detailsOpen = false
                         nodeOpen = true

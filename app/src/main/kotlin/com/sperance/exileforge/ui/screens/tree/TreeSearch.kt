@@ -39,8 +39,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.PickList
-import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
@@ -76,19 +74,17 @@ import kotlin.math.sin
 /**
  * Finding a node by name.
  *
- * [search] - слова поиска узлов на язык интерфейса ([PickOptions.nodes]), общие с подсветкой узлов на карте.
+ * [matches] - узлы, что нашёл поиск панели древа (те же, что подсвечены на карте); null - запрос короче двух букв, панели нет.
  *
  * The tree is over a hundred nodes across seven class areas, so panning to one by eye is not
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
-@Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, search: PickList<String>, onSelect: (String) -> Unit) {
-    val byCode = remember(nodes) { nodes.associateBy { it.code } }
-    val matches = remember(search, rawQuery) { if (rawQuery.isBlank()) emptyList() else search.found(rawQuery).take(FOUND_SHOWN).mapNotNull { option -> option.key?.let { byCode[it] } } }
-    if (rawQuery.isBlank()) return
+@Composable internal fun TreeSearch(game: GameUi, matches: List<TreeNode>?, selected: String, onSelect: (String) -> Unit) {
+    matches ?: return
     ForgePanel {
         Engraved(ui("tree.find_node"))
         if (matches.isEmpty()) Text(ui("tree.nothing_found"), color = Muted)
-        matches.forEach { node ->
+        matches.take(FOUND_SHOWN).forEach { node ->
             ForgeButton(onClick = { onSelect(node.code) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text, accent = nodeColour(node, node.code == selected)) {
                 Text(
                     "${nodeTitle(node.code)} · ${nodeTypeTitle(node.type, game.lang)}",

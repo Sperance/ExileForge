@@ -41,7 +41,7 @@ import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
  * comes first. Вся стая на поле сразу: бой не больше `fight.maxFoes` врагов, свита босса встаёт по зову фаз ([field]).
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
- * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
+ * rolls within its damage range per type (the hero's weapon ranges, a monster's rule variance), may be a critical strike, and is reduced by armour
  * (physical, `armour / (armour + factor × damage)`) and by resistances (elements and chaos,
  * capped). Energy shield takes a hit before life, except chaos, which goes around it; a shield left
  * alone for the rule's delay recharges. Leech gives back a share of what was dealt; a hit big enough

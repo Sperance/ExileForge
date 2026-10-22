@@ -54,7 +54,7 @@ data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val he
 /**
  * One blow of a fighter: a weapon's swing, a skill's hit or a spell — its damage by type before
  * anyone's defences, and what the skill adds. A [spell] and [secondary] damage are not evaded ([evadable]); its damage was rolled already
- * unless it [spread]s by the rule's variance as a weapon's does. [body] is the striker's sheet for this
+ * unless it [spread]s within the striker's damage ranges as a weapon's does. [body] is the striker's sheet for this
  * blow with the skill's own lines laid on; [stun] and [ailments] are chances in percent beyond the rules.
  */
 internal class Blow(

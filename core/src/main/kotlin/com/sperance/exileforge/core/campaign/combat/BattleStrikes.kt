@@ -10,8 +10,10 @@ import com.sperance.exileforge.core.campaign.StatLines
 import com.sperance.exileforge.core.campaign.TypeTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillEvent
+import com.sperance.exileforge.rules.sheet.HitRoll
 import kotlin.math.max
 import kotlin.math.min
 
@@ -29,8 +31,8 @@ internal fun Battle.blightTaken(attacker: Fighter, target: Fighter): Double = if
  * состояния цели (увеличения рядом с увеличениями удара) и что пропускают подавление и отклонение;
  * - пробивание снимает часть сопротивления, «получаемый урон» и проклятие цели растят прошедшее; слабее всего сопротивляемая стихия
  * пробивается глубже;
- * - Разлом («Тяжкие удары», печати Стража, «Одна стихия» Владыки) и Предначертание (рычаги героя тяжелее, враг легче); разброс урона героя
- * - больший из двух бросков;
+ * - Разлом («Тяжкие удары», печати Стража, «Одна стихия» Владыки) и Предначертание (рычаги героя тяжелее, враг легче); бросок урона
+ * в диапазоне - до свода видов ([rolled]): доп. урон от физического и принятый иной стихией берут бросок физического;
  * - зеркало урона - запас сверх удара теми же типами по долям, до защит цели;
  * - урон для недугов - после защит и «получаемого урона» цели, без шока, подавления и Укрепления; основа яда - до защит без множителя крита
  * ([unmitigated]), урон ударами недуги не растит; Разложение - урон своего вида, что прибавили стаки цели, графа разбора;
@@ -84,14 +86,16 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
     val heavy = heavy(me, blow)
     val fateMore = fateHeavier(me, target, blow)
-    val luckySpread = blow.spread && fateLuckySpread(me)
     val seals = sealed(target)
     var unruled = 0.0
     val types = mutableListOf<TypeTrace>()
     var spreadSum = 0.0
     var takenSum = 0.0
     var defended = 0.0
-    val parts = converted(body, target.body, blow.damage.filterValues { it > 0 })
+    val dealing = blow.damage.filterValues { it > 0 }
+    val element = if (body.randomElementHits && dealing.isNotEmpty()) DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] else null
+    val parts = converted(body, target.body, dealing, element)
+    val thrown = if (blow.spread) converted(body, target.body, rolled(me, body, dealing), element) else parts
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
     val ailing = mutableMapOf<DamageType, Double>()
@@ -100,7 +104,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     var exposed = 0.0
     var exposedSum = 0.0
     val taken = parts.mapValues { (type, base) ->
-        val spread = if (blow.spread) 1 + ((if (luckySpread) max(random.nextDouble(), random.nextDouble()) else random.nextDouble()) * 2 - 1) * rules.variance / 100 else 1.0
+        val spread = if (blow.spread) (thrown[type] ?: 0.0) / base else 1.0
         val hurt = base * spread * against * body.damageMore * doubled * versus * fateMore
         val grown = hurt * multiplier * hitMore
         val heavied = if (heavy == 1.0) grown else grown * heavy
@@ -139,7 +143,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
                 DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" },
             ),
         )
-        if (blow.spread && baseSum > 0) add(FactorTrace(FactorKey.SPREAD, spreadSum / baseSum))
+        if (blow.spread && baseSum > 0) add(FactorTrace(FactorKey.SPREAD, spreadSum / baseSum, SPREAD_STATS))
         if (kind == HitKind.CRIT) {
             add(
                 FactorTrace(
@@ -251,11 +255,12 @@ private fun Battle.blocked(target: Fighter) {
  * A blow's damage by type as it meets the target: the striker's whole hit turned to one random element,
  * then the target's physical damage taken as elements.
  *
- * Доля физического урона ударившего - ещё раз другими видами.
+ * Стихия удара случайной стихией [element] брошена до свода: несброшенный и брошенный удар сводятся одной стихией. Доля физического
+ * урона ударившего - ещё раз другими видами.
  */
-private fun Battle.converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
+private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>, element: DamageType?): Map<DamageType, Double> {
     var out = damage
-    if (body.randomElementHits && out.isNotEmpty()) out = mapOf(DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] to out.values.sum())
+    if (element != null) out = mapOf(element to out.values.sum())
     val own = out[DamageType.PHYSICAL] ?: 0.0
     if (own > 0 && body.extraAs.isNotEmpty()) out = out.toMutableMap().also { extra -> body.extraAs.forEach { (type, share) -> extra.merge(type, own * share, Double::plus) } }
     val physical = out[DamageType.PHYSICAL] ?: 0.0
@@ -266,6 +271,19 @@ private fun Battle.converted(body: Combatant, target: Combatant, damage: Map<Dam
     shares.forEach { (type, share) -> moved.merge(type, physical * share, Double::plus) }
     return moved.filterValues { it > 0 }
 }
+
+/**
+ * Урон [damage] удара [me] с листом [body], брошенный в диапазоне каждого вида ([HitRoll.factor]) полушириной листа
+ * ([Combatant.hitWidth]); удачный бросок - лучший из двух: шанс листа ([Combatant.luckyDamage]) или удача рода Предначертания
+ * ([fateLuckySpread]); урон всегда наибольший ([Combatant.maximalDamage]) - верхний конец.
+ */
+private fun Battle.rolled(me: Fighter, body: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
+    val lucky = fateLuckySpread(me) || body.luckyDamage > 0 && draw() < body.luckyDamage
+    return damage.mapValues { (type, value) -> value * HitRoll.factor(body.hitWidth(type), lucky, body.maximalDamage) { random.nextDouble() } }
+}
+
+/** Характеристики броска удара в диапазоне: полуширины видов, удача и наибольший урон - разбор множителя [FactorKey.SPREAD]. */
+private val SPREAD_STATS: List<String> = HitRange.entries.map { it.spread } + CoreStat.LUCKY_DAMAGE.code + CoreStat.MAXIMUM_DAMAGE_ROLLS.code
 
 /** A block under a riposte: the hero strikes the attacker back with that share of the weapon. */
 private fun Battle.counter(attacker: Fighter) {

@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.combat.monsterCast
 import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.PowerEvent
@@ -155,6 +156,31 @@ class ClientCombatTest {
         assertEquals(1 - caps.skillCost / 100, capped.skillCost, 1e-9)
         assertEquals(caps.doubleDamage / 100, capped.doubleDamage, 1e-9)
         assertEquals(caps.recoup / 100, capped.recoup, 1e-9)
+    }
+
+    /**
+     * Удар героя бросается в диапазоне своего вида: урон - в `[1 - w, 1 + w]` от несброшенного при полуширине `w`; урон всегда
+     * наибольший - верхний конец.
+     */
+    @Test
+    fun hero_hits_roll_within_their_range() {
+        val width = 0.3
+        fun hits(extra: Map<String, Double>): List<Double> {
+            val b = battle(body(mapOf(HitRange.PHYSICAL.spread to width * 100) + extra), Foe(body(life = 1e12)))
+            val target = b.foe(0)
+            return listOf(false, *Array(200) { true }).map { spread ->
+                val before = target.life
+                b.strike(b.heroFighter, target, Blow(b.heroFighter.body.damage, spread = spread))
+                before - target.life
+            }
+        }
+        val rolled = hits(emptyMap())
+        val mean = rolled.first()
+        assertTrue(mean > 0, "the unrolled blow dealt nothing")
+        rolled.drop(1).forEach { assertTrue(it in mean * (1 - width) - 1e-6..mean * (1 + width) + 1e-6, "a hit of $it is outside the range around $mean") }
+        assertTrue(rolled.drop(1).any { it < mean } && rolled.drop(1).any { it > mean }, "hits do not spread around the mean")
+        val maximal = hits(mapOf(CoreStat.MAXIMUM_DAMAGE_ROLLS.code to 1.0))
+        maximal.drop(1).forEach { assertEquals(maximal.first() * (1 + width), it, 1e-6) }
     }
 
     /** Лёд шкалы слушает длительность заморозки нападающего и сокращение на себе цели. */

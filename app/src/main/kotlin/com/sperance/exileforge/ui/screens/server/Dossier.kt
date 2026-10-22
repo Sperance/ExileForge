@@ -43,7 +43,6 @@ import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -52,7 +51,7 @@ import java.time.format.DateTimeFormatter
  * Досье как страница настроек: шапка в две строки, строки «Роль ›», «Сервер ›» и переключатель «Тестировщик» - значение роли и сервера
  * печатается только в своей строке; одна панель «ключ — значение» в две колонки, свёрнутые строки Экономика, Связи, История и
  * Предначертание с итогом справа и красный блок опасных действий внизу - у каждого строка последствий. Своё досье администратора -
- * «Сменить» в Предначертании: лист всех даров. В шапке - «✉ Написать» (письмо игроку от Администрации, право `rights.mail`), строка «Имя ›»
+ * «Сменить» в Предначертании: лист всех даров. В шапке - «✉ Написать» (письмо игроку от Администрации, право `rights.mail`, [ModerationModel.write]), строка «Имя ›»
  * меняет имя героя с причиной для игрока (`rights.rename`). Досье - уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]):
  * своей стрелки у него нет.
  */
@@ -65,8 +64,7 @@ import java.time.format.DateTimeFormatter
         return
     }
     val state by vm.state.collectAsStateWithLifecycle()
-    val cards = koinViewModel<PlayerCardViewModel>().model
-    DossierHeader(account, dossier, onMail = { cards.writeAdmin(dossier.account.userId, dossier.account.login, dossier.hero?.name.orEmpty()) }.takeIf { dossier.rights.mail && !vm.owns(dossier.account.userId) })
+    DossierHeader(account, dossier, onMail = { vm.write(dossier) }.takeIf { dossier.rights.mail && !vm.owns(dossier.account.userId) })
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
             sanctionLine(active),

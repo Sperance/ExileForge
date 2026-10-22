@@ -17,4 +17,10 @@ class MailCategoryTest {
         assertTrue(keys.isNotEmpty(), "ключи SystemMail не прочитаны")
         assertEquals(emptyList(), keys.filter { MailCategory.ofKey(it) == null }, "ключи письма без категории")
     }
+
+    /** Письма о решениях Администрации - смена Предначертания и имени героя - лежат в «Администрации», а не в «Системе». */
+    @Test
+    fun administration_decisions_are_in_the_administration() {
+        listOf(SystemMail.FATE_REDRAWN, SystemMail.HERO_RENAMED).forEach { assertEquals(MailCategory.ADMIN, MailCategory.ofKey(it), it) }
+    }
 }

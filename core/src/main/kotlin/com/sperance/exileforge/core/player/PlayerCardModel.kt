@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.Landing
 import com.sperance.exileforge.core.app.Screens
-import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.feedback.AdminLetters
 import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.guild.GuildActions
@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hall.HallFocus
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.market.MarketActions
-import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
@@ -39,7 +38,7 @@ class PlayerCardModel(
     private val guilds: GuildRepository,
     private val guildActions: GuildActions,
     private val market: MarketActions,
-    private val feedback: FeedbackRepository,
+    private val adminLetters: AdminLetters,
     private val letters: LetterActions,
     private val screens: Screens,
     private val hall: HallFocus,
@@ -92,22 +91,10 @@ class PlayerCardModel(
     /** «Написать»: окно письма герою карточки; адресат - плашкой, не вводом. */
     fun write(card: PlayerCard) = leave { letters.compose(LetterDraft.to(card.heroId, card.name, card.heroClass, card.level)) }
 
-    /** Письмо администратора аккаунту героя (только администратору): форма письма адресована владельцу по id аккаунта. */
+    /** Письмо от Администрации аккаунту героя карточки ([AdminLetters]): форма письма адресована владельцу по id аккаунта. */
     fun writeAdmin(card: PlayerCard) {
         val owner = card.rights.moderation?.takeIf { it.userId.isNotBlank() } ?: return
-        writeAdmin(owner.userId, owner.login, card.name)
-    }
-
-    /**
-     * Письмо от Администрации аккаунту [userId] (логин [login], герой [heroName]) - из карточки и из досье модерации: форма письма
-     * адресована владельцу по id аккаунта; модератору - без вложения.
-     */
-    fun writeAdmin(userId: String, login: String, heroName: String) {
-        if (userId.isBlank()) return
-        leave {
-            feedback.update { it.copy(mailTo = MailAddressee.of(userId, login, heroName)) }
-            screens.open(Landing.MAIL)
-        }
+        leave { adminLetters.compose(owner.userId, owner.login, card.name) }
     }
 
     /**

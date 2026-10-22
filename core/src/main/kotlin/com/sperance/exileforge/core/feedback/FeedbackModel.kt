@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackMove
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAddressee
-import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.QueueSight
@@ -184,13 +183,13 @@ class FeedbackModel(
     }
 
     /**
-     * Письмо от Администрации: администратор - `admin/mail` (вложение, рассылка всем), модератор - из досье одному аккаунту по id и без
-     * вложения (`admin/moderation/mail`).
+     * Письмо от Администрации: одному аккаунту по id (адресат из карточки или досье) - `admin/moderation/mail` модератору и администратору
+     * (права и вложение решает сервер); по логину или всем - `admin/mail`, только администратору.
      */
     fun sendMail(request: MailRequest) = commands.task(writing = true) {
         val session = sessions.state.value
-        check(session.isModerator) { ui("hero.grant_admin_only") }
-        val sent = if (session.isAdmin) api.mail.send(request) else api.moderation.mail(request.copy(attachment = MailAttachment()))
+        check(session.isModerator && (session.isAdmin || request.userId.isNotBlank())) { ui("moderation.staff_only") }
+        val sent = if (request.userId.isNotBlank()) api.moderation.mail(request) else api.mail.send(request)
         notices.toast(ui("mail.sent", sent))
     }
 }

@@ -47,6 +47,7 @@ enum class MailCategory {
             SystemMail.FEEDBACK_REPLY to REPORTS,
             SystemMail.FEEDBACK_COMMENT to REPORTS,
             SystemMail.FATE_REDRAWN to ADMIN,
+            SystemMail.HERO_RENAMED to ADMIN,
             SystemMail.ATLAS_RESET to SYSTEM,
             SystemMail.ATLAS_REBUILT to SYSTEM,
             SystemMail.TREE_RESET to SYSTEM,

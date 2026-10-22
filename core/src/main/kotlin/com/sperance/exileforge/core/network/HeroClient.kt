@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
+import com.sperance.exileforge.core.model.fate.FateView
 import com.sperance.exileforge.core.model.hero.BagUse
 import com.sperance.exileforge.core.model.hero.BagUsed
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
@@ -272,6 +273,9 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** «Использовать» стопки сумки [request]: новое имя героя или дар из новой раздачи - одной транзакцией с тратой штуки. */
     suspend fun useBag(heroId: String, request: BagUse): BagUsed = http.post("$HERO/bag/use", heroQuery(heroId), body = WireJson.encodeToJsonElement(request))
+
+    /** Новая раздача «Колоды Рока» [code] - только у героя с колодой в сумке: нынешний дар и три новых, те же, пока дар не сменится. */
+    suspend fun bagDeal(heroId: String, code: String): FateView = http.get("$HERO/bag/deal", heroQuery(heroId, "code" to code))
 
     /** Opens one loot chest of the bag: the server rolls what is inside. */
     suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))

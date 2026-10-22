@@ -6,11 +6,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.fate.FateDeal
@@ -25,9 +27,7 @@ import com.sperance.exileforge.ui.components.HeroNameSheet
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.screens.session.FateAltar
 import com.sperance.exileforge.ui.theme.Muted
-
-/** Есть ли у стопки [code] действие «Использовать» (`items.json` → `use`). */
-fun GameUi.usable(code: String): Boolean = index?.item(ItemCode(code))?.use != null
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * «Использовать» стопки сумки [code] по виду из контента: «Лист Угнетения» - лист нового имени героя; «Колода Рока» - предупреждение
@@ -49,11 +49,18 @@ fun GameUi.usable(code: String): Boolean = index?.item(ItemCode(code))?.use != n
     }
 }
 
+/** Хост раздачи «Колоды Рока»: открытая раздача ([HeroViewModel.fateDeal]) - во весь экран ([FateDealScreen]), иначе ничего. */
+@Composable internal fun FateDealHost(game: GameUi) {
+    val model = koinViewModel<HeroViewModel>()
+    val deal by model.fateDeal.collectAsStateWithLifecycle()
+    deal?.let { FateDealScreen(game, it, model) }
+}
+
 /**
  * Новая раздача «Колоды Рока» во весь экран - тот же алтарь, что первый выбор дара ([FateAltar]): три новых дара без нынешнего, выбор
  * удержанием тратит колоду; принятый - вспышка и выход. До выбора экран закрывается «Назад», колода цела.
  */
-@Composable internal fun FateDealScreen(game: GameUi, deal: FateDeal, model: HeroViewModel) {
+@Composable private fun FateDealScreen(game: GameUi, deal: FateDeal, model: HeroViewModel) {
     Dialog(
         onDismissRequest = { if (deal.accepted == null) model.closeDeal() },
         properties = DialogProperties(dismissOnClickOutside = false, usePlatformDefaultWidth = false, decorFitsSystemWindows = false),

@@ -114,14 +114,14 @@ private const val DAY_MS = 86_400_000L
 @Serializable enum class ModerationSegment { ALL, BANNED, TRASH }
 
 /**
- * Карточка аккаунта списка модерации: сервер группирует страницу героев по владельцу - шапка аккаунта и его герои этой страницы. В корзине -
- * удаления аккаунта ([sanction]) и его героев.
+ * Карточка аккаунта списка модерации: страница сервера - аккаунты, у каждого шапка и его герои, что прошли отбор. В корзине - удаления
+ * аккаунта ([sanction]) и его героев.
  *
  * @property protected роль владельца выше смотрящего - действия недоступны (в корзине - не администратор)
  * @property sanction действующая санкция аккаунта - удаление, бан, немота; null - чист
  * @property fate Предначертание аккаунта - код дара `fates.json`; null - не выбрано
- * @property lastSeenAt когда аккаунт был в игре - последнее использование самой свежей сессии, мс эпохи; 0 - неизвестно
- * @property clientVersion версия клиента самой свежей сессии; пусто - неизвестна
+ * @property lastSeenAt когда аккаунт был в игре, мс эпохи; 0 - неизвестно
+ * @property clientVersion версия клиента, на которой он играет; пусто - неизвестна
  */
 @Serializable data class ModerationAccount(
     val userId: String,
@@ -133,9 +133,27 @@ private const val DAY_MS = 86_400_000L
     val lastSeenAt: Long = 0,
     val clientVersion: String = "",
     val heroes: List<ModerationHero> = emptyList(),
+)
+
+/**
+ * Запрос списка модерации (маршрут `rows`): раздел [segment], страница [page] аккаунтов, поиск [text], порядок [sort], отбор по
+ * Предначертанию [fate], чипы «Удалённые» [deleted] и «Старая версия» [outdated] - старее версии этой сборки (её шлёт каждый запрос).
+ */
+data class ModerationQuery(
+    val segment: ModerationSegment = ModerationSegment.ALL,
+    val page: Int = 0,
+    val text: String = "",
+    val sort: ModerationSort = ModerationSort.ACTIVITY,
+    val fate: ModerationFate = ModerationFate.All,
+    val deleted: Boolean = false,
+    val outdated: Boolean = false,
 ) {
-    /** Та же карточка с героями следующей страницы [next] того же аккаунта: аккаунт со стыка страниц - одной карточкой. */
-    fun joined(next: ModerationAccount): ModerationAccount = next.copy(heroes = (heroes + next.heroes).distinctBy { it.heroId })
+    /** Параметры маршрута. */
+    val params: Map<String, String>
+        get() = mapOf(
+            "segment" to segment.name, "page" to page.toString(), "q" to text.trim(), "sort" to sort.name, "fate" to fate.param,
+            "deleted" to deleted.toString(), "outdated" to outdated.toString(),
+        )
 }
 
 /**
@@ -262,9 +280,9 @@ sealed interface ModerationFate {
 /**
  * Действие журнала модерации; [FATE] - смена Предначертания аккаунту: номера санкции нет, в заметке - прежний и новый код дара через
  * « → » ([ModerationEntryView.fateChange]), причина для игрока - [ModerationEntryView.reason]; [RENAME] - модерация сменила имя героя: в
- * заметке - прежнее и новое имя тем же разделителем.
+ * заметке - прежнее и новое имя тем же разделителем; [MAIL] - письмо игроку от Администрации из досье: в заметке - тема.
  */
-@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE, RENAME }
+@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE, RENAME, MAIL }
 
 @Serializable data class ModerationEntryView(
     val id: String,
@@ -278,8 +296,10 @@ sealed interface ModerationFate {
     val comment: String = "",
     val until: String? = null,
     val at: String,
-    /** Причина для игрока: у смены Предначертания чужому аккаунту; пусто - нет. */
+    /** Причина для игрока: у смены Предначертания чужому аккаунту и имени героя; пусто - нет. */
     val reason: String = "",
+    /** Цель строки без санкции: герой смены имени, аккаунт письма; пусто - нет. */
+    val targetId: String = "",
 ) {
     /**
      * Смена дара строки [ModerationAction.FATE]: прежний код (null - дара не было) и новый - из заметки сервера
@@ -318,30 +338,13 @@ private const val FATE_ARROW = " → "
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    /**
-     * Страница [page] раздела [segment] карточками аккаунтов (всего героев - [Page.total]): поиск [query], порядок [sort], отбор по
-     * Предначертанию [fate], чипы «Удалённые» [deleted] и «Старая версия» [outdated] - старее версии этой сборки (её шлёт каждый запрос).
-     */
-    suspend fun rows(
-        query: String,
-        segment: ModerationSegment,
-        page: Int,
-        sort: ModerationSort = ModerationSort.ACTIVITY,
-        fate: ModerationFate = ModerationFate.All,
-        deleted: Boolean = false,
-        outdated: Boolean = false,
-    ): Page<ModerationAccount> = http.get(
-        "$MODERATION/rows",
-        mapOf(
-            "q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param,
-            "deleted" to deleted.toString(), "outdated" to outdated.toString(),
-        ),
-    )
+    /** Страница карточек аккаунтов по запросу [query] (всего аккаунтов - [Page.total]). */
+    suspend fun rows(query: ModerationQuery): Page<ModerationAccount> = http.get("$MODERATION/rows", query.params)
 
     /** Новое имя героя: модератору и администратору по правам досье; ответ - имя, что теперь у героя. */
     suspend fun rename(request: RenameRequest): String = http.post("$MODERATION/rename", body = WireJson.encodeToJsonElement(request))
 
-    /** Письмо игроку от Администрации из досье: модератор - одному аккаунту и без вложения; ответ - сколько писем ушло. */
+    /** Письмо игроку от Администрации одному аккаунту по id: модератор - без вложения и не администратору; ответ - сколько писем ушло. */
     suspend fun mail(request: MailRequest): Int = http.post("$MODERATION/mail", body = WireJson.encodeToJsonElement(request))
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */

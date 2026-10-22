@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.admin
 
 import com.sperance.exileforge.core.display.PickOption
+import com.sperance.exileforge.core.feedback.AdminLetters
 import com.sperance.exileforge.core.filter.Narrowing
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.phrase
@@ -14,6 +15,7 @@ import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationAccount
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
+import com.sperance.exileforge.core.network.ModerationQuery
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.RenameRequest
@@ -79,7 +81,7 @@ data class ModerationFilters(
 }
 
 /**
- * Окно модерации: раздел, поиск, прочитанные страницы карточек аккаунтов ([page]; аккаунт со стыка страниц - одной карточкой) или журнала
+ * Окно модерации: раздел, поиск, прочитанные страницы карточек аккаунтов ([page]) или журнала
  * ([journal]) - строки всех страниц подряд; открытое
  * досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
@@ -121,6 +123,7 @@ class ModerationModel(
     private val commands: CommandRunner,
     private val sessions: SessionRepository,
     private val notices: Notices,
+    private val letters: AdminLetters,
 ) {
     private val mutable = MutableStateFlow(ModerationState())
     val state: StateFlow<ModerationState> = mutable.asStateFlow()
@@ -146,7 +149,7 @@ class ModerationModel(
         staff()
         val state = mutable.value
         val answer = rows(state.query, state, 0)
-        mutable.update { if (it.sameList(state)) it.copy(page = answer, searched = state.query) else it }
+        mutable.update { if (it.sameList(state)) it.copy(page = answer.distinctBy(ModerationAccount::userId), searched = state.query) else it }
     }
 
     /**
@@ -158,13 +161,13 @@ class ModerationModel(
         if (!state.page.more) return@read
         val next = rows(state.searched, state, state.page.page + 1)
         mutable.update {
-            if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.joinedWith(next, ModerationAccount::userId, ModerationAccount::joined)) else it
+            if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next, ModerationAccount::userId)) else it
         }
     }
 
-    /** Страница [page] раздела и отбора окна [state] по поиску [query]. */
-    private suspend fun rows(query: String, state: ModerationState, page: Int): Page<ModerationAccount> = state.filters.let { filters ->
-        api.rows(query, state.segment, page, filters.sort, filters.fate, filters.deleted, filters.outdated)
+    /** Страница [page] аккаунтов раздела и отбора окна [state] по поиску [text]; аккаунт, что повторился на стыке страниц, - одной карточкой. */
+    private suspend fun rows(text: String, state: ModerationState, page: Int): Page<ModerationAccount> = state.filters.let { filters ->
+        api.rows(ModerationQuery(state.segment, page, text, filters.sort, filters.fate, filters.deleted, filters.outdated))
     }
 
     /** Первая страница журнала модерации; новый вызов сменяет идущий. */
@@ -297,6 +300,12 @@ class ModerationModel(
     fun forgetTester() = mutable.update { it.copy(createdTester = null) }
 
     fun delete(request: DeletionRequest) = act { api.delete(request).also { notices.toast(ui("moderation.deleted", it.label)) } }
+
+    /** «✉ Написать» из досье [dossier]: письмо от Администрации его аккаунту ([AdminLetters]); право - `rights.mail`. */
+    fun write(dossier: Dossier) {
+        if (!dossier.rights.mail) return
+        letters.compose(dossier.account.userId, dossier.account.login, dossier.hero?.name.orEmpty())
+    }
 
     /**
      * Новое имя [name] герою [heroId] досье с причиной [reason] для игрока (он получит письмо): право досье `rights.rename`. Досье и раздел

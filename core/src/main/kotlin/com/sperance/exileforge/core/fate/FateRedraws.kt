@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateView
+import com.sperance.exileforge.core.model.hero.BagAct
 import com.sperance.exileforge.core.model.hero.BagUse
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
@@ -22,7 +23,7 @@ import kotlinx.coroutines.flow.update
 data class FateDeal(val item: String, val view: FateView? = null, val accepted: String? = null)
 
 /**
- * Смены своего Предначертания: «Колода Рока» из сумки - новая раздача из трёх даров без нынешнего (`GET fate/deck`), выбор - стопкой
+ * Смены своего Предначертания: «Колода Рока» из сумки - новая раздача из трёх даров без нынешнего (`hero/bag/deal`), выбор - стопкой
  * (`hero/bag/use`), - и смена себе любым даром модератором и тестировщиком (`POST fate/self`). Новый дар ложится в профиль сессии, герои и их
  * список перечитываются: счётчики прежнего дара у героев с нуля.
  */
@@ -38,11 +39,12 @@ class FateRedraws(
 
     private val api get() = connection.api
 
-    /** Раздача колодой [item]: экран открыт сразу, карты - когда придут. */
+    /** Раздача колодой [item] текущего героя: экран открыт сразу, карты - когда придут. */
     fun open(item: String) {
+        val heroId = heroes.heroId
         mutable.value = FateDeal(item)
         commands.read(Reads.FATE_DEAL, restart = true) {
-            val view = api.fate.deck()
+            val view = api.hero.bagDeal(heroId, item)
             mutable.update { it?.takeIf { deal -> deal.item == item }?.copy(view = view) }
         }
     }
@@ -52,7 +54,7 @@ class FateRedraws(
         val deal = mutable.value ?: return
         val heroId = heroes.heroId
         val started = commands.task(writing = true, touches = TOUCHED) {
-            val view = api.hero.useBag(heroId, BagUse(deal.item, fate = code)).fate ?: return@task
+            val view = api.hero.useBag(heroId, BagUse(deal.item, BagAct.Redeal(code))).fate ?: return@task
             accept(view)
             mutable.update { it?.copy(accepted = view.chosen?.code ?: code) }
         }

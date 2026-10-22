@@ -273,14 +273,14 @@ private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType
 }
 
 /**
- * Урон [damage] удара [me] с листом [body], брошенный в диапазоне каждого вида ([Combatant.dice]). Удача - одна на удар: шанс листа
- * ([HitDice.luckyChance]) или удача рода Предначертания ([fateLuckySpread]) делает удачным бросок всех видов удара.
+ * Урон [damage] удара [me] с листом [body], брошенный в диапазоне каждого вида: герой - диапазонами листа ([Combatant.dice]), монстр -
+ * разбросом правил ([HitDice.varied]). Удача - один бросок на удар всех видов: шанс листа ([Combatant.luckyChance]) или удача рода
+ * Предначертания ([fateLuckySpread]).
  */
 private fun Battle.rolled(me: Fighter, body: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
-    val dice = damage.mapValues { (type, _) -> body.dice(type) }
-    val chance = dice.values.firstOrNull()?.luckyChance ?: 0.0
-    val lucky = if (fateLuckySpread(me) || chance > 0 && draw() < chance) 1.0 else 0.0
-    return damage.mapValues { (type, value) -> value * dice.getValue(type).copy(luckyChance = lucky).roll { random.nextDouble() } }
+    val varied = if (me.side == Side.MONSTER) HitDice.varied(body.stats, rules) else null
+    val lucky = fateLuckySpread(me) || HitDice.lucky(body.luckyChance) { draw() }
+    return damage.mapValues { (type, value) -> value * (varied ?: body.dice(type)).roll(lucky) { random.nextDouble() } }
 }
 
 /** Характеристики броска удара в диапазоне: полуширины видов, удача и наибольший урон - разбор множителя [FactorKey.SPREAD]. */

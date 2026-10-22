@@ -6,7 +6,6 @@ import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.GenericDamage
 import com.sperance.exileforge.rules.sheet.DamageTaken
 import com.sperance.exileforge.rules.sheet.HitDice
 import com.sperance.exileforge.rules.sheet.HitRanges
@@ -111,18 +110,13 @@ data class Combatant(
     val damage: Map<DamageType, Double> = HitRanges.parts(stats, rules).let { parts -> DamageType.entries.associateWith { parts[it.attack] ?: 0.0 } }
     val attackSpeed = stat(CoreStat.ATTACK_SPEED.code).takeIf { it > 0 }?.coerceIn(rules.attackSpeedMin, rules.attackSpeedMax) ?: rules.unarmed.speed
 
-    /**
-     * Монстр: бьёт уроном атак без концов диапазонов ([HitRanges.ranged]) - разбросом правил ±`variance`. Герой без оружия
-     * бьёт полушириной удара без оружия ([HitRanges.width]).
-     */
-    private val monster: Boolean = !HitRanges.ranged(stats) && GenericDamage.HITS.any { stat(it) > 0 }
+    private val diceByType: Map<DamageType, HitDice> = DamageType.entries.associateWith { HitDice.of(stats, it.attack, rules) }
 
-    private val diceByType: Map<DamageType, HitDice> = DamageType.entries.associateWith { type ->
-        HitDice.of(stats, type.attack, rules).let { if (monster) it.copy(width = rules.variance / 100) else it }
-    }
-
-    /** Бросок удара атакой вида [type] в его диапазоне ([HitDice.of]): полуширина, шанс удачи и наибольший урон листа. */
+    /** Бросок удара атакой вида [type] в диапазоне листа ([HitDice.of]): полуширина, шанс удачи и наибольший урон. */
     fun dice(type: DamageType): HitDice = diceByType.getValue(type)
+
+    /** Шанс удачи удара листа, доля ([HitDice.luckOf]): один бросок на удар всех видов. */
+    val luckyChance: Double = HitDice.luckOf(stats, rules)
 
     /** A limit raised by the sheet's own lines: block, evasion and physical reduction, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))

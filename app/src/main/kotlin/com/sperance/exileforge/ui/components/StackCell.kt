@@ -28,12 +28,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.StackLook
-import com.sperance.exileforge.core.display.StackValue
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ItemCode
+import com.sperance.exileforge.rules.content.StackValue
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.Boon
 import com.sperance.exileforge.ui.theme.Gold

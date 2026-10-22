@@ -51,6 +51,8 @@ enum class MailCategory {
             SystemMail.ATLAS_RESET to SYSTEM,
             SystemMail.ATLAS_REBUILT to SYSTEM,
             SystemMail.TREE_RESET to SYSTEM,
+            SystemMail.KEYSTONE_REFUND to SYSTEM,
+            SystemMail.GUILD_TREE_RESET to GUILD,
         )
     }
 }

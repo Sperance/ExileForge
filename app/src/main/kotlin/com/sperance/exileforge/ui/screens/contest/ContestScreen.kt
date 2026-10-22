@@ -54,7 +54,6 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.roman
-import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
@@ -184,9 +183,7 @@ private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () ->
 /** Портрет босса периода и его подпись для чтения с экрана - рисунок сервера; пока портретов нет, жетон пуст. */
 @Composable private fun BossPortrait(game: GameUi, boss: MonsterCode) {
     val form = game.index?.monster(boss)?.form ?: return
-    key(game.world.portraits) {
-        Canvas(Modifier.size(38.dp, 46.dp).clip(RoundedCornerShape(6.dp)).background(Abyss)) { Portraits.monster(this, boss.value, form, 0f) }
-    }
+    MonsterPortrait(boss.value, form, game.world.portraits, Modifier.size(38.dp, 46.dp).clip(RoundedCornerShape(6.dp)).background(Abyss))
 }
 
 /** Мини-пьедестал лиги: до трёх строк «I · имя · мера»; лига пуста - строкой. */

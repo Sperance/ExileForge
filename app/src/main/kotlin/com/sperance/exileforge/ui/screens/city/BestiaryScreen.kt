@@ -38,7 +38,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -63,15 +62,16 @@ import org.koin.compose.viewmodel.koinViewModel
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
                     return@TrailLevel
                 }
-                val tally = remember(known) { BestiaryTally(known) }
-                BestiaryBody(index, bestiary, tally)
+                val tally = remember(bestiary, known) { BestiaryTally(bestiary, known) }
+                val look = remember(index, game.world.portraits) { Look(index, game.world.portraits) }
+                BestiaryBody(look, bestiary, tally)
             }
         }
     }
 }
 
-@Composable private fun BestiaryBody(index: ContentIndex, bestiary: Bestiary, tally: BestiaryTally) {
-    TrailData(ui("history.count", tally.opened(bestiary.all), bestiary.all.size))
+@Composable private fun BestiaryBody(look: Look, bestiary: Bestiary, tally: BestiaryTally) {
+    TrailData(ui("history.count", tally.opened, bestiary.all.size))
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var opened by remember { mutableStateOf<MonsterCode?>(null) }
     val deaths = tally.deaths
@@ -85,44 +85,46 @@ import org.koin.compose.viewmodel.koinViewModel
             onSelect = { tab = it },
             scrollable = false,
         )
-        if (tab == 0) Atlas(index, bestiary, tally) { opened = it } else Killers(index, bestiary, tally) { opened = it }
+        if (tab == 0) Atlas(look, bestiary, tally) { opened = it } else Killers(look, bestiary, tally) { opened = it }
     }
-    opened?.let { SpeciesSheet(index, bestiary, tally, it) { opened = null } }
+    opened?.let { SpeciesSheet(look, bestiary, tally, it) { opened = null } }
 }
 
-/** Выбор главы: все, глава кампании по номеру или «Иное». */
-private sealed interface Shelf {
-    data object All : Shelf
-    data class Chapter(val at: Int) : Shelf
-    data object Other : Shelf
+/** Контент и портреты экрана: для силуэтов видов. */
+private class Look(val index: ContentIndex, val portraits: Int)
+
+/** Выбор главы чипом - число, чтобы пережить пересоздание экрана: [ALL], [OTHER] или номер главы с нуля. */
+private object Shelf {
+    const val ALL = -1
+    const val OTHER = -2
 }
 
 /**
  * Атлас зон: поиск, чипы глав и зоны; при «Все» - зоны всех глав под именами глав. Поиск ищет открытые виды по имени и зоны по имени:
  * зона подходит своим именем или открытым видом; неоткрытые по имени не ищутся.
  */
-@Composable private fun Atlas(index: ContentIndex, bestiary: Bestiary, tally: BestiaryTally, onOpen: (MonsterCode) -> Unit) {
+@Composable private fun Atlas(look: Look, bestiary: Bestiary, tally: BestiaryTally, onOpen: (MonsterCode) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
-    var shelf by remember { mutableStateOf<Shelf>(Shelf.All) }
+    var shelf by rememberSaveable { mutableIntStateOf(Shelf.ALL) }
     var expanded by rememberSaveable { mutableStateOf<String?>(null) }
     val needle = query.trim()
     val chapters = remember(bestiary, tally, shelf, needle) {
         bestiary.chapters.mapIndexedNotNull { i, chapter ->
-            if (shelf != Shelf.All && shelf != Shelf.Chapter(i)) return@mapIndexedNotNull null
+            if (shelf != Shelf.ALL && shelf != i) return@mapIndexedNotNull null
             val zones = chapter.zones.filter { zone -> needle.isEmpty() || zone.matches(needle, tally) }
             (i to chapter.region to zones).takeIf { zones.isNotEmpty() }
         }
     }
     val other = remember(bestiary, tally, shelf, needle) {
-        bestiary.other.filter { (shelf == Shelf.All || shelf == Shelf.Other) && (needle.isEmpty() || (tally.open(it) && monsterTitle(it).contains(needle, true))) }
+        bestiary.other.filter { (shelf == Shelf.ALL || shelf == Shelf.OTHER) && (needle.isEmpty() || (tally.open(it) && monsterTitle(it).contains(needle, true))) }
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item(key = "search") { SearchBar(query, { query = it }, ui("bestiary.search")) }
         item(key = "chips") {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ForgeChip(ui("common.all"), shelf == Shelf.All, { shelf = Shelf.All }, mode = ChipMode.Choice)
-                bestiary.chapters.indices.forEach { i -> ForgeChip(roman(i + 1), shelf == Shelf.Chapter(i), { shelf = Shelf.Chapter(i) }, mode = ChipMode.Choice) }
-                if (bestiary.other.isNotEmpty()) ForgeChip(ui("bestiary.other"), shelf == Shelf.Other, { shelf = Shelf.Other }, mode = ChipMode.Choice)
+                ForgeChip(ui("common.all"), shelf == Shelf.ALL, { shelf = Shelf.ALL }, mode = ChipMode.Choice)
+                bestiary.chapters.indices.forEach { i -> ForgeChip(roman(i + 1), shelf == i, { shelf = i }, mode = ChipMode.Choice) }
+                if (bestiary.other.isNotEmpty()) ForgeChip(ui("bestiary.other"), shelf == Shelf.OTHER, { shelf = Shelf.OTHER }, mode = ChipMode.Choice)
             }
         }
         if (chapters.isEmpty() && other.isEmpty()) {
@@ -135,14 +137,14 @@ private sealed interface Shelf {
         }
         chapters.forEach { (head, zones) ->
             val (at, region) = head
-            if (shelf == Shelf.All) item(key = "chapter-$region") { ChapterHead(ui("bestiary.chapter", roman(at + 1), regionTitle(region))) }
+            if (shelf == Shelf.ALL) item(key = "chapter-$region") { ChapterHead(ui("bestiary.chapter", roman(at + 1), regionTitle(region))) }
             items(zones, key = { it.code.value }) { zone ->
-                ZonePlate(index, bestiary, zone, tally, open = expanded == zone.code.value, onToggle = { expanded = if (expanded == zone.code.value) null else zone.code.value }, onOpen = onOpen)
+                ZonePlate(look, bestiary, zone, tally, open = expanded == zone.code.value, onToggle = { expanded = if (expanded == zone.code.value) null else zone.code.value }, onOpen = onOpen)
             }
         }
         if (other.isNotEmpty()) {
             item(key = "other-head") { ChapterHead(ui("bestiary.other")) }
-            items(other, key = { "other-${it.value}" }) { code -> SpeciesRow(index, tally, code, bestiary.boss(code), note = null) { onOpen(code) } }
+            items(other, key = { "other-${it.value}" }) { code -> SpeciesRow(look, tally, code, bestiary.boss(code), note = null) { onOpen(code) } }
         }
     }
 }
@@ -159,7 +161,7 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
  * Плита зоны: имя, уровень, «открыто / всего» (всё открыто - золотом) и шеврон; свёрнутая - полоса силуэтов монстров и медальон босса
  * за чертой, раскрытая - строки видов.
  */
-@Composable private fun ZonePlate(index: ContentIndex, bestiary: Bestiary, zone: BestiaryZone, tally: BestiaryTally, open: Boolean, onToggle: () -> Unit, onOpen: (MonsterCode) -> Unit) {
+@Composable private fun ZonePlate(look: Look, bestiary: Bestiary, zone: BestiaryZone, tally: BestiaryTally, open: Boolean, onToggle: () -> Unit, onOpen: (MonsterCode) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val opened = tally.opened(zone.species)
     Column(Modifier.fillMaxWidth().clip(shape).depthPanel(shape).border(1.dp, if (open) Brass else Bronze, shape)) {
@@ -172,10 +174,10 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
         if (!open) {
             Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(start = 12.dp, end = 12.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    zone.monsters.forEach { Silhouette(index, it, tally.open(it), boss = false, size = STRIP) }
+                    zone.monsters.forEach { Silhouette(look, it, tally.open(it), boss = false, size = STRIP) }
                 }
                 Box(Modifier.size(1.dp, STRIP).background(Bronze))
-                Silhouette(index, zone.boss, tally.open(zone.boss), boss = true, size = STRIP)
+                Silhouette(look, zone.boss, tally.open(zone.boss), boss = true, size = STRIP)
             }
         } else {
             Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp)) {
@@ -186,7 +188,7 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
                         zones > 1 -> ui("bestiary.more_zones", zones - 1)
                         else -> ui("bestiary.only_here")
                     }
-                    SpeciesRow(index, tally, code, code == zone.boss || bestiary.boss(code), note) { onOpen(code) }
+                    SpeciesRow(look, tally, code, code == zone.boss || bestiary.boss(code), note) { onOpen(code) }
                 }
             }
         }
@@ -197,7 +199,7 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
  * Строка вида: силуэт, имя (неоткрытый - «???») и под ним у открытого заметка [note] («босс зоны», «только здесь», «ещё в N зонах»);
  * у открытого справа - убийства и ступень. Касание открытого - лист вида.
  */
-@Composable private fun SpeciesRow(index: ContentIndex, tally: BestiaryTally, code: MonsterCode, boss: Boolean, note: String?, onClick: () -> Unit) {
+@Composable private fun SpeciesRow(look: Look, tally: BestiaryTally, code: MonsterCode, boss: Boolean, note: String?, onClick: () -> Unit) {
     val open = tally.open(code)
     val kills = tally.kills(code)
     Row(
@@ -205,7 +207,7 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Silhouette(index, code, open, boss = boss, size = ROW)
+        Silhouette(look, code, open, boss = boss, size = ROW)
         Column(Modifier.weight(1f)) {
             Text(if (open) monsterTitle(code) else ui("bestiary.unknown"), color = if (open) Parchment else Muted, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             if (open && note != null) MutedText(note, style = MaterialTheme.typography.labelSmall)
@@ -238,11 +240,11 @@ private val TierHues = listOf(Color(0xFFB07A4A), Color(0xFFC9D3DA), Gold)
  * Силуэт вида: портрет сервера в рамке; неоткрытый - затемнён до тени со знаком «?»; босс - в рамке латуни. Пока портретов нет -
  * пустой жетон.
  */
-@Composable private fun Silhouette(index: ContentIndex, code: MonsterCode, open: Boolean, boss: Boolean, size: Dp) {
-    val form = index.monster(code)?.form.orEmpty()
+@Composable private fun Silhouette(look: Look, code: MonsterCode, open: Boolean, boss: Boolean, size: Dp) {
+    val form = look.index.monster(code)?.form.orEmpty()
     val shape = RoundedCornerShape(if (boss) size / 2 else 6.dp)
     Box(Modifier.size(size).clip(shape).border(1.dp, if (boss) Brass else Bronze, shape), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) { Portraits.monster(this, code.value, form, 0f, wash = if (open) null else Color.Black, washAmount = if (open) 0f else SHADOW) }
+        MonsterPortrait(code.value, form, look.portraits, Modifier.fillMaxSize(), shadow = !open)
         if (!open) Text("?", color = Muted, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
     }
 }
@@ -250,12 +252,9 @@ private val TierHues = listOf(Color(0xFFB07A4A), Color(0xFFC9D3DA), Gold)
 private val STRIP = 30.dp
 private val ROW = 38.dp
 
-/** Насколько тень закрывает портрет неоткрытого вида (предел затемнения портрета). */
-private const val SHADOW = .7f
-
 /** «Кто вас убивал»: рейтинг убийц - место, силуэт, имя и зона, полоса гибелей от самого частого; первый - в красной рамке. */
-@Composable private fun Killers(index: ContentIndex, bestiary: Bestiary, tally: BestiaryTally, onOpen: (MonsterCode) -> Unit) {
-    val killers = remember(tally, bestiary) { tally.killers(bestiary.all.toSet()) }
+@Composable private fun Killers(look: Look, bestiary: Bestiary, tally: BestiaryTally, onOpen: (MonsterCode) -> Unit) {
+    val killers = tally.killers
     if (killers.isEmpty()) {
         Box(Modifier.fillMaxWidth().padding(16.dp)) { InfoCard(ui("bestiary.no_killers"), ui("bestiary.no_killers_hint")) }
         return
@@ -271,7 +270,7 @@ private const val SHADOW = .7f
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text("${i + 1}", color = if (i == 0) LifeRed else Muted, style = MaterialTheme.typography.titleSmall, modifier = Modifier.width(20.dp))
-                Silhouette(index, code, true, bestiary.boss(code), ROW)
+                Silhouette(look, code, true, bestiary.boss(code), ROW)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(monsterTitle(code), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     bestiary.zones(code).firstOrNull()?.let { MutedText(mapTitle(it), style = MaterialTheme.typography.labelSmall) }
@@ -292,7 +291,7 @@ private const val SHADOW = .7f
  * Лист вида: силуэт, имя, глава (или «Иное»), босс или монстр и ступень; факты - убито героем и его гибели; лестница ступеней
  * 10/100/1000 - взята, сколько ещё до следующей, дальше прочерк; где встречается - зоны чипами.
  */
-@Composable private fun SpeciesSheet(index: ContentIndex, bestiary: Bestiary, tally: BestiaryTally, code: MonsterCode, onDismiss: () -> Unit) {
+@Composable private fun SpeciesSheet(look: Look, bestiary: Bestiary, tally: BestiaryTally, code: MonsterCode, onDismiss: () -> Unit) {
     val kills = tally.kills(code)
     val tier = Bestiary.tier(kills)
     val boss = bestiary.boss(code)
@@ -300,7 +299,7 @@ private const val SHADOW = .7f
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Silhouette(index, code, true, boss, 52.dp)
+                Silhouette(look, code, true, boss, 52.dp)
                 Column(Modifier.weight(1f)) {
                     Text(monsterTitle(code), color = GoldBright, style = relicName(18))
                     MutedText(

@@ -65,12 +65,13 @@ import org.koin.compose.viewmodel.koinViewModel
     val album = remember(index) { index?.let { UniqueAlbum(it) } }
     val stats by produceState<Map<String, Long>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.stats(it) } }
     val bestiary = remember(index) { index?.let(::Bestiary) }
+    val tally = remember(bestiary, stats) { stats?.let { known -> bestiary?.let { BestiaryTally(it, known) } } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val known = finds
         HistoryTile(ForgeGlyphs.Gem, rarityColor("UNIQUE"), ui("history.uniques"), if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"), onOpen = vm::openUniques)
         val chronicle = Feature.CHRONICLE.takeUnless { game.unlocked(it) }?.level(index?.rules)
         HistoryTile(ForgeGlyphs.Scroll, GoldBright, ui("chronicle.title"), chronicle?.let { ui("unlock.from", it) } ?: chronicleNews(game), onOpen = vm::openChronicle.takeIf { chronicle == null })
-        HistoryTile(ForgeGlyphs.Skull, BestiaryHue, ui("history.bestiary"), bestiaryNews(bestiary, stats), onOpen = vm::openBestiary)
+        HistoryTile(ForgeGlyphs.Skull, BestiaryHue, ui("history.bestiary"), bestiaryNews(bestiary, tally), onOpen = vm::openBestiary)
     }
 }
 
@@ -100,12 +101,10 @@ private fun chronicleNews(game: GameUi): String {
 }
 
 /** Бестиарий: сколько видов открыто из всех и, если есть, сколько на золотой ступени. */
-private fun bestiaryNews(bestiary: Bestiary?, stats: Map<String, Long>?): String {
-    if (bestiary == null || stats == null) return ui("history.bestiary_hint")
-    val tally = BestiaryTally(stats)
-    val opened = tally.opened(bestiary.all)
-    val golden = tally.golden(bestiary.all)
-    return if (golden > 0) ui("history.bestiary_gold", opened, bestiary.all.size, golden) else ui("history.bestiary_found", opened, bestiary.all.size)
+private fun bestiaryNews(bestiary: Bestiary?, tally: BestiaryTally?): String {
+    if (bestiary == null || tally == null) return ui("history.bestiary_hint")
+    val all = bestiary.all.size
+    return if (tally.golden > 0) ui("history.bestiary_gold", tally.opened, all, tally.golden) else ui("history.bestiary_found", tally.opened, all)
 }
 
 /** Знак Бестиария - охра охотничьего трофея. */

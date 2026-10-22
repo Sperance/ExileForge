@@ -53,32 +53,47 @@ class Bestiary(index: ContentIndex) {
 }
 
 /**
- * Счёт Бестиария героя по его статистике [stats] (`hero/stats`): убийства вида - группы `KILL` и `BOSS`, гибели от него - `KILLER`.
- * Вид открыт, когда убит хоть раз.
+ * Счёт Бестиария героя по его статистике [stats] (`hero/stats`), разобранной один раз: убийства вида - группы `KILL` и `BOSS`, гибели от
+ * него - `KILLER`. Вид открыт, когда убит хоть раз. Итоги по всему Бестиарию [bestiary] ([opened], [golden], [deaths]) считаются раз.
  */
-class BestiaryTally(private val stats: Map<String, Long>) {
-    fun kills(code: MonsterCode): Long = (stats[Stat.of(Stat.KILL, code.value)] ?: 0L) + (stats[Stat.of(Stat.BOSS, code.value)] ?: 0L)
+class BestiaryTally(bestiary: Bestiary, stats: Map<String, Long>) {
+    private val kills = HashMap<MonsterCode, Long>()
+    private val deathsBy = HashMap<MonsterCode, Long>()
 
-    fun deaths(code: MonsterCode): Long = stats[Stat.of(Stat.KILLER, code.value)] ?: 0L
+    init {
+        stats.forEach { (key, value) ->
+            if (value <= 0) return@forEach
+            val group = key.substringBefore(SEPARATOR, "")
+            val code = MonsterCode(key.substringAfter(SEPARATOR, ""))
+            when (group) {
+                Stat.KILL, Stat.BOSS -> kills.merge(code, value, Long::plus)
+                Stat.KILLER -> deathsBy.merge(code, value, Long::plus)
+            }
+        }
+    }
+
+    fun kills(code: MonsterCode): Long = kills[code] ?: 0L
+
+    fun deaths(code: MonsterCode): Long = deathsBy[code] ?: 0L
 
     fun open(code: MonsterCode): Boolean = kills(code) > 0
 
     /** Сколько видов из [codes] открыто. */
     fun opened(codes: Collection<MonsterCode>): Int = codes.count(::open)
 
-    /** Сколько видов из [codes] на золотой ступени. */
-    fun golden(codes: Collection<MonsterCode>): Int = codes.count { Bestiary.tier(kills(it)) == Bestiary.STEPS.size }
+    /** Открыто видов во всём Бестиарии. */
+    val opened: Int = opened(bestiary.all)
 
-    /** Кто убивал героя: виды и число гибелей, чаще первыми; только известные [known]. */
-    fun killers(known: Set<MonsterCode>): List<Pair<MonsterCode, Long>> = stats.mapNotNull { (key, value) ->
-        if (value <= 0 || !key.startsWith(KILLER_PREFIX)) return@mapNotNull null
-        MonsterCode(key.substring(KILLER_PREFIX.length)).takeIf { it in known }?.let { it to value }
-    }.sortedByDescending { it.second }
+    /** Видов всего Бестиария на золотой ступени. */
+    val golden: Int = bestiary.all.count { Bestiary.tier(kills(it)) == Bestiary.STEPS.size }
 
     /** Всего гибелей героя от монстров. */
-    val deaths: Long get() = stats.entries.sumOf { (key, value) -> if (key.startsWith(KILLER_PREFIX)) value else 0L }
+    val deaths: Long = deathsBy.values.sum()
+
+    /** Кто убивал героя: виды Бестиария и число гибелей, чаще первыми. */
+    val killers: List<Pair<MonsterCode, Long>> = bestiary.all.mapNotNull { code -> deathsBy[code]?.let { code to it } }.sortedByDescending { it.second }
 
     private companion object {
-        val KILLER_PREFIX = Stat.of(Stat.KILLER, "")
+        const val SEPARATOR = ':'
     }
 }

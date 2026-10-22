@@ -121,7 +121,17 @@ import kotlin.math.roundToInt
                     val flight = rememberBagFlight(hud.drops)
                     var barBottom by remember { mutableIntStateOf(0) }
                     var trapTip by remember(run) { mutableStateOf<TrapSpot?>(null) }
-                    Stick(run, { barBottom }, onTrap = { trapTip = it }) { model.runCommand(RunCommand.OfferFountain(it)) }
+                    var chillTip by remember(run) { mutableStateOf(false) }
+                    val chilled by remember(live) { derivedStateOf { live.value.stride < 1.0 } }
+                    val showTrap: (TrapSpot) -> Unit = {
+                        chillTip = false
+                        trapTip = it
+                    }
+                    val showChill = {
+                        trapTip = null
+                        chillTip = true
+                    }
+                    Stick(run, { barBottom }, onTrap = showTrap, onHero = showChill.takeIf { chilled }) { model.runCommand(RunCommand.OfferFountain(it)) }
                     MapBar(
                         game,
                         run,
@@ -138,6 +148,7 @@ import kotlin.math.roundToInt
                     )
                     BagFan(flight)
                     trapTip?.let { TrapTip(run, it) { trapTip = null } }
+                    if (chillTip) ChillTip { chillTip = false }
                     if (questsOpen) {
                         HoldsRun(run)
                         RunQuestsSheet(board, hud.questTally) { questsOpen = false }
@@ -256,7 +267,7 @@ private val BELT_FLASK = 40.dp
     HazardFloat(hazards)
 }
 
-/** Подпись холода под героем из живого снимка: «−X%» шага, пока холод замедляет. */
+/** Подпись холода под героем из живого снимка: «❄ шаг −X%», пока холод замедляет. */
 @Composable private fun LiveChill(live: State<RunHud>) {
     val stride by remember(live) { derivedStateOf { live.value.stride } }
     ChillMark(stride)

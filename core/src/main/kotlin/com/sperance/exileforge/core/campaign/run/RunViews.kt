@@ -591,5 +591,5 @@ enum class MapSection(val title: String, val empty: String? = null) {
     }
 }
 
-/** Подпись холода под жетоном героя на карте: «−X%» шага по множителю [RunHud.stride], процент - как в сводке героя ([shareText]). */
+/** Подпись холода под жетоном героя на карте: «❄ шаг −X%» по множителю [RunHud.stride], процент - как в сводке героя ([shareText]). */
 fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))

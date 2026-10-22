@@ -72,6 +72,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -211,11 +212,12 @@ private val ManaDeep = Color(0xFF3F86D6)
  * The stick: wherever the thumb lands in the lower part of the screen (below [STICK_FROM] of its height), dragging from there walks.
  * Касание выше низа шапки карты [barBottom] (пиксели от верха экрана) ход не начинает: полосы и кнопки шапки - не стик.
  * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
- * drag lands on the map: on a fountain still full, it names it to [onFountain]; на ловушке - отдаёт её подсказке [onTrap].
+ * drag lands on the map: on a fountain still full, it names it to [onFountain]; на ловушке - отдаёт её подсказке [onTrap]; на жетоне
+ * героя (с подписью под ним) - [onHero], если он задан, прежде прочего: касание без сдвига ход не начинает.
  *
  * Бой может начаться под пальцем на стекле: герой не уходит после него.
  */
-@Composable internal fun Stick(run: ExpeditionRun, barBottom: () -> Int = { 0 }, onTrap: (TrapSpot) -> Unit = {}, onFountain: (Int) -> Unit) {
+@Composable internal fun Stick(run: ExpeditionRun, barBottom: () -> Int = { 0 }, onTrap: (TrapSpot) -> Unit = {}, onHero: (() -> Unit)? = null, onFountain: (Int) -> Unit) {
     var centre by remember { mutableStateOf<Offset?>(null) }
     var knob by remember { mutableStateOf(Offset.Zero) }
     var area by remember { mutableStateOf(IntSize.Zero) }
@@ -223,12 +225,14 @@ private val ManaDeep = Color(0xFF3F86D6)
     val unit = with(LocalDensity.current) { SCENE_UNIT.toPx() }
     val bar by rememberUpdatedState(barBottom)
     val tap by rememberUpdatedState { at: Offset ->
+        val feet = SceneCamera.hero(area.toSize(), unit)
+        val hero = onHero?.takeIf { abs(at.x - feet.x) < unit * HERO_TAP_ACROSS && at.y in feet.y - unit * HERO_TAP_UP..feet.y + unit * HERO_TAP_DOWN }
         val (x, y) = SceneCamera.toWorld(run.world.heroX, run.world.heroY, at, area.toSize(), unit)
         val fountain = run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }
-        if (fountain != null) {
-            onFountain(fountain.id)
-        } else {
-            run.world.features.firstOrNull { it is TrapSpot && it.shown(run.world) && it.covers(x, y) }?.let { onTrap(it as TrapSpot) }
+        when {
+            hero != null -> hero()
+            fountain != null -> onFountain(fountain.id)
+            else -> run.world.features.firstOrNull { it is TrapSpot && it.shown(run.world) && it.covers(x, y) }?.let { onTrap(it as TrapSpot) }
         }
     }
     DisposableEffect(run) {
@@ -281,3 +285,12 @@ private val ManaDeep = Color(0xFF3F86D6)
 
 /** Доля высоты экрана, ниже которой касание ведёт стик: нижние 55% - под палец, верх - шапка карты. */
 private const val STICK_FROM = .45f
+
+/** Полуширина жетона героя для касания, в единицах сцены от его ног ([SceneCamera.hero]). */
+private const val HERO_TAP_ACROSS = 1.2f
+
+/** Сколько единиц сцены над ногами героя ловит касание жетона: сам жетон. */
+private const val HERO_TAP_UP = 2.4f
+
+/** Сколько единиц сцены под ногами героя ловит касание жетона: подпись под ним ([ChillMark]). */
+private const val HERO_TAP_DOWN = 1.8f

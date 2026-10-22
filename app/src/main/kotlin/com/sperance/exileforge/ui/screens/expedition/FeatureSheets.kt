@@ -316,8 +316,8 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
 }
 
 /**
- * Подпись холода под жетоном героя: «−X%» шага по множителю [stride] ([RunHud.stride]) цветом холода, под ореолом холода
- * сцены; холода нет ([stride] 1) - подписи нет.
+ * Подпись холода под жетоном героя: «❄ шаг −X%» по множителю [stride] ([RunHud.stride]) цветом холода, под ореолом холода
+ * сцены; касание жетона - пояснение [ChillTip]. Холода нет ([stride] 1) - подписи нет.
  */
 @Composable internal fun ChillMark(stride: Double) {
     if (stride >= 1.0) return
@@ -372,33 +372,50 @@ private fun hazardLine(hazard: HazardView): String {
 
 /**
  * Подсказка по касанию ловушки [spot]: имя вида, «стихия · недуг · урон» - что удар снимет с героя сейчас ([trapThreat]; у
- * пульсирующей зоны - стихия этого цикла, у жернова вместо недуга - отброс) и «Бьёт раз в N с, пока стоишь в зоне». Висит
- * [TRAP_TIP_MS] над низом экрана и уходит сама; касание другой ловушки сменяет её.
+ * пульсирующей зоны - стихия этого цикла, у жернова вместо недуга - отброс) и «Бьёт раз в N с, пока стоишь в зоне» ([MapTip]);
+ * касание другой ловушки сменяет её.
  */
 @Composable internal fun TrapTip(run: ExpeditionRun, spot: TrapSpot, onDone: () -> Unit) {
-    LaunchedEffect(spot) {
-        delay(TRAP_TIP_MS)
-        onDone()
-    }
     val threat = remember(spot) { run.trapThreat(spot) }
     val type = ui(threat.type.key())
     val effect = threat.ailment?.let { ui(it.ailment.key()) } ?: ui("trap.knock").takeIf { threat.kind.knock > 0 }
     val damage = threat.damage.roundToInt()
-    Box(Modifier.fillMaxSize().padding(bottom = 120.dp), contentAlignment = Alignment.BottomCenter) {
-        Column(
-            Modifier.padding(horizontal = 16.dp).background(Panel.copy(alpha = .95f), RoundedCornerShape(12.dp))
-                .border(1.dp, tickTint(null, threat.type, onHero = true).copy(alpha = .7f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(ui("trap.${spot.trap.trap.code}"), color = Parchment, style = MaterialTheme.typography.titleSmall)
-            Text(if (effect != null) ui("trap.tip", type, effect, damage) else ui("trap.tip_plain", type, damage), color = tickTint(null, threat.type, onHero = true), style = MaterialTheme.typography.bodySmall)
-            MutedText(ui("trap.every", number(threat.every)))
-        }
+    val tint = tickTint(null, threat.type, onHero = true)
+    MapTip(spot, tint, onDone) {
+        Text(ui("trap.${spot.trap.trap.code}"), color = Parchment, style = MaterialTheme.typography.titleSmall)
+        Text(if (effect != null) ui("trap.tip", type, effect, damage) else ui("trap.tip_plain", type, damage), color = tint, style = MaterialTheme.typography.bodySmall)
+        MutedText(ui("trap.every", number(threat.every)))
     }
 }
 
-private const val TRAP_TIP_MS = 3500L
+/** Пояснение подписи холода ([ChillMark]) по касанию жетона героя: холод из боя замедляет шаг и тает в пути ([MapTip]). */
+@Composable internal fun ChillTip(onDone: () -> Unit) {
+    MapTip(Ailment.CHILLED, ailmentTint(Ailment.CHILLED), onDone) {
+        Text(ui("expedition.chill.tip"), color = Parchment, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+    }
+}
+
+/**
+ * Подсказка карты по касанию: плашка в рамке цвета [tint] над низом экрана, висит [MAP_TIP_MS] и уходит сама ([onDone]);
+ * новый [key] - отсчёт заново.
+ */
+@Composable private fun MapTip(key: Any, tint: Color, onDone: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    LaunchedEffect(key) {
+        delay(MAP_TIP_MS)
+        onDone()
+    }
+    Box(Modifier.fillMaxSize().padding(bottom = 120.dp), contentAlignment = Alignment.BottomCenter) {
+        Column(
+            Modifier.padding(horizontal = 16.dp).background(Panel.copy(alpha = .95f), RoundedCornerShape(12.dp))
+                .border(1.dp, tint.copy(alpha = .7f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content,
+        )
+    }
+}
+
+private const val MAP_TIP_MS = 3500L
 
 private const val HAZARD_TICK_MS = 1100
 private const val HAZARD_FLOAT_MS = 1500

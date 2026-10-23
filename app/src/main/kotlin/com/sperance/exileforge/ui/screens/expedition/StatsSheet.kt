@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
-import com.sperance.exileforge.core.campaign.SourceShifts
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.run.FightHud
@@ -18,6 +17,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.SheetShift
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.runSheet
+import com.sperance.exileforge.core.sheet.runSources
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.Engraved
@@ -125,9 +125,7 @@ internal class FightSheets(
     val run = remember(hero, mapEffects, origins) { mapEffects?.let { hero?.runSheet(it, origins) } }
     val onMap = remember(run, combat, mine, mapEffects) { mapEffects?.let { run?.stats()?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } ?: mine } }
     val shifts = remember(run) { run?.shifts().orEmpty() }
-    val sources = remember(combat, shifts, mine, onMap) {
-        onMap?.let { FightSheets.changed(mine, it) }?.let { changed -> combat?.sources(changed, shifts) ?: shifts.filterKeys { it in changed }.mapValues { SourceShifts.bySource(it.value) } }.orEmpty()
-    }
+    val sources = remember(hero, shifts, mine, onMap) { onMap?.let { hero?.runSources(FightSheets.changed(mine, it), shifts) }.orEmpty() }
     val inFight = remember(combat, body) { body?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } }
     return remember(mine, onMap, shifts, sources, inFight) { FightSheets(mine, onMap, shifts, sources, inFight) }
 }

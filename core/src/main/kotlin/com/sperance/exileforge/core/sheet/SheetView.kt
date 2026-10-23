@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.RunSheet
+import com.sperance.exileforge.core.campaign.SourceShifts
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdicts
@@ -34,6 +35,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.SheetCalculator
+import com.sperance.exileforge.rules.sheet.Shift
 
 /**
  * Герой над контентом: что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
@@ -207,6 +209,13 @@ val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
  * боя - над цифрами сводки как есть.
  */
 fun HeroView.runSheet(effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet = combat?.runSheet(effects, origins) ?: RunSheet.over(figures.stats, effects, origins)
+
+/**
+ * Откуда цифры сводки [stats] под сдвигами захода [shifts] ([RunSheet.shifts]): по цифре - её сдвиги, сложенные по источнику; лист боя
+ * добавляет сдвиги того, что читается вместе с цифрой ([CombatSheet.sources]), до листа боя - только свои сдвиги цифры.
+ */
+fun HeroView.runSources(stats: Collection<String>, shifts: Map<String, List<Shift>>): Map<String, List<Shift>> =
+    combat?.sources(stats, shifts) ?: stats.associateWith { SourceShifts.bySource(shifts[it].orEmpty()) }.filterValues { it.isNotEmpty() }
 
 /** Мощь героя - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
 val HeroView.might: MightReading? get() = combat?.might

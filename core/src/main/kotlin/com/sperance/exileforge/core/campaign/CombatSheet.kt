@@ -391,7 +391,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      * Что сдвиги [layer] (эффекты захода по источникам, [RunSheet.shifts]) сделали с цифрой сводки [stat]: свои сдвиги цифры и сдвиги
      * того, что бой читает вместе с ней, - каждый источник своим сдвигом; сумма - разница цифры под эффектами и без них.
      */
-    fun layered(stat: String, layer: Map<String, List<Shift>>): List<Shift> = layer[stat].orEmpty() + readings.filter { it.stat == stat }.flatMap { read(it, layer) }
+    private fun layered(stat: String, layer: Map<String, List<Shift>>): List<Shift> = layer[stat].orEmpty() + readings.filter { it.stat == stat }.flatMap { read(it, layer) }
 
     /** Источники цифр сводки [stats] под сдвигами захода [layer]: по цифре - её сдвиги ([layered]), сложенные по источнику. */
     fun sources(stats: Collection<String>, layer: Map<String, List<Shift>>): Map<String, List<Shift>> =

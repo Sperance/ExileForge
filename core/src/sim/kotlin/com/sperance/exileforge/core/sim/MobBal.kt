@@ -1564,8 +1564,8 @@ object RushTarget {
  * проходимый бой.
  */
 object LeaderTarget {
-    const val LOW = 0.50
-    const val HIGH = 0.60
+    const val LOW = 0.40
+    const val HIGH = 0.50
 
     /** Доля побед [share] - в цели. */
     fun hits(share: Double): Boolean = share in LOW..HIGH

@@ -9,9 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -119,12 +116,15 @@ fun ContestScreen() {
     prizes?.let { PrizesSheet(rules, it) { prizes = null } }
 }
 
-/** Вкладка периода: у суток - солнце цветом предостережения, у недели - луна цветом золотой медали; точка - у героя сейчас приз. */
+/**
+ * Вкладка периода: у суток - листок календаря с «1» цветом предостережения, у недели - с «7» цветом золотой медали; точка - у героя
+ * сейчас приз.
+ */
 private fun kindTab(stand: ContestStand): StoneTab {
     val label = ui("contest.kind_short.${stand.kind.name}")
     return when (stand.kind) {
-        ContestKind.DAY -> StoneTab(label, Icons.Outlined.WbSunny, Caution, stand.prizedNow)
-        ContestKind.WEEK -> StoneTab(label, Icons.Outlined.DarkMode, medalOf(1), stand.prizedNow)
+        ContestKind.DAY -> StoneTab(label, ForgeGlyphs.CalendarDay, Caution, stand.prizedNow)
+        ContestKind.WEEK -> StoneTab(label, ForgeGlyphs.CalendarWeek, medalOf(1), stand.prizedNow)
     }
 }
 

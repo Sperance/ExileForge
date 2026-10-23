@@ -67,7 +67,39 @@ private fun PathBuilder.dashedRing(cx: Float, cy: Float, r: Float, dashes: Int, 
     }
 }
 
+/** Листок календаря: лист со скруглёнными углами, полоса шапки и два кольца переплёта; цифра дня - отдельной обводкой. */
+private fun PathBuilder.calendarSheet() {
+    moveTo(6f, 5f)
+    lineTo(18f, 5f)
+    arcToRelative(2f, 2f, 0f, false, true, 2f, 2f)
+    lineTo(20f, 19f)
+    arcToRelative(2f, 2f, 0f, false, true, -2f, 2f)
+    lineTo(6f, 21f)
+    arcToRelative(2f, 2f, 0f, false, true, -2f, -2f)
+    lineTo(4f, 7f)
+    arcToRelative(2f, 2f, 0f, false, true, 2f, -2f)
+    close()
+    line(4f, 9.5f, 20f, 9.5f)
+    line(8f, 3f, 8f, 7f)
+    line(16f, 3f, 16f, 7f)
+}
+
 object ForgeGlyphs {
+    /** Листок календаря с цифрой «1» - сутки: вкладка состязаний дня. */
+    val CalendarDay = glyph("CalendarDay", { calendarSheet() }, {
+        moveTo(10.5f, 13f)
+        lineTo(12f, 11.75f)
+        lineTo(12f, 18.5f)
+        line(10.5f, 18.5f, 13.5f, 18.5f)
+    })
+
+    /** Листок календаря с цифрой «7» - неделя: вкладка состязаний недели. */
+    val CalendarWeek = glyph("CalendarWeek", { calendarSheet() }, {
+        moveTo(9.5f, 12f)
+        lineTo(14.5f, 12f)
+        lineTo(11.25f, 18.5f)
+    })
+
     /** Аура: ядро и пунктирное кольцо вокруг - строка, что сдвинули ауры и пассивные умения. */
     val Aura = glyph("Aura", { ring(12f, 12f, 3f) }, { dashedRing(12f, 12f, 8.5f, 8, .55f) })
 

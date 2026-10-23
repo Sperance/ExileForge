@@ -91,7 +91,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         }
         val leader = floor.leader?.takeIf { index.monster(it) != null }?.let { code ->
             val power = leaderPower?.power ?: rule.leaderAt(level)
-            spawns.skilled(spawns.buffed(run.bound(monsters.boss(monsters.guardian(code, level, power), leaderBuffs(effects))), buffs), dice)
+            spawns.skilled(spawns.buffed(run.bound(monsters.boss(monsters.guardian(code, level, power), leaderBuffs(effects))), buffs), dice).copy(leader = true)
         }
         return foes + listOfNotNull(leader)
     }

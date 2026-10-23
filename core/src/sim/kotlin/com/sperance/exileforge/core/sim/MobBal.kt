@@ -1213,6 +1213,12 @@ fun main(args: Array<String>) {
             }
         }
 
+        "leaders" -> {
+            val trials = Trials(index, sim, ModesBal(index))
+            val floors = System.getProperty("floors")?.split(',')?.map { it.trim().toInt() } ?: trials.leaderFloors()
+            floors.forEach { floor -> classes.forEach { c -> tasks += Task { (0 until rolls).map { s -> trials.leader(floor, c, s).row() } } } }
+        }
+
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
         "spread" -> {
@@ -1249,6 +1255,8 @@ fun main(args: Array<String>) {
         "tempo" -> rows + guard(index, rows) + TempoTarget.summary(rows)
         "spread" -> rows + spread(rows)
         "trials" -> rows + Trials.summary(index, rows)
+        "leaders" -> rows + LeaderTarget.towerSummary(rows)
+        "abyss" -> rows + LeaderTarget.abyssSummary(rows)
         else -> rows
     }
     out.writeText(written.joinToString("\n") { it.tsv() } + "\n")
@@ -1469,6 +1477,21 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
         return TowerTry(level, heroClass.code, t.floor, goal, runs, t.wall)
     }
 
+    /** Этажи вождей башни: точки кривой `tower.leaders`. */
+    fun leaderFloors(): List<Int> = rules.tower.leaders.map { it.floor }
+
+    /**
+     * Бой этажа вождя [floor] башни эталоном класса [heroClass] уровня врагов этажа: вход прямо на этаж с полным здоровьем, строки
+     * десятков - первые, самые слабые; кости [seed].
+     */
+    fun leader(floor: Int, heroClass: HeroClass, seed: Int): LeaderTry {
+        val level = rules.tower.level(floor)
+        val zone = sim.nearZones(level, 1).first()
+        val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
+        val t = modes.tower(hero, SimKit.SEED + 41L * seed + floor, floor, floor)
+        return LeaderTry(floor, level, heroClass.code, t.floor >= floor)
+    }
+
     /** Обычный заход зоны уровня [level] эталоном класса [heroClass]: его стена - бои на высшей скорости и ходьба. */
     fun run(level: Int, heroClass: HeroClass): RunTry {
         val zone = sim.nearZones(level, 1).first()
@@ -1486,6 +1509,11 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
     data class TowerTry(val level: Int, val heroClass: String, val floor: Int, val goal: Int, val runs: Double, val wall: Double) {
         val reached: Boolean get() = floor >= goal
         fun row(kind: String = "tower") = Row(listOf(kind, level, heroClass, floor, goal, reached, runs, wall))
+    }
+
+    /** Бой вождя башни: этаж [floor], уровень его врагов [level], победа [won]. */
+    data class LeaderTry(val floor: Int, val level: Int, val heroClass: String, val won: Boolean) {
+        fun row() = Row(listOf("leader", floor, level, heroClass, won))
     }
 
     /** Обычный заход уровня [level]: секунды стены [wall]. */
@@ -1532,6 +1560,31 @@ object RushTarget {
 
     /** Цель ступени [tier] (с 0) из [tiers]. */
     fun at(tier: Int, tiers: Int): Double = if (tiers <= 1) FIRST else FIRST + (LAST - FIRST) * tier / (tiers - 1)
+}
+
+/**
+ * Вожди башни и Бездны (RULES «Общее», цели баланса): эталон своего уровня побеждает вождя в [LOW]–[HIGH] боёв - трудный, но
+ * проходимый бой.
+ */
+object LeaderTarget {
+    const val LOW = 0.50
+    const val HIGH = 0.60
+
+    /** Доля побед [share] - в цели. */
+    fun hits(share: Double): Boolean = share in LOW..HIGH
+
+    /** Сводка `-Pmode=leaders`: доля побед эталонов на этаже каждого вождя башни. */
+    fun towerSummary(rows: List<Row>): List<Row> = rows.filter { it.values[0] == "leader" }.groupBy { it.values[1] as Int }.toSortedMap().map { (floor, list) ->
+        val share = list.count { it.values[4] == true }.toDouble() / list.size
+        Row(listOf("leadersum", floor, list.first().values[2], share, hits(share)))
+    }
+
+    /** Сводка `-Pmode=abyss`: доля побед эталонов на глубинах с вождём - по уровню героя и вождю. */
+    fun abyssSummary(rows: List<Row>): List<Row> = rows.filter { it.values[0] == "abyss" && it.values[7] != "-" }
+        .groupBy { (it.values[3] as Int) to (it.values[7] as String) }.toSortedMap(compareBy({ it.first }, { it.second })).map { (key, list) ->
+            val share = list.count { it.values[8] == true }.toDouble() / list.size
+            Row(listOf("abysssum", key.first, key.second, share, hits(share)))
+        }
 }
 
 /** Башня (RULES «Общее», цели баланса): эталон уровня L с первого этажа доходит до этажа L − [BELOW] в [SHARE] попыток. */

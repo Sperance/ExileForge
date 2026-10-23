@@ -48,7 +48,7 @@ private const val RAGE = "GUARDIAN_RAGE"
 /**
  * A monster's skills, the first ready one it has a reason to use: a heal when hurt, a buff or a curse not already on.
  * Умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; перезарядка - в конце. Первая
- * готовность - доля перезарядки правил (`CastRule.firstReady`, у босса своя); умение фазы готово с её начала ([phase]).
+ * готовность - [firstReadyAt]; умение фазы готово с её начала, у вождя Бездны и башни - через ту же долю от начала фазы ([phase]).
  * Маны умения монстров не тратят: их держит только перезарядка.
  */
 internal fun Battle.monsterCast(me: Fighter) {
@@ -56,12 +56,15 @@ internal fun Battle.monsterCast(me: Fighter) {
     val skills = foes[me.index].skills + learned[me.index].orEmpty()
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
-        val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown * rules.cast.firstReadyShare(me.chief) * me.slow() }
+        val ready = me.readyAt.getOrPut(skill.code) { firstReadyAt(me, skill) }
         if (time < ready || !wanted(me, skill)) continue
         beginCast(me, skill.code, skill.code, CastTime.of(skill, me.body, rules) * me.slow()) { monsterApplied(me, skill) }
         return
     }
 }
+
+/** Первая готовность умения [skill] монстра [me] от этой секунды боя: доля перезарядки правил (`CastRule.firstReady`, у босса своя). */
+internal fun Battle.firstReadyAt(me: Fighter, skill: MonsterSkill): Double = time + skill.cooldown * rules.cast.firstReadyShare(me.chief) * me.slow()
 
 /** Применение монстра [me] закончено: перезарядка (холод и замедление её растягивают) и действие. */
 private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {

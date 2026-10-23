@@ -35,6 +35,7 @@ import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.ConditionalStat
 import com.sperance.exileforge.core.sheet.ConditionalStats
@@ -251,8 +252,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /**
  * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding], значок строки и шапки раздела [icon], итог [figure],
- * шапка раздела с полями [headPadding], между карточками разделов [cardGap]; стрелка источников - касанием [toggle], строки
- * источников - с отступом [sourceIndent] под именем.
+ * шапка раздела с полями [headPadding], между карточками разделов [cardGap].
  */
 private object SummaryMetrics {
     val rowHeight = 28.dp
@@ -261,8 +261,6 @@ private object SummaryMetrics {
     val figure = 14.sp
     val headPadding = 4.dp
     val cardGap = 6.dp
-    val toggle = 44.dp
-    val sourceIndent = 38.dp
 }
 
 /**
@@ -284,9 +282,9 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
 }
 
 /**
- * Строка сводки: касание открывает разбор ([open]). Сдвинутая цифра сравнения боя ([fold]) - строка-сумма с источниками
- * ([SourcedSumRow]): стрелка справа раскрывает прежнее число листа сравнения, эффекты, что её сдвинули, и «Сейчас». Изменённая
- * цифра с источниками эффектов захода ([RowFold.sourcesOf]): несколько - стрелка справа раскрывает их список, один - подписью под строкой.
+ * Строка сводки: касание открывает разбор ([open]). Сдвинутая цифра с долями - строка-сумма ([SourcedSumRow]): несколько долей - стрелка
+ * справа раскрывает их список, одна - подписью под строкой. Доли - сравнения боя ([fold]: прежнее число листа сравнения, эффекты, что
+ * её сдвинули, и «Сейчас») или источники эффектов захода изменённой цифры ([RowFold.sourcesOf]).
  */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
     val trend = fold.trendOf(key)
@@ -297,50 +295,30 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
         was != null -> Modifier.background(Ember.copy(alpha = .08f))
         else -> Modifier
     }
-    val row = Modifier.clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding)
-    if (trend != null && compare != null) {
-        val shares = listOf(SumShare(compare.baseLabel, rowValue(key, was ?: 0.0, game.index, before.orEmpty()))) +
+    val shares = when {
+        trend != null && compare != null -> listOf(SumShare(compare.baseLabel, rowValue(key, was ?: 0.0, game.index, before.orEmpty()))) +
             compare.parts[key].orEmpty() +
             SumShare(ui("stat.trend.now"), rowValue(key, value, game.index, figures.stats), accent = trend.tint)
-        SourcedSumRow(shares, Modifier.fillMaxWidth().then(lit)) {
-            StatRow(key, value, was, before, accent, figures, game, trend, Modifier.weight(1f).then(row))
-        }
-    } else if (was != null && sources.isNotEmpty()) {
-        RunSourcedCell(key, value, was, before, accent, figures, game, sources, lit, open)
-    } else {
-        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(row))
+        was != null && sources.isNotEmpty() -> runShares(key, sources, game)
+        else -> emptyList()
+    }
+    if (shares.isEmpty()) {
+        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
+        return
+    }
+    val end = if (shares.size > 1) 0.dp else 12.dp
+    SourcedSumRow(shares, lit) {
+        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.weight(1f).clickable { open(key) }.padding(start = 12.dp, end = end, top = SummaryMetrics.rowPadding, bottom = SummaryMetrics.rowPadding))
     }
 }
 
-/** Изменённая цифра [key] с источниками эффектов захода [sources]: несколько - стрелка справа раскрывает их список, один - подписью под строкой. */
-@Composable private fun RunSourcedCell(key: String, value: Double, was: Double, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, sources: List<Shift>, lit: Modifier, open: (String) -> Unit) {
-    val many = sources.size > 1
-    var unfolded by rememberSaveable(key) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().then(lit)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            StatRow(key, value, was, before, accent, figures, game, null, Modifier.weight(1f).clickable { open(key) }.padding(start = 12.dp, end = if (many) 0.dp else 12.dp, top = SummaryMetrics.rowPadding, bottom = SummaryMetrics.rowPadding))
-            if (many) {
-                Box(Modifier.size(SummaryMetrics.toggle).foldToggle(unfolded, ui("stat.run_sources")) { unfolded = !unfolded }, contentAlignment = Alignment.Center) {
-                    FoldChevron(unfolded, size = SummaryMetrics.icon)
-                }
-            }
-        }
-        val indent = Modifier.padding(start = SummaryMetrics.sourceIndent, end = 12.dp, bottom = SummaryMetrics.rowPadding)
-        val explainer = remember(game) { StatExplainer(game) }
+/** Доли изменённой цифры [key] по источникам [sources] (строка карты, Атлас, узел гильдии, зелье) - раз на строку и язык. */
+@Composable private fun runShares(key: String, sources: List<Shift>, game: GameUi): List<SumShare> {
+    val lang = uiLanguage
+    return remember(key, sources, game, lang) {
+        val explainer = StatExplainer(game)
         val percent = game.index?.stats?.isPercent(key) == true
-        if (many) {
-            FoldBody(unfolded) { Column(indent) { sources.forEach { RunSourceLine(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) } } }
-        } else {
-            sources.single().let { Column(indent) { RunSourceLine(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) } }
-        }
-    }
-}
-
-/** Источник изменённой цифры: его имя [title] (строка карты, Атлас, узел гильдии, зелье) и что он дал - [amount]. */
-@Composable private fun RunSourceLine(title: String, amount: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        Text(amount, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        sources.map { SumShare(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) }
     }
 }
 

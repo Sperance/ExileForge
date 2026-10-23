@@ -775,7 +775,6 @@
   "expedition.stats_fight_none": "The fight leaves the hero's figures as they are so far.",
   "expedition.stats_fight_hint": "With the fight's effects: buffs, debuffs, flasks and the map. Up: {0}, down: {1} — the old value is struck through, tap a row to see what it is made of.",
   "expedition.stats_fight": "In fight",
-  "stat.run_sources": "Sources",
   "expedition.gear": "Gear",
   "expedition.gear_hint": "Gear can only be looked at here: it was taken at the entrance.",
   "expedition.gear_hint_wear": "Tap a place to choose: finds of this run and what you entered wearing can be put on between fights.",

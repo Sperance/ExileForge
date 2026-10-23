@@ -73,6 +73,11 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Ключи локали | `expedition.refused.because`, `expedition.refused.reason.*`, `run.mods.*` (окно модификаторов карты) | 1 |
 | Компонент UI | `ui/components/SourcedSumRow`, `SumShare` (строка-сумма с источниками) | 1 |
 | Ключи локали | `fountain.part.*`, `vaal.with_map`; удалены `fight.flow.rest`, `fight.flow.part.rest`, `fight.flow.rest_in`, `map.atlas`, `map.guild`, `map.potion`, `map.modifiers`, `map.scarabs`, `map.influence` | 1 |
+| Маршрут сервера | `POST hero/chest/open/all?code=` (отказы - существующие `CH_008`, `CH_020`; новых кодов нет) | 4 |
+| Провод: поле | `ChestOpening.opened`, `ChestOpening.unopened` | 4 |
+| Правило `rules` | `StashRules.free(held, bought)` | 4 |
+| Ключи локали | `item.level_full`, `relic.serial_short`, `chest.open_all`, `chest.stash_full`, `chest.from_all.*`, `chest.unopened`, `row.might_up`, `row.might_down`, `row.might_up_full`, `row.might_down_full` | 4 |
+| Компонент UI | `ui/components/LootRow` (компактная строка предмета), `SerialMark`, `ItemLevelMark` | 4 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

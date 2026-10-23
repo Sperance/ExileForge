@@ -41,7 +41,7 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.SlotConditionKind
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -157,7 +157,7 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
             fontWeight = FontWeight.Bold,
             modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp),
         )
-        if (view.condition == SlotCondition.MANUAL) {
+        if (view.condition.kind == SlotConditionKind.MANUAL) {
             Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(3.dp))
         }
         Box(Modifier.align(Alignment.BottomStart).size(18.dp).clickable(onClickLabel = ui("fight.skill_info"), onClick = onInfo), contentAlignment = Alignment.Center) {

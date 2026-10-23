@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.skillIcon
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.SkillDefinition
-import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.NeonSprite
@@ -28,9 +27,6 @@ fun flaskTint(kind: FlaskKind): Color = when (kind) {
     FlaskKind.MANA -> ManaBlue
     FlaskKind.UTILITY -> Rune
 }
-
-/** When a slot fires or a flask is drunk by itself, in a few words. */
-fun conditionTitle(condition: SlotCondition): String = ui("skills.condition.${condition.name}")
 
 /** What a skill is, as a page of the grimoire heads it: its type and, for a blow of an element, the element. */
 fun skillKindLine(skill: SkillDefinition): String = listOfNotNull(ui("skills.type.${skill.type.name}"), skill.element?.let(SkillText::element)).joinToString(" · ")

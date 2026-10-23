@@ -36,10 +36,10 @@ import com.sperance.exileforge.rules.sheet.StatFold
  */
 data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
     companion object {
-        /** Фляга [item] шаблона [template] на поясе; [condition] - пояса, null - своё условие вида. */
+        /** Фляга [item] шаблона [template] на поясе; [condition] - пояса, null - условие её вида ([FlaskKind.drunk]). */
         fun of(item: ItemInstance, template: ItemTemplate, index: ContentIndex, condition: SlotCondition?): BeltFlask {
             val sheet = FlaskSheet.of(item, template, index)
-            return BeltFlask(sheet, condition ?: defaultCondition(sheet.kind))
+            return BeltFlask(sheet, condition ?: sheet.kind.drunk)
         }
 
         /**
@@ -49,13 +49,6 @@ data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
          */
         fun belt(index: ContentIndex, equipped: Collection<ItemInstance>, level: Int, conditions: List<SlotCondition?>): List<BeltFlask?> = FlaskSheet.slots(index, equipped, level).mapIndexed { n, slot ->
             slot?.let { (item, template) -> of(item, template, index, conditions.getOrNull(n)) }
-        }
-
-        /** When a flask is drunk by itself unless the belt says otherwise: a life flask at half life, a mana flask low on mana, the rest at the start. */
-        fun defaultCondition(kind: FlaskKind): SlotCondition = when (kind) {
-            FlaskKind.LIFE -> SlotCondition.LIFE_50
-            FlaskKind.MANA -> SlotCondition.MANA_30
-            FlaskKind.UTILITY -> SlotCondition.FIGHT_START
         }
     }
 }

@@ -24,13 +24,12 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.display.ConditionText
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
@@ -48,6 +47,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.icons.ConditionGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 
@@ -77,7 +77,7 @@ import com.sperance.exileforge.ui.theme.*
                     textAlign = TextAlign.Center,
                     maxLines = 2,
                 )
-                Text(flask?.condition?.let(::conditionTitle) ?: "", color = Rune, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                flask?.condition?.let { ConditionLine(it) }
             }
         }
     }
@@ -153,7 +153,9 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
         if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.draughtLine(it.stat, it.op, it.value, index) })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("skills.drunk_when"), color = Muted, style = MaterialTheme.typography.labelMedium)
-            ForgeButton(onClick = onCondition, size = ButtonSize.Small, kind = ButtonKind.Secondary) { Text(conditionTitle(flask.condition), maxLines = 1) }
+            ForgeButton(onClick = onCondition, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = ConditionGlyphs.of(flask.condition.kind), accent = conditionTint(flask.condition.kind)) {
+                Text(ConditionText.short(flask.condition), maxLines = 1)
+            }
         }
     }
     ItemCard(view, enabled = false, detailed = true)

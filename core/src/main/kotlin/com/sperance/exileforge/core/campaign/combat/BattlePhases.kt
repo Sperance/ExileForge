@@ -28,6 +28,7 @@ internal fun Battle.phase(foe: Fighter) {
     plan.phases.forEachIndexed { i, phase ->
         val step = phase.step
         if (foe.life > foe.body.maxLife * step.at / 100 || !phased.add(foe.index to i)) return@forEachIndexed
+        foe.phasedAt = time
         val max = foe.body.maxLife
         if (step.lines.isNotEmpty()) {
             buff(foe, phaseSource(code, i), step.lines.map { StatLine(it.stat, it.op, it.value) }, if (step.duration > 0) step.duration else FOREVER)

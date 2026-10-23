@@ -8,7 +8,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -19,6 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +35,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.display.ConditionText
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
@@ -44,6 +50,7 @@ import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
@@ -151,21 +158,35 @@ internal sealed interface Pick {
         }
 
         is Pick.Condition -> skills.active.getOrNull(chosen.index)?.let { slot ->
-            ConditionPicker(
+            val skill = index?.skills?.byCode?.get(slot.skill)
+            ConditionSheet(
                 ui("skills.when_fires", SkillText.title(slot.skill)),
+                ui("skills.in_slot", chosen.index + 1),
                 slot.condition,
                 flask = false,
+                icon = { if (skill != null && index != null) NeonSkillIcon(skill, index.skillGrowth.tier(skill, skills, hero?.stats.orEmpty()), SHEET_ICON) },
                 onDismiss = { pick = null },
                 onSwap = { pick = Pick.Slot(SkillKind.ACTIVE, chosen.index) },
             ) { condition ->
                 pick = null
-                vm.slotSkill(SkillKind.ACTIVE.name, chosen.index, slot.skill, condition?.name)
+                vm.slotSkill(SkillKind.ACTIVE.name, chosen.index, slot.skill, condition.token)
             }
         }
 
-        is Pick.Belt -> ConditionPicker(ui("skills.when_drunk"), skills.flasks.getOrNull(chosen.index), flask = true, onDismiss = { pick = null }) { condition ->
-            pick = null
-            vm.flaskCondition(chosen.index, condition?.name)
+        is Pick.Belt -> if (hero != null && index != null) {
+            worn(hero, index, skills).getOrNull(chosen.index)?.let { (view, flask) ->
+                ConditionSheet(
+                    ui("skills.when_drunk", view.title),
+                    ui("skills.belt_place", chosen.index + 1),
+                    flask.condition,
+                    flask = true,
+                    icon = { FlaskBottle(flask.sheet.kind, 1f, true, Modifier.size(SHEET_FLASK_WIDTH, SHEET_ICON)) },
+                    onDismiss = { pick = null },
+                ) { condition ->
+                    pick = null
+                    vm.flaskCondition(chosen.index, condition.token)
+                }
+            }
         }
 
         null -> Unit
@@ -176,7 +197,7 @@ internal sealed interface Pick {
 /** The slot a skill stands in, as a word — «Слот 2 · Как готово» — or null. */
 internal fun slotOf(skills: HeroSkills, code: String): String? {
     skills.active.indexOfFirst { it?.skill == code }.takeIf { it >= 0 }?.let { index ->
-        return ui("skills.in_slot", index + 1) + " · " + conditionTitle(skills.active[index]!!.condition)
+        return ui("skills.in_slot", index + 1) + " · " + ConditionText.short(skills.active[index]!!.condition)
     }
     return skills.passive.indexOfFirst { it == code }.takeIf { it >= 0 }?.let { ui("skills.in_passive", it + 1) }
 }
@@ -232,7 +253,8 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
  * строка [SLOT_ROW] (иконка [SLOT_ICON] с уровнем внутри, имя и строка условия или резерва). Ряд с нечётным числом ячеек
  * дополняется пустым местом - ширина ячеек одна у обоих разделов. Касание пустой или пассивной ячейки - выбор умения, занятой
  * активной - лист условия (там же «Заменить умение»); долгое нажатие на занятую - карточка её умения, о нём - одна
- * подсказка «Осмотра» под панелью.
+ * подсказка «Осмотра» под панелью. У занятой активной - номер в очереди проверки боя ([SlotCondition.queue]), под активными -
+ * подсказка порядка: умения с условием - первыми.
  */
 @Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
     val rules = index.skillRules
@@ -240,6 +262,7 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
     ForgePanel {
         val activeSlots = rules.slots(SkillKind.ACTIVE)
         val actives = activeSlots.indices.map { skills.active.getOrNull(it) }
+        val queue = remember(actives) { SlotCondition.queue(actives.map { it?.condition }) }
         Engraved(ui("skills.actives", actives.count { it != null }, rules.activeSlots(level)))
         SlotGrid(activeSlots) { at, opens, modifier ->
             val slot = actives[at]
@@ -248,14 +271,17 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
                 skill,
                 skills.level(skill?.code.orEmpty()),
                 skill?.let { index.skillGrowth.tier(it, skills, stats) } ?: 1,
-                slot?.condition?.let(::conditionTitle),
+                null,
                 opens,
                 level,
                 modifier,
                 onTap = { onPick(if (slot == null) Pick.Slot(SkillKind.ACTIVE, at) else Pick.Condition(at)) },
                 onPeek = slot?.let { { inspect(SkillPeek(it.skill, condition = it.condition)) } },
+                condition = slot?.condition,
+                queue = queue[at],
             )
         }
+        if (actives.any { it != null }) OrderHint()
         val passiveSlots = rules.slots(SkillKind.PASSIVE)
         val passives = passiveSlots.indices.map { skills.passive.getOrNull(it) }
         Engraved(ui("skills.passives", passives.count { it != null }, rules.passiveSlots(level)))
@@ -290,9 +316,18 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
     }
 }
 
+/** Подсказка порядка проверки слотов в бою: с условием - первыми, дальше сверху вниз. */
+@Composable private fun OrderHint() {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(Icons.Outlined.Info, null, tint = Muted, modifier = Modifier.size(14.dp))
+        Text(ui("skills.condition.order_hint"), color = Muted, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
 /**
- * Одна ячейка - строка: знак умения «Неон рун» с тиром [tier] и уровнем [level] в углу внутри, имя и под ним [line] - условие
- * ячейки ([Rune]) или резерв ауры (приглушённо, [quiet]); пустая - пунктир с «+», «Пусто · коснитесь»; закрытая - цепь и «с ур. N».
+ * Одна ячейка - строка: знак умения «Неон рун» с тиром [tier] и уровнем [level] в углу внутри, имя и под ним условие ячейки
+ * [condition] (знак вида его цветом и краткий итог) или строка [line] - резерв ауры (приглушённо, [quiet]); [queue] - номер в очереди
+ * проверки боя в левом верхнем углу знака. Пустая - пунктир с «+», «Пусто · коснитесь»; закрытая - цепь и «с ур. N».
  * [onPeek] - долгое нажатие, карточка умения ячейки.
  */
 @Composable internal fun SlotTile(
@@ -306,6 +341,8 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
     onTap: () -> Unit,
     onPeek: (() -> Unit)? = null,
     quiet: Boolean = false,
+    condition: SlotCondition? = null,
+    queue: Int? = null,
 ) {
     val locked = heroLevel < opens
     val shape = RoundedCornerShape(8.dp)
@@ -338,8 +375,16 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp).background(Color.Black.copy(alpha = .62f), RoundedCornerShape(3.dp)).padding(horizontal = 2.dp),
                     )
+                    queue?.let { QueueBadge(it, Modifier.align(Alignment.TopStart)) }
                 }
-                SlotWords(SkillText.title(skill.code), Parchment, line, if (quiet) Muted else Rune)
+                if (condition != null) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        SlotName(SkillText.title(skill.code), Parchment)
+                        ConditionLine(condition)
+                    }
+                } else {
+                    SlotWords(SkillText.title(skill.code), Parchment, line, if (quiet) Muted else Rune)
+                }
             }
         }
     }
@@ -356,8 +401,24 @@ private fun trailTip(index: ContentIndex, level: Int, maxMana: Double, mana: Poo
 /** Имя ячейки [title] (11sp, в ширину - кегль вниз, а не многоточие) и строка под ним [line] (10sp). */
 @Composable private fun RowScope.SlotWords(title: String, color: Color, line: String?, lineColor: Color) {
     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        WordFitText(title, color, MaterialTheme.typography.labelMedium, NAME_MAX, NAME_MIN, Modifier.fillMaxWidth(), maxLines = 1, textAlign = TextAlign.Start)
+        SlotName(title, color)
         line?.let { Text(it, color = lineColor, fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+/** Имя ячейки: 11sp, в ширину - кегль вниз до [NAME_MIN], а не многоточие. */
+@Composable private fun SlotName(title: String, color: Color) {
+    WordFitText(title, color, MaterialTheme.typography.labelMedium, NAME_MAX, NAME_MIN, Modifier.fillMaxWidth(), maxLines = 1, textAlign = TextAlign.Start)
+}
+
+/** Номер слота в очереди проверки боя: кружок в углу знака умения. */
+@Composable private fun QueueBadge(number: Int, modifier: Modifier) {
+    val label = ui("skills.condition.queue", number)
+    Box(
+        modifier.size(QUEUE_BADGE).background(Abyss, CircleShape).border(1.dp, Rune, CircleShape).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$number", color = Rune, fontSize = 8.sp, lineHeight = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -370,6 +431,13 @@ private val SLOT_ROW = 48.dp
 private val SLOT_ICON = 32.dp
 private val SLOT_GAP = 6.dp
 private const val SLOT_COLUMNS = 2
+
+/** Кружок номера очереди на знаке ячейки. */
+private val QUEUE_BADGE = 13.dp
+
+/** Знак в шапке листа условия: умение - [SHEET_ICON], фляга - бутыль [SHEET_FLASK_WIDTH] × [SHEET_ICON]. */
+private val SHEET_ICON = 40.dp
+private val SHEET_FLASK_WIDTH = 24.dp
 
 /**
  * A page of the class's book: what the skill is, its level, where it stands, and what comes next. Иконка «Неон рун»

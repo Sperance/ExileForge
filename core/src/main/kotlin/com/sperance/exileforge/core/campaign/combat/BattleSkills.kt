@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FlaskStat
-import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillAilment
@@ -25,6 +24,7 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.SlotConditionKind
 import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.extraTargets
 import com.sperance.exileforge.rules.sheet.lines
@@ -41,34 +41,42 @@ private const val RANDOM = "RANDOM"
 
 private const val ELEMENT = "ELEMENT"
 
-/** Whether a slot's [condition] holds now; an opening one only until its slot has fired this fight. */
+/** Щит, что считается пробитым: остаток не больше этого числа. */
+private const val SHIELD_GONE = 0.5
+
+/**
+ * Держится ли условие слота [condition] сейчас. «Через N с» - раз за бой: пока слот не сработал ([opened]); «Нет эффекта фляги» верно
+ * всегда - фляга с идущим глотком до проверки не доходит. Пороги «не больше» и «не меньше» - включительно.
+ */
 private fun Battle.holds(condition: SlotCondition, opened: Boolean): Boolean {
     val hero = heroFighter
-    return when (condition) {
-        SlotCondition.READY -> true
-        SlotCondition.FIGHT_START -> !opened
-        SlotCondition.RARE_OR_BOSS -> foeFighters.any { it.alive && foes[it.index].rarity >= MonsterRarity.RARE }
-        SlotCondition.LIFE_50 -> hero.life < hero.body.maxLife * 0.5
-        SlotCondition.LIFE_35 -> hero.life < hero.body.maxLife * 0.35
-        SlotCondition.LIFE_20 -> hero.life < hero.body.maxLife * 0.2
-        SlotCondition.MANA_30 -> hero.mana < manaCap() * 0.3
-        SlotCondition.SHIELD_BROKEN -> hero.body.maxShield > 0 && hero.shield <= 0.5
-        SlotCondition.ENEMIES_3 -> enemies() >= 3
-        SlotCondition.AILING -> hero.ailed
-        SlotCondition.MANUAL -> false
+    return when (condition.kind) {
+        SlotConditionKind.READY, SlotConditionKind.NO_EFFECT -> true
+        SlotConditionKind.MANUAL -> false
+        SlotConditionKind.TIME -> !opened && time >= condition.value
+        SlotConditionKind.LIFE -> hero.life <= hero.body.maxLife * condition.share
+        SlotConditionKind.MANA -> hero.mana <= manaCap() * condition.share
+        SlotConditionKind.SHIELD -> hero.body.maxShield > 0 && hero.shield <= max(hero.body.maxShield * condition.share, SHIELD_GONE)
+        SlotConditionKind.AILING -> hero.ailments.any { stack -> stack.ailment.ailing && condition.ailments.any { stack.ailment.word in it.words } }
+        SlotConditionKind.BURST -> burst.drop() >= (hero.body.maxLife + hero.body.maxShield) * condition.share
+        SlotConditionKind.ENEMIES -> enemies() >= condition.value
+        SlotConditionKind.TARGET -> target()?.let { it.life <= it.body.maxLife * condition.share } == true
+        SlotConditionKind.RARITY -> foeFighters.any { it.alive && foes[it.index].rarity >= condition.rarity }
+        SlotConditionKind.CAST -> foeFighters.any { it.alive && (it.casting != null || time - it.phasedAt <= SlotConditionKind.CAST_PHASE_SECONDS) }
     }
 }
 
 /**
  * The active slots in order: a ready one whose condition holds, or that was tapped, is used; one short of
- * mana is passed over, so a cheaper heal or guard further down still answers. Подготовки нет - слоты
- * готовы с начала боя; умение применяется своё время ([CastTime]), и пока идёт применение, прочие слоты и удар ждут.
+ * mana is passed over, so a cheaper heal or guard further down still answers. Порядок проверки - [Battle.skillOrder]: слоты с
+ * условием раньше «Как готово». Подготовки нет - слоты готовы с начала боя; умение применяется своё время ([CastTime]), и пока идёт
+ * применение, прочие слоты и удар ждут.
  */
 internal fun Battle.useSkills() {
     val hero = heroFighter
     if (hero.casting != null) return
-    for ((slot, kitSkill) in kit.actives.withIndex()) {
-        kitSkill ?: continue
+    for (slot in skillOrder) {
+        val kitSkill = kit.actives[slot] ?: continue
         val tapped = slot in taps
         if (time < (hero.readyAt[slotKey(slot)] ?: 0.0)) continue
         if (skillLock(slot) > 0) continue
@@ -475,18 +483,19 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
 
 /**
  * The belt in order: a flask whose condition holds, that was tapped, or that drinks itself at low life, is drunk if it has the charges and is not running.
+ * Порядок проверки - [Battle.flaskOrder]: места с условием раньше «Как готово».
  *
  * Как в PoE: глоток, что только восполняет уже полные полосы ([Battle.waste]), не тратится.
  */
 internal fun Battle.useFlasks() {
     val hero = heroFighter
-    kit.flasks.forEachIndexed { i, flask ->
-        flask ?: return@forEachIndexed
-        if (draughtOf(i) != null || flaskLock(i) > 0) return@forEachIndexed
+    for (i in flaskOrder) {
+        val flask = kit.flasks[i] ?: continue
+        if (draughtOf(i) != null || flaskLock(i) > 0) continue
         val auto = flask.sheet.own(FlaskStat.AUTO_LOW_LIFE.code).let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
-        if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
-        if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
-        if (waste(i, flask).isNotEmpty()) return@forEachIndexed
+        if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) continue
+        if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) continue
+        if (waste(i, flask).isNotEmpty()) continue
         flaskOpened[i] = true
         drink(i, flask)
     }

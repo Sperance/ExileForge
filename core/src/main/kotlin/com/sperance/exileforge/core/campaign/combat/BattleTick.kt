@@ -49,6 +49,7 @@ internal fun Battle.step(dt: Double) {
     powers.tick()
     if (finished()) return
     val hero = heroFighter
+    burst.record(hero.life + hero.shield)
     if (hero.alive && joined()) {
         if (!autoDrunk) {
             autoDrunk = true

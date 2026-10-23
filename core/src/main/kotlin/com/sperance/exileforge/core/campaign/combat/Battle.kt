@@ -26,6 +26,8 @@ import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.ReservePool
+import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.SlotConditionKind
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
@@ -207,6 +209,9 @@ class Battle(
 
         /** Умение, что боец применяет сейчас: удар и прочие умения ждут его конца; null - не применяет. */
         internal var casting: Casting? = null
+
+        /** Когда боец последний раз сменил фазу: «Враг готовит умение» слотов героя держится миг после неё. */
+        internal var phasedAt = NEVER
 
         /** Рывок силы в этом замахе: следующий удар - сразу, а не через интервал. */
         internal var rushed = false
@@ -463,6 +468,13 @@ class Battle(
     internal val taps = mutableSetOf<Int>()
     internal val charges = DoubleArray(kit.flasks.size) { i -> kit.flasks[i]?.sheet?.let { pools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal val flaskOpened = BooleanArray(kit.flasks.size)
+
+    /** Порядок проверки слотов умений и мест пояса ([SlotCondition.order]): с условием - раньше «Как готово», дальше сверху вниз. */
+    internal val skillOrder: IntArray = SlotCondition.order(kit.actives.map { it?.condition }).toIntArray()
+    internal val flaskOrder: IntArray = SlotCondition.order(kit.flasks.map { it?.condition }).toIntArray()
+
+    /** Запас героя (здоровье и щит) за окно «Резкого урона». */
+    internal val burst = PoolWindow(SlotConditionKind.BURST_SECONDS, STEP)
     internal val drinks = mutableSetOf<Int>()
     internal val triggerReady = mutableMapOf<String, Double>()
     internal val recoveries = mutableListOf<Recovery>()

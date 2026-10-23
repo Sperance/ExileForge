@@ -3,7 +3,6 @@ package com.sperance.exileforge.ui.screens.skills
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,6 +39,7 @@ import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.display.ConditionText
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillPace
@@ -155,7 +155,7 @@ internal fun SkillSheet(
         pace?.let { ui("skills.cost", fineNumber(it.mana)) },
         pace?.let { ui("skills.cast", fineNumber(it.cast)) },
         pace?.cooldown?.takeIf { it > 0 }?.let { ui("skills.cooldown", fineNumber(it)) },
-        (condition ?: skill.condition).takeIf { skill.kind == SkillKind.ACTIVE }?.let { ui("skills.default_condition", conditionTitle(it)) },
+        (condition ?: skill.condition).takeIf { skill.kind == SkillKind.ACTIVE }?.let { ui("skills.default_condition", ConditionText.short(it)) },
     )
     if (chips.isNotEmpty()) Text(chips.joinToString(" · "), color = Rune, style = MaterialTheme.typography.labelMedium)
 }
@@ -240,37 +240,6 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                 }
             }
             ForgeButton(state = ButtonState.of(!game.busy), onClick = { onPick(null) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(ui("skills.empty_it")) }
-        }
-    }
-}
-
-/**
- * When a slot fires, or a flask is drunk, by itself: every condition — a flask's own kind's too, and the mana's only for a flask.
- * [onSwap] - «Заменить умение» ячейки под условиями.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ConditionPicker(title: String, current: SlotCondition?, flask: Boolean, onDismiss: () -> Unit, onSwap: (() -> Unit)? = null, onPick: (SlotCondition?) -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
-            val options: List<SlotCondition?> = (if (flask) listOf(null) else emptyList<SlotCondition?>()) + SlotCondition.entries.filter { flask || !it.flaskOnly }
-            options.forEach { condition ->
-                val on = condition == current
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (on) PanelRaised else Color.Transparent).clickable { onPick(condition) }
-                        .padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    RadioButton(selected = on, onClick = { onPick(condition) }, colors = RadioButtonDefaults.colors(selectedColor = Gold))
-                    Text(condition?.let(::conditionTitle) ?: ui("skills.condition.KIND"), color = if (on) GoldBright else Parchment)
-                }
-            }
-            onSwap?.let { ForgeButton(onClick = it, modifier = Modifier.fillMaxWidth().padding(top = 4.dp), kind = ButtonKind.Text, accent = Rune) { Text(ui("skills.swap_skill")) } }
         }
     }
 }

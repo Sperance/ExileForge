@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.TargetRule
 import com.sperance.exileforge.core.display.AffixKind
+import com.sperance.exileforge.core.display.ConditionText
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.key
 import com.sperance.exileforge.core.i18n.Lang
@@ -24,7 +25,10 @@ import com.sperance.exileforge.rules.content.SkillEvent
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.SlotAilment
+import com.sperance.exileforge.rules.content.SlotConditionGroup
+import com.sperance.exileforge.rules.content.SlotConditionKind
+import com.sperance.exileforge.rules.content.SlotParam
 import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.content.WeaponType
@@ -271,7 +275,22 @@ class UiStringsTest {
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }
             com.sperance.exileforge.core.display.SourceKind.entries.forEach { add("source.${it.name}") }
             com.sperance.exileforge.core.display.ChanceUnit.entries.forEach { add("source.per.${it.name}") }
-            SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
+            SlotConditionKind.entries.forEach { kind ->
+                add("skills.condition.${kind.name}")
+                add("skills.condition.note.${kind.name}")
+                when (kind.param) {
+                    SlotParam.AILMENTS -> listOf("all", "some").forEach { add("skills.condition.short.${kind.name}.$it") }
+                    else -> add("skills.condition.short.${kind.name}")
+                }
+            }
+            ConditionText.ZERO_KINDS.forEach { kind ->
+                add("skills.condition.short.${kind.name}.zero")
+                add("skills.condition.zero.${kind.name}")
+            }
+            listOf(SlotParam.PERCENT, SlotParam.SECONDS).forEach { add("skills.condition.value.${it.name}") }
+            SlotConditionGroup.entries.forEach { add("skills.condition.group.${it.name}") }
+            MonsterRarity.entries.forEach { add("skills.condition.rarity.${it.name}") }
+            SlotAilment.entries.forEach { add("skills.condition.ailment.${it.name}") }
             SkillType.entries.forEach { add("skills.type.${it.name}") }
             SkillEvent.entries.forEach { add("skill.on.${it.name}") }
             (DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }

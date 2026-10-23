@@ -116,7 +116,8 @@ class MetaCombatTest {
      * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
      * запасы, чью ауру несёт герой; здоровье и щит стаи ×[foesLife] - долгая схватка, в которой успевают сказаться медленные
      * характеристики (длительность недугов), скорость атак и чар стаи ×[foesPace] - паузы между ударами, в которые
-     * перезаряжается щит героя; редкие тяжёлые удары (сильная и медленная стая) снимают щит так, что видна скорость его перезарядки.
+     * перезаряжается щит героя; редкие тяжёлые удары (сильная и медленная стая) снимают щит так, что видна скорость его перезарядки;
+     * [blighted] - стая осквернена Скверной: в ней срабатывают условия поражённой Скверной цели.
      */
     private data class Scenario(
         val heroClass: String,
@@ -128,6 +129,7 @@ class MetaCombatTest {
         val auras: Set<ReservePool> = setOf(ReservePool.MANA),
         val foesLife: Double = 1.0,
         val foesPace: Double = 1.0,
+        val blighted: Boolean = false,
     )
 
     private val prints = java.util.concurrent.ConcurrentHashMap<Scenario, Int>()
@@ -191,7 +193,7 @@ class MetaCombatTest {
                     else -> v
                 }
             }
-            phases.foe(m.copy(stats = scaled), run.areaLevel)
+            phases.foe(m.copy(stats = scaled), run.areaLevel).copy(tainted = scenario.blighted)
         }
     }
 
@@ -310,6 +312,7 @@ class MetaCombatTest {
             Scenario("MARAUDER", SkillType.ATTACK, 1.65, cleared = false, seed = 3),
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, auras = ReservePool.entries.toSet()),
             Scenario("MARAUDER", SkillType.ATTACK, 1.25, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, blighted = true),
         )
 
         /** Кости стаи схваток. */
@@ -360,7 +363,7 @@ class MetaCombatTest {
             addAll(listOf("POWER_HOLLOW_VEINS", "POWER_HUSH_STILLNESS", "POWER_IDOLBREAKER", "POWER_IDOLBREAKER_SPLINTERS"))
             addAll(listOf("POWER_IDOL_ASH", "POWER_IDOL_ASH_EMBERS", "POWER_LAMP_HOARD", "POWER_LICHS_FOCUS"))
             addAll(listOf("POWER_LINEAGE_FURY", "POWER_LINEAGE_SIGNET", "POWER_LINGERING_ROT", "POWER_LONE_QUARRY"))
-            addAll(listOf("POWER_LOYAL_BANNER", "POWER_MAGNATE_TAX", "POWER_MOTHERS_CORD", "POWER_PLAGUE_TRAIL_HOARD"))
+            addAll(listOf("POWER_LOYAL_BANNER", "POWER_MAGNATE_TAX", "POWER_PLAGUE_TRAIL_HOARD"))
             addAll(listOf("POWER_PROTOTYPE_BULWARK", "POWER_PROTOTYPE_PLATING", "POWER_QUARRY_SOLUTION", "POWER_RIFT_STEP"))
             addAll(listOf("POWER_ROOT_DRINK", "POWER_RUNE_CARVER", "POWER_RUNE_RESONANCE", "POWER_SACRIFICIAL_PACT"))
             addAll(listOf("POWER_SCHOLARS_INSIGHT", "POWER_SHAMANBANE", "POWER_SHAMANBANE_WARD", "POWER_SPECTRAL_LEECH"))

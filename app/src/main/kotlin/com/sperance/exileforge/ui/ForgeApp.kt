@@ -226,7 +226,7 @@ import org.koin.compose.viewmodel.koinViewModel
             sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
             if (route.phase == AppPhase.GAME && game.heroId.isNotBlank() && expedition == null && trial == null && !rift.open && warmup?.finished != false) {
-                com.sperance.exileforge.ui.screens.contest.ContestResultsHost(game) { mailId ->
+                com.sperance.exileforge.ui.screens.contest.ContestResultsHost(game, paused = mailOpen) { mailId ->
                     mailFocus = mailId
                     mailOpen = true
                 }

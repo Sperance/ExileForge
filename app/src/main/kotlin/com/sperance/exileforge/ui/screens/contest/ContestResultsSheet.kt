@@ -59,23 +59,23 @@ import org.koin.compose.koinInject
 
 /**
  * Итоги состязаний при входе героя: вход героя тихо читает его ящик и свой титул ([ContestResultsModel.check]); непоказанные призы
- * ([ContestNews]) встают листом «Грамота» один раз - «Забрать» у грамоты открывает её письмо ([onOpenMail]), «Закрыть» (и закрытие
- * листа) запоминает их показанными на устройстве.
+ * ([ContestNews]) встают листом «Грамота» один раз: «Забрать» у грамоты отмечает показанной её и открывает её письмо ([onOpenMail]) -
+ * пока почта открыта ([paused]), листа нет, после неё он встаёт с оставшимися; «Закрыть» (и закрытие листа) отмечает показанными все.
  */
-@Composable fun ContestResultsHost(game: GameUi, onOpenMail: (String) -> Unit) {
+@Composable fun ContestResultsHost(game: GameUi, paused: Boolean, onOpenMail: (String) -> Unit) {
     val model = koinInject<ContestResultsModel>()
     val inbox by model.inbox.collectAsStateWithLifecycle()
     val settings by model.settings.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) { model.check() }
     val news = remember(game.heroId, inbox.mail, settings.shownPrizes) { model.news(game.heroId, inbox.mail, settings) }
-    if (news.empty) return
+    if (news.empty || paused) return
     val podium = game.index?.rules?.contests?.podium ?: PODIUM
     val shown = remember(news) { news.prizes.map { it.mailId } }
     ContestResultsSheet(
         news,
         podium,
         onClaim = { mailId ->
-            model.seen(shown)
+            model.seen(listOf(mailId))
             onOpenMail(mailId)
         },
         onClose = { model.seen(shown) },

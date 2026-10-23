@@ -395,7 +395,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Источники цифр сводки [stats] под сдвигами захода [layer]: по цифре - её сдвиги ([layered]), сложенные по источнику. */
     fun sources(stats: Collection<String>, layer: Map<String, List<Shift>>): Map<String, List<Shift>> =
-        if (layer.isEmpty()) emptyMap() else stats.associateWith { layered(it, layer).bySource() }.filterValues { it.isNotEmpty() }
+        if (layer.isEmpty()) emptyMap() else stats.associateWith { SourceShifts.bySource(layered(it, layer)) }.filterValues { it.isNotEmpty() }
 
     /**
      * Что сдвиги [layer] сделали с чтением [reading]: каждый источник положен на лист один, а что они делают только вместе -
@@ -409,9 +409,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         fun under(moves: List<Pair<String, Double>>): Double = reading.adds(Combatant(moves.fold(stats) { sheet, (key, delta) -> sheet + (key to (sheet[key] ?: 0.0) + delta) }, body.level, body.rules)) - own
         val bySource = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
         layer.forEach { (key, shifts) -> shifts.forEach { bySource.getOrPut(it.source) { mutableListOf() } += key to it.delta } }
-        val parts = bySource.mapNotNull { (source, moves) -> under(moves).takeIf { abs(it) >= MOVED }?.let { Shift(source, it, reading.from) } }.toMutableList()
+        val parts = bySource.mapNotNull { (source, moves) -> under(moves).takeIf { abs(it) >= SourceShifts.MOVED }?.let { Shift(source, it, reading.from) } }.toMutableList()
         val rest = under(bySource.values.flatten()) - parts.sumOf { it.delta }
-        if (abs(rest) < MOVED) return parts
+        if (abs(rest) < SourceShifts.MOVED) return parts
         if (parts.isEmpty()) return listOf(Shift(bySource.keys.last(), rest, reading.from))
         parts[parts.lastIndex] = parts.last().let { it.copy(delta = it.delta + rest) }
         return parts
@@ -433,9 +433,6 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     override fun hashCode(): Int = stats.hashCode()
 
     companion object {
-        /** Сдвиг меньше этого - не сдвиг: десятые листа. */
-        private const val MOVED = 0.05
-
         /** Виды небоевых сил с характеристикой листа: их прибавка к добыче в сводке - вместе с силами. */
         private val LOOT = WorldKind.entries.filter { it.stock != null }
 
@@ -443,7 +440,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         private val APART = mapOf(WorldKind.UNIQUE to CoreStat.RARITY, WorldKind.MAP to CoreStat.QUANTITY, WorldKind.BOOK to CoreStat.QUANTITY)
 
         private fun moved(before: Map<String, Double>, after: Map<String, Double>): Map<String, Double> = (before.keys + after.keys)
-            .associateWith { (after[it] ?: 0.0) - (before[it] ?: 0.0) }.filterValues { abs(it) >= MOVED }
+            .associateWith { (after[it] ?: 0.0) - (before[it] ?: 0.0) }.filterValues { abs(it) >= SourceShifts.MOVED }
 
         /**
          * Лист боя героя: его лист [sheet] (без модели - null), уровень [level], класс [heroClass], умения [skills] и Предначертание

@@ -14,7 +14,6 @@ import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatSource
-import kotlin.math.abs
 import kotlin.math.max
 
 /** What a line of a map is, as the launch window marks it. */
@@ -152,31 +151,8 @@ object MapEffects {
     fun heroShifts(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): Map<String, List<Shift>> {
         if (effects.isEmpty()) return emptyMap()
         val parts = effects.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> source to hero(stats, mapOf(code to share)) } }
-        return sourced(stats, parts, hero(stats, effects))
+        return SourceShifts.split(stats, parts, hero(stats, effects))
     }
-
-    /**
-     * Сдвиги листа [before] по источникам: каждая часть [parts] - лист под ней одной, а что части делают только вместе (лист под всеми -
-     * [joint]), ложится на последний сдвиг характеристики - сумма сдвигов равна `joint - before`.
-     */
-    internal fun sourced(before: Map<String, Double>, parts: List<Pair<StatSource, Map<String, Double>>>, joint: Map<String, Double>): Map<String, List<Shift>> {
-        val shifts = LinkedHashMap<String, MutableList<Shift>>()
-        parts.forEach { (source, sheet) ->
-            sheet.forEach { (stat, moved) ->
-                val delta = moved - (before[stat] ?: 0.0)
-                if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
-            }
-        }
-        joint.forEach { (stat, together) ->
-            val own = shifts[stat] ?: return@forEach
-            val rest = together - (before[stat] ?: 0.0) - own.sumOf { it.delta }
-            if (abs(rest) >= MOVED) own[own.lastIndex] = own.last().let { it.copy(delta = it.delta + rest) }
-        }
-        return shifts
-    }
-
-    /** Сдвиг листа меньше этого - след округления, не сдвиг. */
-    internal const val MOVED = 0.05
 
     /**
      * Строки карты, что меняют героя, для полки «на весь бой»: каждая строка карты (не дар Атласа) со сдвигами листа

@@ -8,8 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
+import com.sperance.exileforge.core.campaign.SourceShifts
 import com.sperance.exileforge.core.campaign.StatFigures
-import com.sperance.exileforge.core.campaign.bySource
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.display.SkillText
@@ -47,10 +47,10 @@ private enum class StatsTab(val key: String) {
  * ([origins]: карта, Атлас, древо гильдии, зелье) - стрелкой справа или подписью под строкой.
  *
  * Эффекты захода ложатся на лист боя героя одним листом захода ([com.sperance.exileforge.core.campaign.RunSheet]), как в бою. Бой
- * без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки «На карте» нет. В бою ([fight]) - третья вкладка «В бою», с неё лист и открывается: живое тело героя ([FightHud.heroBody]: баффы,
- * дебаффы, глотки, карта) против «На карте» (без карты - против «Героя»), сдвиг - стрелкой цвета сдвига, строка раскрывается -
- * из каких эффектов сложилась ([fightParts]). Числа идут вживую со снимком боя, строки не переставляются; бой арены стоит, пока
- * лист открыт ([ArenaHold]).
+ * без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки «На карте» нет. В бою ([fight]) - третья вкладка «В бою», с неё
+ * лист и открывается: живое тело героя ([FightHud.heroBody]: баффы, дебаффы, глотки, карта) против «На карте» (без карты - против
+ * «Героя»), сдвиг - стрелкой цвета сдвига, строка раскрывается - из каких эффектов сложилась ([fightParts]). Числа идут вживую со
+ * снимком боя, строки не переставляются; бой арены стоит, пока лист открыт ([ArenaHold]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,7 +126,7 @@ internal class FightSheets(
     val onMap = remember(run, combat, mine, mapEffects) { mapEffects?.let { run?.stats()?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } ?: mine } }
     val shifts = remember(run) { run?.shifts().orEmpty() }
     val sources = remember(combat, shifts, mine, onMap) {
-        onMap?.let { FightSheets.changed(mine, it) }?.let { changed -> combat?.sources(changed, shifts) ?: shifts.filterKeys { it in changed }.mapValues { it.value.bySource() } }.orEmpty()
+        onMap?.let { FightSheets.changed(mine, it) }?.let { changed -> combat?.sources(changed, shifts) ?: shifts.filterKeys { it in changed }.mapValues { SourceShifts.bySource(it.value) } }.orEmpty()
     }
     val inFight = remember(combat, body) { body?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } }
     return remember(mine, onMap, shifts, sources, inFight) { FightSheets(mine, onMap, shifts, sources, inFight) }

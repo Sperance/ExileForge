@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.slotTitle
@@ -49,6 +50,7 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AuctionRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.trade.BidLeader
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -222,8 +224,8 @@ internal fun PriceScale(lot: AuctionLot, mine: Long?, median: Long?, sales: Int)
 }
 
 /**
- * Лента ставок без имён, новые сверху ([feedLines] ядра): сумма, «вы» у своих (у лидирующей своей - зелёным), «лидирует» - у той, что
- * лидирует сейчас, и давность к «сейчас» [now]; над ней пунктиром - своя сумма [pending], пока ставка не сделана. Видны [FEED_SHOWN] верхних, остальные свёрнуты «Ещё N».
+ * Лента ставок, новые сверху ([feedLines] ядра): сумма, «вы» у своих (у лидирующей своей - зелёным), «лидирует» - у той, что лидирует
+ * сейчас, с ником, классом и уровнем лидера ([leader] ядра; касание - карточка игрока), прочие без имён, и давность к «сейчас» [now]; над ней пунктиром - своя сумма [pending], пока ставка не сделана. Видны [FEED_SHOWN] верхних, остальные свёрнуты «Ещё N».
  * Ставок нет - что своя будет первой и наименьшая.
  */
 @Composable internal fun BidFeed(lot: AuctionLot, now: Long, pending: Long?) {
@@ -249,16 +251,36 @@ internal fun PriceScale(lot: AuctionLot, mine: Long?, median: Long?, sales: Int)
     Column { FoldBody(open) { rest.forEach { FeedRow(lot, it, now) } } }
 }
 
-/** Строка ленты [feed]: сумма со знаком сферы, «вы» у своей, «лидирует» у лидирующей и давность. */
+/**
+ * Строка ленты [feed]: сумма со знаком сферы, «вы» у своей, «лидирует» у лидирующей - с ником, классом и уровнем лидера, если его
+ * видно (касание - карточка игрока), - и давность.
+ */
 @Composable private fun FeedRow(lot: AuctionLot, feed: FeedLine, now: Long) {
     val leading = feed.leading
+    val leader = lot.leader?.takeIf { leading }
+    val mark = when {
+        !leading -> ""
+        leader == null -> ui("auction.feed_leads")
+        else -> ui("auction.feed_leads_by", leaderLine(leader))
+    }
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OrbAmount(lot.priceOrb, feed.line.orbs, tint = if (leading) GoldBright else Quiet)
         if (feed.line.own) Text(ui("auction.feed_you"), color = if (leading) Vital else Muted, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Text(if (leading) ui("auction.feed_leads") else "", color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+        Text(
+            mark,
+            color = if (leader == null) Muted else Rune,
+            style = MaterialTheme.typography.labelSmall,
+            textDecoration = if (leader == null) null else TextDecoration.Underline,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f).opensPlayer(leader?.hero),
+        )
         Text(agoText(now - feed.line.at), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
+
+/** Лидер торгов [leader] одной строкой: «Ник · Класс Уровень». */
+internal fun leaderLine(leader: BidLeader): String = ui("auction.leader_who", leader.name, classTitle(leader.heroClass), leader.level)
 
 /** Своя сумма [amount] над лентой пунктиром: ставка ещё не сделана. */
 @Composable private fun PendingBid(lot: AuctionLot, amount: Long) {

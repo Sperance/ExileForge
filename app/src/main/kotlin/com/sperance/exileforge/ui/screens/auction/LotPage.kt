@@ -215,7 +215,7 @@ private const val FOLDED_LINES = 2
 
 /**
  * Панель «Торги»: текущая ставка (без ставок - первая) и выкуп, правила торгов - в ⓘ; шкала цены от первой ставки до выкупа с текущей,
- * своей суммой [mine] и медианой похожих сделок [hint] ([PriceScale]); ниже - лента ставок без имён ([BidFeed]).
+ * своей суммой [mine] и медианой похожих сделок [hint] ([PriceScale]); ниже - лента ставок, имя - только у лидера ([BidFeed]).
  */
 @Composable private fun TradePanel(lot: AuctionLot, rules: AuctionRules, now: Long, hint: PriceHint?, mine: Long?) {
     ForgePanel {
@@ -239,13 +239,15 @@ private const val FOLDED_LINES = 2
 }
 
 /**
- * Факты лота: продавец (касание - карточка игрока; у своего лота его нет), когда выставлен; свой лот за цену в окне продления -
+ * Факты лота: продавец (касание - карточка игрока; у своего лота его нет), лидер открытых торгов - ник, класс и уровень (касание -
+ * карточка игрока; не видно - строки нет), когда выставлен; свой лот за цену в окне продления -
  * «Продлить на N дн.» с платой ([ExtendRow]).
  */
 @Composable private fun LotFacts(game: GameUi, lot: AuctionLot, stance: LotStance, rules: AuctionRules, now: Long, vm: MarketViewModel) {
     val own = stance == LotStance.OWN_FIXED || stance == LotStance.OWN_BID || lot.belongsTo(game.heroId)
     ForgePanel {
         if (!own) Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
+        lot.leader?.let { leader -> Box(Modifier.opensPlayer(leader.hero)) { PropertyRow(ui("auction.leader"), leaderLine(leader), Glyph.CHARACTER) } }
         listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
         if (stance == LotStance.OWN_FIXED && lot.extendable(rules, now)) {
             val fee = game.index?.let { com.sperance.exileforge.rules.trade.AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L

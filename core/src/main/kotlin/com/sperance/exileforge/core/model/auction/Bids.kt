@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.rules.content.AuctionRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.trade.AuctionFees
+import com.sperance.exileforge.rules.trade.BidLeader
 import com.sperance.exileforge.rules.trade.BidLine
 import com.sperance.exileforge.rules.trade.BidStanding
 import com.sperance.exileforge.rules.trade.Bidding
@@ -75,7 +76,13 @@ data class LotTerms(val mode: LotMode = LotMode.FIXED, val minPrice: Long = 0) {
     fun valid(price: Long): Boolean = mode == LotMode.FIXED || minPrice in 1..price
 }
 
-/** Строка ленты ставок для показа: ставка [line] без имени (своя - [BidLine.own]) и [leading] - она лидирует сейчас. */
+/**
+ * Лидер открытых торгов - ник, класс и уровень героя (`BidState.top` сервера); null - ставок нет, торги закрыты или лидера не показать
+ * (в корзине, скрыт модерацией).
+ */
+val AuctionLot.leader: BidLeader? get() = bidding?.takeIf { status == LotStatus.ACTIVE && it.stake != null }?.top
+
+/** Строка ленты ставок для показа: ставка [line] без имени (своя - [BidLine.own]) и [leading] - она лидирует сейчас (её лидер - [AuctionLot.leader]). */
 data class FeedLine(val line: BidLine, val leading: Boolean)
 
 /**

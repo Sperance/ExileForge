@@ -45,7 +45,7 @@ class ContentSmokeTest {
         assertEquals(first.spawn(0), second.spawn(0))
         assertEquals(first.kill(0, 0, false, RewardDraws(7L, 0)), second.kill(0, 0, false, RewardDraws(7L, 0)))
         assertEquals(first.chests(3, RewardDraws(7L, 1)), second.chests(3, RewardDraws(7L, 1)))
-        assertEquals(first.boss(RewardDraws(7L, 2)), second.boss(RewardDraws(7L, 2)))
+        assertEquals(first.boss(RewardDraws(7L, 2), slain = 0), second.boss(RewardDraws(7L, 2), slain = 0))
         assertNotNull(first.kill(0, 0, false, RewardDraws(7L, 0)), "a kill pays nothing at all")
     }
 

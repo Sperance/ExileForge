@@ -379,7 +379,7 @@ class HeroSheetTest {
         assertTrue(abs(summary - breakdown) < 0.15, "разбор $breakdown != сводка $summary")
         val hero = Combatant(stats, 40, rules)
         val zone = index.campaign.zones.first()
-        val rolled = checkNotNull(Spawns(index, Run(index, zone, 7L, RunContext(heroClass.code, 40))).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
+        val rolled = checkNotNull(Spawns(index, Run(index, zone, 7L, RunContext(heroClass.code, 40))).boss(zone, MapEffects.buffs(emptyMap()), emptyList(), awakened = false))
         val foe = PhaseFoes(index, rules).foe(rolled, zone.level)
         val boss = foe.copy(body = Combatant(foe.body.stats + (CoreStat.HEALTH.code to 1e9), foe.body.level, rules))
         val battle = Battle(hero, listOf(boss), rules, index.rules.fight, hero.maxLife, Random(3))

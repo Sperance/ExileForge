@@ -96,6 +96,12 @@ val Ember = Color(0xFFD9642E)
 /** Огонь текстом на тёмной подложке (число урона карточки): светлее [Ember], контраст не ниже 4.5:1. */
 val EmberText = Color(0xFFE9784A)
 
+/** Пробуждения дня: печать и обод жетона зоны дня, полоса редкой карты и строка пробуждённого стража в бою. */
+val Awakened = Color(0xFFEE8250)
+
+/** Пробуждение неоткрытой зоны дня на карте мира: приглушённый [Awakened]. */
+val AwakenedDim = Color(0xFF8A6A5A)
+
 /** The colours Path of Exile gives a crafted and a fractured modifier, and the two influences. */
 val Crafted = Color(0xFFB4B4FF)
 val Fractured = Color(0xFFA29162)

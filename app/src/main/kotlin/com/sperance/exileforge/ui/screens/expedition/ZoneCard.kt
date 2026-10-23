@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.AwakeningDay
 import com.sperance.exileforge.core.campaign.LootFalloffView
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.TokenState
@@ -44,6 +45,7 @@ import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasPoints
+import com.sperance.exileforge.rules.content.AwakeningStanding
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Monster
@@ -78,12 +80,13 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * Карточка зоны на карте мира (вместо окна входа): поднимается над низом карты по касанию жетона. Каждая часть - одной строкой: имя
  * (касание - описание зоны) и состояние; уровень, биом, финал, регион и прохождения; страж - ждёт или убит до срока - и три точки
  * Атласа; лента снаряжения (карты, зелья, скарабеи); плита выбранной карты; «Войти в портал». Зона «???» говорит только, чей страж её
- * открывает. Правила и контент - индекса; сроки зоны - возвращение стража - кампании героя.
+ * открывает. Правила и контент - индекса; сроки зоны - возвращение стража - кампании героя. Зона дня [awakening]: у карт, что будят
+ * стража, - печать в ленте, у выбранной такой - полоса пробуждения над плитой, у иной - подсказка, какая карта его будит.
  *
  * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик со свободным прогрессом начинает заход сразу боем со стражем. Новое семя раньше
  * правил не даётся: кнопка погашена и считает секунды; погашенная без карты объясняет причину по касанию.
  */
-@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
+@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, awakening: AwakeningDay, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
@@ -132,7 +135,16 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 index.monster(zone.boss)?.let { Guardian(game, zone, it, maps.picked?.view?.areaLevel ?: zone.level, summon, Modifier.weight(1f).fillMaxHeight()) } ?: Spacer(Modifier.weight(1f))
                 AtlasPips(game.atlasState?.earned.orEmpty(), zone.code.value, Modifier.fillMaxHeight())
             }
-            KitRibbon(game, vm, zone, maps, launch)
+            val awakened = awakening[zone.code]
+            val awakenings = index.awakenings
+            KitRibbon(game, vm, zone, maps, launch, awakened)
+            if (awakened != null) {
+                if (maps.picked?.let { awakenings.wakes(it.item.rarity) } == true) {
+                    AwakeningBand(awakenings.rule, awakened, awakening.changeAt)
+                } else if (awakened == AwakeningStanding.WAITING) {
+                    AwakeningHint(awakenings.rule, game.lang)
+                }
+            }
             maps.picked?.let { MapPlate(game, index, zone, it, launch) }
             LaunchButton(
                 label = when {

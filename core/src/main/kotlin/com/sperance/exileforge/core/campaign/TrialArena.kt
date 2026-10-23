@@ -282,7 +282,7 @@ class TrialArena(
                 val zone = plan?.zones?.getOrNull(step) ?: return finish(fallen = false)
                 level = trial.heroLevel
                 sooner = tier.enrage
-                listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList()))
+                listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList(), awakened = false))
             }
 
             TrialKind.TOWER -> {

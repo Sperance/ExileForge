@@ -194,7 +194,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 @Composable private fun AtlasSearch(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val places = remember(index, taken) { Places.atlas(index.atlas.nodes, taken) }
     val text = PlaceSearchText(ui("atlas.search_hint"), ui("atlas.search_help"), ui("atlas.search_none_help"))
-    PlaceSearchSheet(places, emptyList(), text, onDismiss, onPick)
+    PlaceSearchSheet(places, emptyList(), text, onDismiss, filter = null, onPick = onPick)
 }
 
 /**

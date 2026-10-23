@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.campaign
 
+import com.sperance.exileforge.rules.content.AwakenedWins
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.ServiceRule
 import com.sperance.exileforge.rules.content.SummonBar
@@ -48,6 +49,8 @@ import kotlinx.serialization.Serializable
     val summons: SummonLog = SummonLog(),
     /** Когда герой последний раз получил новое семя захода, мс эпохи сервера: следующее - по `RunRules.seedReadyAt`. */
     val seededAt: Long = 0,
+    /** Победы над пробуждёнными стражами в нынешние сутки UTC ([AwakenedWins]): над каждым - одна в сутки. */
+    val awakened: AwakenedWins = AwakenedWins(),
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now

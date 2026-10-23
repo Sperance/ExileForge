@@ -54,9 +54,14 @@ import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
+import com.sperance.exileforge.rules.content.AwakeningStanding
 import com.sperance.exileforge.rules.content.CampaignFile
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.ui.components.motionPhase
+import com.sperance.exileforge.ui.screens.expedition.awakeningSeal
+import com.sperance.exileforge.ui.theme.Awakened
+import com.sperance.exileforge.ui.theme.AwakenedDim
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -76,6 +81,9 @@ import kotlin.math.hypot
  * token picks the zone, a tap on the land lets it go. Everything but the words is drawn in world
  * units under one transform; the words are laid out once and only scaled.
  *
+ * [awakened] - пробуждения дня по зонам: двойной обод и печать-глаз слева внизу (неоткрытая зона - приглушённо, побеждённый сегодня -
+ * ромб с галочкой); на зоне сюжета обод - снаружи кольца сюжета.
+ *
  * [story] - зона шага сюжета, вокруг жетона кольцо; null - сюжета на карте нет. Без анимаций жетоны и дороги стоят; общие часы декора, а не
  * свой бесконечный переход. Пергамент записан один раз в свой слой ([LocalWorldArtLayer], живёт с оболочкой); пергамент, туман и дороги
  * записаны в неподвижный слой карты ([StillLayer]), камера его не перерисовывает, а лишь сдвигает и масштабирует. Жетоны, ореолы, кольцо
@@ -89,6 +97,7 @@ fun WorldCanvas(
     camera: WorldCamera,
     selected: String?,
     stash: Map<String, Int>,
+    awakened: Map<MapCode, AwakeningStanding>,
     modifier: Modifier = Modifier,
     story: String? = null,
     onTap: (String?) -> Unit,
@@ -138,7 +147,11 @@ fun WorldCanvas(
         Canvas(Modifier.matchParentSize()) {
             val view = camera.view(size)
             onWorld(camera) {
-                world.tokens.forEach { if (it.seen(view, height)) token(it, height, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0) }
+                world.tokens.forEach {
+                    if (!it.seen(view, height)) return@forEach
+                    token(it, height, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0)
+                    awakened[it.zone.code]?.let { standing -> awakening(it, height, standing, it.zone.code.value == story) }
+                }
             }
         }
         if (story != null) {
@@ -363,6 +376,26 @@ private fun DrawScope.storyRing(token: WorldToken, height: Float, spin: Float) {
         }
     }
 }
+
+/**
+ * Пробуждение дня на жетоне: двойной обод цвета пробуждения (побеждённый сегодня - бледнее, неоткрытая зона - пунктиром и приглушённо)
+ * и печать слева внизу, напротив галочки «пройден»; [aroundStory] - на зоне сюжета обод снаружи её кольца.
+ */
+private fun DrawScope.awakening(token: WorldToken, height: Float, standing: AwakeningStanding, aroundStory: Boolean) {
+    val c = Offset(token.zone.x.toFloat(), height - token.zone.y)
+    val r = radius(token)
+    val locked = token.state == TokenState.LOCKED
+    val ink = (if (locked) AwakenedDim else Awakened).copy(alpha = if (standing == AwakeningStanding.BEATEN) .5f else if (locked) .55f else 1f)
+    val inner = r + if (aroundStory) STORY_RING_GAP + AWAKENING_STORY_GAP else AWAKENING_GAP
+    drawCircle(ink, inner, c, style = Stroke(2.4f, pathEffect = if (locked) PathEffect.dashPathEffect(floatArrayOf(3f, 3f)) else null))
+    drawCircle(ink, inner + 3f, c, style = Stroke(1f))
+    awakeningSeal(c + Offset(-r * .72f, r * .72f), AWAKENING_SEAL, standing, locked)
+}
+
+/** Отступ обода пробуждения от жетона, от кольца сюжета и радиус печати - в мере мира. */
+private const val AWAKENING_GAP = 2.5f
+private const val AWAKENING_STORY_GAP = 8f
+private const val AWAKENING_SEAL = 8.5f
 
 /** Засечек в кольце сюжета, отступ кольца от жетона и полный оборот, мс. */
 private const val STORY_RUNES = 24

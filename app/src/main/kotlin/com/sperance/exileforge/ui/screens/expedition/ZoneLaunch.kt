@@ -41,6 +41,7 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasBonuses
+import com.sperance.exileforge.rules.content.AwakeningStanding
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.LootRoller
@@ -59,11 +60,12 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
 }
 
 /**
- * Лента снаряжения входа одной строкой: квадрат «без карты» и карты зоны рамкой редкости (тир - в углу), за чертой - зелья и
- * скарабеи сумки. Карта и стопка открывают свою карточку, взять или убрать - её кнопкой; «без карты» выбирается сразу. Нет карт зоны -
+ * Лента снаряжения входа одной строкой: квадрат «без карты» и карты зоны рамкой редкости (тир - в углу; у зоны дня [awakened] на картах,
+ * что будят стража, - уголок-печать слева внизу), за чертой - зелья и скарабеи сумки. Карта и стопка открывают свою карточку, взять или убрать - её кнопкой; «без карты» выбирается сразу. Нет карт зоны -
  * пунктирный «?», касание объясняет, откуда они; скарабеи без карты погашены, касание говорит, что нужна карта.
  */
-@Composable internal fun KitRibbon(game: GameUi, vm: ExpeditionViewModel, zone: Zone, maps: ZoneMaps, launch: MapLaunch) {
+@Composable internal fun KitRibbon(game: GameUi, vm: ExpeditionViewModel, zone: Zone, maps: ZoneMaps, launch: MapLaunch, awakened: AwakeningStanding?) {
+    val awakenings = game.index?.awakenings
     val brews = game.index?.rules?.brews
     val potions = brews?.potions?.keys.orEmpty().filter { (game.bagAmount(it) ?: 0L) > 0 }
     val scarabs = brews?.scarabs?.keys.orEmpty().filter { (game.bagAmount(it) ?: 0L) > 0 }
@@ -95,6 +97,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
                 Square(if (chosen) GoldBright else color, chosen, true, map.view.title, { inspect(Inspect.Copy(map.item, pick)) }) {
                     ItemIcon(map.view, color, Modifier.size(28.dp))
                     map.item.mapTier.takeIf { it > 0 }?.let { Corner(ui("expedition.launch_tier", it), color) }
+                    if (awakened != null && awakenings?.wakes(map.item.rarity) == true) AwakeningSeal(awakened, 16.dp, Modifier.align(Alignment.BottomStart).padding(2.dp))
                 }
             }
         }

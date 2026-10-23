@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.rules.content.BossPower
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterCode
@@ -37,16 +38,22 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         return run.foes(token).map { skilled(buffed(it, buffs), casting) }
     }
 
-    /** Босс зоны при встрече: без своих строк; [buffs] - строки карты на всех монстрах, [extra] - что карта и режим делают с ним одним. */
-    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? = guardian(zone.boss, run.levelOf(zone), buffs, extra, run.streams.of("bossRoll"))
+    /**
+     * Босс зоны при встрече: без своих строк; [buffs] - строки карты на всех монстрах, [extra] - что карта и режим делают с ним одним;
+     * [awakened] - встаёт пробуждённым ([Run.awakens]) с силой пробуждения ([Run.bossPower]).
+     */
+    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, awakened: Boolean): RolledMonster? {
+        val level = run.levelOf(zone)
+        return guardian(zone.boss, level, run.bossPower(level, awakened), buffs, extra, run.streams.of("bossRoll"))?.copy(awakened = awakened)
+    }
 
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
-    fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, run.levelOf(zone), buffs, emptyList(), run.streams.of("corruptRoll"))
+    fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = run.levelOf(zone).let { level -> guardian(zone.corrupted, level, run.guardianPower(level), buffs, emptyList(), run.streams.of("corruptRoll")) }
 
-    /** Босс [code] с силой захода ([Run.guardianPower]: на карте - своя по тиру); [dice] - кости его умений. */
-    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
+    /** Босс [code] с силой [power] (силой захода [Run.guardianPower]: на карте - своя по тиру); [dice] - кости его умений. */
+    private fun guardian(code: MonsterCode, level: Int, power: BossPower, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
-        return skilled(buffed(run.bound(monsters.boss(monsters.guardian(code, level, run.guardianPower(level)), extra)), buffs), dice)
+        return skilled(buffed(run.bound(monsters.boss(monsters.guardian(code, level, power), extra)), buffs), dice)
     }
 
     /**

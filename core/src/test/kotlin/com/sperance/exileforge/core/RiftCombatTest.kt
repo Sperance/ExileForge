@@ -53,7 +53,7 @@ class RiftCombatTest {
     private fun boss(): Foe {
         val zone = index.campaign.zones.first()
         val run = Run(index, zone, 7L, RunContext(index.classes.classes.first().code, 40))
-        val rolled = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
+        val rolled = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList(), awakened = false))
         val foe = PhaseFoes(index, rules).foe(rolled, zone.level)
         return foe.copy(body = Combatant(foe.body.stats + (CoreStat.HEALTH.code to 1e9), foe.body.level, rules), rarity = MonsterRarity.UNIQUE)
     }

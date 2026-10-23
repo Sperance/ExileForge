@@ -33,7 +33,7 @@ class BossPhaseTest {
         val sheet = Sheets.calculate(index, 40, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         val hero = Combatant(sheet.stats + mapOf("STOCK_HEALTH" to 1_000_000.0, "STOCK_ATTACK_PHYSICAL" to 40.0), 40, rules)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, 40))
-        val boss = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
+        val boss = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList(), awakened = false))
         val phases = PhaseFoes(index, rules)
         val steps = index.campaign.phasesByCode.getValue("SUMMON").steps.sortedByDescending { it.at }
         val foe = phases.foe(boss, zone.level).copy(phase = "SUMMON", phases = steps.map { FoePhase(it) }, slots = index.campaign.totems.slots)
@@ -58,7 +58,7 @@ class BossPhaseTest {
         val sheet = Sheets.calculate(index, 40, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         val hero = Combatant(sheet.stats + mapOf("STOCK_HEALTH" to 1_000_000.0, "STOCK_ATTACK_PHYSICAL" to 8.0), 40, rules)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, 40))
-        val boss = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
+        val boss = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList(), awakened = false))
         val totems = index.campaign.totems
         val own = listOf("TOTEM_RAGE", "TOTEM_FLAME").map { FoeTotem(totems.byCode.getValue(it)) }
         val foe = PhaseFoes(index, rules).foe(boss, zone.level).copy(totems = own, totemEvery = 3.0, totemFirst = 1.0, slots = totems.slots)

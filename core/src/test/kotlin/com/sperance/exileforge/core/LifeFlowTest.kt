@@ -30,7 +30,7 @@ class LifeFlowTest {
         val hero = Combatant(sheet.stats + mapOf(CoreStat.HEALTH.code to 100_000.0) + extra, 40, rules)
         val zone = index.campaign.zones.first()
         val run = Run(index, zone, 7L, RunContext(heroClass.code, 40))
-        val rolled = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
+        val rolled = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList(), awakened = false))
         val foe = PhaseFoes(index, rules).foe(rolled, zone.level)
         val boss: Foe = foe.copy(body = Combatant(foe.body.stats + (CoreStat.HEALTH.code to 1e9), foe.body.level, rules))
         return Battle(hero, listOf(boss), rules, index.rules.fight, hero.maxLife, Random(3)).also { b ->

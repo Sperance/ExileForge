@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.FightKinds
 import com.sperance.exileforge.core.campaign.combat.FlaskView
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
@@ -98,7 +99,7 @@ internal fun ExpeditionRun.announce(pack: MonsterAgent) {
  * (сила, судьбоносные строки и счёт Разгона на входе, как их видит сервер).
  *
  * Сделки алтаря ложатся на каждый бой (строки карты, сила босса, лишние строки монстров); уровень боя - свой уровень на карте. Свита фаз
- * босса - в конце стаи, на своём потоке.
+ * босса - в конце стаи, на своём потоке. Бой с пробуждённым стражем - с его ранней яростью ([com.sperance.exileforge.rules.content.AwakeningRule.rage]).
  */
 internal fun ExpeditionRun.battle(): Battle {
     val phases = PhaseFoes(this.index, rules)
@@ -106,11 +107,14 @@ internal fun ExpeditionRun.battle(): Battle {
         val monster = pactFoe(member)
         phases.foe(monster, monster.level.takeIf { it > 0 } ?: fightLevel).copy(round = member.round)
     }
+    val fielded = phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream)), run::bound)
+    val kind = FightKinds.expedition(fielded)
+    val rage = rules.enrage(kind).let { base -> if (members.any { it.monster.awakened }) index.awakenings.rule.rage(base) else base }
     return Battle(
         hero,
-        phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream)), run::bound),
+        fielded,
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit.copy(fate = FateKit.of(run.fate)), model = build, pools = pools,
-        percent = build.gear.percent, cleared = wonLast, fateRun = fateRun,
+        percent = build.gear.percent, cleared = wonLast, kind = kind, rage = rage, fateRun = fateRun,
     )
 }
 

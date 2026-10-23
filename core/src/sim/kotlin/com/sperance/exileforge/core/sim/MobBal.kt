@@ -536,7 +536,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
             val run = run(zone, hero, SimKit.SEED + r, active)
             val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
             val spawns = Spawns(index, run)
-            val boss = spawns.boss(zone, MapEffects.buffs(effects), MapEffects.bossBuffs(effects)) ?: return@repeat
+            val boss = spawns.boss(zone, MapEffects.buffs(effects), MapEffects.bossBuffs(effects), awakened = false) ?: return@repeat
             val level = run.levelOf(zone)
             val foe = arena.phases.foe(boss, level)
             bossLife += foe.body.maxLife + foe.body.maxShield
@@ -699,7 +699,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val (fx, act) = mapEffects(zone, map, mapRarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
         val rr = run(zone, hero, SimKit.SEED + r, act)
         val a = Arena(index, hero, heroEffects(zone, fx, act != null))
-        val boss = Spawns(index, rr).boss(zone, MapEffects.buffs(fx), MapEffects.bossBuffs(fx))!!
+        val boss = Spawns(index, rr).boss(zone, MapEffects.buffs(fx), MapEffects.bossBuffs(fx), awakened = false)!!
         Prober.probe(index, a, boss, rr.levelOf(zone), 8_000L + r)
     }
 
@@ -902,7 +902,7 @@ fun main(args: Array<String>) {
                 val roller = com.sperance.exileforge.rules.roll.MonsterRoller(index)
                 val ms = (0 until 8).map { r ->
                     val run = Run(index, zone, SimKit.SEED + r, RunContext(classes.first().code, zone.level))
-                    val boss = Spawns(index, run).boss(zone, emptyList(), emptyList())!!
+                    val boss = Spawns(index, run).boss(zone, emptyList(), emptyList(), awakened = false)!!
                     Triple(Might.of(index, boss.stats, zone.level), boss.stats, boss)
                 }
                 val base = roller.stats(index.monster(zone.boss)!!, zone.level)
@@ -962,7 +962,7 @@ fun main(args: Array<String>) {
                     val hero = sim.hero(c, System.getProperty("level")?.toIntOrNull() ?: zone.level, Archetype(band), penalty(zone, false))
                     val run = Run(index, zone, SimKit.SEED, RunContext(c.code, hero.level))
                     val arena = Arena(index, hero, index.campaign.resistPenaltyLines(zone.code, false))
-                    val boss = Spawns(index, run).boss(zone, emptyList(), emptyList())!!
+                    val boss = Spawns(index, run).boss(zone, emptyList(), emptyList(), awakened = false)!!
                     val foe = arena.phases.foe(boss, run.levelOf(zone))
                     val battle = if (System.getProperty("dummy") == "1") arena.battle(listOf(arena.phases.foe(Prober.dummy(boss), run.levelOf(zone))), 9173L, false) else arena.battle(listOf(foe), 9173L, true, run::bound)
                     while (battle.outcome == null && battle.time < 60) battle.advance(0.25)

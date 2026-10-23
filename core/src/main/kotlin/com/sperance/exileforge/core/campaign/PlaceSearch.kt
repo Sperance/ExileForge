@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.AtlasNode
+import com.sperance.exileforge.rules.content.AwakeningStanding
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 
@@ -67,6 +68,20 @@ object Places {
         val facts = if (slain) ui("expedition.search_zone_slain", zone.level, guardian, act) else ui("expedition.search_zone", zone.level, guardian, act)
         Place(code, title, facts, zone.level, listOf(ItemSearch.fold(title), ItemSearch.fold(guardian)))
     }.sortedWith(compareBy({ it.level }, { it.title }))
+
+    /**
+     * Зоны дня [day] для отбора «Пробуждения дня», в порядке броска: только открытые [unlocked] - неоткрытые скрыты. Сведения - уровень и
+     * пробуждённый страж (побеждён сегодня - так и сказано), второй строкой - число карт тайника зоны, что будят стража ([waking]).
+     */
+    fun awakened(index: ContentIndex, unlocked: Collection<MapCode>, day: AwakeningDay, waking: Map<MapCode, Int>): List<Place<MapCode>> =
+        day.marks.mapNotNull { (code, standing) ->
+            val zone = index.zone(code)?.takeIf { code in unlocked } ?: return@mapNotNull null
+            val title = mapTitle(code)
+            val guardian = monsterTitle(zone.boss)
+            val head = if (standing == AwakeningStanding.BEATEN) ui("awakening.search_beaten", zone.level) else ui("awakening.search_zone", zone.level, guardian)
+            val facts = listOf(head, ui("awakening.search_maps", waking[code] ?: 0)).joinToString("\n")
+            Place(code, title, facts, zone.level, listOf(ItemSearch.fold(title), ItemSearch.fold(guardian)))
+        }
 
     /** Узлы Атласа [nodes]: имя, ветвь и «взят» по взятым [taken]; слова - имя узла и ветви. */
     fun atlas(nodes: List<AtlasNode>, taken: Set<String>): List<Place<String>> = nodes.map { node ->

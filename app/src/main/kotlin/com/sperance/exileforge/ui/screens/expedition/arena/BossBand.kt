@@ -166,7 +166,8 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 internal fun tapFoe(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
 
 /**
- * Рамка босса в три ряда, одна для любого босса: имя (сжимается до минимума, дальше многоточие) с чипами фазы, неуязвимости с
+ * Рамка босса в три ряда, одна для любого босса: у пробуждённого стража над именем - строка «ПРОБУЖДЁННЫЙ СТРАЖ» (имя то же и не
+ * сжимается ради неё); имя (сжимается до минимума, дальше многоточие) с чипами фазы, неуязвимости с
  * отсчётом, ярости, Разлома и Скверны; слой здоровья - полоса с уровнем и Мощью внутри справа, под ней тонкие нити маны и накоплений; каст. Эффекты босса -
  * не здесь, а лентой над его головой на арене ([EffectRibbon]).
  */
@@ -179,6 +180,9 @@ internal fun tapFoe(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspe
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
+        if (foe.monster.awakened) {
+            Text(ui("awakening.guardian").uppercase(), color = Awakened, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .8.sp, maxLines = 1)
+        }
         Row(Modifier.heightIn(min = 20.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
             if (boss.marks.isNotEmpty()) PhaseChip(boss, name)

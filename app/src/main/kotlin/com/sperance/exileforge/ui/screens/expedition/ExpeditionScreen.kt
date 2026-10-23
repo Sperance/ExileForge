@@ -20,8 +20,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_EXPEDITION
 import com.sperance.exileforge.core.app.unlocked
+import com.sperance.exileforge.core.campaign.AwakeningDay
 import com.sperance.exileforge.core.campaign.Places
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.AwakenedWins
+import com.sperance.exileforge.rules.content.AwakeningStanding
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
@@ -92,6 +95,7 @@ private const val CARD_TOP = .48f
     val scope = rememberCoroutineScope()
     val launch = expedition.launch?.takeIf { world?.token(it.mapCode) != null }
     val stash = remember(game.hero?.items, index) { stashCounts(game) }
+    val awakening = rememberAwakeningDay(index.awakenings, game.hero?.campaign?.awakened ?: AwakenedWins())
     BackHandler(launch != null) { vm.closeZone() }
     LaunchedEffect(camera, camera.viewport, world) {
         if (world == null || camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
@@ -114,7 +118,7 @@ private const val CARD_TOP = .48f
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {
             val story = quests.board?.let { board -> game.index?.quests?.story?.getOrNull(board.chapter)?.steps?.getOrNull(board.step)?.zone?.value?.takeIf { it != com.sperance.exileforge.rules.content.MapCode.NONE.value } }
-            WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+            WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, awakening.marks, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         var searching by remember { mutableStateOf(false) }
         var storyOpen by remember { mutableStateOf(false) }
@@ -125,24 +129,29 @@ private const val CARD_TOP = .48f
             zoomTools(canZoomOut, canZoomIn, { scope.launch { camera.zoomBy(1 / MAP_ZOOM_STEP) } }, { scope.launch { camera.zoomBy(MAP_ZOOM_STEP) } }) +
             CanvasTool(Icons.Outlined.Search, ui("expedition.search"), enabled = true, onClick = { searching = true })
         WorldBar(tools, Modifier.align(Alignment.TopCenter))
-        if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, Modifier.align(Alignment.BottomCenter))
-        if (searching) ZoneSearch(game, vm) { searching = false }
+        if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, awakening, Modifier.align(Alignment.BottomCenter))
+        if (searching) ZoneSearch(game, vm, awakening) { searching = false }
         if (storyOpen && board != null) StorySheet(game, board, questModel) { storyOpen = false }
     }
 }
 
 /**
  * Поиск зоны карты мира ([PlaceSearchSheet]): только открытые зоны кампании - имя, уровень, страж (убит ли - по часам сервера) и акт;
- * недавние - зоны входа на устройстве. Выбор открывает карточку зоны, камера едет к ней сама.
+ * недавние - зоны входа на устройстве. Отбор «Пробуждения дня» [awakening] - открытые зоны дня с числом карт тайника, что будят
+ * стража, и сменой суток. Выбор открывает карточку зоны, камера едет к ней сама.
  */
-@Composable private fun ZoneSearch(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
+@Composable private fun ZoneSearch(game: GameUi, vm: ExpeditionViewModel, awakening: AwakeningDay, onDismiss: () -> Unit) {
     val index = game.index ?: return
     val unlocked = game.progress?.unlocked.orEmpty()
     val now = rememberServerNow(SEARCH_TICK_MS)
     val places = remember(index, unlocked, game.hero?.campaign, now) { Places.zones(index, unlocked, game.hero?.campaign, now) }
     val recent = remember(places, game.heroId) { vm.recentZones(game.heroId).mapNotNull { code -> places.firstOrNull { it.key == code } } }
+    val waking = remember(index, game.hero?.items) { AwakeningDay.wakingMaps(index.awakenings, game.hero?.stash.orEmpty()) }
+    val awakened = remember(index, unlocked, awakening, waking) { Places.awakened(index, unlocked, awakening, waking) }
+    val change = awakeningChange(awakening.changeAt)
+    val filter = PlaceFilter(ui("awakening.title"), awakened, ui("awakening.change", change.clock, change.left), ui("awakening.search_none"), Awakened) { AwakeningSeal(AwakeningStanding.WAITING, 14.dp) }
     val text = PlaceSearchText(ui("expedition.search_hint"), ui("expedition.search_help"), ui("expedition.search_none_help"))
-    PlaceSearchSheet(places, recent, text, onDismiss) { vm.selectZone(it.value) }
+    PlaceSearchSheet(places, recent, text, onDismiss, filter) { vm.selectZone(it.value) }
 }
 
 /** Такт часов поиска зон: «страж убит» хватает раз в минуту. */

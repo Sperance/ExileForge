@@ -706,7 +706,7 @@ class ExpeditionRun(
             val spawns = Spawns(index, run)
             val buffs = MapEffects.buffs(effects)
             val packs = spawns.packs(vaal, buffs)
-            val boss = spawns.boss(zone, buffs, MapEffects.bossBuffs(effects))
+            val boss = spawns.boss(zone, buffs, MapEffects.bossBuffs(effects), awakened = !vaal && run.awakens(if (bossSlain) 1 else 0))
             val bossDown = !vaal && campaign.bossDown(location.code, now)
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)

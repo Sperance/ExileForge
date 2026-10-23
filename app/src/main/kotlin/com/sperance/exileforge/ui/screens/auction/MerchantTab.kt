@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.WearBar
 import com.sperance.exileforge.core.market.wearBar
+import com.sperance.exileforge.core.market.wearable
 import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.session.Reads
@@ -39,7 +40,6 @@ import com.sperance.exileforge.ui.screens.hero.WearChoice
 import com.sperance.exileforge.ui.screens.hero.placeTitle
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
-import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -199,7 +199,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, venue: We
                         Text(bill?.payLabel(ui("auction.buy")) ?: ui("auction.buy"))
                     }
                 }
-                if (wearable(game, item)) {
+                if (game.wearable(item)) {
                     val place = choice.target
                     val reason = remember(item, game.hero, game.index, place, venue) { wearReason(game, item, place, venue) }
                     ForgeButton(

@@ -59,7 +59,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
         LaunchedEffect(itemId) { onDismiss() }
         return
     }
-    val can = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
+    val can = !game.busy && game.controlsHero
     val loose = !instance.equipped && !instance.socketed
     val locked = instance.locked
     val waiting = instance.id in game.link.waitingItems

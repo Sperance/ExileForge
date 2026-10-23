@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.core.market.wearable
 import com.sperance.exileforge.core.sheet.might
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.wearPlaces
@@ -41,9 +42,6 @@ import com.sperance.exileforge.ui.components.StatComparisonPending
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
-/** Whether an item goes on the hero at all: a map and a jewel are placed elsewhere; a tool - in its profession's slot. */
-fun wearable(game: GameUi, item: ItemInstance): Boolean = game.index?.template(item.template)?.slot?.let { !it.isJewelLike } == true
 
 /**
  * Выбор места для «Если надеть»: у вещи слота с несколькими местами (кольца - две руки, фляги) игрок выбирает,
@@ -150,4 +148,4 @@ private fun pendingTitle(slot: Slot?): String = when {
 internal fun placeTitle(slot: Slot): String = uiOr(uiLanguage, "wear.place.${slot.name}", slotTitle(slot))
 
 /** Итог героя для карточки [item] с выбором места [choice], или null, когда вещь не надевается: карта, самоцвет, уже надетая. */
-fun wearTotals(game: GameUi, item: ItemInstance, choice: WearChoice): (@Composable (RelicLook) -> Unit)? = if (!wearable(game, item) || item.equipped || item.socketed) null else ({ look -> WearTotals(game, item, choice, look) })
+fun wearTotals(game: GameUi, item: ItemInstance, choice: WearChoice): (@Composable (RelicLook) -> Unit)? = if (!game.wearable(item) || item.equipped || item.socketed) null else ({ look -> WearTotals(game, item, choice, look) })

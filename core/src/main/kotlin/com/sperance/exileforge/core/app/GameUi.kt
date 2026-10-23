@@ -94,6 +94,9 @@ data class GameUi(
     val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.slotHolders).coerceAtLeast(0)
     val ownsCharacter: Boolean get() = session.signedIn && session.profile?.id == holding.owner
 
+    /** Игрок вправе слать команды о герое на виду: вошёл и это его герой, или он администратор. */
+    val controlsHero: Boolean get() = session.signedIn && (ownsCharacter || isAdmin)
+
     /** Что продажа вещей редкостей [rarities] даст осколками сейчас, словами: правило сервера над сумкой героя; null - ничего. */
     fun shardsFor(rarities: Collection<com.sperance.exileforge.rules.content.Rarity>): String? {
         val rules = index?.rules?.sell ?: return null

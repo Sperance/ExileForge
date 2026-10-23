@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.expedition.LootPresence
 import com.sperance.exileforge.core.expedition.lootPresence
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.wearable
 import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
@@ -36,7 +37,6 @@ import com.sperance.exileforge.ui.components.ownWearAction
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
-import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Panel
@@ -67,7 +67,7 @@ internal fun LootSheet(
     val stand = game.lootPresence(item.id, arriving = expedition.pending > 0)
     val dressed = rememberRunGame(game, vm)
     val choice = rememberWearChoice(dressed, item.item)
-    val wearing = rememberRunWearing(vm)?.takeIf { it.lock != GearLock.OVER && wearable(dressed, item.item) }
+    val wearing = rememberRunWearing(vm)?.takeIf { it.lock != GearLock.OVER && dressed.wearable(item.item) }
     LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {

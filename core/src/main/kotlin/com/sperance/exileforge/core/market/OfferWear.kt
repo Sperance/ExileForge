@@ -41,6 +41,18 @@ fun GameUi.wearBar(item: ItemInstance, place: Slot?, onMap: Boolean): WearBar? {
  */
 fun GameUi.equipBar(item: ItemInstance, place: Slot?): WearBar? = gearBar(item, place, onMap = false)
 
+/** Надевается ли вещь [item] на героя вообще: карта и самоцвет кладутся в другие места, инструмент - в гнездо своей профессии. */
+fun GameUi.wearable(item: ItemInstance): Boolean = index?.template(item.template)?.slot?.let { !it.isJewelLike } == true
+
+/**
+ * Копия героя для вещи [item], если игрок может надеть её из тайника прямо сейчас: герой его ([GameUi.controlsHero]), вещь в тайнике,
+ * не надета и не вставлена, надевается ([wearable]) и замки сервера пускают ([equipBar]); иначе null.
+ */
+fun GameUi.stashWearable(item: ItemInstance): ItemInstance? {
+    val held = hero?.item(item.id) ?: return null
+    return held.takeIf { controlsHero && !it.equipped && !it.socketed && wearable(it) && equipBar(it, null) == null }
+}
+
 /** Замки надевания вещи [item] на место [place]: требования, поход по карте (кроме торговца в нём, [onMap]), забег Разлома по открытому забегу снимка героя, вторая уникалка. */
 private fun GameUi.gearBar(item: ItemInstance, place: Slot?, onMap: Boolean): WearBar? {
     val hero = hero ?: return null

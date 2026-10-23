@@ -21,14 +21,13 @@ import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.market.equipBar
+import com.sperance.exileforge.core.market.stashWearable
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
-import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.LifeRed
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -52,7 +51,7 @@ val LocalInFight = compositionLocalOf { false }
 ) {
     if (game.hero?.item(item.id) == null) return
     val inFight = LocalInFight.current
-    val can = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
+    val can = !game.busy && game.controlsHero
     val smithy = koinViewModel<SmithyViewModel>().model
     val shell = koinViewModel<ShellViewModel>()
     val model = koinViewModel<HeroViewModel>()
@@ -101,13 +100,11 @@ val LocalInFight = compositionLocalOf { false }
 /**
  * «Надеть» своей вещи тайника [item] - главное действие карточки, где место своего не дало (итоги испытаний, Разлом, Бездна, сундуки,
  * письма, ремёсла, сумка и прочие): снятая вещь ложится в тайник, место - выбор карточки ([InspectChoice.wearInto]: вкладки сравнения
- * колец, оружия и фляг). null - кнопки нет: вещь надета, вставлена или не надевается, герой не свой, или надеть нельзя по замкам сервера
- * ([equipBar]: поход по карте, забег Разлома, требования, вторая уникалка).
+ * колец, оружия и фляг). null - кнопки нет: вещь надеть из тайника нельзя ([stashWearable]: не своя, надета, вставлена, не надевается или
+ * не пускают замки сервера).
  */
 @Composable fun ownWearAction(game: GameUi, item: ItemInstance): InspectAction? {
     val model = koinViewModel<HeroViewModel>()
-    val held = game.hero?.item(item.id) ?: return null
-    val mine = game.session.signedIn && (game.ownsCharacter || game.isAdmin)
-    if (!mine || held.equipped || held.socketed || !wearable(game, held) || game.equipBar(held, null) != null) return null
+    val held = game.stashWearable(item) ?: return null
     return InspectAction(ui("hero.equip"), enabled = !game.busy) { model.equip(held.id, wearInto) }
 }

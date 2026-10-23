@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** Ремёсла на экране: открытое окно профессии и последний выбор кузнеца героя на этом устройстве. */
+/** Ремёсла на экране: открытое окно профессии, последний выбор кузнеца и уровни карт картографа героя на этом устройстве. */
 class CraftsModel(
     private val store: HeroCache,
     private val sessions: SessionRepository,
@@ -30,5 +30,13 @@ class CraftsModel(
     fun rememberSmithChoice(heroId: String, choice: SmithChoice) {
         val server = sessions.state.value.server
         scope.launch { store.saveSmithChoice(server, heroId, choice.name) }
+    }
+
+    /** Последний запущенный уровень карты работы картографа [job] героя на этом устройстве: лист работы открывается на нём. */
+    suspend fun chartLevel(heroId: String, job: String): Int? = store.chartLevel(sessions.state.value.server, heroId, job)
+
+    fun rememberChartLevel(heroId: String, job: String, level: Int) {
+        val server = sessions.state.value.server
+        scope.launch { store.saveChartLevel(server, heroId, job, level) }
     }
 }

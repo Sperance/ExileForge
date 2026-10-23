@@ -65,6 +65,11 @@ interface HeroCache {
 
     suspend fun saveSmithChoice(server: String, heroId: String, choice: String)
 
+    /** Последний запущенный уровень карты работы картографа [job] героя на сервере. */
+    suspend fun chartLevel(server: String, heroId: String, job: String): Int?
+
+    suspend fun saveChartLevel(server: String, heroId: String, job: String, level: Int)
+
     /** Герой, в которого последним играли на сервере: запуск с сохранённой сессией открывается сразу в нём. */
     suspend fun lastHero(server: String): String?
 

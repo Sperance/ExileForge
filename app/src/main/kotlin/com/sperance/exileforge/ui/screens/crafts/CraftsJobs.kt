@@ -49,11 +49,13 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
+import com.sperance.exileforge.core.model.crafts.charted
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AdditiveEffect
+import com.sperance.exileforge.rules.content.ChartLevels
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Job
@@ -191,8 +193,8 @@ internal fun resultCard(game: GameUi, job: JobView): Inspect? {
 
 /**
  * Лист работы формулой рецепта: имя и «профессия · с ур. N», выборы листа - строки общего выбора ([ForgePicker]): вариант работы (книга,
- * эссенция, материал, база инструмента, умение ритуала, руна - [jobChoiceLabel]; у ковки - кузнец), вещь у Осквернения, инструмент
- * профессии, добавки работы ([ForgeMultiPicker]); ниже полоса-формула «вход + вход → выход + находки» (касание материала или выхода -
+ * эссенция, материал, база инструмента, умение ритуала, руна - [jobChoiceLabel]; у ковки - кузнец), вещь у Осквернения, уровень карты
+ * картографа ([ChartLevelPicker], под именем - пояснение разброса), инструмент профессии, добавки работы ([ForgeMultiPicker]); ниже полоса-формула «вход + вход → выход + находки» (касание материала или выхода -
  * карточка), что получится - имя, сведения и описание (касание - карточка), поля работы списком с разбором по источникам ([JobFields]),
  * у нехватки - где материал добывается, и внизу кнопка или одна точная причина, почему работу не начать: уровень, вариант, регион,
  * инструмент или нехватка на цикл.
@@ -212,8 +214,10 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
         mutableStateOf(if (smith) SmithChoice.RANDOM.name else (choices.firstOrNull(profession::opens) ?: choices.firstOrNull())?.choice.orEmpty())
     }
     LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
-    val job = work.options.firstOrNull { it.choice == picked } ?: work
-    val variants = work.options.ifEmpty { listOf(work) }
+    val levels = game.index?.chartLevels?.takeIf { it.chooses(work.job) }
+    val chartLevel = rememberChartLevel(game, vm, levels, work, held)
+    val job = levels?.let { work.charted(it, chartLevel.value) } ?: work.options.firstOrNull { it.choice == picked } ?: work
+    val variants = if (levels != null) listOf(job) else work.options.ifEmpty { listOf(work) }
     val targets = remember(work.code, game.hero?.items, game.index) { itemTargets(game, work.job) }
     var target by remember(work.code) { mutableStateOf("") }
     val item = target.takeIf { id -> targets.any { it.id == id } }.orEmpty()
@@ -232,7 +236,9 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             val picksItem = work.job.targetsItem && targets.isNotEmpty()
             val most = crafts?.crafting?.maxAdditives ?: 0
             val picksAdditives = crafts != null && most > 0 && variants.any { crafts.crafting.additives(it.job).isNotEmpty() }
-            if (work.options.isNotEmpty() || picksItem || picksAdditives) Engraved(ui("crafts.choose"))
+            if (levels != null) MutedText(ui("crafts.map_choose_note", ChartLevels.BELOW, ChartLevels.ABOVE), style = MaterialTheme.typography.labelMedium)
+            if (work.options.isNotEmpty() || picksItem || picksAdditives || levels != null) Engraved(ui("crafts.choose"))
+            if (levels != null) ChartLevelPicker(game, levels, work, chartLevel.value) { chartLevel.value = it }
             if (work.options.isNotEmpty()) {
                 val options = remember(game.lang, game.hero?.bag, game.index, work, choices, profession.level) {
                     if (smith) PickOptions.smiths { bagCount(game, it) } else PickOptions.jobChoices(work, choices, profession, game.index) { bagCount(game, it) }
@@ -256,6 +262,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             ) { variant, chosen ->
                 onDismiss()
                 if (smith) SmithChoice.of(variant.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
+                (variant.job as? Job.Chart)?.chosen?.takeIf { it > 0 }?.let { vm.rememberChartLevel(game.heroId, variant.code, it) }
                 vm.start(variant.code, if (variant.job.targetsItem) item else variant.choice, chosen)
             }
             TallestOf(variants, job) { variant ->
@@ -264,6 +271,22 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
         }
     }
     help?.let { key -> crafts?.rules?.let { CraftsGlossaryEntry(it, key) { help = null } } }
+}
+
+/**
+ * Выбранный в листе уровень карты работы картографа [work] (правило [levels]; у прочих работ не читается): идёт эта работа с выбором - он,
+ * иначе последний запущенный на устройстве, иначе уровень героя - в пределах, что герой может задать ([ChartLevels.initial]).
+ */
+@Composable
+private fun rememberChartLevel(game: GameUi, vm: CraftsViewModel, levels: ChartLevels?, work: JobView, held: Crafts): MutableState<Int> {
+    val chart = work.job as? Job.Chart
+    val heroLevel = game.hero?.level ?: 1
+    val running = held.state?.work?.takeIf { it.job == work.code }?.choice?.toIntOrNull()
+    val level = remember(work.code) { mutableIntStateOf(if (levels != null && chart != null) levels.initial(chart, heroLevel, running) else 0) }
+    LaunchedEffect(work.code, game.heroId) {
+        if (levels != null && chart != null && running == null) vm.chartLevel(game.heroId, work.code)?.let { level.intValue = levels.initial(chart, heroLevel, it) }
+    }
+    return level
 }
 
 /**
@@ -396,6 +419,10 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
             FormulaPlus()
             FormulaSlot(ui("crafts.percent", number(find.chance)), Brass, frame = Bronze, onClick = { onOpen(Inspect.Stack(find.item)) }) { StackCell(game.index, find.item, 1, size = 40.dp) }
         }
+        if (job.gemChance > 0) {
+            FormulaPlus()
+            FormulaSlot(ui("crafts.percent", number(job.gemChance)), Brass, frame = Bronze) { GlyphIcon(Glyph.GEM, Brass, Modifier.size(28.dp)) }
+        }
     }
 }
 
@@ -419,10 +446,6 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         val y = size.height / 2
         drawLine(Brush.horizontalGradient(listOf(Bronze, Gold)), Offset(0f, y), Offset(size.width - 4.dp.toPx(), y), strokeWidth = 2.dp.toPx())
         val tip = Path().apply {
-        if (job.gemChance > 0) {
-            FormulaPlus()
-            FormulaSlot(ui("crafts.percent", number(job.gemChance)), Brass, frame = Bronze) { GlyphIcon(Glyph.GEM, Brass, Modifier.size(28.dp)) }
-        }
             moveTo(size.width, y)
             lineTo(size.width - 7.dp.toPx(), y - 5.dp.toPx())
             lineTo(size.width - 7.dp.toPx(), y + 5.dp.toPx())
@@ -453,7 +476,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         verticalAlignment = Alignment.Top,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(jobProduct(job), color = Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(jobProduct(job, game.index?.chartLevels), color = Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             if (meta.isNotEmpty()) Text(meta, color = Muted, style = MaterialTheme.typography.labelSmall)
             if (description.isNotEmpty()) Text(description, color = Parchment, style = MaterialTheme.typography.bodySmall)
         }

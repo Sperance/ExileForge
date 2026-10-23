@@ -36,7 +36,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.choiceTitle
+import com.sperance.exileforge.core.display.choiceLabel
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -199,7 +199,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /** Вариант и примеси идущей работы строкой: «Оружие · Сила · + Кровавый флюс»; без них - null. */
-internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.takeIf { it.isNotEmpty() }?.let(::choiceTitle)) + work.additives.map { "+ ${itemTitle(it)}" })
+internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.takeIf { it.isNotEmpty() }?.let(::choiceLabel)) + work.additives.map { "+ ${itemTitle(it)}" })
     .takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
 /** «Остановить»: опасная компактная иконка-кнопка. */

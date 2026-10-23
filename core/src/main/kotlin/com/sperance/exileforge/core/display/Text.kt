@@ -146,8 +146,11 @@ fun additiveTitle(effect: AdditiveEffect, index: ContentIndex?): String = when (
 /** What a choosing work was told to make: the item, the smith's group and attribute, the tool base or the skill of a tier ritual. */
 fun choiceTitle(choice: String): String = locFirst(LocaleKey.itemName(choice), LocaleKey.choiceName(choice), LocaleKey.equipmentName(choice), LocaleKey.skillName(choice))
 
+/** Выбор идущей работы словами: уровень карты картографа - «ур. 37» (её выбор - число), прочее - [choiceTitle]. */
+fun choiceLabel(choice: String): String = choice.toIntOrNull()?.let { ui("crafts.map_level_choice", it) } ?: choiceTitle(choice)
+
 /** A work with its choice: «Condense Essence · Weeping Essence of Greed». */
-fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"
+fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceLabel(choice)}"
 
 /**
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label

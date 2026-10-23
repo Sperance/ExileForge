@@ -71,6 +71,11 @@ class CraftsViewModel(
     suspend fun smithChoice(heroId: String): SmithChoice? = model.smithChoice(heroId)
 
     fun rememberSmithChoice(heroId: String, choice: SmithChoice) = model.rememberSmithChoice(heroId, choice)
+
+    /** Последний запущенный уровень карты работы [job] героя на этом устройстве. */
+    suspend fun chartLevel(heroId: String, job: String): Int? = model.chartLevel(heroId, job)
+
+    fun rememberChartLevel(heroId: String, job: String, level: Int) = model.rememberChartLevel(heroId, job, level)
 }
 
 /** Сколько счёт сделанного живёт без экрана: поворот экрана не начинает его заново. */

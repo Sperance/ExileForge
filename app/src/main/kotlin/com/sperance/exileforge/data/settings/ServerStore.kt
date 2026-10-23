@@ -5,6 +5,7 @@ import android.content.Context
 import android.provider.Settings
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
@@ -210,6 +211,13 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         context.settings.edit { it[smithKey(server, heroId)] = choice }
     }
     private fun smithKey(server: String, heroId: String) = stringPreferencesKey("smith_choice:$server|$heroId")
+
+    /** Последний запущенный уровень карты работы картографа: лист этой работы открывается на нём. */
+    override suspend fun chartLevel(server: String, heroId: String, job: String): Int? = context.settings.data.first()[chartKey(server, heroId, job)]
+    override suspend fun saveChartLevel(server: String, heroId: String, job: String, level: Int) {
+        context.settings.edit { it[chartKey(server, heroId, job)] = level }
+    }
+    private fun chartKey(server: String, heroId: String, job: String) = intPreferencesKey("chart_level:$server|$heroId|$job")
 
     /**
      * The world of other rules forgotten: when the rules' version moves, the heroes' copies, the waiting commands, the

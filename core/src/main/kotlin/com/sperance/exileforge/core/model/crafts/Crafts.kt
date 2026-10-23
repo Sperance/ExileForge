@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model.crafts
 
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.rules.content.ChartLevels
 import com.sperance.exileforge.rules.content.CraftingRules
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.Job
@@ -37,9 +38,9 @@ import kotlinx.serialization.Serializable
     val options: List<JobView> = emptyList(),
     /** Опыт профессии за удачный цикл - присылает сервер по кривой опыта ремесла с бонусом опыта героя ([Work.experience]). */
     val experience: Double = 0.0,
-) {
     /** Шанс находки камня за удачный цикл с уровнем и бонусом находок героя ([Work.gemChance]); у работы без камней - ноль. */
     val gemChance: Double = 0.0,
+) {
     val code: String get() = job.code
     val kind: JobKind get() = job.kind
     val level: Int get() = job.level
@@ -110,8 +111,16 @@ import kotlinx.serialization.Serializable
     fun made(items: Iterable<ItemInstance>): List<ItemInstance> = items.filter { item -> item.origin?.let { it.profession == profession && it.at >= startedAt } == true }
 }
 
-/** The work [code] as the hero runs it: the chosen variant of a choosing work, else the work itself. */
-fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.firstOrNull { it.code == code }?.let { job -> job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } }
+/**
+ * Работа [code], как её ведёт герой: выбранный вариант работы с выбором, у карты картографа - она с выбранным уровнем ([levels], правило
+ * [ChartLevels]), иначе сама работа; выбор не подходит - null.
+ */
+fun ProfessionView.job(code: String, choice: String, levels: ChartLevels?): JobView? = jobs.firstOrNull { it.code == code }?.let { job ->
+    job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } ?: choice.toIntOrNull()?.let { level -> levels?.let { job.charted(it, level) } }
+}
+
+/** Карта картографа с выбранным уровнем [level]: входы умножены по правилу [levels]; не карта без тира или уровень вне пределов - null. */
+fun JobView.charted(levels: ChartLevels, level: Int): JobView? = (job as? Job.Chart)?.let { levels.at(it, level) }?.let { copy(job = it, choice = level.toString()) }
 
 /** The crafts of a hero, whole: every answer of the crafts routes is this. */
 @Serializable data class CraftsState(
@@ -126,5 +135,5 @@ fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.first
     val from: Long = 0,
 )
 
-/** The work under way, as its profession lists it: the chosen variant when it has one. */
-val CraftsState.running: JobView? get() = work?.let { w -> professions.firstOrNull { it.code == w.profession }?.job(w.job, w.choice) }
+/** Идущая работа, как её числит профессия: выбранный вариант, у карты - с выбранным уровнем по правилу [levels]. */
+fun CraftsState.running(levels: ChartLevels?): JobView? = work?.let { w -> professions.firstOrNull { it.code == w.profession }?.job(w.job, w.choice, levels) }

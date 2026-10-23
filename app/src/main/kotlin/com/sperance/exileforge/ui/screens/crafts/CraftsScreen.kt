@@ -163,7 +163,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             return@ForgePanel
         }
         val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession }
-        val job = profession?.job(work.job, work.choice)
+        val job = profession?.job(work.job, work.choice, game.index?.chartLevels)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (help != null) Engraved(ui("crafts.now_label"))
@@ -187,7 +187,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             }
             if (profession != null && job != null) LevelEta(profession, job, work, offset)
         }
-        crafts.state?.running?.let { StockRow(game, work, it) }
+        crafts.state?.running(game.index?.chartLevels)?.let { StockRow(game, work, it) }
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
         val made by vm.made.collectAsStateWithLifecycle()
         val heroModel = koinViewModel<HeroViewModel>()

@@ -58,6 +58,7 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.ChartLevels
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
@@ -88,15 +89,17 @@ fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.wor
 fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
 
 /**
- * What a work makes, in words: the stack, the smith's range or the cartographer's location.
+ * What a work makes, in words: the stack, the smith's range or the cartographer's location. Карта с выбранным уровнем - разброс её уровня
+ * по правилу [levels] и зоны работы.
  *
  * Работа с выбором - выбранный вариант как обычная работа: инструмент кузнеца - база инструмента, ритуал тира - умение, резьба - руна на
  * выходе, Осквернение - та же вещь с запечатанной судьбоносной строкой.
  */
-fun jobProduct(view: JobView): String = when (val job = view.job) {
+fun jobProduct(view: JobView, levels: ChartLevels?): String = when (val job = view.job) {
     is Job.Item -> itemTitle(job.output)
     is Job.Equipment -> ui("crafts.kind_equipment", job.levels.first, job.levels.last)
-    is Job.Chart -> ui("crafts.kind_map", job.levels.first, job.levels.last)
+    is Job.Chart -> levels?.takeIf { job.chosen > 0 }?.spread(job, job.chosen)?.let { ui("crafts.kind_map_chosen", it.first, it.last, job.levels.first, job.levels.last) }
+        ?: ui("crafts.kind_map", job.levels.first, job.levels.last)
     is Job.Flask -> equipmentTitle(job.output)
     is Job.Book -> ui("crafts.kind_book", job.upTo)
     is Job.Condense -> ui("crafts.kind_condense")

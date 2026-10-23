@@ -43,7 +43,7 @@ import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.expedition.LootPresence
-import com.sperance.exileforge.core.expedition.presentLoot
+import com.sperance.exileforge.core.expedition.presentLootViews
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
@@ -334,7 +334,7 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
         if (selecting) SellPresetRow(it)
         MutedText(ui(if (selecting) "sell.summary_hint" else "sell.summary_hold"), style = MaterialTheme.typography.bodySmall)
     }
-    val gear = game.presentLoot(loot.equipment, arriving = tally.receiving).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
+    val gear = game.presentLootViews(loot.equipment, arriving = tally.receiving)
     LootPanel(game.index, gear, loot.items, emptyList(), onStack) { (piece, presence) ->
         val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
         val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = false)

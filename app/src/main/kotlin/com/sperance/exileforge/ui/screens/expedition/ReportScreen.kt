@@ -39,10 +39,9 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.expedition.presentLoot
+import com.sperance.exileforge.core.expedition.presentLootViews
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.decorTime
@@ -329,7 +328,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Caption(ui("expedition.report_recipe"))
         LootChip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
-    val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
+    val gear = game.presentLootViews(reward.equipment, arriving = hud.rewardAwaiting > 0)
     val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
     LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack, heading = { Caption(ui(it.caption())) }) { (piece, presence) ->
         val marked = piece.id in marks

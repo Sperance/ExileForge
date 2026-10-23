@@ -38,11 +38,10 @@ import com.sperance.exileforge.core.campaign.run.LootKind
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.expedition.presentLoot
+import com.sperance.exileforge.core.expedition.presentLootViews
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Buzz
-import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
@@ -138,7 +137,7 @@ private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Bo
             )
             if (fresh) Text(ui("expedition.bag.new"), color = Vital, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
         }
-        val gear = game.presentLoot(reward.equipment, arriving = arriving).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
+        val gear = game.presentLootViews(reward.equipment, arriving = arriving)
         LootPanel(game.index, gear, reward.items, emptyList(), onStack) { (piece, presence) ->
             key(piece.id) {
                 val marked = piece.id in marks

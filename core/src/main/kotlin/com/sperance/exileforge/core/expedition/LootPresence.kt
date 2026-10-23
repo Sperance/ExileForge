@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core.expedition
 
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.BulkSale
 import com.sperance.exileforge.rules.roll.ItemInstance
 
@@ -41,6 +43,10 @@ fun GameUi.lootPresence(id: String, arriving: Boolean = false): LootPresence {
 
 /** Вещи снимка награды [equipment] с их положением у героя, без пропавших, в порядке снимка. */
 fun GameUi.presentLoot(equipment: List<ItemInstance>, arriving: Boolean = false): List<Pair<ItemInstance, LootPresence>> = equipment.map { it to lootPresence(it.id, arriving) }.filter { (_, presence) -> presence.shown }
+
+/** Вещи [presentLoot] видом для показа ([view]) с их положением; вещь, которую контент не знает, пропускается. */
+fun GameUi.presentLootViews(equipment: List<ItemInstance>, arriving: Boolean): List<Pair<ItemView, LootPresence>> =
+    presentLoot(equipment, arriving).mapNotNull { (instance, presence) -> view(instance)?.let { it to presence } }
 
 /**
  * Можно ли пометить вещь [id] к продаже посреди захода - то же правило, что лот продажи в итогах ([BulkSale.pickable]): вещь в

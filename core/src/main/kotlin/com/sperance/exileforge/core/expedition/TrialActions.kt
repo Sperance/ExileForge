@@ -153,7 +153,7 @@ class TrialActions(
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
             expedition.atlasEarned(owner, report.rewards.flatMap { it.atlas })
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
-            notices.refused(report.rejected, events.associate { it.n to it.kind.refusedKey() })
+            notices.refused(report.rejected, events.associate { it.n to it.kind.refusedKey() }, emptyMap())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(owner)) heroSync.readHero()
             if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
         } catch (e: CancellationException) {

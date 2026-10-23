@@ -239,6 +239,9 @@ class ExpeditionActions(
     /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
     private val freeProgress: Boolean get() = sessions.state.value.freeProgress(heroes.state.value)
 
+    /** Видит ли игрок отказы сервера по журналу захода: только администратор и тестировщик - игроку отказ правила не показывают. */
+    private val seesRefusals: Boolean get() = sessions.state.value.grants(heroes.state.value)
+
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
 
@@ -430,7 +433,7 @@ class ExpeditionActions(
      *
      * Ключ пачки - на диске до её ухода (новый ключ пишется сразу, пачка в полёте снова ждёт лишь заявленное, [JournalWriter.written]):
      * потерянный с процессом ответ спрашивается снова; после ответа - одна запись. Отклонённое начало боя - не потеря игрока, о нём
-     * не говорят; прочие отказы - красный тост с причиной сервера поверх тоста добычи. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
+     * не говорят; прочие отказы администратору и тестировщику - красный тост с причиной сервера по коду правила поверх тоста добычи, игроку - ничего. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
      * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
      * офлайн или таймаут - снова скоро.
      */
@@ -458,7 +461,7 @@ class ExpeditionActions(
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
-            notices.refused(report.rejected.filter { it !in engages }, pending.associate { it.n to it.kind.refusedKey() })
+            if (seesRefusals) notices.refused(report.rejected.filter { it !in engages }, pending.associate { it.n to it.kind.refusedKey() }, report.refusals)
             if (!report.open && j.settled) done(j, report) else journals.now()
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)

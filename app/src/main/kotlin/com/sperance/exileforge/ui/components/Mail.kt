@@ -60,6 +60,7 @@ import com.sperance.exileforge.core.model.feedback.MailLink
 import com.sperance.exileforge.core.model.feedback.MailLinkKind
 import com.sperance.exileforge.core.model.feedback.MailMute
 import com.sperance.exileforge.core.model.feedback.MailQuota
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.listedAt
@@ -67,11 +68,13 @@ import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает; у золота её нет. */
+/**
+ * Что несёт письмо, кроме копий вещей, строкой каждое: золото, стопки, вещи витрины - с карточкой, которую строка открывает; у золота
+ * её нет. Копии вещей письмо показывает короткими строками ([LootRow]).
+ */
 fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
     if (mail.attachment.gold > 0) add(ui("mail.gold", compactNumber(mail.attachment.gold)) to null)
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
-    mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}") to Inspect.Copy(it)) }
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
 }
 
@@ -465,10 +468,14 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
     }
 }
 
-/** Вложение письма - рамкой в конце текста: строки с карточкой вещи и «Забрать» героем в игре, один раз. */
+/**
+ * Вложение письма - рамкой в конце текста: строки золота, стопок и витрины, копии вещей - короткими строками ([LootRow]: вердикт к
+ * надетому и цена торговца), касание - карточка; ниже «Забрать» героем в игре, один раз.
+ */
 @Composable private fun Attachment(game: GameUi, model: FeedbackModel, busy: Boolean, mail: Mail) {
     val lines = attachmentLines(mail)
-    if (lines.isEmpty()) return
+    val copies = remember(mail.attachment.instances, game.index) { mail.attachment.instances.mapNotNull { item -> game.view(item)?.let { item to it } } }
+    if (lines.isEmpty() && copies.isEmpty()) return
     val inspect = rememberInspect()
     val shape = RoundedCornerShape(12.dp)
     Column(
@@ -480,6 +487,9 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
             Box(Modifier.fillMaxWidth().heightIn(min = ATTACHMENT_LINE).then(card?.let { Modifier.clickable { inspect(it) } } ?: Modifier), contentAlignment = Alignment.CenterStart) {
                 Text(line, color = Vital, style = MaterialTheme.typography.labelLarge)
             }
+        }
+        copies.forEach { (item, piece) ->
+            LootRow(piece, verdict = rememberGearVerdict(game, item), price = piece.sellPrice(), modifier = Modifier.padding(vertical = 3.dp)) { inspect(Inspect.Copy(item)) }
         }
         if (mail.claimable) {
             ForgeButton(state = ButtonState.of(!busy && game.heroId.isNotBlank()), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {

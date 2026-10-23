@@ -155,6 +155,9 @@ class HeroActions(
     /** Сундук с добычей вскрыт: добыча на экране, пока её не закрыли. */
     fun openChest(code: String) = heroCommand { id -> heroes.chest(api.hero.openChest(id, code)) }
 
+    /** Сундуки стопки [code] вскрыты одним запросом, пока в тайнике есть место: итог на экране, пока его не закрыли. */
+    fun openChests(code: String) = heroCommand { id -> heroes.chest(api.hero.openChests(id, code)) }
+
     /** «Лист Угнетения» [code]: новое имя [name] текущему герою - прежнее свободно сразу; список героев перечитывается. */
     fun renameHero(code: String, name: String) = heroCommand(setOf(Reads.HERO, Reads.CHARACTERS)) { id ->
         api.hero.useBag(id, BagUse(code, BagAct.Rename(name.trim()))).name?.let { notices.toast(ui("bag.renamed", it)) }

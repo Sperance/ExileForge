@@ -38,17 +38,16 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Вещь в списке - «Плита» (выбор владельца): гнездо с иконкой в цвете редкости и уровнем на углу ([LevelBadge], как у плитки сумки),
- * имя серифами, под ним номер экземпляра уникальной или мифической, строка «что это · база», а ниже - каждая строка вещи со значком тира:
- * модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом угле.
- * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
- * [compact] - две линии (лут после боя): имя целиком, под ним значки тиров и отметки, без текстов строк.
+ * имя серифами, под ним строка «что это · база» с номером экземпляра уникальной или мифической в конце ([SerialMark]), а ниже - каждая
+ * строка вещи со значком тира: модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом
+ * угле. [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список. Короткая
+ * строка лута - [LootRow].
  *
  * [worn] - надетое или вставленное: строка в золотой рамке, значок на иконке. [unwearable] - причины правил, почему сейчас не надеть.
  * [extra] - факты после слота, [trailing] - напротив имени (цена лота), [price] - цена торговца, когда напротив имени больше ничего,
- * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. Две линии вместо плиты - лут после боя; «Ценник» -
- * ярлык цены сверху плиты; «лучше или хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка;
- * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - значки тиров, качество, состояния и замок; уровень -
- * только на гнезде; каждая строка вещи видна без карточки. [accent] - цвет рамки метки строки ([note]): «лучше надетого» в походе.
+ * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. «Ценник» - ярлык цены сверху плиты; «лучше или
+ * хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка; свёртка строк - все сразу или под
+ * чипом «Свойства · N»; уровень - только на гнезде; каждая строка вещи видна без карточки. [accent] - цвет рамки метки строки ([note]).
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -66,7 +65,6 @@ fun ItemRow(
     footer: @Composable (ColumnScope.() -> Unit)? = null,
     locked: Boolean = item.item.locked,
     waiting: Boolean = false,
-    compact: Boolean = false,
     tag: (@Composable RowScope.() -> Unit)? = null,
     verdict: GearVerdict? = null,
     onLongClick: (() -> Unit)? = null,
@@ -75,8 +73,6 @@ fun ItemRow(
     onClick: () -> Unit,
 ) {
     val look = relicLook(item.rarity)
-    val legend = look.legend
-    val card = RoundedCornerShape(16.dp)
     val base = item.figures
     val sub = (
         listOf(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot)) + facts +
@@ -84,27 +80,9 @@ fun ItemRow(
         ).joinToString(" · ")
     Box(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card).shadow(8.dp, card, clip = false).clip(card)
-                .background(
-                    when {
-                        legend != null -> Brush.verticalGradient(listOf(look.top, look.bottom))
-                        worn -> Brush.verticalGradient(listOf(Gold.copy(alpha = .10f).compositeOver(DepthTop), Gold.copy(alpha = .06f).compositeOver(DepthBottom)))
-                        else -> Brush.verticalGradient(listOf(DepthTop, DepthBottom))
-                    },
-                )
-                .border(
-                    1.dp,
-                    when {
-                        selected -> Gold
-                        accent != null -> accent.copy(alpha = .7f)
-                        worn -> Gold.copy(alpha = .5f)
-                        legend != null -> look.gold.copy(alpha = .55f)
-                        else -> look.rarity.copy(alpha = .2f)
-                    },
-                    card,
-                )
+            Modifier.fillMaxWidth().itemPlate(look, selected, worn, accent)
                 .combinedClickable(enabled = enabled, onLongClick = onLongClick, onClick = onClick).padding(start = 12.dp, end = 12.dp, top = if (tag != null) 16.dp else 10.dp, bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 RowSocket(item, look, worn, locked, unwearable)
@@ -113,45 +91,67 @@ fun ItemRow(
                         item.title,
                         color = look.name,
                         style = itemName(15),
-                        maxLines = if (compact) 3 else 2,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (item.item.serial > 0) SerialLine(item.item.serial, look)
-                    if (!compact) Text(sub, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(sub, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        SerialMark(item.item.serial, look.accent, MaterialTheme.typography.labelSmall)
+                    }
                 }
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                     trailing?.invoke() ?: price?.let { GoldPrice(it) }
                     verdict?.let { GearVerdictBadge(it) }
-                    if (!compact) item.summary.quality?.let { RollPill(it) }
+                    item.summary.quality?.let { RollPill(it) }
                 }
             }
-            if (compact) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
-                    item.orderedLines.forEach { TierHex(it.marks, 16.dp) }
-                    if (item.orderedLines.isNotEmpty()) Spacer(Modifier.width(3.dp))
+            if (item.states.isNotEmpty() || waiting) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     QualityBadge(item, compact = true)
-                    item.summary.quality?.let { RollPill(it) }
                     RowStates(item)
+                    if (waiting) PendingMark()
                 }
             } else {
-                if (item.states.isNotEmpty() || waiting) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        QualityBadge(item, compact = true)
-                        RowStates(item)
-                        if (waiting) PendingMark()
-                    }
-                } else {
-                    QualityBadge(item, compact = true)
-                }
-                if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                if (item.orderedLines.isNotEmpty()) FoldedLines(item.orderedLines, lines, look)
+                QualityBadge(item, compact = true)
             }
+            if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+            if (item.orderedLines.isNotEmpty()) FoldedLines(item.orderedLines, lines, look)
             footer?.invoke(this)
         }
         tag?.let { PriceTag(Modifier.align(Alignment.TopEnd).padding(end = 12.dp), it) }
     }
 }
+
+/**
+ * Подложка строки вещи - одна у плиты ([ItemRow]) и короткой строки ([LootRow]): тень и скругление, фон легенды, надетой или обычной,
+ * рамка - выбранная золотом, метка цветом [accent], надетая, легенда золотом, прочие - нитью редкости; выбранная светится.
+ */
+internal fun Modifier.itemPlate(look: RelicLook, selected: Boolean, worn: Boolean, accent: Color?): Modifier {
+    val legend = look.legend
+    return glow(Gold, on = selected, radius = 10.dp, shape = PlateShape).shadow(8.dp, PlateShape, clip = false).clip(PlateShape)
+        .background(
+            when {
+                legend != null -> Brush.verticalGradient(listOf(look.top, look.bottom))
+                worn -> Brush.verticalGradient(listOf(Gold.copy(alpha = .10f).compositeOver(DepthTop), Gold.copy(alpha = .06f).compositeOver(DepthBottom)))
+                else -> Brush.verticalGradient(listOf(DepthTop, DepthBottom))
+            },
+        )
+        .border(
+            1.dp,
+            when {
+                selected -> Gold
+                accent != null -> accent.copy(alpha = .7f)
+                worn -> Gold.copy(alpha = .5f)
+                legend != null -> look.gold.copy(alpha = .55f)
+                else -> look.rarity.copy(alpha = .2f)
+            },
+            PlateShape,
+        )
+}
+
+/** Скругление подложки строки вещи. */
+private val PlateShape = RoundedCornerShape(16.dp)
 
 /** Ярлык цены «Ценника»: свисает с верхнего края плиты, скруглён снизу, в тонкой золотой нити. */
 @Composable private fun PriceTag(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
@@ -170,7 +170,7 @@ fun ItemRow(
  *
  * Отметка на строке одна: чего не хватает, говорит карточка или подсказка отметки.
  */
-@Composable private fun RowSocket(item: ItemView, look: RelicLook, worn: Boolean, locked: Boolean, unwearable: List<String>) {
+@Composable internal fun RowSocket(item: ItemView, look: RelicLook, worn: Boolean, locked: Boolean, unwearable: List<String>) {
     val shape = if (look.legend == RelicLook.Legend.STARS) CircleShape else RoundedCornerShape(12.dp)
     Box(
         Modifier.size(44.dp).then(if (look.legend != null) Modifier.glow(look.glow.copy(alpha = .4f), radius = 7.dp, shape = shape) else Modifier)
@@ -199,21 +199,6 @@ fun ItemRow(
         LevelBadge(item, look, Modifier.align(Alignment.BottomEnd).offset(x = LevelBadgeOffset.x, y = LevelBadgeOffset.y))
     }
 }
-
-/** «◆ № 41 ◆ ──»: номер экземпляра под именем в плите. */
-@Composable private fun SerialLine(serial: Long, look: RelicLook) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            "◆ № $serial ◆",
-            color = UniqueGoldInk,
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = RelicSerif, fontWeight = FontWeight.Bold),
-        )
-        Box(Modifier.width(28.dp).height(1.dp).background(look.gold.copy(alpha = .3f)))
-    }
-}
-
-/** Золото номера экземпляра. */
-private val UniqueGoldInk = Color(0xFFF0C76A)
 
 /** Состояния вещи значками с подсказкой: порча, отражение, влияние, ремесло. */
 @Composable private fun RowStates(item: ItemView) {

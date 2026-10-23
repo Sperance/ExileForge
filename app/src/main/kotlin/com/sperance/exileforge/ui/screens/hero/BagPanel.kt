@@ -41,6 +41,7 @@ import com.sperance.exileforge.core.hero.BagStack
 import com.sperance.exileforge.core.hero.StackUse
 import com.sperance.exileforge.core.hero.StackUses
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.stashFree
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ItemCode
@@ -211,6 +212,8 @@ private val GAP = 6.dp
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
  *
  * [onRead] - книга умения класса читается сразу, [onEssence] - эссенция в кузню, [onOpenChest] - сундук-добыча открывается на месте,
+ * [onOpenAllChests] - «Открыть все (N)» у стопки больше одного сундука: вся стопка одним запросом, пока в тайнике есть место; тайник полон
+ * с самого начала - кнопка погашена с подписью «Тайник полон» (то же правило свободных мест, что у сервера, `StashRules.free`),
  * [onSeal] - печать Атласа в раздел печатей кузни, [onUse] - «Использовать» стопки с действием контента ([BagUseFlow]). Сундук можно и
  * выставить на аукцион, торговцу - нет.
  */
@@ -223,6 +226,7 @@ private val GAP = 6.dp
     onRead: (String) -> Unit = {},
     onEssence: (String) -> Unit = {},
     onOpenChest: (String) -> Unit = {},
+    onOpenAllChests: (String) -> Unit = {},
     onSeal: (String) -> Unit = {},
     onUse: (String) -> Unit = {},
 ) {
@@ -242,7 +246,17 @@ private val GAP = 6.dp
             if (StackUse.BOOK in uses && skill != null) {
                 RowButton(ui(if ((game.hero?.skills?.level(skill.code) ?: 0) > 0) "bag.read_book" else "bag.learn_book"), onClick = { onRead(skill.code) }, state = idle)
             }
-            if (StackUse.CHEST in uses) RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle)
+            if (StackUse.CHEST in uses) {
+                RowButton(ui("chest.open"), onClick = { onOpenChest(code) }, state = idle, kind = if (stack.amount > 1) ButtonKind.Secondary else ButtonKind.Primary)
+                if (stack.amount > 1) {
+                    val room = game.stashFree()?.let { it > 0 } ?: true
+                    RowButton(
+                        if (room) ui("chest.open_all", stack.amount) else ui("chest.stash_full"),
+                        onClick = { onOpenAllChests(code) },
+                        state = ButtonState.of(!game.busy && room),
+                    )
+                }
+            }
             if (StackUse.USE in uses) RowButton(ui("bag.use"), onClick = { onUse(code) }, state = idle)
         }
     }

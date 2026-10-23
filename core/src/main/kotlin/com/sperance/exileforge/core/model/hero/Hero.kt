@@ -228,11 +228,22 @@ object ServerClock {
 /** The hero's unique finds as `GET hero/uniques` answers them: template code — its find. */
 @kotlinx.serialization.Serializable data class UniquesView(val finds: Map<String, UniqueFind> = emptyMap())
 
-/** A loot chest opened: what it gave — gold, stacks, things (already in the stash or its overflow). */
+/**
+ * Открытые сундуки-добыча [code]: что они дали - золото, стопки, вещи (уже в тайнике или переполнении), сколько открыто [opened] и сколько
+ * осталось в стопке неоткрытыми из-за полного тайника [unopened]. Ответ сервера без счёта - один открытый сундук.
+ */
 @kotlinx.serialization.Serializable
 data class ChestOpening(
     val code: String,
     val gold: Long = 0,
     val items: Map<String, Long> = emptyMap(),
     val equipment: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList(),
-)
+    val opened: Int = 1,
+    val unopened: Int = 0,
+) {
+    /** Итог «Открыть все», а не одного сундука: открыто больше одного или часть осталась в стопке. */
+    val batch: Boolean get() = opened > 1 || unopened > 0
+
+    /** Строк итога - стопки и вещи, без золота: стопка - одна строка. */
+    val pieces: Int get() = items.size + equipment.size
+}

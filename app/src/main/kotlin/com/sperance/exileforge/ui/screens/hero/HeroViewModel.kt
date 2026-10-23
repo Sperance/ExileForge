@@ -68,6 +68,7 @@ class HeroViewModel(
     fun sellOverflow(itemId: String) = hero.sellOverflow(itemId)
     fun learnSkill(code: String) = hero.learnSkill(code)
     fun openChest(code: String) = hero.openChest(code)
+    fun openChests(code: String) = hero.openChests(code)
 
     /** «Лист Угнетения» [code]: новое имя [name] текущему герою. */
     fun renameHero(code: String, name: String) = hero.renameHero(code, name)

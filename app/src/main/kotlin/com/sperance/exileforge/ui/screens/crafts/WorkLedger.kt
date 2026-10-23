@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,8 +48,6 @@ import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.slotTitle
-import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ItemCode
@@ -63,12 +60,13 @@ import com.sperance.exileforge.ui.components.FoldBody
 import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.LootRow
 import com.sperance.exileforge.ui.components.foldToggle
+import com.sperance.exileforge.ui.components.rememberGearVerdict
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberNow
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
@@ -77,7 +75,6 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
-import com.sperance.exileforge.ui.theme.rarityColor
 
 /**
  * Итог работы для книги учёта: и с начала работы ([WorkTally] сервера), и за сессию ([WorkGains] клиента). [made] - сколько вещей сделано
@@ -123,7 +120,7 @@ internal class WorkSums(
  * часам сервера со сдвигом [offset]: «1:05»), циклы («130 −2» впустую), опыт («+150к ▲1» уровни), сделано (счёт сервера, плитки нет при 0)
  * и уровень профессии [level]; не влезло число - кегль плитки меньше; под плитками - почему циклы прошли впустую («Впустую ×3: нет
  * подходящих основ»); затем каждая стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное
- * красным); сделанные вещи [made] - строками с иконкой в рамке редкости, именем её цвета, видом и уровнем: первые [MADE_SHOWN], прочие -
+ * красным); сделанные вещи [made] - короткими строками ([LootRow]): первые [MADE_SHOWN], прочие -
  * под «Ещё N». [onShow] - кнопка «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
  *
  * [folded] - книга плашки работы: видны только плитки со стрелкой, касание плиток раскрывает и сворачивает всё, что под ними.
@@ -208,7 +205,7 @@ internal fun WorkLedger(
 /** Сделанные вещи строками: первые [MADE_SHOWN], прочие раскрываются касанием «Ещё N ▾». */
 @Composable internal fun MadeList(game: GameUi, made: List<ItemInstance>, onOpen: (ItemInstance) -> Unit) {
     var open by remember(made.size) { mutableStateOf(false) }
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         (if (open) made else made.take(MADE_SHOWN)).forEach { item -> MadeRow(game, item) { onOpen(item) } }
         if (made.size > MADE_SHOWN) {
             Row(
@@ -223,23 +220,16 @@ internal fun WorkLedger(
     }
 }
 
-/** Сделанная вещь строкой 40dp: иконка в рамке редкости, имя её цвета, вид и уровень справа; касание - [onClick]. */
+/**
+ * Сделанная вещь короткой строкой ([LootRow]): тип, вердикт Мощи к надетому над ценой торговца; касание - [onClick]. Вещь, чьей основы
+ * нет в контенте, - одним именем.
+ */
 @Composable private fun MadeRow(game: GameUi, item: ItemInstance, onClick: () -> Unit) {
     val view = game.view(item)
-    val tone = rarityColor(item.rarity.name)
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Box(Modifier.size(32.dp).background(Abyss, RoundedCornerShape(6.dp)).border(1.dp, tone.copy(alpha = .7f), RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-            view?.let { ItemIcon(it, tone, Modifier.size(22.dp)) }
-        }
-        Column(Modifier.weight(1f)) {
-            Text(view?.title ?: equipmentTitle(item.template), color = tone, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            view?.let { Text(it.weaponType?.let(::weaponTitle) ?: slotTitle(it.slot), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-        }
-        view?.let { Text(ui("crafts.made_level", it.level), color = Parchment, style = MaterialTheme.typography.labelMedium) }
+    if (view != null) {
+        LootRow(view, verdict = rememberGearVerdict(game, item), price = view.sellPrice(), onClick = onClick)
+    } else {
+        Text(equipmentTitle(item.template), color = Muted, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 

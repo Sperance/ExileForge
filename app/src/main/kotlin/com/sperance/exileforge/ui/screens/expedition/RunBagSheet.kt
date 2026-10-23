@@ -147,13 +147,15 @@ private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Bo
             key(instance.id) {
                 game.view(instance)?.let { piece ->
                     val marked = piece.id in marks
+                    val (verdict, mark) = rememberLootVerdict(dressed, instance, flasks = true)
                     PieceLine(
                         piece,
                         presence,
+                        verdict,
                         selected = marked,
                         onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
                         trailing = if (marked) ({ SaleCoin() }) else null,
-                        mark = rememberLootVerdict(dressed, instance, flasks = true).second,
+                        mark = mark,
                     ) { onItem(piece) }
                 }
             }

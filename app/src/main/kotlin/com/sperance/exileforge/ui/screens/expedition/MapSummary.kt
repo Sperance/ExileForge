@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.compactNumber
@@ -53,9 +54,10 @@ import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
-import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LootCellSize
+import com.sperance.exileforge.ui.components.LootRow
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.RowNote
 import com.sperance.exileforge.ui.components.SaleMarked
 import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellLine
@@ -335,16 +337,16 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
     game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
         game.view(instance)?.let { piece ->
             val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
-            val (_, mark) = rememberLootVerdict(dressed, instance, flasks = false)
+            val (verdict, mark) = rememberLootVerdict(dressed, instance, flasks = false)
             when {
-                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
+                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, verdict, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
 
                 lot != null -> {
                     val marked = lot.chosen(piece.id)
-                    SaleMarked(marked) { PieceLine(piece, presence, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
+                    SaleMarked(marked) { PieceLine(piece, presence, verdict, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
                 }
 
-                else -> PieceLine(piece, presence, mark = mark) { onItem(piece) }
+                else -> PieceLine(piece, presence, verdict, mark = mark) { onItem(piece) }
             }
         }
     }
@@ -391,21 +393,22 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
 }
 
 /**
- * Добытая вещь «Полем боя»: две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
- * Надетая ([presence]) - строкой с меткой «Надето», без действий. [mark] - метка похода напротив имени и рамка её цвета ([LootMark]).
+ * Добытая вещь «Полем боя» короткой строкой ([LootRow]): имя и тип, справа вердикт Мощи [verdict] над ценой торговца; всё прочее - в
+ * карточке по нажатию. Надетая ([presence]) - строкой с меткой «Надето», без действий. [mark] - метка похода после имени и рамка её цвета.
  */
 @Composable internal fun PieceLine(
     item: ItemView,
     presence: LootPresence,
+    verdict: GearVerdict?,
     selected: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
-    mark: LootMark? = null,
+    mark: RowNote? = null,
     onClick: () -> Unit,
 ) = if (presence.worn) {
     WornLootRow(item)
 } else {
-    ItemRow(item, note = mark?.text, noteColor = mark?.color ?: Gold, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, accent = mark?.color, onClick = onClick)
+    LootRow(item, verdict = verdict, price = item.sellPrice(), note = mark, selected = selected, trailing = trailing, onLongClick = onLongClick, onClick = onClick)
 }
 
 /** Сколько итоги карты глухи к нажатиям после появления, мс. */

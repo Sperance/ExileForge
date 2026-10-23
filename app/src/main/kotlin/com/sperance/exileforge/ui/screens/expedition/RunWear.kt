@@ -8,7 +8,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.GearLock
@@ -22,6 +21,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.RowNote
 import com.sperance.exileforge.ui.components.rememberGearVerdict
 import com.sperance.exileforge.ui.theme.Boon
 import com.sperance.exileforge.ui.theme.Vital
@@ -30,25 +30,22 @@ import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** Метка строки лута в походе: [text] напротив имени и рамка строки её цвета [color]. */
-internal class LootMark(val text: String, val color: Color)
-
 /**
  * Метка строки лута по уже посчитанному вердикту [verdict] вещи [item]: фляга, что герой может надеть, - «Новая фляга · 0 зар.» (только с
  * [flasks] - пока набор в походе ещё меняется), прочая вещь лучше надетого ([GearVerdict.better]) - «▲ Лучше надетого»; иначе null.
  */
-internal fun lootMark(game: GameUi, item: ItemInstance, verdict: GearVerdict?, flasks: Boolean): LootMark? {
+internal fun lootMark(game: GameUi, item: ItemInstance, verdict: GearVerdict?, flasks: Boolean): RowNote? {
     verdict ?: return null
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
     return when {
-        flask -> LootMark(ui("expedition.new_flask"), Boon).takeIf { flasks }
-        verdict.better -> LootMark(ui("expedition.better_worn"), Vital)
+        flask -> RowNote(ui("expedition.new_flask"), Boon).takeIf { flasks }
+        verdict.better -> RowNote(ui("expedition.better_worn"), Vital)
         else -> null
     }
 }
 
 /** Вердикт вещи [item] строки лута и её метка ([lootMark]): сравнение - с копией героя, когда она уже у него. */
-@Composable internal fun rememberLootVerdict(game: GameUi, item: ItemInstance, flasks: Boolean): Pair<GearVerdict?, LootMark?> {
+@Composable internal fun rememberLootVerdict(game: GameUi, item: ItemInstance, flasks: Boolean): Pair<GearVerdict?, RowNote?> {
     val verdict = rememberGearVerdict(game, game.hero?.item(item.id) ?: item)
     return verdict to lootMark(game, item, verdict, flasks)
 }

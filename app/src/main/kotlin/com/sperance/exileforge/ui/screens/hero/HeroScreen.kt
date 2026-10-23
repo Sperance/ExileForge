@@ -160,6 +160,10 @@ fun HeroScreen() {
                     stackCode = null
                     model.openChest(chest)
                 },
+                onOpenAllChests = { chest ->
+                    stackCode = null
+                    model.openChests(chest)
+                },
                 onUse = { used ->
                     stackCode = null
                     useCode = used

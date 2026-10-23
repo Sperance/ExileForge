@@ -7,6 +7,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.character.GearVerdict
@@ -20,10 +22,12 @@ import com.sperance.exileforge.core.sheet.gearVerdict
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.theme.LifeRed
+import com.sperance.exileforge.ui.theme.LossText
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /**
  * Вердикт вещи для героя, сложенный вне главного потока и запомненный на вещь и лист героя: строки длинного
@@ -68,4 +72,29 @@ private fun MightShift.figure(): String = signedNumber(after - before) { compact
 @Composable fun MightShiftBadge(might: MightShift, modifier: Modifier = Modifier) {
     if (!might.shown) return
     Text(ui("might.short", might.figure()), modifier, color = might.shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
+}
+
+/**
+ * Вердикт колонки цифр короткой строки ([LootRow]): сдвиг Мощи стрелкой и числом - рост «⚜ ▲ 1.2k» цветом `Vital`, падение «⚜ ▼ 340»
+ * цветом `LossText`; для чтения с экрана - «Мощь вырастет на …» / «упадёт на …». Сдвиг, что не стоит показа, не пишется. У инструмента -
+ * «⚒ лучше» / «⚒ хуже», как в [GearVerdictBadge].
+ */
+@Composable fun GearVerdictArrow(verdict: GearVerdict, modifier: Modifier = Modifier) {
+    if (verdict is ToolVerdict) {
+        GearVerdictBadge(verdict, modifier)
+        return
+    }
+    val might = verdict.might?.takeIf { it.shown } ?: return
+    val rise = might.shift == Shift.UP
+    val figure = compactNumber(abs(might.after - might.before))
+    val spoken = ui(if (rise) "row.might_up_full" else "row.might_down_full", figure)
+    Text(
+        ui(if (rise) "row.might_up" else "row.might_down", figure),
+        modifier.clearAndSetSemantics { contentDescription = spoken },
+        color = if (rise) Vital else LossText,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+        softWrap = false,
+        style = MaterialTheme.typography.labelSmall,
+    )
 }

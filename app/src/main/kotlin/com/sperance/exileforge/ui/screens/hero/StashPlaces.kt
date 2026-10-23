@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.stashFree
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -31,7 +32,7 @@ import com.sperance.exileforge.ui.theme.*
     val rules = game.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
     val held = hero.items.size
-    val full = held >= capacity
+    val full = game.stashFree() == 0
     val price = rules.price(hero.info.stashSlots)
     val pack = minOf(rules.slotStep, rules.maxSlots - capacity)
     val bill = game.goldBill(price) ?: return
@@ -77,7 +78,7 @@ import com.sperance.exileforge.ui.theme.*
     val hero = game.hero ?: return
     val rules = game.index?.rules?.stash ?: return
     if (hero.overflow.isEmpty()) return
-    val full = hero.items.size >= rules.capacity(hero.info.stashSlots)
+    val full = game.stashFree() == 0
     val inspect = rememberInspect()
     FoldPanel(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -170,6 +170,9 @@ fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 /** Плашки особого блока карточки копии [item], что не строки вещи ([HeroLens.itemSeals]). */
 fun GameUi.itemSeals(item: ItemInstance): List<CardSeal> = HeroLens.itemSeals(index, hero, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
+
+/** Свободных мест самого тайника героя по правилу сервера (`StashRules.free`), без переполнения; нет героя или правил - null. */
+fun GameUi.stashFree(): Int? = hero?.let { hero -> index?.rules?.stash?.free(hero.items.size, hero.info.stashSlots) }
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.socketing(jewel: ItemInstance, socket: String): WearOutcome = HeroLens.socketing(index, hero, jewel, socket)
 

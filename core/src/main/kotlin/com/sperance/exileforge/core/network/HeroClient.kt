@@ -280,6 +280,9 @@ class HeroClient internal constructor(private val http: Transport) {
     /** Opens one loot chest of the bag: the server rolls what is inside. */
     suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))
 
+    /** «Открыть все»: сундуки стопки [code] одним запросом, пока в тайнике есть место; неоткрытые остаются в стопке. */
+    suspend fun openChests(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open/all", heroQuery(heroId, "code" to code))
+
     /** Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill]. */
     suspend fun slotSkill(heroId: String, kind: String, index: Int, skill: String?, condition: String? = null): HeroSkills = http.post("$HERO/skills/slot", heroQuery(heroId, "kind" to kind, "index" to index.toString(), "skill" to skill, "condition" to condition))
 

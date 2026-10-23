@@ -307,9 +307,9 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
         gear.forEach { (piece, presence) ->
             val marked = piece.id in marks
-            val (_, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
+            val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
             SaleMarked(marked) {
-                PieceLine(piece, presence, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
+                PieceLine(piece, presence, verdict, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
             }
         }
         if (hud.gearLock == null) MutedText(ui("expedition.report_wear_hint"))

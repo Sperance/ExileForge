@@ -28,7 +28,7 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card.
+ * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as a short row ([LootRow]).
  * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
  * With [onItem] a card opens its comparison with what is worn. Каждая надеваемая вещь несёт стрелки урона и
  * защиты. Вещь показывается по её положению у героя ([presentLoot]): проданной нет, надетая - с меткой
@@ -62,15 +62,9 @@ import com.sperance.exileforge.ui.theme.*
 
                     else -> {
                         val (verdict, mark) = rememberLootVerdict(game, instance, flasks = false)
-                        ItemRow(
-                            piece,
-                            note = mark?.text,
-                            noteColor = mark?.color ?: Gold,
-                            compact = true,
-                            price = game.sellPrice(instance),
-                            verdict = verdict,
-                            accent = mark?.color,
-                        ) { if (onItem != null) onItem(piece) else inspect(Inspect.Copy(instance)) }
+                        LootRow(piece, verdict = verdict, price = game.sellPrice(instance), note = mark) {
+                            if (onItem != null) onItem(piece) else inspect(Inspect.Copy(instance))
+                        }
                     }
                 }
             }
@@ -91,8 +85,8 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Надетая вещь лута: строка с меткой «Надето», без цены и действий - во всех списках лута одна; касание - карточка. */
+/** Надетая вещь лута: короткая строка с отметкой надетого, без цены и действий - во всех списках лута одна; касание - карточка. */
 @Composable internal fun WornLootRow(piece: ItemView) {
     val inspect = rememberInspect()
-    ItemRow(piece, compact = true, worn = true) { inspect(Inspect.Copy(piece.item)) }
+    LootRow(piece, worn = true) { inspect(Inspect.Copy(piece.item)) }
 }

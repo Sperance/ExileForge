@@ -201,7 +201,10 @@ import org.koin.compose.viewmodel.koinViewModel
 
                 RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
 
-                RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal) { model.runCommand(RunCommand.StepBack) }
+                RunPhase.GATE -> {
+                    val withMap = remember(run, hud.gate, run.mapEffects) { hud.gate?.let(run::withPortal) }
+                    VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, withMap, onEnter = model::enterVaal) { model.runCommand(RunCommand.StepBack) }
+                }
 
                 RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
 

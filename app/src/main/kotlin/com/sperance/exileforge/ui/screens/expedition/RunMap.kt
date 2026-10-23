@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
@@ -178,10 +177,10 @@ private fun Path.diamond(centre: Offset, unit: Float) {
 
 /**
  * The whole map, over everything: all the explored ground fitted to the screen, the
- * monsters in the hero's light, a legend of what each mark is, what the map still holds, and what
- * the map item, the atlas, the guild tree and the potion lay on it - each share in its own section once.
+ * monsters in the hero's light, a legend of what each mark is, what the map still holds, and its modifiers.
  *
- * Каждая доля - в своём разделе один раз ([ExpeditionRun.windowLines]), строки читаются как строки вещи.
+ * Модификаторы - одно окно и для карты, и для зоны Ваал ([ExpeditionRun.modifiers], [ModifierList]): список сумм по характеристикам,
+ * строка с несколькими источниками раскрывается стрелкой в «источник … доля».
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -221,18 +220,8 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 legendOf(world).forEach { (tint, text) -> Legend(tint, text) }
             }
-            val sections = remember(run, run.mapEffects) { run.windowLines }
-            MapSection.entries.forEach { section ->
-                val lines = sections[section].orEmpty()
-                if (lines.isEmpty()) {
-                    section.empty?.let { MutedText(ui(it)) }
-                    return@forEach
-                }
-                Engraved(ui(section.title))
-                lines.forEach { (stat, value) ->
-                    ModifierLine(effectText(stat, value, run.index), Glyph.ofStat(stat), stats = listOf(stat), index = run.index)
-                }
-            }
+            val modifiers = remember(run, run.mapEffects) { run.modifiers }
+            ModifierList(modifiers, run.index)
         }
     }
 }

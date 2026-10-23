@@ -108,8 +108,8 @@ class ExpeditionRun(
     internal val seed: Long,
     /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря: с ними встали стаи на входе. */
     val baseEffects: Map<String, Double>,
-    /** Строки захода сверх карты-предмета и атласа: штраф сопротивлений акта и строки зоны Ваал. */
-    val runLines: Map<String, Double>,
+    /** Штраф сопротивлений акта зоны захода строками карты: в зоне Ваал - той же зоны под порталом. */
+    val penaltyLines: Map<String, Double>,
     /** This run is the Vaal zone behind the portal. */
     val vaal: Boolean,
     startPools: HeroPools?,
@@ -131,6 +131,9 @@ class ExpeditionRun(
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
         internal set
+
+    /** Строки захода сверх карты-предмета и атласа: штраф сопротивлений акта ([penaltyLines]) и строки зоны Ваал. */
+    val runLines: Map<String, Double> = MapEffects.sum(penaltyLines, if (vaal) run.context.vaal?.effects.orEmpty() else emptyMap())
 
     /**
      * Когда отдыхающий страж вернётся на пост, мс часов сервера; null - он не отдыхает. Отдых, что кончился посреди
@@ -273,19 +276,36 @@ class ExpeditionRun(
     /** Строки карты-предмета захода по источникам, как их сложил сервер на входе ([ActiveMap.sources]). */
     val mapSources: List<SourcedEffects> get() = run.context.active?.sources.orEmpty()
 
+    /** Окно модификаторов этой карты или зоны Ваал ([window]): в зоне Ваал её строки - первыми. */
+    val modifiers: ModifierWindow get() = window(if (vaal) run.context.vaal else null)
+
+    /** Итог с картой на портале Ваал: строки зоны [portal], что за порталом, и строки этой карты под ним - как их покажет окно в зоне. */
+    fun withPortal(portal: VaalZone): ModifierWindow = window(portal)
+
     /**
-     * Строки окна карты по разделам ([MapSection]), каждая доля один раз: источники карты-предмета ([mapSources]); свои строки захода
-     * ([runLines]) и сделки алтарей - к строкам карты; [atlas] - по долям [origins], кроме сил монстров, что сервер уже положил строками
-     * карты источника атласа ([AtlasEffects.laid]).
+     * Модификаторы одним списком сумм по характеристикам ([ModifierWindow]), каждая доля один раз и под своим источником: строки зоны
+     * Ваал [zone] (с силой Атласа), источники карты-предмета ([mapSources]; в зоне Ваал строки карты - «под порталом»), штраф
+     * сопротивлений акта ([penaltyLines]), сделки алтарей ([pacts]), [atlas] - по долям [origins], кроме сил монстров, что сервер уже
+     * положил строками карты источника атласа ([AtlasEffects.laid]).
      */
-    val windowLines: Map<MapSection, Map<String, Double>>
-        get() {
-            val laid = AtlasEffects.laid(atlas)
-            val sourced = mapSources.map { MapSection.of(it.source) to it.effects } + (MapSection.MAP to MapEffects.sum(runLines, pacts))
-            val shares = atlas.filterKeys { it !in laid }.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> MapSection.of(source.kind) to mapOf(code to share) } }
-            return (sourced + shares).groupBy({ it.first }, { it.second })
-                .mapValues { (_, parts) -> parts.reduce(MapEffects::sum).filterValues { it != 0.0 } }
+    private fun window(zone: VaalZone?): ModifierWindow {
+        val map = when {
+            zone == null -> ModifierSource.MAP
+            run.context.active != null -> ModifierSource.PORTAL_MAP
+            else -> ModifierSource.PORTAL_ZONE
         }
+        val laid = AtlasEffects.laid(atlas)
+        val parts = buildList {
+            zone?.let { add(ModifierSource.VAAL to it.effects) }
+            mapSources.forEach { add(ModifierSource.of(it.source, map) to it.effects) }
+            add(ModifierSource.ACT_PENALTY to penaltyLines)
+            add(ModifierSource.PACTS to pacts)
+            atlas.filterKeys { it !in laid }.forEach { (code, value) ->
+                origins.parts(code, value).forEach { (source, share) -> add(ModifierSource.of(source.kind) to mapOf(code to share)) }
+            }
+        }
+        return ModifierWindow.of(parts, zone?.atlasEffect ?: 1.0)
+    }
 
     /**
      * Босс основной карты убит в этом заходе: право на шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]) до конца
@@ -678,8 +698,8 @@ class ExpeditionRun(
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
-            val own = MapEffects.sum(index.campaign.resistPenaltyLines(location.code, onMap = context.active != null), if (vaal) context.vaal?.effects.orEmpty() else emptyMap())
-            val effects = MapEffects.sum(base, own)
+            val penalty = index.campaign.resistPenaltyLines(location.code, onMap = context.active != null)
+            val effects = MapEffects.sum(base, MapEffects.sum(penalty, if (vaal) context.vaal?.effects.orEmpty() else emptyMap()))
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))
             val stats = build.body.stats
@@ -700,7 +720,7 @@ class ExpeditionRun(
                 world.placeFeatures(run.features.all, features, index.campaign.features)
             }
             return ExpeditionRun(
-                index, zone, run, journal, world, build, rules, run.seed, effects, own, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
+                index, zone, run, journal, world, build, rules, run.seed, effects, penalty, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, callbacks, fateRun,
             ).also {
                 it.swiftAllowed = prefs.swiftAllowed

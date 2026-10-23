@@ -8,6 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -17,20 +22,24 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.run.ModifierWindow
 import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.display.MapLines
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.mapTitle
-import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MonsterCode
-import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.FoldBody
+import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.theme.*
 
 /** The Vaal zone's own reds (the owner's mockup I «Кровавый алтарь»). */
@@ -51,9 +60,10 @@ private object Altar {
  * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  *
- * От портала только отходят: он остаётся и откроется снова.
+ * Строки зоны - с силой Атласа, те же числа, что в зоне ([MapLines.vaal]); под ними свёрнутая строка «Итог с картой» - [withMap]
+ * тем же списком, что окно модификаторов в зоне ([ModifierList]). От портала только отходят: он остаётся и откроется снова.
  */
-@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, onEnter: () -> Unit, onBack: () -> Unit) {
+@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, withMap: ModifierWindow?, onEnter: () -> Unit, onBack: () -> Unit) {
     val index = game.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
         Column(
@@ -79,8 +89,10 @@ private object Altar {
                 )
             }
             if (zone != null) {
+                val lines = remember(zone, index, uiLanguage) { index?.let { MapLines.vaal(zone, it) } ?: zone.rolls.map { displayName(it.code.value) } }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    zone.rolls.forEach { ModLine(rollText(index, it)) }
+                    lines.forEach { ModLine(it) }
+                    if (withMap != null && index != null) WithMap(withMap, index)
                 }
             } else {
                 Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -108,8 +120,20 @@ private object Altar {
     }
 }
 
-/** A rolled line of the zone as its sentence; a code the content does not know reads as the code. */
-private fun rollText(index: ContentIndex?, roll: Roll): String = index?.let { i -> i.modifier(roll.code)?.let { modifierLine(i, it, roll.values(it)) } } ?: displayName(roll.code.value)
+/** «Итог с картой» под строками зоны: свёрнут, касание раскрывает сумму Ваал и карты под порталом тем же списком, что окно в зоне. */
+@Composable private fun WithMap(window: ModifierWindow, index: ContentIndex) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 44.dp).foldToggle(open, ui("vaal.with_map")) { open = !open },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(ui("vaal.with_map"), color = Altar.title, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            FoldChevron(open, Altar.muted)
+        }
+        FoldBody(open) { ModifierList(window, index, titled = false) }
+    }
+}
 
 /** One modifier: a scarlet rhombus and its sentence on a dark red strip, a vein down its edge. */
 @Composable private fun ModLine(text: String) {

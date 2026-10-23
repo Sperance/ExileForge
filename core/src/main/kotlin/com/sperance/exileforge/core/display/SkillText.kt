@@ -213,6 +213,18 @@ object SkillText {
         return numbered?.let { fillTemplate(it.replace("{v}", "{0}"), listOf(number)) } ?: plainStatLine(stat, operation, value)
     }
 
+    /**
+     * Доля [value] прибавки к характеристике [stat] коротким числом со знаком и единицей ([statValue]) - так, как её читает фраза сервера:
+     * шаблон с минусом у числа («Сопротивления героя стихиям: −{v}%») ставит минус у прибавки; без шаблона - знак самого числа.
+     */
+    fun statShare(stat: String, value: Double, index: ContentIndex?): String {
+        val key = "stat.template.$stat.${Op.ADD.name}"
+        val negative = locOr("$key.negative", "").takeIf { value < 0 && it.isNotBlank() }
+        val shown = if (negative != null) abs(value) else value
+        val flips = (negative ?: locOr(key, "")).let { it.contains(ModifierText.MINUS + "{v}") || it.contains("-{v}") }
+        return signedNumber(if (flips) -shown else shown) { statValue(stat, it, index) }
+    }
+
     /** Строка стата без шаблона сервера: имя характеристики и число по операции. */
     private fun plainStatLine(stat: String, operation: Op, value: Double): String {
         val size = statNumber(stat, abs(value))

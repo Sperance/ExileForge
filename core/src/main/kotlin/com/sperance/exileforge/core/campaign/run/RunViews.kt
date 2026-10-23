@@ -50,7 +50,6 @@ import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
-import com.sperance.exileforge.rules.roll.EffectSource
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
@@ -59,7 +58,6 @@ import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import com.sperance.exileforge.rules.sheet.SourceKind
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -551,37 +549,6 @@ data class LevelUp(val from: Int, val to: Int) {
  * рычаг).
  */
 data class ObjectAction(val feature: MapFeature, val progress: Float?)
-
-/**
- * Раздел окна карты ([ExpeditionRun.windowLines]): строки самой карты, скарабеи, влияние, атлас, древо гильдии, зелье; [title] - ключ
- * заголовка, [empty] - ключ строки пустого раздела (null - пустой не показывается).
- */
-enum class MapSection(val title: String, val empty: String? = null) {
-    MAP("map.modifiers", "map.no_modifiers"),
-    SCARAB("map.scarabs"),
-    INFLUENCE("map.influence"),
-    ATLAS("map.atlas"),
-    GUILD("map.guild"),
-    POTION("map.potion"),
-    ;
-
-    companion object {
-        /** Раздел доли с источником [kind]: гильдия и зелье - свои, остаток атласа - атлас. */
-        fun of(kind: SourceKind): MapSection = when (kind) {
-            SourceKind.GUILD -> GUILD
-            SourceKind.POTION -> POTION
-            else -> ATLAS
-        }
-
-        /** Раздел строк карты-предмета источника [source]. */
-        fun of(source: EffectSource): MapSection = when (source) {
-            EffectSource.MAP -> MAP
-            EffectSource.ATLAS -> ATLAS
-            EffectSource.SCARAB -> SCARAB
-            EffectSource.INFLUENCE -> INFLUENCE
-        }
-    }
-}
 
 /** Подпись холода под жетоном героя на карте: «❄ шаг −X%» по множителю [RunHud.stride], процент - как в сводке героя ([shareText]). */
 fun strideText(stride: Double): String = ui("expedition.chill.stride", shareText((1 - stride) * 100))

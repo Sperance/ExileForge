@@ -255,10 +255,7 @@ class UiStringsTest {
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
             TestContent.index.stats.stats.filter { TestContent.index.stats.section(it.code) != null }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
-            com.sperance.exileforge.core.campaign.run.MapSection.entries.forEach { section ->
-                add(section.title)
-                section.empty?.let(::add)
-            }
+            com.sperance.exileforge.core.campaign.run.ModifierSource.entries.forEach { add(it.key) }
             com.sperance.exileforge.core.campaign.BuffSource.entries.forEach { add("fight.part_${it.name.lowercase()}") }
             Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
             com.sperance.exileforge.core.campaign.HeroBar.entries.forEach { add(it.fullKey) }

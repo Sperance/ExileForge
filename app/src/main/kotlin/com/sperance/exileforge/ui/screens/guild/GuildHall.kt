@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.romanNumeral
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
@@ -370,9 +371,7 @@ private fun Modifier.place(at: Offset, unit: Dp, size: DpSize): Modifier = offse
 }
 
 /** Номер ряда римской цифрой: ряды древа немногочисленны. */
-private fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (rest, out), (value, sign) ->
-    rest % value to out + sign.repeat(rest / value)
-}.second
+private fun roman(n: Int): String = romanNumeral(n)
 
 /**
  * Лист узла: имя и ранг, ветвь и ряд (у вершины - «вершина ветви»), описание с числом правил (`perRank`), эффект «сейчас → со

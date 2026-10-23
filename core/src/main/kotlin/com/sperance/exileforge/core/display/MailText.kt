@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.contest.ContestPrizeMail
 import com.sperance.exileforge.core.feedback.MailCategory
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
@@ -97,30 +98,35 @@ object MailSchemas {
     private val auction = listOf(titled(0, ::lotItem), arg(1)).let { lot -> MailSchema(lot, lot) }
 
     /** Аргумент [index] - имя перечисления [E], или null. */
-    private inline fun <reified E : Enum<E>> enumArg(args: List<String>, index: Int): E? = args.getOrNull(index)?.let { name -> enumValues<E>().firstOrNull { it.name == name } }
+    private inline fun <reified E : Enum<E>> enumArg(args: List<String>, index: Int): E? = ContestPrizeMail.enumArg<E>(args, index)
 
     /**
-     * Письмо о призе состязания ([SystemMail.CONTEST_PRIZE]): вид словами, мера с боссом, лига уровнями, место, число героев, результат
-     * мерой и, у первых мест, титул и его срок.
+     * Письмо о призе состязания ([SystemMail.CONTEST_PRIZE]; аргументы - [ContestPrizeMail]): вид словами, мера с боссом, лига уровнями,
+     * место (в теме - римской цифрой), число героев, результат мерой и, у первых мест, титул и его срок.
      */
-    private val contest = listOf(
-        MailSlot { args -> enumArg<ContestKind>(args, CONTEST_KIND)?.let { ui("contest.mail.kind.${it.name}") }.orEmpty() },
-        MailSlot { args -> enumArg<ContestMetric>(args, CONTEST_METRIC)?.let { contestMetricLine(it, args.getOrNull(CONTEST_BOSS)?.takeIf(String::isNotBlank)?.let(::MonsterCode)) }.orEmpty() },
-        MailSlot { args ->
-            val from = args.getOrNull(CONTEST_FROM)?.toIntOrNull() ?: return@MailSlot ""
-            val to = args.getOrNull(CONTEST_TO)?.toIntOrNull() ?: 0
-            if (to > 0) ui("contest.league_range", from, to) else ui("contest.league_open", from)
-        },
-        arg(CONTEST_PLACE),
-        arg(CONTEST_SIZE),
-        MailSlot { args -> enumArg<ContestMetric>(args, CONTEST_METRIC)?.let { metric -> args.getOrNull(CONTEST_VALUE)?.toLongOrNull()?.let { contestValue(metric, it) } }.orEmpty() },
-        MailSlot { args ->
-            val metric = enumArg<ContestMetric>(args, CONTEST_METRIC)
-            val kind = enumArg<ContestKind>(args, CONTEST_KIND)
-            if (metric != null && kind != null) contestTitle(metric, kind) else ""
-        },
-        MailSlot { args -> args.getOrNull(CONTEST_UNTIL)?.toLongOrNull()?.takeIf { it > 0 }?.let(::stampText).orEmpty() },
-    ).let { slots -> MailSchema(slots, slots) }
+    private val contest: MailSchema = run {
+        val head = listOf(
+            MailSlot { args -> enumArg<ContestKind>(args, ContestPrizeMail.KIND)?.let { ui("contest.mail.kind.${it.name}") }.orEmpty() },
+            MailSlot { args -> enumArg<ContestMetric>(args, ContestPrizeMail.METRIC)?.let { contestMetricLine(it, args.getOrNull(ContestPrizeMail.BOSS)?.takeIf(String::isNotBlank)?.let(::MonsterCode)) }.orEmpty() },
+            MailSlot { args ->
+                val from = args.getOrNull(ContestPrizeMail.FROM)?.toIntOrNull() ?: return@MailSlot ""
+                val to = args.getOrNull(ContestPrizeMail.TO)?.toIntOrNull() ?: 0
+                if (to > 0) ui("contest.league_range", from, to) else ui("contest.league_open", from)
+            },
+        )
+        val tail = listOf(
+            arg(ContestPrizeMail.SIZE),
+            MailSlot { args -> enumArg<ContestMetric>(args, ContestPrizeMail.METRIC)?.let { metric -> args.getOrNull(ContestPrizeMail.VALUE)?.toLongOrNull()?.let { contestValue(metric, it) } }.orEmpty() },
+            MailSlot { args ->
+                val metric = enumArg<ContestMetric>(args, ContestPrizeMail.METRIC)
+                val kind = enumArg<ContestKind>(args, ContestPrizeMail.KIND)
+                if (metric != null && kind != null) contestTitle(metric, kind) else ""
+            },
+            MailSlot { args -> args.getOrNull(ContestPrizeMail.UNTIL)?.toLongOrNull()?.takeIf { it > 0 }?.let(::stampText).orEmpty() },
+        )
+        val romanPlace = MailSlot { args -> args.getOrNull(ContestPrizeMail.PLACE)?.toIntOrNull()?.let(::romanNumeral).orEmpty() }
+        MailSchema(head + romanPlace + tail, head + arg(ContestPrizeMail.PLACE) + tail)
+    }
 
     /** Письмо о торгах: предмет лота, число, сферы и имя сферы цены. */
     private val bidding = listOf(titled(0, ::lotItem), arg(1), arg(2), titled(3, ::itemTitle)).let { deal -> MailSchema(deal, deal) }
@@ -156,16 +162,6 @@ object MailSchemas {
 
     private const val FIXED = "FIXED"
 
-    /** Номера аргументов письма о призе состязания ([SystemMail.CONTEST_PRIZE]). */
-    private const val CONTEST_KIND = 0
-    private const val CONTEST_METRIC = 1
-    private const val CONTEST_BOSS = 2
-    private const val CONTEST_FROM = 3
-    private const val CONTEST_TO = 4
-    private const val CONTEST_PLACE = 5
-    private const val CONTEST_SIZE = 6
-    private const val CONTEST_VALUE = 7
-    private const val CONTEST_UNTIL = 8
 }
 
 /** Имя категории письма словами: «Рынок», «Награды», «Администрация» (`mail.category.<имя>`). */

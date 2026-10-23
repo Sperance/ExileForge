@@ -180,21 +180,22 @@ internal fun burnText(mail: Mail): String = when {
  * знаком отправителя, темой, первой строкой и сроком; касание открывает письмо листом поверх, письмо со ссылкой - её цель ([MailLinks]). «Прочитать все» и «Удалить
  * прочитанные» - разом; список игнора - тут же.
  *
- * Почта: лист с вкладками, письмо - листом поверх, новое письмо - своим листом. Письма героев видны лишь адресату - ящик читается глазами
+ * Почта: лист с вкладками, письмо - листом поверх, новое письмо - своим листом; [focus] - письмо, открытое сразу (итоги состязания). Письма героев видны лишь адресату - ящик читается глазами
  * героя в игре.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
+fun MailSheet(game: GameUi, focus: String? = null, onDismiss: () -> Unit) {
     val model = koinViewModel<FeedbackViewModel>().model
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) {
         model.loadMail()
         model.letters.loadIgnored()
+        focus?.let(model::readMail)
     }
     val sheets = LocalSystemSheets.current
-    var open by remember { mutableStateOf<String?>(null) }
+    var open by remember { mutableStateOf(focus) }
     var box by remember { mutableStateOf(MailBox.ALL) }
     var ignoring by remember { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {

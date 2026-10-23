@@ -52,12 +52,17 @@ data class GameSettings(
     val bag: BagFilter = BagFilter(),
     /** Ключ строки, что окно загрузки показало последней ([com.sperance.exileforge.core.i18n.LaunchLines]): следующая будет другой. */
     val lastLaunchLine: String = "",
+    /** Письма о призах состязаний, чьи итоги уже показаны при входе, по id героя: последние [GameSettings.SHOWN_PRIZES]. */
+    val shownPrizes: Map<String, List<String>> = emptyMap(),
 ) {
     companion object {
         val PAUSES = listOf(0, 30, 50)
 
         /** Сколько недавних зон входа помнит устройство на героя ([recentZones]). */
         const val RECENT_ZONES = 5
+
+        /** Сколько показанных итогов состязаний помнит устройство на героя ([shownPrizes]). */
+        const val SHOWN_PRIZES = 30
     }
 }
 

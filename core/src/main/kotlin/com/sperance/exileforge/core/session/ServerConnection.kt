@@ -56,6 +56,9 @@ object Reads {
     const val CONTESTS = "contests"
     const val CONTEST_TABLE = "contest_table"
 
+    /** Итоги состязаний при входе героя: письма о призах и свой титул. */
+    const val CONTEST_RESULTS = "contest_results"
+
     /** Карточка игрока. */
     const val PLAYER_CARD = "player_card"
 

@@ -2,8 +2,11 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.contest.ContestResultsModel
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.bodyPlaces
@@ -13,7 +16,9 @@ import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ClassesFile
+import com.sperance.exileforge.rules.content.ContestHonour
 import com.sperance.exileforge.ui.components.accountRole
+import org.koin.compose.koinInject
 
 /**
  * Who the hero is, as the header draws it: the purse and the experience move here and nowhere else.
@@ -34,6 +39,8 @@ import com.sperance.exileforge.ui.components.accountRole
     val classes: ClassesFile?,
     /** Роль аккаунта: значок рядом с именем, у игрока - нет. */
     val role: com.sperance.exileforge.core.network.AccountRole? = null,
+    /** Лучший действующий титул состязаний: встаёт на место строки класса, рамка портрета - его медалью; null - нет. */
+    val honour: ContestHonour? = null,
 )
 
 /** The tree's points the header's chip says: free of all. */
@@ -63,9 +70,11 @@ import com.sperance.exileforge.ui.components.accountRole
     val index = game.index
     val tree = remember(index, hero.level, hero.tree) { game.treeState?.let { TreePoints(it.available, it.total) } }
     val role = game.session.profile?.role
-    return remember(hero.info, game.world.portraits, tree, index, role) {
+    val results by koinInject<ContestResultsModel>().results.collectAsStateWithLifecycle()
+    val honour = results.honour?.takeIf { results.heroId == hero.info.id }
+    return remember(hero.info, game.world.portraits, tree, index, role, honour) {
         val info = hero.info
-        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes, accountRole(role))
+        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes, accountRole(role), honour)
     }
 }
 

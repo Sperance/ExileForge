@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.romanNumeral
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MonsterCode
@@ -361,6 +362,4 @@ private val ROW = 38.dp
 }
 
 /** Номер римской цифрой: главы и ступени Бестиария немногочисленны. */
-private fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (rest, out), (value, sign) ->
-    rest % value to out + sign.repeat(rest / value)
-}.second
+private fun roman(n: Int): String = romanNumeral(n)

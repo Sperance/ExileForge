@@ -60,8 +60,17 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
         }
     }
 
-    /** Забыть камеру карты, последнюю и недавние зоны стёртого героя [heroId]: его записи на устройстве больше никому не нужны. */
-    suspend fun forgetHero(heroId: String) = editSettings { copy(worldViews = worldViews - heroId, lastZones = lastZones - heroId, recentZones = recentZones - heroId) }
+    /** Отметить итоги состязаний писем [mailIds] героя [heroId] показанными: на этом устройстве при входе они больше не встают. */
+    suspend fun keepShownPrizes(heroId: String, mailIds: Collection<String>) {
+        if (heroId.isBlank() || mailIds.isEmpty()) return
+        editSettings {
+            val kept = (mailIds + shownPrizes[heroId].orEmpty()).distinct().take(GameSettings.SHOWN_PRIZES)
+            copy(shownPrizes = shownPrizes + (heroId to kept))
+        }
+    }
+
+    /** Забыть камеру карты, последнюю и недавние зоны и показанные итоги стёртого героя [heroId]: его записи на устройстве больше никому не нужны. */
+    suspend fun forgetHero(heroId: String) = editSettings { copy(worldViews = worldViews - heroId, lastZones = lastZones - heroId, recentZones = recentZones - heroId, shownPrizes = shownPrizes - heroId) }
 
     /**
      * Строка окна загрузки на этот показ из [keys]: не та, что в прошлый ([GameSettings.lastLaunchLine], прочитано с устройства), выбор

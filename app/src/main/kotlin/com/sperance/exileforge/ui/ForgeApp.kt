@@ -163,6 +163,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val drafts = koinInject<DraftStore>()
     LaunchedEffect(shell) { shell.bugRequests.collect { sheets.bug = true } }
     var mailOpen by remember { mutableStateOf(false) }
+    var mailFocus by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
@@ -214,9 +215,22 @@ import org.koin.compose.viewmodel.koinViewModel
                     onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
                 )
             }
-            if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+            if (mailOpen) {
+                com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
+                    MailSheet(game, mailFocus) {
+                        mailOpen = false
+                        mailFocus = null
+                    }
+                }
+            }
             sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
+            if (route.phase == AppPhase.GAME && game.heroId.isNotBlank() && expedition == null && trial == null && !rift.open && warmup?.finished != false) {
+                com.sperance.exileforge.ui.screens.contest.ContestResultsHost(game) { mailId ->
+                    mailFocus = mailId
+                    mailOpen = true
+                }
+            }
             if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
             if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
         }

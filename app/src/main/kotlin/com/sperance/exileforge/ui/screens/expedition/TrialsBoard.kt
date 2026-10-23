@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.romanNumeral
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
@@ -355,6 +356,4 @@ private val TagShape = RoundedCornerShape(6.dp)
 private const val KEYS_PER_ROW = 4
 
 /** Номер ступени раша римскими цифрами. */
-internal fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (left, out), (value, sign) ->
-    (left % value) to (out + sign.repeat(left / value))
-}.second
+internal fun roman(n: Int): String = romanNumeral(n)

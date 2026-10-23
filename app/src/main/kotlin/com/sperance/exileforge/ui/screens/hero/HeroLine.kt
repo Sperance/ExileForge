@@ -1,8 +1,10 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,15 +20,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.contestTitle
+import com.sperance.exileforge.core.display.dayText
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ClassesFile
+import com.sperance.exileforge.rules.content.ContestHonour
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.RoleMark
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
+import com.sperance.exileforge.ui.components.honourRing
+import com.sperance.exileforge.ui.components.medalOf
 import com.sperance.exileforge.ui.theme.*
 
 /** Строка героя над текущим состоянием игры; до прочтения героя её нет. */
@@ -41,7 +49,9 @@ import com.sperance.exileforge.ui.theme.*
  * - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не выталкивает ни значки, ни число золота,
  * длинная подпись опыта - тоже.
  *
- * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается.
+ * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается. Титул состязаний
+ * ([HeroHeaderState.honour]) встаёт на место класса цветом медали места со сроком «до 24.10», касание - подсказка со сроком; класс тогда
+ * - в подсказке имени. Рамка портрета - медаль титула.
  */
 @Composable fun HeroLine(
     hero: HeroHeaderState,
@@ -55,7 +65,8 @@ import com.sperance.exileforge.ui.theme.*
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp).then(onPortrait?.let { Modifier.clickable(onClickLabel = ui("nav.account"), onClick = it) } ?: Modifier), round = true)
+            val ring = hero.honour?.let { Modifier.border(2.dp, honourRing(it), CircleShape) } ?: Modifier
+            ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp).then(ring).then(onPortrait?.let { Modifier.clickable(onClickLabel = ui("nav.account"), onClick = it) } ?: Modifier), round = true)
             Tipped({ heroLevelTip(hero) }, Modifier.weight(1f)) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -63,13 +74,12 @@ import com.sperance.exileforge.ui.theme.*
                         RoleMark(hero.role, 14.dp)
                         Text("· " + ui("hero.line_level", hero.level), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                     }
-                    Text(
-                        hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"),
-                        color = Muted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val honour = hero.honour
+                    if (honour == null) {
+                        Text(classLine(hero), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    } else {
+                        HonourLine(honour)
+                    }
                 }
             }
             trailing()
@@ -83,6 +93,24 @@ import com.sperance.exileforge.ui.theme.*
             Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             GoldPrice(hero.money)
         }
+    }
+}
+
+/** Класс героя словами; неизвестен - так и сказано. */
+private fun classLine(hero: HeroHeaderState): String = hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class")
+
+/** Титул состязаний на месте класса: «Охотник дня · до 24.10» цветом медали места; касание - подсказка со сроком титула и рамки. */
+@Composable private fun HonourLine(honour: ContestHonour) {
+    val title = contestTitle(honour)
+    Tipped({ Tip(title, ui("contest.honour_tip", stampText(honour.until)), medalOf(honour.place)) }) {
+        Text(
+            ui("contest.honour_until", title, dayText(honour.until)),
+            color = medalOf(honour.place),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -110,7 +138,8 @@ internal fun heroLevelTip(hero: HeroHeaderState): Tip {
 
         else -> emptyList()
     }
-    return Tip(hero.name, tint = GoldBright, facts = listOf(ui("hero.level_tip.level") to "${hero.level}") + steps)
+    val heroClass = listOfNotNull((ui("hero.level_tip.class") to classLine(hero)).takeIf { hero.honour != null })
+    return Tip(hero.name, tint = GoldBright, facts = heroClass + listOf(ui("hero.level_tip.level") to "${hero.level}") + steps)
 }
 
 /**

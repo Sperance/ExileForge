@@ -217,6 +217,7 @@ val appModule = module {
     singleOf(::HallFocus)
     factoryOf(::HallModel)
     singleOf(::ContestModel)
+    single { com.sperance.exileforge.core.contest.ContestResultsModel(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
     single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }

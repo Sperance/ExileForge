@@ -1254,7 +1254,7 @@ fun main(args: Array<String>) {
         "guard" -> rows + guard(index, rows)
         "tempo" -> rows + guard(index, rows) + TempoTarget.summary(rows)
         "spread" -> rows + spread(rows)
-        "trials" -> rows + Trials.summary(index, rows)
+        "trials" -> rows + Trials.summary(rows)
         "leaders" -> rows + LeaderTarget.towerSummary(rows)
         "abyss" -> rows + LeaderTarget.abyssSummary(rows)
         else -> rows
@@ -1529,14 +1529,13 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
          * Сводка `-Pmode=trials`: доля зачисток раша по ступени против [RushTarget], доля героев, дошедших до этажа цели башни,
          * и награда испытаний в минуту долей заходов в минуту и в цели ли она ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта.
          */
-        fun summary(index: ContentIndex, rows: List<Row>): List<Row> {
+        fun summary(rows: List<Row>): List<Row> {
             val runs = rows.filter { it.values[0] == "run" }
             val perMinute = runs.map { 60.0 / (it.values[3] as Double).coerceAtLeast(1.0) }.average()
-            val tiers = checkNotNull(index.campaign.trials).rush.tierCount
             val rush = rows.filter { it.values[0] == "rush" }.groupBy { it.values[5] as Int }.toSortedMap().map { (tier, list) ->
                 val clear = list.count { it.values[6] == true }.toDouble() / list.size
                 val pay = list.sumOf { it.values[7] as Double } / (list.sumOf { it.values[8] as Double } / 60) / perMinute
-                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, RewardTarget.rush(pay)))
+                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier), pay, RewardTarget.rush(tier, pay)))
             }
             val farms = rows.filter { it.values[0] == "farm" }.groupBy { it.values[1] as Int }
             val tower = rows.filter { it.values[0] == "tower" }.groupBy { it.values[1] as Int }.toSortedMap().map { (level, list) ->
@@ -1550,13 +1549,15 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
     }
 }
 
-/** Раш (RULES «Общее», цели баланса): ступень I зачищает эталон уровня финала региона в [FIRST] попыток, дальше линейно до [LAST] на последней. */
+/**
+ * Раш (RULES «Общее», цели баланса): доля полных зачисток ступени эталоном уровня финала региона - [SHARES] по ступеням с I,
+ * старше последней из них - ноль: ступень I едва по силам эталону, старшие - героям сильнее него.
+ */
 object RushTarget {
-    const val FIRST = 0.60
-    const val LAST = 0.05
+    val SHARES = listOf(0.10, 0.02)
 
-    /** Цель ступени [tier] (с 0) из [tiers]. */
-    fun at(tier: Int, tiers: Int): Double = if (tiers <= 1) FIRST else FIRST + (LAST - FIRST) * tier / (tiers - 1)
+    /** Цель ступени [tier] (с 0). */
+    fun at(tier: Int): Double = SHARES.getOrElse(tier) { 0.0 }
 }
 
 /**
@@ -1594,16 +1595,18 @@ object TowerTarget {
 }
 
 /**
- * Награда испытаний (RULES «Общее», цели баланса): опыт и золото в минуту - не меньше [SHARE] обычного захода своего уровня в минуту,
- * у ступени раша - и не больше [RUSH_CEILING].
+ * Награда испытаний (RULES «Общее», цели баланса) эталону уровня финала региона (раш) или своего уровня (башня) - опыт и золото
+ * в минуту долей обычного захода своего уровня в минуту: ступень I раша - от [RUSH_FIRST_MIN] до [RUSH_CEILING], старшие ступени - не
+ * больше [RUSH_CEILING] (эталон их почти не зачищает, их награда - героям сильнее), фарм башни - не меньше [TOWER_MIN].
  */
 object RewardTarget {
-    const val SHARE = 1.2
+    const val RUSH_FIRST_MIN = 1.0
     const val RUSH_CEILING = 1.5
+    const val TOWER_MIN = 1.2
 
-    /** Награда ступени раша в минуту долей захода в минуту [pay] - в цели. */
-    fun rush(pay: Double): Boolean = pay in SHARE..RUSH_CEILING
+    /** Награда ступени раша [tier] (с 0) в минуту долей захода в минуту [pay] - в цели. */
+    fun rush(tier: Int, pay: Double): Boolean = pay <= RUSH_CEILING && (tier > 0 || pay >= RUSH_FIRST_MIN)
 
     /** Награда фарма башни в минуту долей захода в минуту [pay] - в цели. */
-    fun tower(pay: Double): Boolean = pay >= SHARE
+    fun tower(pay: Double): Boolean = pay >= TOWER_MIN
 }

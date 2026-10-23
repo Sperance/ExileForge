@@ -10,9 +10,11 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Functions
 import androidx.compose.material.icons.outlined.MoreVert
@@ -32,6 +34,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -155,17 +159,23 @@ fun SkillTreePanel(
     val filtering = tag != null || matches != null
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
+        val jewels = hero.jewels
+        val jewelTints = remember(jewels) { jewels.mapValues { (_, jewel) -> rarityColor(jewel.rarity.name) } }
+        val tour = remember(nodes, taken, jewels) { socketTour(nodes, taken, jewels.keys) }
+        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode, jewels = jewelTints) { code ->
             onSelect(code)
             nodeOpen = true
         }
-        Tipped({ pointsTip(index, tree, hero.info.bonusPoints) }, Modifier.align(Alignment.TopStart).padding(8.dp)) {
-            Text(
-                ui("tree.points", tree.available, tree.total),
-                color = Gold,
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
-            )
+        Column(Modifier.align(Alignment.TopStart).padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Tipped({ pointsTip(index, tree, hero.info.bonusPoints) }, Modifier.heightIn(min = PLATE_TOUCH), contentAlignment = Alignment.CenterStart) {
+                Text(
+                    ui("tree.points", tree.available, tree.total),
+                    color = Gold,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
+            EmptySockets(tour, view)
         }
         val moreMenu = @Composable {
             ForgeMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
@@ -283,13 +293,70 @@ fun SkillTreePanel(
 
     /** The first look on the class's start was taken; a «back to the whole tree» keeps it from coming back. */
     var focused = false
+
+    /** Последняя просьба провести камеру к узлу (плашка пустых гнёзд): холст ведёт карту к нему и на миг обводит золотом. */
+    var jump by mutableStateOf<TreeJump?>(null)
+        private set
+
+    /** Провести камеру к узлу [code]; тот же узел снова - снова. */
+    fun jumpTo(code: String) {
+        jump = TreeJump(code, (jump?.serial ?: 0) + 1)
+    }
+
     fun reset() {
         scale = 1f
         pan = Offset.Zero
     }
 }
 
+/** Просьба провести камеру к узлу [code]; [serial] - её номер, чтобы повтор того же узла тоже сработал. */
+@Immutable internal data class TreeJump(val code: String, val serial: Int)
+
 internal val PILL = RoundedCornerShape(16.dp)
+
+/** Зона касания плашек в углу карты. */
+private val PLATE_TOUCH = 40.dp
+
+/**
+ * Пустые взятые гнёзда самоцветов в порядке обхода плашки: первым - ближайшее к середине колеса, дальше по кругу (по углу вокруг
+ * середины, по часовой стрелке от первого).
+ */
+internal fun socketTour(nodes: List<TreeNode>, taken: Set<String>, socketed: Set<String>): List<String> {
+    val empty = nodes.filter { it.type == SkillNodeType.JEWEL_SOCKET && it.code in taken && it.code !in socketed }
+    val first = empty.minByOrNull { it.x.toDouble() * it.x + it.y.toDouble() * it.y } ?: return emptyList()
+    val from = atan2(first.y.toDouble(), first.x.toDouble())
+    fun turn(node: TreeNode) = (atan2(node.y.toDouble(), node.x.toDouble()) - from).mod(2 * PI)
+    return listOf(first.code) + (empty - first).sortedBy(::turn).map { it.code }
+}
+
+/**
+ * Плашка «Пустых гнёзд: N ›» под очками: касание ведёт камеру к следующему пустому гнезду обхода [tour], по кругу; без пустых гнёзд её
+ * нет.
+ */
+@Composable internal fun EmptySockets(tour: List<String>, view: TreeView, modifier: Modifier = Modifier) {
+    if (tour.isEmpty()) return
+    var at by remember(tour) { mutableIntStateOf(-1) }
+    val label = ui("tree.empty_sockets", tour.size)
+    Row(
+        modifier.heightIn(min = PLATE_TOUCH).clickable(onClickLabel = ui("tree.empty_sockets_next")) {
+            at = (at + 1) % tour.size
+            view.jumpTo(tour[at])
+        }.semantics { contentDescription = label },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(Modifier.size(14.dp).border(1.5.dp, ManaBlue, CircleShape), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(5.dp).border(1.dp, ManaBlue, CircleShape))
+            }
+            Text(label, color = ManaBlue, style = MaterialTheme.typography.labelLarge)
+            Icon(Icons.Outlined.ChevronRight, null, tint = Quiet, modifier = Modifier.size(16.dp))
+        }
+    }
+}
 
 /**
  * Подсказка очков древа: всего, потрачено и свободно ([tree]), сколько очков даёт уровень героя и каждый `bonusEvery`-й уровень

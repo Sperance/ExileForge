@@ -1,5 +1,8 @@
 package com.sperance.exileforge.ui.screens.tree
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -8,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -17,8 +21,13 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -48,6 +57,10 @@ import kotlin.math.sin
  * второй палец щипка. Двойное касание на любом масштабе возвращает к целому дереву. Ближайший узел выигрывает только в своём круге не
  * меньше пальца. Неподвижный слой рисуется заново лишь со сдвигом, масштабом или выбором; дышащий - только узлы на шаг от взятого и только
  * на экране.
+ *
+ * Гнездо с самоцветом [jewels] (код гнезда - цвет редкости самоцвета) - центр и ореол этого цвета, у невзятого - приглушённый; взятое
+ * без самоцвета - светлое кольцо с пунктирной лункой и подписью «Пустое гнездо». Просьба [TreeView.jump] ведёт камеру к узлу и на миг
+ * обводит его золотом.
  */
 @Composable internal fun TreeCanvas(
     nodes: List<TreeNode>,
@@ -58,20 +71,38 @@ import kotlin.math.sin
     view: TreeView,
     modifier: Modifier = Modifier,
     focus: String? = null,
+    jewels: Map<String, Color> = emptyMap(),
     onSelect: (String) -> Unit,
 ) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     val select by rememberUpdatedState(onSelect)
     var area by remember { mutableStateOf(Size.Zero) }
+    val flash = remember { Animatable(0f) }
+    val measurer = rememberTextMeasurer()
+    val emptyWord = ui("tree.empty_socket")
+    val emptyLabel = remember(measurer, emptyWord) { measurer.measure(emptyWord, TextStyle(color = ManaBlue, fontSize = EMPTY_LABEL_SIZE)) }
+    val empty = remember(nodes, taken, jewels) { nodes.filter { it.type == SkillNodeType.JEWEL_SOCKET && it.code in taken && it.code !in jewels } }
     LaunchedEffect(area, focus) {
         val node = focus?.let(byCode::get) ?: return@LaunchedEffect
         if (view.focused || area.width <= 0f) return@LaunchedEffect
         view.focused = true
-        val at = place(node, bounds, area.width, area.height, FOCUS_ZOOM, Offset.Zero)
-        val limit = panLimit(bounds, area.width, area.height, FOCUS_ZOOM)
         view.scale = FOCUS_ZOOM
-        view.pan = Offset((area.width / 2 - at.x).coerceIn(-limit.x, limit.x), (area.height / 2 - at.y).coerceIn(-limit.y, limit.y))
+        view.pan = centred(node, bounds, area, FOCUS_ZOOM)
+    }
+    LaunchedEffect(view.jump, area) {
+        val node = view.jump?.code?.let(byCode::get) ?: return@LaunchedEffect
+        if (area.width <= 0f) return@LaunchedEffect
+        val fromScale = view.scale
+        val fromPan = view.pan
+        val scale = max(fromScale, FOCUS_ZOOM)
+        val toPan = centred(node, bounds, area, scale)
+        animate(0f, 1f, animationSpec = tween(JUMP_MS)) { t, _ ->
+            view.scale = fromScale + (scale - fromScale) * t
+            view.pan = fromPan + (toPan - fromPan) * t
+        }
+        flash.snapTo(1f)
+        flash.animateTo(0f, tween(FLASH_MS))
     }
 
     fun zoomAt(focus: Offset, factor: Float, drag: Offset, width: Float, height: Float) {
@@ -141,7 +172,11 @@ import kotlin.math.sin
                 if (breathes(node)) return@forEach
                 val at = place(node, bounds, width, height, view.scale, view.pan)
                 if (!onScreen(node, at, view.scale, width, height)) return@forEach
-                medallion(node, at, view.scale, node.code in taken, false, node.code == selected, 0f)
+                medallion(node, at, view.scale, node.code in taken, false, node.code == selected, 0f, jewels[node.code])
+            }
+            empty.forEach { node ->
+                val at = place(node, bounds, width, height, view.scale, view.pan)
+                if (onScreen(node, at, view.scale, width, height)) emptyCaption(emptyLabel, at, radius(node) * view.scale.coerceIn(.5f, 2.2f))
             }
             nodes.forEach { node ->
                 if (node.code !in highlight || breathes(node)) return@forEach
@@ -150,15 +185,22 @@ import kotlin.math.sin
         }
         val breathers = remember(nodes, taken, reachable) { nodes.filter(::breathes) }
         Canvas(Modifier.fillMaxSize().clipToBounds()) {
-            if (breathers.isEmpty()) return@Canvas
             val width = size.width
             val height = size.height
-            val now = pulse
-            breathers.forEach { node ->
-                val at = place(node, bounds, width, height, view.scale, view.pan)
-                if (!onScreen(node, at, view.scale, width, height)) return@forEach
-                medallion(node, at, view.scale, false, true, node.code == selected, now)
-                if (node.code in highlight) drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, at, style = Stroke(2.5f))
+            if (breathers.isNotEmpty()) {
+                val now = pulse
+                breathers.forEach { node ->
+                    val at = place(node, bounds, width, height, view.scale, view.pan)
+                    if (!onScreen(node, at, view.scale, width, height)) return@forEach
+                    medallion(node, at, view.scale, false, true, node.code == selected, now, jewels[node.code])
+                    if (node.code in highlight) drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, at, style = Stroke(2.5f))
+                }
+            }
+            val lit = flash.value
+            val target = view.jump?.code?.let(byCode::get)
+            if (lit > 0f && target != null) {
+                val at = place(target, bounds, width, height, view.scale, view.pan)
+                drawCircle(Boon.copy(alpha = lit), radius(target) * view.scale.coerceIn(.5f, 2.2f) + FLASH_GAP.toPx(), at, style = Stroke(FLASH_WIDTH.toPx()))
             }
         }
     }
@@ -168,6 +210,21 @@ import kotlin.math.sin
 private fun onScreen(node: TreeNode, at: Offset, scale: Float, width: Float, height: Float): Boolean {
     val reach = radius(node) * scale.coerceIn(.5f, 2.2f) * GLOW_REACH + 8f
     return at.x > -reach && at.y > -reach && at.x < width + reach && at.y < height + reach
+}
+
+/** Сдвиг карты, при котором [node] стоит в середине холста [area] на масштабе [scale], - в пределах сдвига ([panLimit]). */
+private fun centred(node: TreeNode, bounds: Bounds, area: Size, scale: Float): Offset {
+    val at = place(node, bounds, area.width, area.height, scale, Offset.Zero)
+    val limit = panLimit(bounds, area.width, area.height, scale)
+    return Offset((area.width / 2 - at.x).coerceIn(-limit.x, limit.x), (area.height / 2 - at.y).coerceIn(-limit.y, limit.y))
+}
+
+/** Подпись [label] под гнездом радиуса [r] в точке [at] - на тёмной плашке, чтобы читалась поверх нитей. */
+private fun DrawScope.emptyCaption(label: TextLayoutResult, at: Offset, r: Float) {
+    val pad = CAPTION_PAD.toPx()
+    val topLeft = Offset(at.x - label.size.width / 2f, at.y + r + CAPTION_GAP.toPx())
+    drawRoundRect(NEON_STONE.copy(alpha = .85f), topLeft - Offset(pad, pad / 2), Size(label.size.width + pad * 2, label.size.height + pad), CornerRadius(pad))
+    drawText(label, topLeft = topLeft)
 }
 
 /** Нить от [from] до [to] хоть краем на холсте: её рамка пересекает его. */
@@ -283,9 +340,13 @@ internal fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float
  * colour under a light rim and a strong halo. A node out of reach is grey and unlit: only what can be taken
  * and what is taken keep their colour.
  */
-internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float) {
+internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float, jewel: Color? = null) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
-    val tint = if (node.type == SkillNodeType.START) classTint(node.code) else nodeColour(node, false)
+    val tint = when {
+        node.type == SkillNodeType.START -> classTint(node.code)
+        jewel != null && taken -> jewel
+        else -> nodeColour(node, false)
+    }
     val glow = when {
         taken -> TAKEN_GLOW
         next -> NEXT_GLOW * pulse
@@ -330,8 +391,13 @@ internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, t
         SkillNodeType.ATTRIBUTE -> shape(polygon(3, r, -PI.toFloat() / 2))
 
         SkillNodeType.JEWEL_SOCKET -> {
+            drawCircle(NEON_STONE, r, centre)
             drawCircle(edge, r, centre, style = Stroke(width * 1.2f))
-            drawCircle(if (taken) tint else NEON_STONE, r * .6f, centre)
+            when {
+                jewel != null -> drawCircle(if (taken) jewel else jewel.copy(alpha = UNTAKEN_JEWEL), r * .6f, centre)
+                taken -> drawCircle(ManaBlue, r * .55f, centre, style = Stroke(EMPTY_RING.dp.toPx(), pathEffect = EMPTY_DASH))
+                else -> drawCircle(NEON_STONE, r * .6f, centre)
+            }
         }
 
         SkillNodeType.SMALL -> {
@@ -359,3 +425,19 @@ internal const val NEXT_GLOW = .45f
 internal const val TAKEN_GLOW = .7f
 internal const val PULSE_LOW = .4f
 internal const val PULSE_MS = 800
+
+/** Самоцвет в невзятом гнезде - приглушённый цвет его редкости. */
+private const val UNTAKEN_JEWEL = .35f
+
+/** Пустое взятое гнездо: пунктирная лунка толщиной [EMPTY_RING] dp и подпись под ним. */
+private const val EMPTY_RING = 1.6f
+private val EMPTY_DASH = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))
+private val EMPTY_LABEL_SIZE = 10.sp
+private val CAPTION_GAP = 4.dp
+private val CAPTION_PAD = 4.dp
+
+/** Переход камеры к гнезду и золотая обводка после него: длительности и вид кольца. */
+private const val JUMP_MS = 450
+private const val FLASH_MS = 900
+private val FLASH_GAP = 7.dp
+private val FLASH_WIDTH = 2.5.dp

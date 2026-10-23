@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
-import com.sperance.exileforge.core.expedition.TrapJointsCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -26,6 +25,7 @@ import com.sperance.exileforge.core.campaign.run.MonsterAgent
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.core.campaign.run.waiting
+import com.sperance.exileforge.core.expedition.TrapJointsCache
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.Strokes
 import com.sperance.exileforge.ui.icons.drawToken

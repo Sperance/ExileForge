@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.rules.content.AdditiveEffect
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreAttribute
 import com.sperance.exileforge.rules.content.GuildRank

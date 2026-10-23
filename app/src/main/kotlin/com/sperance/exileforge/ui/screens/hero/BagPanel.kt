@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,10 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.BagCategory
 import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
@@ -23,6 +25,7 @@ import com.sperance.exileforge.core.display.RuneText
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.essenceCondense
 import com.sperance.exileforge.core.display.essenceGuarantees
 import com.sperance.exileforge.core.display.itemDescription
@@ -30,10 +33,12 @@ import com.sperance.exileforge.core.display.itemDetails
 import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemUseIndex
+import com.sperance.exileforge.core.display.key
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.hero.BagFilter
+import com.sperance.exileforge.core.hero.BagGroup
 import com.sperance.exileforge.core.hero.BagOrder
 import com.sperance.exileforge.core.hero.BagSection
 import com.sperance.exileforge.core.hero.BagShelf
@@ -42,6 +47,7 @@ import com.sperance.exileforge.core.hero.StackUse
 import com.sperance.exileforge.core.hero.StackUses
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.stashFree
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ItemCode
@@ -49,12 +55,11 @@ import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
-import com.sperance.exileforge.ui.components.ChipSize
+import com.sperance.exileforge.ui.components.CheckMark
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.FilterSwitch
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.InfoCard
 import com.sperance.exileforge.ui.components.InfoMark
@@ -120,22 +125,25 @@ import kotlinx.coroutines.withContext
 }
 
 /**
- * Шторка фильтра сумки: полки множеством фишками с числом стопок всей сумки (пустые полки не предлагаются) и «Можно применить»
- * ([StackUses]); ничего не применяется до «Показать N», «Сбросить» снимает всё сразу.
+ * Шторка фильтра сумки: полки множеством - списком в два столбца (флажок, имя, число стопок всей сумки справа; пустая полка серая и
+ * не нажимается) и «Можно применить» ([StackUses]); ничего не применяется до «Показать N», «Сбросить» снимает всё сразу.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BagFilterSheet(game: GameUi, shelf: BagShelf, filter: BagFilter, query: String, onDismiss: () -> Unit, onApply: (BagFilter) -> Unit) {
     var draft by remember { mutableStateOf(filter) }
     val chosen = BagCategory.entries.filter { it in draft.shelves }
     val groups = listOf(
         AccordionGroup("shelves", ui("bag.shelves"), if (chosen.isEmpty()) ui("bag.shelves_all") else chosen.joinToString(", ") { ui(it.key) }) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                BagCategory.entries.forEach { category ->
-                    val count = shelf.counts[category] ?: 0
-                    if (count > 0) {
-                        val on = category in draft.shelves
-                        ForgeChip(ui(category.key), on, { draft = draft.copy(shelves = if (on) draft.shelves - category else draft.shelves + category) }, size = ChipSize.Dense, count = count)
+            Column {
+                BagCategory.entries.chunked(SHELF_COLUMNS).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { category ->
+                            val on = category in draft.shelves
+                            ShelfOption(ui(category.key), shelf.counts[category] ?: 0, on, Modifier.weight(1f)) {
+                                draft = draft.copy(shelves = if (on) draft.shelves - category else draft.shelves + category)
+                            }
+                        }
+                        repeat(SHELF_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -151,6 +159,25 @@ private fun BagFilterSheet(game: GameUi, shelf: BagShelf, filter: BagFilter, que
         onDismiss = onDismiss,
     )
 }
+
+/** Полка в шторке фильтра: флажок, имя (переносится, не режется) и число стопок [count] справа; пустая полка серая и не нажимается. */
+@Composable
+private fun ShelfOption(title: String, count: Int, checked: Boolean, modifier: Modifier, onToggle: () -> Unit) {
+    val enabled = count > 0
+    Row(
+        modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(8.dp)).toggleable(checked, enabled = enabled, role = Role.Checkbox) { onToggle() }
+            .alpha(if (enabled) 1f else DISABLED_ALPHA).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CheckMark(checked && enabled)
+        Text(title, color = if (enabled) Parchment else Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(compactNumber(count.toLong()), color = Muted, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+private const val SHELF_COLUMNS = 2
+private const val DISABLED_ALPHA = .45f
 
 /**
  * Пусто под отбором и поиском: «Ничего не нашлось», почему - словами ([BagShelf.emptyReason]) и одно действие - снять фильтры, а без
@@ -171,18 +198,22 @@ private fun BagFilterSheet(game: GameUi, shelf: BagShelf, filter: BagFilter, que
 
 /**
  * The bag as a table: a heading per category and under it the stack cells ([StackCell]) - as many to a row as fit [CELL]. The name, the rule and the ways on
- * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code.
+ * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code. Части полки - под своими подзаголовками ([BagGroup]): у «Книг» героя
+ * сначала книги его класса, ниже «Другие классы».
  */
 @Composable fun BagGrid(game: GameUi, sections: List<BagSection>, onOpen: (String) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val columns = ((maxWidth + GAP) / (CELL + GAP)).toInt().coerceAtLeast(1)
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            sections.forEach { (category, stacks) ->
+            sections.forEach { (category, groups) ->
                 Column(verticalArrangement = Arrangement.spacedBy(GAP)) {
                     MutedText(ui(category.key), style = MaterialTheme.typography.labelMedium)
-                    stacks.chunked(columns).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-                            row.forEach { stack -> StackCell(game.index, stack.code, stack.amount, size = CELL, onClick = { onOpen(stack.code) }) }
+                    groups.forEach { (heading, stacks) ->
+                        heading?.let { Text(it.title(), color = Brass, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 2.dp)) }
+                        stacks.chunked(columns).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
+                                row.forEach { stack -> StackCell(game.index, stack.code, stack.amount, size = CELL, onClick = { onOpen(stack.code) }) }
+                            }
                         }
                     }
                 }

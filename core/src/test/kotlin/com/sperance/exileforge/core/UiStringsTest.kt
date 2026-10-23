@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.TargetRule
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.bodyPlaces
+import com.sperance.exileforge.core.display.key
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.plural
@@ -265,6 +266,7 @@ class UiStringsTest {
             AtlasPoints.KINDS.forEach { add("expedition.key_$it") }
             com.sperance.exileforge.core.campaign.run.LootKind.entries.forEach { add("expedition.bag.from.${it.name}") }
             com.sperance.exileforge.core.hero.BagOrder.entries.forEach { add("bag.order.${it.name}") }
+            com.sperance.exileforge.rules.content.BagCategory.entries.forEach { add(it.key) }
             AtlasPoints.ALL.forEach { add("atlas.earned.$it") }
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }
             com.sperance.exileforge.core.display.SourceKind.entries.forEach { add("source.${it.name}") }

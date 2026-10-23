@@ -1,20 +1,21 @@
 package com.sperance.exileforge.core.hero
 
-import com.sperance.exileforge.core.display.BagCategory
 import com.sperance.exileforge.core.display.ItemSearch
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.key
 import com.sperance.exileforge.core.filter.Narrowing
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.rules.content.BagCategoriesByName
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.SetSerializer
-import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -60,12 +61,12 @@ enum class BagOrder {
 /**
  * Отбор сумки, что помнится на устройстве: полки множеством [shelves] (пусто - все), только то, что можно применить
  * ([applicable], [StackUses]), и порядок внутри полки [order]. Поиск по имени - не грань и не помнится: его держит экран. Полки и
- * порядок пишутся именами и читаются терпимо ([ShelvesByName], [BagOrderByName]): переименованная полка или порядок не сбрасывают
+ * порядок пишутся именами и читаются терпимо ([BagCategoriesByName], [BagOrderByName]): переименованная полка или порядок не сбрасывают
  * остальные настройки устройства.
  */
 @Serializable
 data class BagFilter(
-    @Serializable(with = ShelvesByName::class) val shelves: Set<BagCategory> = emptySet(),
+    @Serializable(with = BagCategoriesByName::class) val shelves: Set<BagCategory> = emptySet(),
     val applicable: Boolean = false,
     val order: BagOrder = BagOrder.VALUE,
 ) {
@@ -80,16 +81,6 @@ data class BagFilter(
     fun cleared(): BagFilter = BagFilter(order = order)
 }
 
-/** Полки отбора сумки на устройстве - именами; имя, которого больше нет среди [BagCategory], при чтении пропускается. */
-object ShelvesByName : KSerializer<Set<BagCategory>> {
-    private val names = SetSerializer(String.serializer())
-    override val descriptor: SerialDescriptor = names.descriptor
-
-    override fun serialize(encoder: Encoder, value: Set<BagCategory>) = encoder.encodeSerializableValue(names, value.mapTo(LinkedHashSet()) { it.name })
-
-    override fun deserialize(decoder: Decoder): Set<BagCategory> = decoder.decodeSerializableValue(names).mapNotNullTo(LinkedHashSet()) { name -> BagCategory.entries.firstOrNull { it.name == name } }
-}
-
 /** Порядок сумки на устройстве - именем; незнакомое имя при чтении - [BagOrder.VALUE]. */
 object BagOrderByName : KSerializer<BagOrder> {
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("BagOrder", PrimitiveKind.STRING)
@@ -99,8 +90,24 @@ object BagOrderByName : KSerializer<BagOrder> {
     override fun deserialize(decoder: Decoder): BagOrder = decoder.decodeString().let { name -> BagOrder.entries.firstOrNull { it.name == name } } ?: BagOrder.VALUE
 }
 
-/** Полка сумки на экране: её стопки [stacks] в порядке отбора. */
-data class BagSection(val category: BagCategory, val stacks: List<BagStack>)
+/** Подзаголовок части полки «Книги»: книги, что читает герой (своего класса и общие), - под именем его класса, прочие - «Другие классы». */
+sealed interface BagHeading {
+    fun title(): String
+
+    data class OwnClass(val heroClass: String) : BagHeading {
+        override fun title(): String = classTitle(heroClass)
+    }
+
+    data object OtherClasses : BagHeading {
+        override fun title(): String = ui("bag.books_other")
+    }
+}
+
+/** Часть полки под подзаголовком [heading] (null - без него): её стопки [stacks] в порядке отбора. */
+data class BagGroup(val heading: BagHeading?, val stacks: List<BagStack>)
+
+/** Полка сумки на экране: её части [groups] - одна без подзаголовка, а у «Книг» героя - свои сверху, чужие ниже. */
+data class BagSection(val category: BagCategory, val groups: List<BagGroup>)
 
 /**
  * Сумка глазами экрана - полки по порядку [BagCategory], без пустых, под отбором [BagFilter] и поиском по имени ([ItemSearch]);
@@ -128,21 +135,33 @@ class BagShelf private constructor(val sections: List<BagSection>, val counts: M
          */
         fun of(index: ContentIndex?, bag: Map<String, Long>, heroClass: String?, filter: BagFilter, query: String): BagShelf {
             val seen = bag.filterValues { it > 0 }.map { (code, amount) -> SeenStack.of(index, heroClass, BagStack(code, amount)) }
-            val byCategory = seen.filter { it.fits(filter, query) }.sortedWith(SeenStack.order(filter.order)).groupBy({ it.category }, { it.stack })
-            val sections = BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { BagSection(category, it) } }
+            val byCategory = seen.filter { it.fits(filter, query) }.sortedWith(SeenStack.order(filter.order)).groupBy { it.category }
+            val sections = BagCategory.entries.mapNotNull { category -> byCategory[category]?.let { BagSection(category, groups(category, it, heroClass)) } }
             return BagShelf(sections, seen.groupingBy { it.category }.eachCount(), seen)
+        }
+
+        /**
+         * Части полки [category] из стопок [stacks]: у «Книг» героя класса [heroClass] - сначала те, что он читает ([StackUse.BOOK]: своего
+         * класса и общие), затем «Другие классы»; пустая часть не показывается. Прочие полки - одной частью.
+         */
+        private fun groups(category: BagCategory, stacks: List<SeenStack>, heroClass: String?): List<BagGroup> {
+            if (category != BagCategory.BOOKS || heroClass == null) return listOf(BagGroup(null, stacks.map { it.stack }))
+            val (own, other) = stacks.partition { StackUse.BOOK in it.uses }
+            return listOf(BagGroup(BagHeading.OwnClass(heroClass), own.map { it.stack }), BagGroup(BagHeading.OtherClasses, other.map { it.stack })).filter { it.stacks.isNotEmpty() }
         }
     }
 }
 
-/** Что сумка знает о стопке [stack], посчитанное раз: полка [category], годность к действию [usable] ([StackUses]), имя [name] и цена [worth]. */
-private class SeenStack(val stack: BagStack, val category: BagCategory, val usable: Boolean, val name: String, val worth: Long) {
+/** Что сумка знает о стопке [stack], посчитанное раз: полка [category], действия [uses] ([StackUses]), имя [name] и цена [worth]. */
+private class SeenStack(val stack: BagStack, val category: BagCategory, val uses: Set<StackUse>, val name: String, val worth: Long) {
+    val usable: Boolean get() = uses.isNotEmpty()
+
     fun fits(filter: BagFilter, query: String): Boolean = (filter.shelves.isEmpty() || category in filter.shelves) && (!filter.applicable || usable) && ItemSearch.matches(stack.code, query)
 
     companion object {
         fun of(index: ContentIndex?, heroClass: String?, stack: BagStack): SeenStack {
             val item = index?.item(ItemCode(stack.code))
-            return SeenStack(stack, BagCategory.of(item), StackUses.of(index, stack.code, heroClass).isNotEmpty(), itemTitle(stack.code), item?.price ?: 0L)
+            return SeenStack(stack, BagCategory.of(item), StackUses.of(index, stack.code, heroClass), itemTitle(stack.code), item?.price ?: 0L)
         }
 
         /** Порядок [order] внутри полки; равные - по имени. */

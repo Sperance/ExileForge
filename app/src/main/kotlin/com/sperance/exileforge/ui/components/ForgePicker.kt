@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Lock
@@ -71,7 +70,6 @@ import com.sperance.exileforge.ui.theme.Elder
 import com.sperance.exileforge.ui.theme.Ember
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.ManaBlue
 import com.sperance.exileforge.ui.theme.Muted
@@ -391,17 +389,6 @@ private fun PickRow(option: PickOption<*>, mark: RowMark, onPick: () -> Unit, on
             else -> Spacer(Modifier.width(12.dp))
         }
         if (mark is RowMark.Many) CheckMark(mark.checked, Modifier.padding(end = 12.dp))
-    }
-}
-
-/** Флажок строки выбора нескольких: отмеченный - золотая заливка с галочкой, нет - пустой квадрат в окантовке. */
-@Composable private fun CheckMark(checked: Boolean, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(5.dp)
-    Box(
-        modifier.size(22.dp).clip(shape).background(if (checked) Gold else Color.Transparent).border(1.5.dp, if (checked) Gold else Muted, shape),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (checked) Icon(Icons.Outlined.Check, null, tint = Ink, modifier = Modifier.size(16.dp))
     }
 }
 

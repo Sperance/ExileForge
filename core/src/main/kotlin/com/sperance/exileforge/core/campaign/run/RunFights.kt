@@ -184,7 +184,7 @@ internal fun ExpeditionRun.tallyWins() {
  * баффы, проклятия и заряды уходят на карту остатком ([HeroCarry]), перезарядка щита - от последнего удара боя. Свита фаз - в журнале вслед
  * за стаей. Цифры боя идут в статистику героя до того, как гибель закроет журнал. Гибель в Бездне
  * сжигает копилку (кроме доли атласа), в Ваал-зоне - обычная смерть, весь заход кончен. Бездна сцепляет бои: следующий бой волны или
- * следующая глубина, когда игрок спустится.
+ * следующая глубина, когда игрок спустится; выигранная волна целиком - итоги волны поверх листа Расщелины.
  */
 internal fun ExpeditionRun.play(dt: Double) {
     val battle = fight ?: return
@@ -224,6 +224,7 @@ internal fun ExpeditionRun.play(dt: Double) {
             fightAgents.forEach { it.alive = false }
             if (down != null) {
                 report = null
+                down.bank(pack, duration)
                 phase = RunPhase.ABYSS
             } else {
                 slain = leader
@@ -252,7 +253,12 @@ internal fun ExpeditionRun.play(dt: Double) {
     if (phase != RunPhase.DEAD) pendingGear?.let { wear(it) }
     pendingGear = null
     if (outcome == Outcome.WIN && down != null) {
-        if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++
+        if (down.fights.isNotEmpty()) {
+            nextFight(down)
+        } else {
+            down.cleared++
+            waveReport = down.summary(leader)
+        }
     }
 }
 

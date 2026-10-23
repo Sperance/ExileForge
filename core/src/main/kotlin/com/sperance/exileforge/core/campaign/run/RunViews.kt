@@ -403,6 +403,12 @@ data class RunHud(
     val report: FightReport? = null,
     /** Журнал последнего боя захода - пункт «Журнал боя» меню забега; null - боя ещё не было. */
     val lastFight: FightReport? = null,
+
+    /**
+     * Итоги выигранной волны Бездны - все её бои одним отчётом, каждый бой со своего начала ([PackHit.start]): экран «Итоги волны»
+     * поверх листа Расщелины, пока игрок его не закроет; null - его нет.
+     */
+    val waveReport: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */
     val fall: Double? = null,
     /** Уровень героя, с которого гибель стоит опыта, пока герой ниже него; null - цена уже действует. */

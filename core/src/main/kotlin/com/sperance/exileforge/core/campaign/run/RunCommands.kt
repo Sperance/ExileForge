@@ -153,6 +153,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 phase = RunPhase.LEFT
             }
 
+            RunPhase.ABYSS -> waveReport = null
+
             else -> Unit
         }
 
@@ -252,6 +254,7 @@ internal fun ExpeditionRun.vaaling(spot: CrystalSpot): Boolean = vaalings.values
 internal fun ExpeditionRun.closeRift() {
     rift = null
     descent = null
+    waveReport = null
     if (phase == RunPhase.ABYSS) phase = RunPhase.MAP
 }
 

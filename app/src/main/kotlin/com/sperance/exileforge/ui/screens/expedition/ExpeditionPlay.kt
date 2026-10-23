@@ -97,6 +97,7 @@ import org.koin.compose.viewmodel.koinViewModel
         when {
             summary -> Unit
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
+            hud.phase == RunPhase.ABYSS && hud.waveReport != null -> model.runCommand(RunCommand.Continue)
             hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && (hud.fountain != null || hud.feature != null || hud.exitOffered) -> model.runCommand(RunCommand.StepOff)
             hud.phase == RunPhase.MAP -> if (!zone) leaving = true
             else -> model.runCommand(RunCommand.Leave)
@@ -208,7 +209,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
                 RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
 
-                RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
+                RunPhase.ABYSS -> hud.waveReport?.let { WaveReportScreen(game, hud, it) { model.runCommand(RunCommand.Continue) } }
+                    ?: hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
 
                 RunPhase.LEFT -> MapSummary(game, model, hud, onDone = close)
 

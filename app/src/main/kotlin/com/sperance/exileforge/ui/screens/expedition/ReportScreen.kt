@@ -95,8 +95,8 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        ReportHead(report, won, hud.rank.takeIf { won })
-        ReportTabs(report, hud, won, tab) { tab = it }
+        ReportHead(report, if (won) ui("expedition.report_slain", monsterTitle(report.monster.code)) else ui("expedition.report_fallen"), hud.rank.takeIf { won })
+        ReportTabs(ReportTab.entries, report, hud, won, tab) { tab = it }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
                 ReportTab.SPOILS -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -104,17 +104,9 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
                     if (won && hud.levelUp == null && !levelled) AtlasBlock(hud.atlas)
                 }
 
-                ReportTab.FIGHT -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FightTab(report) { breakdown = true }
-                }
+                ReportTab.FIGHT -> FightPane(report) { breakdown = true }
 
-                ReportTab.LOG -> Column(
-                    Modifier.fillMaxSize().background(Panel, RoundedCornerShape(8.dp)).border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                ) {
-                    LogShelves(game.logFilter, shell::logFilter)
-                    FightLog(report.pack, Modifier.fillMaxWidth().weight(1f), game.logFilter, toDeath = !won) { event, name -> line = event to name }
-                }
+                ReportTab.LOG -> LogPane(game, shell, report, toDeath = !won) { event, name -> line = event to name }
             }
         }
         if (won) {
@@ -142,12 +134,13 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
 }
 
 /**
- * Шапка в строку 44 dp: жетон монстра в кольце редкости, исход и под ним стая и время боя, справа - место первой победы над стражем
+ * Шапка в строку 44 dp: жетон монстра в кольце редкости, заголовок [title] (исход) и под ним стая и время боя, справа - место первой победы над стражем
  * [rank], его слова - в подсказке по касанию.
  *
  * Дыхание портрета - декор: общие часы декора, при выключенных анимациях - покой.
  */
-@Composable private fun ReportHead(report: FightReport, won: Boolean, rank: Long?) {
+@Composable private fun ReportHead(report: FightReport, title: String, rank: Long?) {
+    val won = report.outcome == Outcome.WIN
     val monster = report.monster
     val time = decorTime()
     Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -162,7 +155,7 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
         }
         Column(Modifier.weight(1f)) {
             Text(
-                if (won) ui("expedition.report_slain", monsterTitle(monster.code)) else ui("expedition.report_fallen"),
+                title,
                 color = outcomeColour(report.outcome),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
@@ -198,18 +191,69 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
     }
 }
 
-/** Ряд вкладок долями одной дорожки; у «Добычи» - число находок, у «Журнала» - число строк боя. */
-@Composable private fun ReportTabs(report: FightReport, hud: RunHud, won: Boolean, tab: ReportTab, onSelect: (ReportTab) -> Unit) {
+/** Ряд вкладок [tabs] долями одной дорожки; у «Добычи» - число находок, у «Журнала» - число строк боя. */
+@Composable private fun ReportTabs(tabs: List<ReportTab>, report: FightReport, hud: RunHud, won: Boolean, tab: ReportTab, onSelect: (ReportTab) -> Unit) {
     val found = hud.reward?.let { it.equipment.size + it.items.size + (if (it.recipe != null) 1 else 0) } ?: 0
-    val labels = ReportTab.entries.map { entry ->
+    val labels = tabs.map { entry ->
         when (entry) {
             ReportTab.SPOILS -> if (won) counted(ui("expedition.report_tab_spoils"), found) else ui("expedition.report_tab_losses")
             ReportTab.FIGHT -> ui("expedition.report_tab_fight")
             ReportTab.LOG -> counted(ui("expedition.report_tab_log"), report.events.size)
         }
     }
-    PillTabs(labels, tab.ordinal, { onSelect(ReportTab.entries[it]) }, segmented = true)
+    PillTabs(labels, tabs.indexOf(tab), { onSelect(tabs[it]) }, segmented = true)
 }
+
+/** Вкладка «Бой» во всю высоту, листается; [onBreakdown] - открыть «Разбор боя». */
+@Composable private fun FightPane(report: FightReport, onBreakdown: () -> Unit) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FightTab(report, onBreakdown)
+    }
+}
+
+/** Вкладка «Журнал» во всю высоту: полки фильтра и журнал стаи; [toDeath] - открыть на роковом ударе, [onLine] - карточка строки. */
+@Composable private fun LogPane(game: GameUi, shell: ShellViewModel, report: FightReport, toDeath: Boolean, onLine: (CombatEvent, String) -> Unit) {
+    Column(
+        Modifier.fillMaxSize().background(Panel, RoundedCornerShape(8.dp)).border(1.dp, Bronze.copy(alpha = .4f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        LogShelves(game.logFilter, shell::logFilter)
+        FightLog(report.pack, Modifier.fillMaxWidth().weight(1f), game.logFilter, toDeath = toDeath, onOpen = onLine)
+    }
+}
+
+/**
+ * «Итоги волны» Бездны поверх листа Расщелины: все бои выигранной волны одним отчётом ([RunHud.waveReport]) - шапка с последним павшим,
+ * вкладки «Бой · Журнал» (журнал - по боям волны) и «Продолжить», что возвращает к листу Расщелины. Добычи здесь нет: она - в копилке
+ * Бездны.
+ */
+@Composable internal fun WaveReportScreen(game: GameUi, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
+    val shell: ShellViewModel = koinViewModel()
+    var tab by remember(report) { mutableStateOf(ReportTab.FIGHT) }
+    var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
+    var breakdown by remember { mutableStateOf(false) }
+    Column(
+        Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ReportHead(report, ui("expedition.report_wave"), rank = null)
+        ReportTabs(WAVE_TABS, report, hud, won = true, tab) { tab = it }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (tab) {
+                ReportTab.LOG -> LogPane(game, shell, report, toDeath = false) { event, name -> line = event to name }
+                else -> FightPane(report) { breakdown = true }
+            }
+        }
+        ForgeButton(onClick = onContinue, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+            Text(ui("expedition.continue"), style = MaterialTheme.typography.titleMedium)
+        }
+    }
+    line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
+    if (breakdown) FightStatsSheet(report.stats, hud.summary.fights) { breakdown = false }
+}
+
+/** Вкладки итогов волны: добычи у волны нет. */
+private val WAVE_TABS = listOf(ReportTab.FIGHT, ReportTab.LOG)
 
 private fun counted(label: String, count: Int) = if (count > 0) "$label · $count" else label
 

@@ -44,11 +44,34 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-/** A descent under way: its crack, how many depths it leads down, how many are cleared, and the fights of the wave left. */
+/**
+ * A descent under way: its crack, how many depths it leads down, how many are cleared, and the fights of the wave left. Выигранные бои
+ * волны копятся в [won] - каждый со своего начала от начала волны, [elapsed] - их общее время: из них - итоги волны.
+ */
 internal class Descent(val spot: AbyssSpot, val depth: Int) {
     var cleared = 0
     var level = 0
     var fights: List<List<RolledMonster>> = emptyList()
+    var won: List<PackHit> = emptyList()
+        private set
+    var elapsed = 0.0
+        private set
+
+    /** Новая волна из боёв [fights]: итоги прошлой забыты. */
+    fun rise(fights: List<List<RolledMonster>>) {
+        this.fights = fights
+        won = emptyList()
+        elapsed = 0.0
+    }
+
+    /** Выигранный бой волны со стаей [pack] длиной [duration] - в итоги волны, следом за прошлыми. */
+    fun bank(pack: List<PackHit>, duration: Double) {
+        won = won + pack.map { it.copy(start = elapsed) }
+        elapsed += duration
+    }
+
+    /** Итоги волны, где последним пал [leader]: все её выигранные бои одним отчётом. */
+    fun summary(leader: RolledMonster): FightReport = FightReport(leader, Outcome.WIN, won, elapsed)
 
     /** The claim of the hoard, by its event: what it holds is the server's answer. */
     var claim: Int? = null
@@ -77,7 +100,8 @@ internal fun ExpeditionRun.descend() {
 internal fun ExpeditionRun.wave(current: Descent, depth: Int) {
     val rule = abyssRule ?: return
     current.level = rule.waves.getOrNull(depth - 1)?.levelAt(run.levelOf(zone)) ?: run.levelOf(zone)
-    current.fights = waves.wave(rule, depth, current.spot.id, zone, baseEffects, run.context.extraRareMods)
+    current.rise(waves.wave(rule, depth, current.spot.id, zone, baseEffects, run.context.extraRareMods))
+    waveReport = null
     nextFight(current)
 }
 

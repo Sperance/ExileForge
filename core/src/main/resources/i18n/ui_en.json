@@ -918,6 +918,7 @@
   "expedition.report_reward": "Reward",
   "expedition.report_run": "This run",
   "expedition.report_slain": "Victory: {0}",
+  "expedition.report_wave": "Wave summary",
   "expedition.report_tab_spoils": "Loot",
   "expedition.report_tab_losses": "Losses",
   "expedition.report_tab_fight": "Fight",

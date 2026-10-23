@@ -395,6 +395,9 @@ class ExpeditionRun(
     /** Журнал последнего боя захода, любого - и Бездны: его открывает «Журнал боя» меню забега. */
     internal var lastFight: FightReport? = null
 
+    /** Итоги последней выигранной волны Бездны поверх листа Расщелины; null - их нет или игрок их закрыл. */
+    internal var waveReport: FightReport? = null
+
     /** Прошлый бой захода выигран: следующий бой открывается силами `FIGHT_CLEAR`. */
     internal var wonLast = false
 

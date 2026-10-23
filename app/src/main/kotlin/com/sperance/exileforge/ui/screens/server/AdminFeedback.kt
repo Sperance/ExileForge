@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
@@ -59,8 +60,8 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Отчёты для модерации - очередь сервера страницами ([PagedColumn], `rules.pageSize`): строка поиска ([SearchBar]: текст, переписка,
  * номер Issue, логин автора - ищет сервер по клавиатуре и очистке поля), чипы очереди со счётом под тем же поиском ([QueueChip]: у
- * «Обсуждения» - точка, пока обсуждения ждут ответа модерации) и в конце их ряда - вид выпадающим выбором, ниже - порядок сегментами без
- * подписи ([FeedbackSort]: новые, номер Issue). Любая смена отбора - и уже выбранный чип - читает очередь с первой страницы,
+ * «Обсуждения» - точка, пока обсуждения ждут ответа модерации), ниже - порядок сегментами без подписи ([FeedbackSort]: новые, номер
+ * Issue). Все виды отчётов - вместе, по времени; вид - у каждой строки. Любая смена отбора - и уже выбранный чип - читает очередь с первой страницы,
  * листание до края дочитывает следующую. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же,
  * что у игрока ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает; касание автора - досье модерации ([DossierView])
  * уровнем цепочки «назад». Комментарий модерации к новому отчёту переводит его в «Обсуждение», «В работу» - отправляет в GitHub.
@@ -87,7 +88,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Refreshable(loading) { vm.loadQueue() }
     val queue = feedback.queue
     val page = queue.page
-    PagedColumn(page.items.size, page.more, loading, vm::moreQueue, queue.kind, queue.queue, queue.query, queue.sort, modifier = Modifier.fillMaxSize(), contentPadding = SettingsPadding, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    PagedColumn(page.items.size, page.more, loading, vm::moreQueue, queue.queue, queue.query, queue.sort, modifier = Modifier.fillMaxSize(), contentPadding = SettingsPadding, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item(key = "search") { SearchBar(query, { query = it }, ui("feedback.admin.search"), onSearch = { vm.filterQueue { it.copy(query = query) } }, maxLength = account.inputs.search) }
         item(key = "queues") {
             val cue = rememberRowScrollCue()
@@ -95,7 +96,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 FeedbackQueue.entries.forEach { q ->
                     QueueChip(q, queue.counts.queues[q], queue.counts.replied.takeIf { q == FeedbackQueue.DISCUSSION } ?: 0L, queue.queue == q) { vm.filterQueue { it.copy(queue = q) } }
                 }
-                Picker(kindTitle(queue.kind), FeedbackKind.entries.map { k -> kindTitle(k) to { vm.filterQueue { it.copy(kind = k) } } })
             }
         }
         item(key = "order") { PillTabs(FeedbackSort.entries.map { ui(it.key) }, queue.sort.ordinal, { picked -> vm.filterQueue { it.copy(sort = FeedbackSort.entries[picked]) } }, segmented = true) }
@@ -154,8 +154,8 @@ private val ReplyDot: @Composable () -> Unit = { Box(Modifier.size(8.dp).backgro
 private val FullReport.where: String get() = place.ifBlank { screen }
 
 /**
- * Строка отчёта в две линии: значок вида цветом судьбы, первая строка текста и «×повторы · дата»; ниже - метка «новый ответ» (последнее
- * слово обсуждения - автора) или «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у
+ * Строка отчёта в две линии, судьба - полосой 3 dp цвета судьбы по левому краю: первая строка текста и «×повторы · дата»; ниже первым - вид
+ * значком и словом своего цвета ([ReportKindLabel]), метка «новый ответ» (последнее слово обсуждения - автора) или «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у
  * отправленного и логин автора; касание - [onOpen].
  */
 @Composable internal fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
@@ -164,11 +164,11 @@ private val FullReport.where: String get() = place.ifBlank { screen }
     val shape = RoundedCornerShape(10.dp)
     val small = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, Bronze, shape).clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp),
+        Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, Bronze, shape).drawBehind { drawRect(fate.tint, size = Size(FATE_STRIP.toPx(), size.height)) }
+            .clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ReportKindMark(report.kind, fate.tint)
             Text(
                 report.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),
                 color = Parchment,
@@ -185,7 +185,8 @@ private val FullReport.where: String get() = place.ifBlank { screen }
                 softWrap = false,
             )
         }
-        Row(Modifier.padding(start = 34.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReportKindLabel(report.kind)
             when {
                 report.awaitsModeration -> LineMark(ui("feedback.admin.new_reply"), Rune)
                 report.status == ReportStatus.WITHDRAWN -> LineMark(ui("feedback.fate.withdrawn"), Quiet)
@@ -440,6 +441,9 @@ private val MAIL_RARITIES = listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE)
 /** Номер Issue-оригинала у дубля - не длиннее. */
 private const val DUPLICATE_DIGITS = 6
 
+/** Ширина полосы судьбы по левому краю строки очереди. */
+private val FATE_STRIP = 3.dp
+
 /**
  * The administrator's letter: to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
@@ -551,31 +555,5 @@ private const val DUPLICATE_DIGITS = 6
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(text, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
         ForgeButton(onClick = onRemove, kind = ButtonKind.Danger, icon = Icons.Outlined.Delete) { Text(ui("mail.remove")) }
-    }
-}
-
-/**
- * Компактный выпадающий выбор в ряду чипов: значение «Ошибка ▾» в нити, зона касания - общая 44 dp ([touchZone]); пункт [options] -
- * подпись и что он делает.
- */
-@Composable private fun Picker(value: String, options: List<Pair<String, () -> Unit>>) {
-    var expanded by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(8.dp)
-    Box {
-        Text(
-            "$value ▾",
-            color = Rune,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            modifier = Modifier.clickable(role = Role.Button) { expanded = true }.touchZone().clip(shape).border(1.dp, Bronze, shape).padding(horizontal = 8.dp, vertical = 3.dp),
-        )
-        ForgeMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { (label, pick) ->
-                DropdownMenuItem(text = { Text(label) }, onClick = {
-                    expanded = false
-                    pick()
-                })
-            }
-        }
     }
 }

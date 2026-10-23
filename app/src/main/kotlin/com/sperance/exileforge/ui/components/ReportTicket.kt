@@ -285,6 +285,23 @@ internal val LocalIssueLinks = staticCompositionLocalOf { false }
     }
 }
 
+/** Вид отчёта значком и словом своего цвета ([tint]) - без подложки: строка очереди модерации, где все виды вместе. */
+@Composable internal fun ReportKindLabel(kind: FeedbackKind) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Icon(kind.icon, null, tint = kind.tint, modifier = Modifier.size(13.dp))
+        Text(kindTitle(kind), color = kind.tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+    }
+}
+
+/** Цвет вида отчёта: ошибка - серый, падение - красный, модерация (апелляция) - бронзовый, жалоба - фиолетовый. */
+internal val FeedbackKind.tint: Color
+    get() = when (this) {
+        FeedbackKind.BUG -> Quiet
+        FeedbackKind.CRASH -> LossText
+        FeedbackKind.APPEAL -> Brass
+        FeedbackKind.COMPLAINT -> Elder
+    }
+
 /** Значок вида отчёта. */
 private val FeedbackKind.icon: ImageVector
     get() = when (this) {

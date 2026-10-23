@@ -182,12 +182,11 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
 /** Страница очереди модерации (`GET admin/feedback`): отчёты [page] и счёт очередей [counts] - только у первой страницы. */
 @Serializable data class FeedbackQueuePage(val page: Page<AdminReport> = Page(), val counts: QueueCounts? = null)
 
-/** Вид [kind] (null - любой) и поиск [query], под которыми модерация смотрит очередь: по ним сервер считает счёт очередей. */
-data class QueueSight(val kind: FeedbackKind?, val query: String) {
-    /** Параметры запроса: `kind` и непустой `q`. */
+/** Поиск [query], под которым модерация смотрит очередь всех видов отчётов: по нему сервер считает счёт очередей. */
+data class QueueSight(val query: String) {
+    /** Параметры запроса: непустой `q`. */
     val params: Map<String, String>
         get() = buildMap {
-            kind?.let { put("kind", it.name) }
             query.trim().takeIf { it.isNotEmpty() }?.let { put("q", it) }
         }
 }

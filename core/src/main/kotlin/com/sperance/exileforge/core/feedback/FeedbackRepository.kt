@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.model.feedback.AdminReport
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.FeedbackMove
 import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
@@ -41,23 +40,22 @@ data class Feedback(
 }
 
 /**
- * Очередь модерации, как её показывает окно: отбор сервера - вид [kind], очередь [queue], поиск [query], порядок [sort] - прочитанные
- * страницы [page] (строки всех страниц подряд) и счёт очередей [counts] - первой страницы или последнего действия модерации. Смена отбора
- * читает её с первой страницы.
+ * Очередь модерации, как её показывает окно: отбор сервера - очередь [queue], поиск [query], порядок [sort] - прочитанные страницы [page]
+ * (строки всех страниц подряд, все виды отчётов вместе) и счёт очередей [counts] - первой страницы или последнего действия модерации.
+ * Смена отбора читает её с первой страницы.
  */
 data class ReportQueue(
-    val kind: FeedbackKind = FeedbackKind.BUG,
     val queue: FeedbackQueue = FeedbackQueue.NEW,
     val query: String = "",
     val sort: FeedbackSort = FeedbackSort.NEWEST,
     val page: Page<AdminReport> = Page(),
     val counts: QueueCounts = QueueCounts(),
 ) {
-    /** Вид и поиск очереди для сервера: под ними он считает счёт очередей. */
-    val sight: QueueSight get() = QueueSight(kind, query)
+    /** Поиск очереди для сервера: под ним он считает счёт очередей. */
+    val sight: QueueSight get() = QueueSight(query)
 
     /** Тот же ли отбор у очереди [other]: ответ на прежний отбор в новую очередь не ложится. */
-    fun sameFilter(other: ReportQueue): Boolean = kind == other.kind && queue == other.queue && query == other.query && sort == other.sort
+    fun sameFilter(other: ReportQueue): Boolean = queue == other.queue && query == other.query && sort == other.sort
 
     /**
      * Ответ [move] на действие модерации с отчётом [id]: свежий счёт очередей; отчёт, что остался в выбранной очереди, встаёт на место

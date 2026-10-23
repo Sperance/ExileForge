@@ -242,7 +242,8 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
                 if (shown < count) LockedTier(shown)
             }
         }
-        RushTierFacts(rules.rush.tier(tier))
+        val shownTier = rules.rush.tier(tier)
+        RushTierFacts(shownTier, game.index?.rules?.loot?.uniqueOdds(shownTier.unique) ?: shownTier.unique)
         EnterButton(ui("trials.rush_enter", roman(tier + 1)), entryBlock(trials.run != null, keys), !game.busy) { vm.enterRush(region.code, tier) }
     }
 }
@@ -300,9 +301,9 @@ private val TagShape = RoundedCornerShape(6.dp)
 /**
  * Цифры выбранной ступени раша из её записи в контенте - строками «подпись - значение»: здоровье и урон боссов со знаком
  * (ниже обычного - зелёным, выше - красным, ноль - «как обычно»), насколько раньше ярость боссов, множитель сфер сундука и шанс
- * уникалки за полную зачистку.
+ * уникалки за полную зачистку [unique] - шанс ступени под множителем правил (`LootRules.uniqueOdds`), как его катит сервер.
  */
-@Composable private fun RushTierFacts(tier: RushTier) {
+@Composable private fun RushTierFacts(tier: RushTier, unique: Double) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         val power = if (tier.power == 0.0) ui("trials.rush_power_usual") else ui("trials.rush_power_value", signedNumber(tier.power))
         val tint = when {
@@ -314,7 +315,7 @@ private val TagShape = RoundedCornerShape(6.dp)
         val enrage = if (tier.enrage > 0) ui("trials.rush_enrage_value", number(tier.enrage)) else ui("trials.rush_enrage_usual")
         TierFact(ui("trials.rush_enrage_label"), enrage, if (tier.enrage > 0) Ember else Parchment)
         TierFact(ui("trials.rush_reward_label"), ui("trials.rush_reward_value", number(tier.reward)), GoldBright)
-        TierFact(ui("trials.rush_unique_label"), ui("trials.rush_unique_value", number(tier.unique)), GoldBright)
+        TierFact(ui("trials.rush_unique_label"), ui("trials.rush_unique_value", number(unique)), GoldBright)
     }
 }
 

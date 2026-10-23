@@ -9,18 +9,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,11 +35,16 @@ import com.sperance.exileforge.core.admin.ModerationFilters
 import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.admin.ModerationState
 import com.sperance.exileforge.core.admin.ModerationTab
+import com.sperance.exileforge.core.admin.TrashTerm
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.dateText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.DeviceView
@@ -45,6 +53,7 @@ import com.sperance.exileforge.core.network.ModerationAccount
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationHero
+import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionCategory
 import com.sperance.exileforge.core.network.SanctionKind
@@ -53,6 +62,7 @@ import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.core.network.TesterAccount
+import com.sperance.exileforge.core.network.epochOfStamp
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.text.AppVersion
 import com.sperance.exileforge.ui.components.*
@@ -61,8 +71,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Окно модерации: поиск, разделы «Все / Баны / Корзина / Журнал», карточки аккаунтов ([AccountCard]: шапка аккаунта и строки его героев);
- * тап по герою открывает досье. Бан и удаление - нижними шторками, удаление - удержанием. Что смотрящему нельзя (админ, модератор для
+ * Окно модерации: поиск, разделы «Все / Баны / Корзина / Журнал», карточка на каждого героя ([HeroCard]: герой, его присутствие и логин
+ * аккаунта), в корзине - строки удалений героев и аккаунтов ([TrashRow]); тап по карточке открывает досье героя, по логину - аккаунта. Бан и удаление - нижними шторками, удаление - удержанием. Что смотрящему нельзя (админ, модератор для
  * модератора), сервер не пропустит, а карточка показывает замком.
  *
  * Сверху строка поиска ([SearchBar]): порядок и отбор по дару - за кнопкой фильтра с числом сужений, заданные - чипами под
@@ -72,7 +82,10 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable internal fun ModerationPage(account: AccountUi) {
     val vm = koinViewModel<ModerationViewModel>().model
     val state by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.load() }
+    LaunchedEffect(Unit) {
+        vm.load()
+        vm.loadServers()
+    }
     if (state.dossierKey != null) {
         TrailLevel(ui("moderation.dossier"), onBack = vm::close) { SettingsScroll { DossierView(account, vm, state.dossier) } }
         return
@@ -124,8 +137,13 @@ import org.koin.compose.viewmodel.koinViewModel
             item(key = "total") { MutedText(ui("moderation.total", page.total ?: 0L), style = MaterialTheme.typography.labelSmall) }
             if (page.items.isEmpty() && !loading) item(key = "none") { MutedText(ui("moderation.none")) }
             val trash = state.tab == ModerationTab.TRASH
-            items(page.items, key = { it.userId }) { card ->
-                AccountCard(account, card, trash, onOpen = { heroId -> vm.open(heroId, card.userId) }, onRestore = vm::lift)
+            items(page.items, key = { it.key }) { row ->
+                val deletion = row.deletion
+                val hero = row.hero
+                when {
+                    trash && deletion != null -> TrashRow(account, row, deletion, vm::open, vm::lift, vm::purge)
+                    hero != null -> HeroCard(account, row, hero, vm::serverName, vm::open)
+                }
             }
         }
     }
@@ -223,93 +241,159 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val FATE_COLUMNS = 2
 
 /**
- * Карточка аккаунта: шапка - логин, роль и замок (роль выше вашей), справа «был в сети» и версия клиента ([VersionMark]); под ней чипы
- * санкции аккаунта и дара; ниже строки героев ([HeroLine]). В корзине ([trash]) удаления несут полосу до очистки и «Восстановить»
- * администратору ([onRestore]); касание героя или аккаунта без героев открывает досье ([onOpen] - id героя, пусто - аккаунт).
+ * Карточка героя списка модерации - «плотная строка» в три строки без подписей: портрет, имя и знак тестировщика, класс и уровень, Мощь
+ * справа; ниже присутствие героя (живое, «в сети» - по окну `rules.online`) и логин аккаунта с ролью и замком (касание логина - досье
+ * аккаунта); третья - гильдия, золото, когда создан, сервер и версия клиента ([VersionMark]). Чипы - санкции героя и аккаунта и дар.
+ * Касание карточки - досье героя ([onOpen]: id героя и аккаунта).
  */
-@Composable private fun AccountCard(account: AccountUi, card: ModerationAccount, trash: Boolean, onOpen: (String) -> Unit, onRestore: (SanctionView) -> Unit) {
-    val shape = RoundedCornerShape(16.dp)
-    val sanction = card.sanction?.takeIf { it.active }
-    val edge = when (sanction?.kind) {
-        SanctionKind.BAN -> LifeRed.copy(alpha = .45f)
-        SanctionKind.MUTE -> Caution.copy(alpha = .45f)
-        else -> Bronze
-    }
-    Column(Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, edge, shape).clip(shape)) {
-        Column(
-            Modifier.fillMaxWidth().clickable(enabled = !account.busy && card.heroes.isEmpty()) { onOpen("") }.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(card.login, color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                RoleMark(card.role)
-                if (card.protected && !trash) Icon(Icons.Outlined.Lock, ui("moderation.protected"), tint = Muted, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.weight(1f))
-                MutedText(seenText(card.lastSeenAt), style = MaterialTheme.typography.labelSmall)
-                VersionMark(card.clientVersion)
-            }
-            if (sanction != null || card.fate != null) {
-                Chips {
-                    sanction?.let { SanctionTag(it) }
-                    card.fate?.let { FateMark(FateCard(it)) }
-                }
-            }
-            if (trash && sanction != null) TrashLine(account, sanction, !card.protected) { onRestore(sanction) }
+@Composable private fun HeroCard(account: AccountUi, row: ModerationRow, hero: ModerationHero, serverName: (String) -> String, onOpen: (String, String) -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    val owner = row.account
+    val heroSanction = hero.sanction?.takeIf { it.active }
+    val accountSanction = owner.sanction?.takeIf { it.active }
+    val edge = sanctionEdge(heroSanction ?: accountSanction)
+    val presence = rememberPresence(hero.lastSeenAt) { now -> account.index?.rules?.online(hero.lastSeenAt, now) == true }
+    Column(
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, edge, shape).clip(shape).clickable(enabled = !account.busy) { onOpen(hero.heroId, owner.userId) }
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        HeroHead(account, hero)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(presence.text, color = if (presence.online) Vital else Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+            MutedText("·", style = MaterialTheme.typography.labelSmall)
+            LoginLink(account, owner, Modifier.weight(1f, fill = false)) { onOpen("", owner.userId) }
         }
-        card.heroes.forEach { hero ->
-            HorizontalDivider(color = PanelRaised)
-            HeroLine(account, hero, trash && !card.protected, onOpen = { onOpen(hero.heroId) }, onRestore = onRestore)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                listOfNotNull(
+                    hero.guild ?: ui("moderation.row.no_guild"),
+                    ui("moderation.row.gold", compactNumber(hero.gold.toDouble())),
+                    epochOfStamp(hero.createdAt)?.let { ui("moderation.row.created", dateText(it)) },
+                    hero.server.takeIf { it.isNotBlank() }?.let(serverName),
+                ).joinToString(" · "),
+                color = Quiet,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            VersionMark(owner.clientVersion)
+        }
+        if (heroSanction != null || accountSanction != null || owner.fate != null) {
+            Chips {
+                heroSanction?.let { SanctionTag(it) }
+                accountSanction?.let { SanctionTag(it) }
+                owner.fate?.let { FateMark(FateCard(it)) }
+            }
         }
     }
 }
 
-/**
- * Строка героя карточки аккаунта: портрет, имя и знак тестировщика, ниже - класс и уровень или, у героя в корзине, «Удалён автором /
- * модерацией · дата»; справа - Мощь. Бан и немота героя - красной строкой; в корзине - полоса до очистки и «Восстановить» ([restorable]).
- */
-@Composable private fun HeroLine(account: AccountUi, hero: ModerationHero, restorable: Boolean, onOpen: () -> Unit, onRestore: (SanctionView) -> Unit) {
-    val held = hero.sanction?.takeIf { it.active }
-    val deletion = held?.takeIf { it.kind == SanctionKind.DELETION }
-    Column(Modifier.fillMaxWidth().clickable(enabled = !account.busy, onClick = onOpen).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ClassPortrait(hero.heroClass.takeIf { it.isNotBlank() }, account.world.portraits, Modifier.size(30.dp).alpha(if (hero.deleted) .45f else 1f))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Text(hero.name, color = if (hero.deleted) Muted else Parchment, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    if (hero.tester) Icon(Icons.Outlined.Science, ui("dossier.tester"), tint = Elder, modifier = Modifier.size(14.dp))
-                }
-                if (hero.deleted) {
-                    Text(deletedText(deletion), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                } else {
-                    MutedText(listOf(classTitle(hero.heroClass), ui("common.level_short", hero.level)).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.labelSmall)
-                }
+/** Верхняя строка героя: портрет, имя и знак тестировщика, класс и уровень (без данных героя - «данных героя нет»), Мощь справа; удалённый - приглушён. */
+@Composable private fun HeroHead(account: AccountUi, hero: ModerationHero) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        ClassPortrait(hero.heroClass.takeIf { it.isNotBlank() }, account.world.portraits, Modifier.size(30.dp).alpha(if (hero.deleted) GONE else 1f))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(hero.name, color = if (hero.deleted) Muted else Parchment, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                TesterMark(hero.tester, 14.dp)
             }
+            MutedText(
+                if (hero.heroClass.isBlank()) ui("moderation.row.no_data") else listOf(classTitle(hero.heroClass), ui("common.level_short", hero.level)).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        hero.might?.let { might ->
             Column(horizontalAlignment = Alignment.End) {
-                Text(hero.might?.let { number(it) } ?: "…", color = if (hero.deleted) Muted else Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(number(might), color = if (hero.deleted) Muted else Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 MutedText(ui("moderation.might"), style = MaterialTheme.typography.labelSmall)
             }
         }
-        held?.takeIf { it.kind != SanctionKind.DELETION }?.let { Text(sanctionLine(it), color = LifeRed, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        if (deletion != null && restorable) TrashLine(account, deletion, true) { onRestore(deletion) }
     }
 }
 
-/** Метка героя в корзине: кто удалил - автор (самоудаление) или модерация - и когда; удаления не прочитать - просто «Удалён». */
-private fun deletedText(deletion: SanctionView?): String = deletion?.let {
-    ui(if (it.voluntary) "moderation.deleted_by_author" else "moderation.deleted_by_moderation", listedAt(it.at)?.take(DATE).orEmpty())
-} ?: ui("moderation.deleted_mark")
+/** Логин аккаунта ссылкой на его досье ([onOpen]): значок, логин, роль и замок, если роль выше вашей. */
+@Composable private fun LoginLink(account: AccountUi, owner: ModerationAccount, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+    Row(
+        modifier.clip(RoundedCornerShape(6.dp)).clickable(enabled = !account.busy, role = Role.Button, onClick = onOpen).heightIn(min = 24.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(Icons.Outlined.Person, null, tint = Muted, modifier = Modifier.size(13.dp))
+        Text(owner.login, color = Quiet, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        RoleMark(owner.role, 13.dp)
+        if (owner.protected) Icon(Icons.Outlined.Lock, ui("moderation.protected"), tint = Muted, modifier = Modifier.size(13.dp))
+    }
+}
 
-/** Удаление в корзине: кто и за что удалил, полоса до очистки и «Восстановить» администратору ([restorable]). */
-@Composable private fun TrashLine(account: AccountUi, sanction: SanctionView, restorable: Boolean, onRestore: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MutedText(listOf(ui("moderation.target.${sanction.target.name}"), sanction.byLogin, categoryTitle(sanction.category)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
-            LinearProgressIndicator(progress = { trashShare(sanction) }, color = Muted, trackColor = PanelRaised, modifier = Modifier.fillMaxWidth().height(3.dp))
-            Text(ui("moderation.purge_in", sanction.daysLeft() ?: 0), color = Muted, style = MaterialTheme.typography.labelSmall)
+/** Кромка карточки по санкции: бан - красная, немота - жёлтая, иначе обычная. */
+private fun sanctionEdge(sanction: SanctionView?): Color = when (sanction?.kind) {
+    SanctionKind.BAN -> LifeRed.copy(alpha = .45f)
+    SanctionKind.MUTE -> Caution.copy(alpha = .45f)
+    else -> Bronze
+}
+
+/**
+ * Строка корзины: удалённый герой (шапка героя и логин аккаунта) или удалённый аккаунт целиком (логин и сколько героев сотрёт стирание);
+ * ниже - кто, когда и за что удалил, живой срок «через 29 дн. 22 ч · 24 нояб.» и полоса «осталось» (серая, красная в последние
+ * [TrashTerm.URGENT_DAYS] дня), справа круглые «Восстановить» и «Стереть сейчас» с кольцом удержания - только администратору; пока
+ * палец на «Стереть», под полосой - что сотрётся. Касание строки героя - досье героя, аккаунта - досье аккаунта.
+ */
+@Composable private fun TrashRow(account: AccountUi, row: ModerationRow, deletion: SanctionView, onOpen: (String, String) -> Unit, onRestore: (SanctionView) -> Unit, onPurge: (SanctionView) -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    val hero = row.hero
+    val owner = row.account
+    Column(
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, Bronze, shape).clip(shape).clickable(enabled = !account.busy) { onOpen(hero?.heroId.orEmpty(), owner.userId) }
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (hero != null) {
+            HeroHead(account, hero)
+            LoginLink(account, owner) { onOpen("", owner.userId) }
+        } else {
+            Text(owner.login, color = Muted, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            MutedText(ui("moderation.row.whole_account", heroCount(owner.heroCount)), style = MaterialTheme.typography.labelSmall)
         }
-        if (restorable) ForgeIconButton(Icons.Outlined.Restore, ui("moderation.restore"), onClick = onRestore, state = ButtonState.of(!account.busy), accent = Gold)
+        TrashTermLine(account, deletion, consequence = if (hero != null) ui("moderation.purge.hold_hero") else ui("moderation.purge.hold_account", heroCount(owner.heroCount)), actionable = !owner.protected, onRestore, onPurge)
     }
 }
+
+/** «N героев» с числом и склонением языка. */
+private fun heroCount(count: Int): String = ui(pluralKey("moderation.hero_count", count), count)
+
+/**
+ * Срок удаления [deletion] в строке корзины: кто и за что удалил, живой срок и дата очистки, полоса «осталось»; при [actionable]
+ * (администратор) справа «Восстановить» ([onRestore]) и «Стереть сейчас» удержанием ([onPurge]), пока его держат - [consequence].
+ */
+@Composable private fun TrashTermLine(account: AccountUi, deletion: SanctionView, consequence: String, actionable: Boolean, onRestore: (SanctionView) -> Unit, onPurge: (SanctionView) -> Unit) {
+    val now = rememberServerNow(TERM_TICK_MS)
+    val term = remember(deletion.at, deletion.until, now) { TrashTerm.of(deletion.at, deletion.until, now) }
+    var holding by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            MutedText(listOf(deletedText(deletion), deletion.byLogin, categoryTitle(deletion.category)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
+            term?.let {
+                val tint = if (it.urgent) LifeRed else Muted
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(it.leftText(), color = if (it.urgent) LossText else Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
+                    MutedText("· " + it.dateText(), style = MaterialTheme.typography.labelSmall)
+                }
+                LinearProgressIndicator(progress = { it.share }, color = tint, trackColor = PanelRaised, modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)))
+            }
+            Text(if (holding) consequence else ui("moderation.purge.left"), color = if (holding) LossText else Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2)
+        }
+        if (actionable) {
+            ForgeIconButton(Icons.Outlined.Restore, ui("moderation.restore"), onClick = { onRestore(deletion) }, kind = ButtonKind.Secondary, size = ButtonSize.Compact, state = ButtonState.of(!account.busy), accent = Gold, shape = IconButtonShape.Circle)
+            HoldRingButton(Icons.Outlined.DeleteForever, ui("moderation.purge.now"), enabled = !account.busy, tint = LifeRed, onHolding = { holding = it }) { onPurge(deletion) }
+        }
+    }
+}
+
+/** Метка удаления: кто удалил - автор (самоудаление) или модерация - и когда. */
+private fun deletedText(deletion: SanctionView): String =
+    ui(if (deletion.voluntary) "moderation.deleted_by_author" else "moderation.deleted_by_moderation", listedAt(deletion.at)?.take(DATE).orEmpty())
 
 /** Чип санкции аккаунта: вид, цель, срок и причина для игрока (без неё - категория); бан - красный, немота - жёлтая, удаление - серое. */
 @Composable private fun SanctionTag(sanction: SanctionView) {
@@ -539,28 +623,16 @@ internal fun sanctionLine(sanction: SanctionView): String = listOfNotNull(
     "#${sanction.number}",
 ).joinToString(" · ")
 
-/** Последняя активность героя: «был 5 мин назад», «был 07.10 18:24», «нет данных». */
-internal fun seenText(at: Long, now: Long = System.currentTimeMillis()): String {
-    if (at <= 0) return ui("moderation.seen_unknown")
-    val minutes = (now - at) / 60_000
-    return when {
-        minutes < 1 -> ui("moderation.seen_now")
-        minutes < 60 -> ui("moderation.seen_minutes", minutes)
-        minutes < 24 * 60 -> ui("moderation.seen_hours", minutes / 60)
-        else -> ui("moderation.seen_at", java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(at)))
-    }
-}
-
 internal fun categoryTitle(category: SanctionCategory): String = ui("moderation.category.${category.name}")
 
-/** Срок санкции словами: «до 11.10 18:02», «навсегда» или «очистка через N дн.». */
-internal fun termText(sanction: SanctionView): String? = termText(sanction.kind, sanction.until, sanction.daysLeft())
+/** Срок санкции словами: «до 11.10 18:02», «навсегда» или срок корзины «через 29 дн. 22 ч» ([TrashTerm]). */
+internal fun termText(sanction: SanctionView): String? = termText(sanction.kind, sanction.at, sanction.until)
 
 /** Срок санкции глазами наказанного - теми же словами. */
-internal fun termText(notice: SanctionNotice): String? = termText(notice.kind, notice.until, notice.daysLeft())
+internal fun termText(notice: SanctionNotice): String? = termText(notice.kind, notice.at, notice.until)
 
-private fun termText(kind: SanctionKind, until: String?, daysLeft: Long?): String? = when {
-    kind == SanctionKind.DELETION -> daysLeft?.let { ui("moderation.purge_in", it) }
+private fun termText(kind: SanctionKind, at: String, until: String?): String? = when {
+    kind == SanctionKind.DELETION -> TrashTerm.of(at, until, System.currentTimeMillis() + ServerClock.offset)?.leftText()
     until == null -> ui("moderation.forever")
     else -> listedAt(until)?.let { ui("moderation.until", it) }
 }
@@ -577,16 +649,11 @@ private fun hoursText(hours: Int): String = when {
     else -> ui("moderation.hours", hours)
 }
 
-/** Мс эпохи по метке сервера (UTC); не читается - null. */
-internal fun epochOf(stamp: String?): Long? = stamp?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
-
-private fun trashShare(sanction: SanctionView): Float {
-    val from = epochOf(sanction.at) ?: return 0f
-    val to = epochOf(sanction.until) ?: return 0f
-    return if (to <= from) 1f else ((System.currentTimeMillis() - from).toFloat() / (to - from)).coerceIn(0f, 1f)
-}
-
 private const val PRESET_WEEK = 2
+private const val TERM_TICK_MS = 60_000L
+
+/** Прозрачность портрета героя в корзине. */
+private const val GONE = .45f
 internal const val TRASH_DAYS = 30
 private const val COMMENT = 300
 private const val DIGITS = 4

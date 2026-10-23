@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.ModerationAccount
 import com.sperance.exileforge.core.network.ModerationHero
+import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.SanctionCategory
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionTarget
@@ -12,31 +13,28 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Корзина модерации падала на повторе ключа строки. Ключ карточки списка - аккаунт: два удаления одного героя - строки одной карточки, а
- * повтор карточки внутри страницы и на стыке страниц (список сдвинулся между чтениями) остаётся одной карточкой.
+ * Корзина модерации падала на повторе ключа строки. Ключ строки корзины - удаление: два удаления одного героя - две строки, а повтор
+ * строки внутри страницы и на стыке страниц (список сдвинулся между чтениями) остаётся одной строкой.
  */
 class TrashKeysTest {
     @Test
-    fun twoDeletionsOfOneHeroAndRepeatedCardsKeepKeysUnique() {
-        val first = card("user-1", "del-1", "del-2")
-        val page = Page(listOf(first, card("user-2", "del-3"), first), more = true).distinctBy(ModerationAccount::userId)
-        assertEquals(listOf("user-1", "user-2"), page.items.map { it.userId })
-        assertEquals(2, page.items.first().heroes.size)
+    fun twoDeletionsOfOneHeroAndRepeatedRowsKeepKeysUnique() {
+        val first = row("user-1", "del-1")
+        val page = Page(listOf(first, row("user-1", "del-2"), first), more = true).distinctBy(ModerationRow::key)
+        assertEquals(listOf("del-1", "del-2"), page.items.map { it.key })
 
-        val next = Page(listOf(card("user-2", "del-3"), card("user-3", "del-4")), page = 1)
-        val shown = page.followedBy(next, ModerationAccount::userId)
-        assertEquals(listOf("user-1", "user-2", "user-3"), shown.items.map { it.userId })
+        val next = Page(listOf(row("user-1", "del-2"), row("user-3", "del-4")), page = 1)
+        val shown = page.followedBy(next, ModerationRow::key)
+        assertEquals(listOf("del-1", "del-2", "del-4"), shown.items.map { it.key })
     }
 
-    private fun card(user: String, vararg deletions: String) = ModerationAccount(
-        userId = user,
-        heroes = deletions.map { id ->
-            ModerationHero(
-                heroId = "hero",
-                name = "Hero",
-                deleted = true,
-                sanction = SanctionView(id, 1, SanctionKind.DELETION, SanctionTarget.HERO, "Hero", SanctionCategory.CHEATS, byLogin = "admin", byRole = AccountRole.ADMIN, at = "2026-10-05T00:00"),
-            )
-        },
+    private fun row(user: String, deletion: String) = ModerationRow(
+        ModerationAccount(userId = user),
+        ModerationHero(
+            heroId = "hero",
+            name = "Hero",
+            deleted = true,
+            sanction = SanctionView(deletion, 1, SanctionKind.DELETION, SanctionTarget.HERO, "Hero", SanctionCategory.CHEATS, byLogin = "admin", byRole = AccountRole.ADMIN, at = "2026-10-05T00:00"),
+        ),
     )
 }

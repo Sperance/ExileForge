@@ -178,7 +178,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 val opens = vm.guildOpens(card)
                 ReferenceRow(ui("player.guild"), ui("player.guild_value", guild.tag, ui("guild.role.${guild.role.name}")), Parchment, onClick = if (opens) ({ vm.openGuild(card) }) else null)
             }
-            ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
+            ReferenceRow(ui("player.online"), rememberPresence(card.lastSeenAt) { card.online }.text, Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
             card.honours.drop(1).forEach { honour ->
                 ReferenceRow(ui("player.contest_title.${honour.kind.name}"), ui("player.contest_title_value", contestTitle(honour), stampText(honour.until)), medalOf(honour.place))
             }

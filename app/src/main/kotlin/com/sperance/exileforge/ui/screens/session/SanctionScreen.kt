@@ -18,10 +18,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionNotice
+import com.sperance.exileforge.core.network.epochOfStamp
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.screens.server.categoryTitle
-import com.sperance.exileforge.ui.screens.server.epochOf
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -90,8 +90,8 @@ import org.koin.compose.viewmodel.koinViewModel
             now = System.currentTimeMillis()
         }
     }
-    val from = epochOf(sanction?.at)
-    val to = epochOf(sanction?.until)
+    val from = epochOfStamp(sanction?.at)
+    val to = epochOfStamp(sanction?.until)
     val share = if (from == null || to == null || to <= from) 1f else ((to - now).toFloat() / (to - from)).coerceIn(0f, 1f)
     Box(Modifier.size(132.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {

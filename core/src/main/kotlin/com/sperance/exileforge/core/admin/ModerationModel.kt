@@ -12,10 +12,10 @@ import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.GameServer
-import com.sperance.exileforge.core.network.ModerationAccount
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationQuery
+import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.RenameRequest
@@ -81,7 +81,7 @@ data class ModerationFilters(
 }
 
 /**
- * Окно модерации: раздел, поиск, прочитанные страницы карточек аккаунтов ([page]) или журнала
+ * Окно модерации: раздел, поиск, прочитанные страницы строк героев ([page]; в корзине - строки удалений героев и аккаунтов) или журнала
  * ([journal]) - строки всех страниц подряд; открытое
  * досье - поверх списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
@@ -92,7 +92,7 @@ data class ModerationState(
     val searched: String = "",
     /** Порядок списка и отбор по Предначертанию. */
     val filters: ModerationFilters = ModerationFilters.DEFAULT,
-    val page: Page<ModerationAccount> = Page(),
+    val page: Page<ModerationRow> = Page(),
     val journal: Page<ModerationEntryView> = Page(),
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
@@ -149,7 +149,7 @@ class ModerationModel(
         staff()
         val state = mutable.value
         val answer = rows(state.query, state, 0)
-        mutable.update { if (it.sameList(state)) it.copy(page = answer.distinctBy(ModerationAccount::userId), searched = state.query) else it }
+        mutable.update { if (it.sameList(state)) it.copy(page = answer.distinctBy(ModerationRow::key), searched = state.query) else it }
     }
 
     /**
@@ -161,12 +161,12 @@ class ModerationModel(
         if (!state.page.more) return@read
         val next = rows(state.searched, state, state.page.page + 1)
         mutable.update {
-            if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next, ModerationAccount::userId)) else it
+            if (it.sameList(state) && it.searched == state.searched && it.page.page == state.page.page) it.copy(page = it.page.followedBy(next, ModerationRow::key)) else it
         }
     }
 
-    /** Страница [page] аккаунтов раздела и отбора окна [state] по поиску [text]; аккаунт, что повторился на стыке страниц, - одной карточкой. */
-    private suspend fun rows(text: String, state: ModerationState, page: Int): Page<ModerationAccount> = state.filters.let { filters ->
+    /** Страница [page] строк раздела и отбора окна [state] по поиску [text]; строка, что повторилась на стыке страниц, - одной. */
+    private suspend fun rows(text: String, state: ModerationState, page: Int): Page<ModerationRow> = state.filters.let { filters ->
         api.rows(ModerationQuery(state.segment, page, text, filters.sort, filters.fate, filters.deleted, filters.outdated))
     }
 
@@ -206,6 +206,17 @@ class ModerationModel(
     /** Снимает бан или немоту, восстанавливает удалённое из корзины. */
     fun lift(sanction: SanctionView) = act {
         api.lift(sanction.id).also { notices.toast(ui("moderation.lifted.${it.kind.name}", it.label)) }
+    }
+
+    /**
+     * Стирает удаление [sanction] из корзины сразу - героя или аккаунт со всеми героями (только администратор): тост называет стёртое,
+     * досье стёртой цели закрывается (перечитывать нечего), раздел перечитывается.
+     */
+    fun purge(sanction: SanctionView) = act {
+        api.purge(sanction.id).also {
+            notices.toast(ui("moderation.purge.done", it.label))
+            if (sanction.targetId in mutable.value.dossierKey?.toList().orEmpty()) close()
+        }
     }
 
     /** Новая роль аккаунта [userId]: администратор выдаёт игрока, тестировщика или модератора. */

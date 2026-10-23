@@ -52,7 +52,8 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
 /**
  * Санкция, как её видит модерация: [until] - конец бана или очистки корзины (null - бессрочно), [liftedAt] - снята досрочно,
  * [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана; [comment] - служебная заметка, [reason] - причина для
- * игрока. Игрок видит [SanctionNotice].
+ * игрока; [targetId] - цель (герой, аккаунт, устройство), [parentId] - удаление аккаунта, вместе с которым удалён этот герой (пусто -
+ * своё удаление: его можно стереть сразу). Игрок видит [SanctionNotice].
  */
 @Serializable data class SanctionView(
     val id: String,
@@ -71,14 +72,16 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     val purgedAt: String? = null,
     val appealed: Boolean = false,
     val reason: String = "",
+    val targetId: String = "",
+    val parentId: String = "",
 ) {
     val active: Boolean get() = liftedAt == null && purgedAt == null
 
     /** Самоудаление: герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
     val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
 
-    /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
-    fun daysLeft(now: Long = System.currentTimeMillis()): Long? = daysUntil(until, now)
+    /** Действующее удаление, что лежит в корзине своей строкой - не вместе с аккаунтом: его можно стереть сразу. */
+    val erasable: Boolean get() = active && kind == SanctionKind.DELETION && parentId.isEmpty()
 }
 
 /**
@@ -105,23 +108,23 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
 }
 
 /** Полных или начатых дней от [now] до метки сервера [until] (UTC); null - бессрочно или не прочитать. */
-private fun daysUntil(until: String?, now: Long): Long? = until
-    ?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
-    ?.let { ((it - now).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
+private fun daysUntil(until: String?, now: Long): Long? = epochOfStamp(until)?.let { ((it - now).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
+
+/** Мс эпохи по метке сервера (`LocalDateTime` в UTC); пусто или не читается - null. */
+fun epochOfStamp(stamp: String?): Long? = stamp?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
 
 private const val DAY_MS = 86_400_000L
 
 @Serializable enum class ModerationSegment { ALL, BANNED, TRASH }
 
 /**
- * Карточка аккаунта списка модерации: страница сервера - аккаунты, у каждого шапка и его герои, что прошли отбор. В корзине - удаления
- * аккаунта ([sanction]) и его героев.
+ * Аккаунт строки списка модерации: логин, роль, санкция и версия клиента. Присутствие - у героя строки ([ModerationHero.lastSeenAt]).
  *
  * @property protected роль владельца выше смотрящего - действия недоступны (в корзине - не администратор)
  * @property sanction действующая санкция аккаунта - удаление, бан, немота; null - чист
  * @property fate Предначертание аккаунта - код дара `fates.json`; null - не выбрано
- * @property lastSeenAt когда аккаунт был в игре, мс эпохи; 0 - неизвестно
  * @property clientVersion версия клиента, на которой он играет; пусто - неизвестна
+ * @property heroCount сколько героев сотрёт стирание удалённого аккаунта (строка аккаунта корзины), иначе 0
  */
 @Serializable data class ModerationAccount(
     val userId: String,
@@ -130,13 +133,24 @@ private const val DAY_MS = 86_400_000L
     val protected: Boolean = false,
     val sanction: SanctionView? = null,
     val fate: String? = null,
-    val lastSeenAt: Long = 0,
     val clientVersion: String = "",
-    val heroes: List<ModerationHero> = emptyList(),
+    val heroCount: Int = 0,
 )
 
 /**
- * Запрос списка модерации (маршрут `rows`): раздел [segment], страница [page] аккаунтов, поиск [text], порядок [sort], отбор по
+ * Строка списка модерации - герой [hero] и его аккаунт [account]; в корзине без героя - удалённый аккаунт целиком, его удаление -
+ * [ModerationAccount.sanction].
+ */
+@Serializable data class ModerationRow(val account: ModerationAccount, val hero: ModerationHero? = null) {
+    /** Ключ строки в списке: удаление, что держит её в корзине, иначе герой (у строки без героя - аккаунт). */
+    val key: String get() = deletion?.id ?: hero?.heroId ?: account.userId
+
+    /** Удаление, что держит строку в корзине: героя или аккаунта целиком; null - строка не в корзине. */
+    val deletion: SanctionView? get() = (hero?.sanction ?: account.sanction)?.takeIf { it.active && it.kind == SanctionKind.DELETION }
+}
+
+/**
+ * Запрос списка модерации (маршрут `rows`): раздел [segment], страница [page] героев, поиск [text], порядок [sort], отбор по
  * Предначертанию [fate], чипы «Удалённые» [deleted] и «Старая версия» [outdated] - старее версии этой сборки (её шлёт каждый запрос).
  */
 data class ModerationQuery(
@@ -162,8 +176,10 @@ data class ModerationQuery(
 }
 
 /**
- * Герой карточки аккаунта: [name] - у копии, стёртой владельцем, имя до стирания; [deleted] - в корзине, [sanction] - удаление, что его
- * держит (автором или модерацией), бан или немота героя; [might] - Мощь, null - не посчитана.
+ * Герой строки списка модерации: [name] - у копии, стёртой владельцем, имя до стирания; [deleted] - в корзине, [sanction] - удаление,
+ * что его держит (автором или модерацией), бан или немота героя; [might] - Мощь, null - не посчитана; [lastSeenAt] - последняя команда
+ * героя, мс эпохи (0 - неизвестно); [guild] - название гильдии, null - без гильдии; [createdAt] - метка сервера создания и [server] -
+ * код игрового сервера, пусто - документа героя нет (корзина).
  */
 @Serializable data class ModerationHero(
     val heroId: String,
@@ -174,8 +190,11 @@ data class ModerationQuery(
     val might: Double? = null,
     val deleted: Boolean = false,
     val sanction: SanctionView? = null,
-    /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
+    val guild: String? = null,
+    val gold: Long = 0,
+    val createdAt: String = "",
+    val server: String = "",
 )
 
 /** Смена имени героя [hero] модерацией на [name]; [reason] - причина для игрока, обязательна: она уйдёт ему письмом. */
@@ -280,7 +299,13 @@ sealed interface ModerationFate {
     val appeals: Int = 0,
     val reports: Int = 0,
     val rights: DossierRights = DossierRights(),
-)
+) {
+    /** Последняя команда цели досье, мс эпохи: у героя - его, у аккаунта - самая свежая из его героев; 0 - неизвестно. */
+    val seenAt: Long get() = hero?.lastSeenAt ?: heroes.maxOfOrNull { it.lastSeenAt } ?: 0
+
+    /** Удаление героя досье, что можно стереть сразу ([SanctionView.erasable]); null - герой не в корзине своей строкой или досье аккаунта. */
+    val heroDeletion: SanctionView? get() = hero?.let { focus -> sanctions.firstOrNull { it.erasable && it.target == SanctionTarget.HERO && it.targetId == focus.heroId } }
+}
 
 /**
  * Действие журнала модерации; [FATE] - смена Предначертания аккаунту: номера санкции нет, в заметке - прежний и новый код дара через
@@ -343,8 +368,8 @@ private const val FATE_ARROW = " → "
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    /** Страница карточек аккаунтов по запросу [query] (всего аккаунтов - [Page.total]). */
-    suspend fun rows(query: ModerationQuery): Page<ModerationAccount> = http.get("$MODERATION/rows", query.params)
+    /** Страница строк героев по запросу [query] (всего - [Page.total]); в корзине - строки удалений героев и аккаунтов. */
+    suspend fun rows(query: ModerationQuery): Page<ModerationRow> = http.get("$MODERATION/rows", query.params)
 
     /** Новое имя героя: модератору и администратору по правам досье; ответ - имя, что теперь у героя. */
     suspend fun rename(request: RenameRequest): String = http.post("$MODERATION/rename", body = WireJson.encodeToJsonElement(request))
@@ -359,6 +384,9 @@ class ModerationClient internal constructor(private val http: Transport) {
 
     /** Снимает бан или восстанавливает удалённое. */
     suspend fun lift(sanctionId: String): SanctionView = http.post("$MODERATION/lift", mapOf("id" to sanctionId))
+
+    /** Стирает строку корзины - героя или аккаунт со всеми героями - сразу, не дожидаясь срока: только администратор. */
+    suspend fun purge(sanctionId: String): SanctionView = http.post("$MODERATION/purge", mapOf("id" to sanctionId))
 
     /** Новая роль аккаунта: только администратор, ответ - роль, что теперь у аккаунта. */
     suspend fun setRole(userId: String, role: AccountRole): AccountRole = http.post("$MODERATION/role", body = WireJson.encodeToJsonElement(RoleRequest(userId, role)))

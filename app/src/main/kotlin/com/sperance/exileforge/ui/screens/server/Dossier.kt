@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.SwapHoriz
@@ -40,6 +41,7 @@ import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.epochOfStamp
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
@@ -59,6 +61,7 @@ import java.time.format.DateTimeFormatter
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
     var deleting by remember { mutableStateOf<SanctionTarget?>(null) }
     var device by remember { mutableStateOf<DeviceView?>(null) }
+    var purging by remember { mutableStateOf<SanctionView?>(null) }
     if (dossier == null) {
         CircularProgressIndicator(color = Gold, modifier = Modifier.size(28.dp))
         return
@@ -82,11 +85,17 @@ import java.time.format.DateTimeFormatter
     DangerBlock(account, dossier, vm.owns(dossier.account.userId), onSanction = { kind ->
         device = null
         sanctioning = kind
-    }) { deleting = it }
+    }, onPurge = { purging = it }) { deleting = it }
     sanctioning?.let { kind ->
         BanSheet(account, dossier, device, kind, onDismiss = { sanctioning = null }) {
             sanctioning = null
             vm.ban(it)
+        }
+    }
+    purging?.let { deletion ->
+        PurgeSheet(account, dossier.hero?.name ?: deletion.label, onDismiss = { purging = null }) {
+            purging = null
+            vm.purge(deletion)
         }
     }
     deleting?.let { target ->
@@ -124,24 +133,23 @@ import java.time.format.DateTimeFormatter
 private data class Fact(val label: String, val value: String, val color: Color = Parchment)
 
 /**
- * Панель фактов: «ключ — значение» плотными строками в две колонки - регистрация, вход, в сети (последнее использование
- * сессии аккаунта, коротко), клиент, устройство, у героя - с какого дня, гильдия, золото, бои, уровни в час и часы боя. Версии
+ * Панель фактов: «ключ — значение» плотными строками в две колонки - регистрация, вход, в сети (живая давность последней команды
+ * героя, у аккаунта - самого свежего героя: [Dossier.seenAt]), клиент, устройство, у героя - с какого дня, гильдия, золото, бои, уровни в час и часы боя. Версии
  * Android сервер не знает - её строки нет.
  */
 @Composable private fun DossierFacts(account: AccountUi, dossier: Dossier) {
-    val now = System.currentTimeMillis()
     val owner = dossier.account
     val hero = dossier.hero
-    val seen = epochOf(owner.lastSeenAt)
-    val online = seen != null && account.index?.rules?.online(seen, now) == true
+    val seen = dossier.seenAt
+    val presence = rememberPresence(seen) { now -> account.index?.rules?.online(seen, now) == true }
     val facts = buildList {
-        add(Fact(ui("moderation.registered"), epochOf(owner.registeredAt)?.let(::dayOf) ?: DASH))
-        add(Fact(ui("moderation.last_login"), epochOf(owner.lastLoginAt)?.let(::momentOf) ?: DASH))
-        add(Fact(ui("dossier.online"), seen?.let { (if (online) "● " else "") + seenShort(it, now) } ?: DASH, if (online) Vital else Parchment))
+        add(Fact(ui("moderation.registered"), epochOfStamp(owner.registeredAt)?.let(::dayOf) ?: DASH))
+        add(Fact(ui("moderation.last_login"), epochOfStamp(owner.lastLoginAt)?.let(::momentOf) ?: DASH))
+        add(Fact(ui("dossier.online"), presence.text, if (presence.online) Vital else Parchment))
         add(Fact(ui("moderation.client"), owner.clientVersion.ifBlank { DASH }))
         add(Fact(ui("dossier.device"), dossier.devices.firstOrNull()?.let { it.model.ifBlank { it.hardware.take(HARDWARE) } } ?: DASH))
         hero?.let {
-            add(Fact(ui("dossier.hero_since"), epochOf(it.createdAt)?.let(::dayOf) ?: DASH))
+            add(Fact(ui("dossier.hero_since"), epochOfStamp(it.createdAt)?.let(::dayOf) ?: DASH))
             add(Fact(ui("moderation.guild"), it.guild ?: DASH))
             add(Fact(ui("moderation.gold"), compactNumber(it.gold.toDouble())))
             add(Fact(ui("moderation.fights"), number(it.fights.toDouble())))
@@ -412,11 +420,14 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 /**
  * Опасные действия - красный блок внизу досье: бан, немота и удаление строками, под каждым именем - одна строка последствий. Права
  * - из досье ([Dossier.rights]); роль выше вашей - строки модерации погашены, касание называет причину. В своём досье [own] блока нет.
+ * У героя в корзине вместо удаления - «Стереть героя» администратору ([onPurge] с его удалением, [Dossier.heroDeletion]): удалённый
+ * герой не открывает удаление аккаунта.
  */
-@Composable private fun DangerBlock(account: AccountUi, dossier: Dossier, own: Boolean, onSanction: (SanctionKind) -> Unit, onDelete: (SanctionTarget) -> Unit) {
+@Composable private fun DangerBlock(account: AccountUi, dossier: Dossier, own: Boolean, onSanction: (SanctionKind) -> Unit, onPurge: (SanctionView) -> Unit, onDelete: (SanctionTarget) -> Unit) {
     val rights = dossier.rights
     if (own || !account.isModerator) return
-    val hero = dossier.hero?.takeIf { !it.deleted }
+    val focus = dossier.hero
+    val hero = focus?.takeIf { !it.deleted }
     val protected = !rights.ban
     val days = account.index?.rules?.moderation?.trashDays ?: TRASH_DAYS
     val shape = RoundedCornerShape(12.dp)
@@ -424,7 +435,13 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
         DangerRow(ui("moderation.ban"), ui("moderation.ban_effect"), rights.ban && !account.busy, protected) { onSanction(SanctionKind.BAN) }
         HorizontalDivider(color = LifeRed.copy(alpha = .25f))
         DangerRow(ui("moderation.mute"), ui("moderation.mute_note"), rights.mute && !account.busy, protected) { onSanction(SanctionKind.MUTE) }
-        if (rights.delete || (protected && account.isAdmin)) {
+        val deletion = dossier.heroDeletion?.takeIf { account.isAdmin }
+        if (focus?.deleted == true) {
+            deletion?.let {
+                HorizontalDivider(color = LifeRed.copy(alpha = .25f))
+                DangerRow(ui("moderation.purge.hero_do"), ui("moderation.purge.hero_effect"), !account.busy, protected = false) { onPurge(it) }
+            }
+        } else if (rights.delete || (protected && account.isAdmin)) {
             HorizontalDivider(color = LifeRed.copy(alpha = .25f))
             val target = if (hero != null) SanctionTarget.HERO else SanctionTarget.ACCOUNT
             DangerRow(
@@ -492,6 +509,22 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
     }
 }
 
+/** Лист «Стереть героя [name] навсегда?»: что сотрётся и опасная кнопка удержанием ([onPurge]). */
+@Composable private fun PurgeSheet(account: AccountUi, name: String, onDismiss: () -> Unit, onPurge: () -> Unit) {
+    ForgeSheet(
+        onDismissRequest = onDismiss,
+        body = SheetBody.Scroll(),
+        footer = {
+            ForgeButton(onClick = onPurge, modifier = Modifier.weight(1f), kind = ButtonKind.Danger, state = ButtonState.of(!account.busy), icon = Icons.Outlined.DeleteForever, hold = Hold()) {
+                Text(ui("moderation.purge.now"))
+            }
+        },
+    ) {
+        Text(ui("moderation.purge.hero_title", name), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        MutedText(ui("moderation.purge.hero_effect"))
+    }
+}
+
 @Composable private fun ServerSheet(account: AccountUi, onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
     var code by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
@@ -553,17 +586,6 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
     }
 }
 
-/** Давность в сети коротко: «сейчас», «5 мин», «3 ч», дальше - «14.10 21:03». */
-private fun seenShort(at: Long, now: Long): String {
-    val minutes = (now - at) / MINUTE_MS
-    return when {
-        minutes < 1 -> ui("dossier.seen.now")
-        minutes < MINUTES_IN_HOUR -> ui("dossier.seen.minutes", minutes)
-        minutes < MINUTES_IN_DAY -> ui("dossier.seen.hours", minutes / MINUTES_IN_HOUR)
-        else -> momentOf(at)
-    }
-}
-
 /** День в зоне устройства: `дд.мм.гг`. */
 private fun dayOf(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DAY)
 
@@ -573,9 +595,6 @@ private fun momentOf(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.
 private val DAY = DateTimeFormatter.ofPattern("dd.MM.yy")
 private val MOMENT = DateTimeFormatter.ofPattern("dd.MM HH:mm")
 private const val DASH = "—"
-private const val MINUTE_MS = 60_000L
-private const val MINUTES_IN_HOUR = 60
-private const val MINUTES_IN_DAY = 24 * 60
 private const val SERVER_CODE = 16
 private const val SERVER_NAME = 32
 

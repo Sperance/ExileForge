@@ -80,8 +80,8 @@ private val TOAST_BOTTOM = 20.dp
 class ToastFloors {
     private val tops = mutableStateMapOf<Any, Float>()
 
-    /** Верх самого высокого отмеченного; ничего не отмечено - null. */
-    val highest: Float? get() = tops.values.minOrNull()
+    /** Верх самого высокого отмеченного в пикселях окна; ничего не отмечено - null. */
+    val topEdge: Float? get() = tops.values.minOrNull()
 
     internal fun put(owner: Any, top: Float) {
         if (tops[owner] != top) tops[owner] = top
@@ -133,7 +133,7 @@ private class ToastFloorNode : Modifier.Node(), GlobalPositionAwareModifierNode,
         val navigation = WindowInsets.navigationBars
         Box(Modifier.fillMaxSize().onGloballyPositioned { bottom = it.boundsInWindow().bottom }) {
             content()
-            ToastHost(game, onRefusal, onNotice, Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, -lift(floors.highest, bottom, navigation)) })
+            ToastHost(game, onRefusal, onNotice, Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, -lift(floors.topEdge, bottom, navigation)) })
         }
     }
 }

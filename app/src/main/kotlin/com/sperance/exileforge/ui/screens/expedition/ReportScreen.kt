@@ -330,7 +330,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     }
     val gear = game.presentLootViews(reward.equipment, arriving = hud.rewardAwaiting > 0)
     val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
-    LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack, heading = { Caption(ui(it.caption())) }) { (piece, presence) ->
+    LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack, heading = { Caption(it.caption()) }) { (piece, presence) ->
         val marked = piece.id in marks
         val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
         SaleMarked(marked) {
@@ -345,12 +345,14 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     }
 }
 
-/** Подпись части добычи итогов боя. */
-private fun LootPart.caption(): String = when (this) {
-    LootPart.PIECES -> "expedition.report_gear"
-    LootPart.STACKS -> "expedition.report_orbs"
-    LootPart.SUMS -> "expedition.report_reward"
-}
+/** Подпись части добычи итогов боя, словами. */
+private fun LootPart.caption(): String = ui(
+    when (this) {
+        LootPart.PIECES -> "expedition.report_gear"
+        LootPart.STACKS -> "expedition.report_orbs"
+        LootPart.SUMS -> "expedition.report_reward"
+    },
+)
 
 /**
  * A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it.

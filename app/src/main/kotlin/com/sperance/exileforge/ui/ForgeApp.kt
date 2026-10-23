@@ -39,6 +39,7 @@ import com.sperance.exileforge.ui.components.LocalHeaderCollapse
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
+import com.sperance.exileforge.ui.components.LocalToastFloors
 import com.sperance.exileforge.ui.components.LocalUpdateHint
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
@@ -46,6 +47,7 @@ import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.ReportsSheet
 import com.sperance.exileforge.ui.components.StartActions
 import com.sperance.exileforge.ui.components.StartStages
+import com.sperance.exileforge.ui.components.ToastFloors
 import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.UpdateHintState
@@ -113,7 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
     CompositionLocalProvider(
         LocalUpdates provides updates,
         LocalUpdateHint provides remember(hardVersionCode) { UpdateHintState() },
-        com.sperance.exileforge.ui.components.LocalToastFloors provides remember { com.sperance.exileforge.ui.components.ToastFloors() },
+        LocalToastFloors provides remember { ToastFloors() },
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,

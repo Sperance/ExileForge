@@ -18,6 +18,8 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.MapCapture
 import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.unmetNeeds
+import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.atlas.AtlasState
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -41,11 +43,11 @@ import com.sperance.exileforge.rules.sheet.Shift
  * Герой над контентом: что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
  */
 internal object HeroLens {
-    /** Память видов копий: одна на приложение, сбрасывается сама с новым контентом. */
+    /** Память видов копий: одна на приложение, сбрасывается сама с новым контентом и с новым словарём сервера. */
     private val views = ItemViews()
 
-    /** The view of an item over the content on screen, or null before the content has been read. */
-    fun view(index: ContentIndex?, item: ItemInstance): ItemView? = index?.let { views.of(item, it) }
+    /** The view of an item over the content on screen in the language on screen, or null before the content has been read. */
+    fun view(index: ContentIndex?, item: ItemInstance): ItemView? = index?.let { views.of(item, it, serverLocale) }
 
     /** What the merchant pays for [item], by the rules' price; null until the content has arrived. */
     fun sellPrice(index: ContentIndex?, item: ItemInstance): Long? = view(index, item)?.sellPrice()
@@ -238,11 +240,13 @@ private class LastOf<R>(private val compute: (ContentIndex) -> R) {
  * один раз на запрос, совпавший ключ сверяется с самой запомненной копией; мутаторы правил на запомненной копии не зовутся,
  * изменённая копия даёт другой хеш и другой вид. Помнится и отсутствие вида (шаблона нет в контенте) - неизвестная копия не ищется
  * в контенте каждый раз. Вид одной копии и одного контента одинаков - память не меняет отображение. Держит не больше [LIMIT] видов,
- * давно не спрошенные уходят первыми; новый контент сбрасывает всё. Потокобезопасна: виды спрашивают и вне главного потока
+ * давно не спрошенные уходят первыми; новый контент или новый словарь сервера ([LocaleBundle], смена языка) сбрасывает всё: ленивые
+ * строки вида печатаются на языке, что был при их первом чтении. Потокобезопасна: виды спрашивают и вне главного потока
  * (фильтр вещей, примерка, ремёсла).
  */
 private class ItemViews(private val limit: Int = LIMIT) {
     private var index: ContentIndex? = null
+    private var locale: LocaleBundle? = null
     private val known = object : LinkedHashMap<Key, Entry>(limit * 4 / 3 + 1, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, Entry>): Boolean = size > limit
     }
@@ -253,10 +257,11 @@ private class ItemViews(private val limit: Int = LIMIT) {
     /** Запомненная копия и её вид; null - шаблона копии в контенте нет. */
     private class Entry(val item: ItemInstance, val view: ItemView?)
 
-    /** Вид копии [item] над контентом [index] из памяти или заново; null - шаблона копии в контенте нет. */
-    fun of(item: ItemInstance, index: ContentIndex): ItemView? = synchronized(this) {
-        if (this.index !== index) {
+    /** Вид копии [item] над контентом [index] на языке словаря [locale] из памяти или заново; null - шаблона копии в контенте нет. */
+    fun of(item: ItemInstance, index: ContentIndex, locale: LocaleBundle): ItemView? = synchronized(this) {
+        if (this.index !== index || this.locale !== locale) {
             this.index = index
+            this.locale = locale
             known.clear()
         }
         val key = Key(item.id, item.hashCode())

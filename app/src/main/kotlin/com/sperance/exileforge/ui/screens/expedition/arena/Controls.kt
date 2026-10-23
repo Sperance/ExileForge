@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.*
@@ -54,7 +53,7 @@ import com.sperance.exileforge.ui.theme.*
         }
         RunMenu(
             items = emptyList(),
-            hold = { ArenaHold(onCommand) },
+            hold = { ArenaHold() },
             trigger = { onClick -> RunMenuButton(onClick = onClick) },
         )
     }
@@ -75,13 +74,5 @@ import com.sperance.exileforge.ui.theme.*
                 onCommand(RunCommand.Surrender)
             }
         }
-    }
-}
-
-/** Держит бой арены, пока лист на экране. */
-@Composable private fun ArenaHold(onCommand: (RunCommand) -> Unit) {
-    DisposableEffect(Unit) {
-        onCommand(RunCommand.Hold(true))
-        onDispose { onCommand(RunCommand.Hold(false)) }
     }
 }

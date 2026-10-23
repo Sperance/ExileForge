@@ -418,11 +418,11 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
     }
 }
 
-/** Плитка переполнения «+N»: сколько ещё эффектов не влезло; касание - лист эффектов [onOpen]. */
-@Composable private fun MoreTile(count: Int, side: Dp, onOpen: () -> Unit) {
+/** Плитка переполнения «+N»: сколько ещё эффектов не влезло; касание ловит её клетка полки ([ShelfCell]). */
+@Composable private fun MoreTile(count: Int, side: Dp) {
     val shape = RoundedCornerShape(4.dp)
     Box(
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Muted.copy(alpha = .08f)).border(1.dp, Muted, shape).clickable(onClick = onOpen),
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Muted.copy(alpha = .08f)).border(1.dp, Muted, shape),
         contentAlignment = Alignment.Center,
     ) {
         Text(ui("fight.shelf.more", count), color = Parchment, fontSize = (side.value * .36f).coerceIn(7f, 11f).sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -465,38 +465,77 @@ internal class ShelfHits {
 
 /**
  * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание плитки - лист эффектов на ней ([onOpen] с плиткой), касание «+N» - лист сверху ([onOpen] с null).
- * [hits] - куда полка ряда пишет раскладку плиток для зоны касания шире неё. Подкомпоновка по месту - число «+N» зависит от размера
- * полки; интринсиков у полки нет, её размер задаёт родитель.
+ * «+N» последней. Каждая плитка ловит касание квадратом [reach] (не меньше [side]) - плитка посреди него, шаг полки - [reach] и [gap].
+ * Касание плитки при [peek] - её выноска ([EffectPeek]) у плитки, «Все эффекты» в ней - лист на её строке ([onOpen] с плиткой); без
+ * [peek] - сразу лист на её строке. Касание «+N» - лист сверху ([onOpen] с null). Выноска, чья плитка ушла с полки, стоит на её
+ * прежнем месте с «Эффект закончился»; плитка ушла под «+N» - встаёт на «+N». [hits] - куда полка ряда пишет раскладку плиток для зоны
+ * касания шире неё. Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
 @Composable internal fun EffectShelf(
     items: List<Shelved>,
     side: Dp,
     onOpen: (Shelved?) -> Unit,
+    peek: ShelfPeek?,
     modifier: Modifier = Modifier,
     vertical: Boolean = false,
     gap: Dp = 4.dp,
+    reach: Dp = side,
     hits: ShelfHits? = null,
 ) {
     SubcomposeLayout(if (hits != null) modifier.onPlaced { hits.placed(it.positionInRoot().x) } else modifier) { constraints ->
-        val sidePx = side.roundToPx()
+        val cellPx = maxOf(reach, side).roundToPx()
         val gapPx = gap.roundToPx()
+        val pitch = cellPx + gapPx
         val room = if (vertical) constraints.maxHeight else constraints.maxWidth
-        val fit = if (room == Constraints.Infinity) items.size else ((room + gapPx) / (sidePx + gapPx)).coerceAtLeast(1)
+        val fit = if (room == Constraints.Infinity) items.size else ((room + gapPx) / pitch).coerceAtLeast(1)
         val over = items.size > fit
         val shown = if (over) fit - 1 else items.size
-        hits?.laid(items, shown, sidePx + gapPx)
-        val tile = Constraints.fixed(sidePx, sidePx)
-        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) { onOpen(items[i]) } }.first().measure(tile) } +
-            (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side) { onOpen(null) } }.first().measure(tile)) else emptyList())
-        val length = if (tiles.isEmpty()) 0 else tiles.size * sidePx + (tiles.size - 1) * gapPx
-        val width = (if (vertical) sidePx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
-        val height = (if (vertical) length else sidePx).coerceIn(constraints.minHeight, constraints.maxHeight)
+        hits?.laid(items, shown, pitch)
+        val cell = Constraints.fixed(cellPx, cellPx)
+        val pick: (Shelved) -> Unit = { item -> if (peek != null) peek.open(item) else onOpen(item) }
+        val tiles = (0 until shown).map { i -> subcompose(i) { ShelfCell({ pick(items[i]) }) { ShelfTileFace(items[i], side, null) } }.first().measure(cell) } +
+            (if (over) listOf(subcompose(MORE) { ShelfCell({ onOpen(null) }) { MoreTile(items.size - shown, side) } }.first().measure(cell)) else emptyList())
+        val live = peek?.find(items)
+        val last = peek?.takeIf { it.key != null }?.last
+        val peekAt = if (peek != null && last != null) {
+            val at = live?.let(items::indexOf) ?: -1
+            when {
+                at in 0 until shown -> at
+                at >= shown -> tiles.lastIndex
+                else -> peek.slot.coerceIn(0, (tiles.size - 1).coerceAtLeast(0))
+            }.also { peek.slot = it }
+        } else {
+            null
+        }
+        val anchor = if (peek != null && last != null) {
+            subcompose(PEEK) {
+                EffectPeek(live, last, {
+                    peek.close()
+                    onOpen(live ?: last)
+                }, peek::close)
+            }.first().measure(cell)
+        } else {
+            null
+        }
+        val length = if (tiles.isEmpty()) 0 else tiles.size * cellPx + (tiles.size - 1) * gapPx
+        val width = (if (vertical) cellPx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
+        val height = (if (vertical) length else cellPx).coerceIn(constraints.minHeight, constraints.maxHeight)
         layout(width, height) {
-            tiles.forEachIndexed { i, placeable -> if (vertical) placeable.place(0, i * (sidePx + gapPx)) else placeable.place(i * (sidePx + gapPx), 0) }
+            tiles.forEachIndexed { i, placeable -> if (vertical) placeable.place(0, i * pitch) else placeable.place(i * pitch, 0) }
+            if (anchor != null && peekAt != null) {
+                if (vertical) anchor.place(0, peekAt * pitch) else anchor.place(peekAt * pitch, 0)
+            }
         }
     }
 }
+
+/** Клетка полки: касание [onPick] ловит вся клетка, плитка [content] - посреди неё. */
+@Composable private fun ShelfCell(onPick: () -> Unit, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().clickable(onClick = onPick), contentAlignment = Alignment.Center) { content() }
+}
+
+/** Ключ слота выноски в подкомпоновке полки. */
+private const val PEEK = "peek"
 
 private const val MORE = "more"
 
@@ -565,7 +604,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
  * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
  * разбор (один раз - своей строкой в группе он не повторяется). Эффекты героя на весь бой - свой лист [LastingSheet].
  * [focus] - ключ плитки, которой коснулись ([Shelved.key]): лист открывается прокрученным к её строке, строка подсвечена.
- * Читается вживую: таймеры идут, бой не стоит.
+ * Читается вживую: таймеры идут; бой арены стоит, пока лист открыт ([ArenaHold]).
  */
 @Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, focus: String? = null, onDismiss: () -> Unit) {
     val scroll = rememberScrollState()
@@ -576,6 +615,7 @@ internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
         val lit = focus != null && item.key == focus
         SheetRow(item, lit, if (lit) Modifier.onPlaced { if (focusAt == null) focusAt = it.positionInParent().y.roundToInt() } else Modifier)
     }
+    ArenaHold()
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(scroll).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -622,13 +662,15 @@ private val FOCUS_MARGIN = 36.dp
 
 /**
  * Лист эффектов героя «на весь бой» (кнопка «≡ N» у портрета): «На весь бой · N», чипы выбора источника со счётом (больше одной
- * группы) и группы [LastingGroup] строками с полными текстами - у силы уникалки источник - имя вещи. Читается вживую, бой не стоит.
+ * группы) и группы [LastingGroup] строками с полными текстами - у силы уникалки источник - имя вещи. Читается вживую; бой арены стоит,
+ * пока лист открыт ([ArenaHold]).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LastingSheet(items: List<Shelved>, onDismiss: () -> Unit) {
     val groups = remember(items) { items.groupBy { it.lastingGroup }.toSortedMap() }
     var only by remember { mutableStateOf<LastingGroup?>(null) }
+    ArenaHold()
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),

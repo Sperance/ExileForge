@@ -108,7 +108,8 @@ private const val HERO_CARD = -1
     val introBounds = remember { IntroBounds() }
     val onIntroFrame: (LayoutCoordinates) -> Unit = remember(intro) { { if (intro?.staged == true) introBounds.frame(it) } }
     val introField = remember(intro) { if (intro == null) Modifier else Modifier.onGloballyPositioned { if (intro.staged) introBounds.field(it) } }
-    CompositionLocalProvider(LocalFightMight provides might, LocalArenaFx provides fx) {
+    val hold: (Boolean) -> Unit = remember(onCommand) { { on -> onCommand(RunCommand.Hold(on)) } }
+    CompositionLocalProvider(LocalFightMight provides might, LocalArenaFx provides fx, LocalArenaHold provides hold) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }.graphicsLayer { alpha = intro?.entry ?: 1f }) {
             fight.boss?.let { BossBackdrop(biome, it, frame, fx) }
             Spacer(Modifier.fillMaxSize().sideTint())
@@ -170,7 +171,7 @@ private const val HERO_CARD = -1
                 ) { inspect = null }
             }
             hint?.let { FocusHintCard(it, { hint = null }, Modifier.align(Alignment.Center).padding(horizontal = 12.dp)) }
-            info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
+            info?.let { view -> FightSkillSheet(game, view) { info = null } }
             fight.outcome?.takeIf { it != Outcome.WIN }?.let {
                 Text(
                     ui("expedition.outcome_${it.name.lowercase()}"),

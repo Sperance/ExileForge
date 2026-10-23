@@ -777,7 +777,8 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
     }
     val shape = RoundedCornerShape(12.dp)
     val shelves = rememberFoeShelves(foe.ailments, foe.held, foe.effects)
-    var effectsOpen by remember { mutableStateOf(false) }
+    var effectsOpen by remember { mutableStateOf<ShelfFocus?>(null) }
+    val peek = rememberShelfPeek()
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val breath = .55f + .2f * sin(frame.time * 2f)
@@ -805,9 +806,9 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         focusMark(foe, fight, taunt = false)?.let { FocusBadge(it, Modifier.align(Alignment.BottomCenter).padding(bottom = if (shielded) 26.dp else 6.dp)) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
-        if (foe.alive) EffectRibbon(shelves, { effectsOpen = true }, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
+        if (foe.alive) EffectRibbon(shelves, peek, { effectsOpen = ShelfFocus(it?.key) }, Modifier.align(Alignment.TopCenter).padding(top = 4.dp, start = 6.dp, end = 6.dp))
     }
-    if (effectsOpen) EffectsSheet(ui("fight.shelf.foe", name), shelves.timed, shelves.lasting, null) { effectsOpen = false }
+    effectsOpen?.let { focus -> EffectsSheet(ui("fight.shelf.foe", name), shelves.timed, shelves.lasting, null, focus.key) { effectsOpen = null } }
 }
 
 /** Плашка «без урона» на портрете неуязвимого босса: удары по нему сейчас ничего не снимают. */

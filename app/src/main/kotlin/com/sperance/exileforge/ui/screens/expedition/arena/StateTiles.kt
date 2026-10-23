@@ -54,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
     if (all.isEmpty()) {
         MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
     } else {
-        EffectShelf(all, 30.dp, { open = ShelfFocus(it?.key) }, Modifier.fillMaxWidth())
+        EffectShelf(all, 30.dp, { open = ShelfFocus(it?.key) }, null, Modifier.fillMaxWidth())
     }
     open?.let { focus -> EffectsSheet(title, timed, lasting, null, focus.key) { open = null } }
 }
@@ -72,22 +72,37 @@ internal class EffectShelves(val timed: List<Shelved>, val lasting: List<Shelved
 
 /**
  * Лента эффектов босса над его головой на арене: все плитки состояний и эффектов [shelves] стороной 22dp на полупрозрачной подложке,
- * по шесть в строке, лишние - следующей строкой, без «+N»; последним - чип «≡», его касание - лист эффектов [onOpen]. Касание плитки -
- * её выноска; подложка касаний не ловит - они уходят портрету под ней (выбор цели).
+ * по шесть в строке, лишние - следующей строкой, без «+N»; последним - чип «≡», его касание - лист эффектов ([onOpen] с null). Касание
+ * плитки - её выноска у плитки ([EffectPeek] в [peek]), «Все эффекты» в ней - лист на её строке; эффект кончился - выноска встаёт у
+ * ленты с «Эффект закончился». Подложка касаний не ловит - они уходят портрету под ней (выбор цели).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun EffectRibbon(shelves: EffectShelves, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    if (shelves.isEmpty) return
-    FlowRow(
-        modifier.clip(RibbonShape).background(RibbonVeil).padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-        maxItemsInEachRow = RIBBON_ROW,
-    ) {
-        shelves.timed.forEach { ShelfTile(it, RIBBON_TILE) }
-        shelves.lasting.forEach { ShelfTile(it, RIBBON_TILE) }
-        SheetChip(shelves.timed.size + shelves.lasting.size, onOpen)
+internal fun EffectRibbon(shelves: EffectShelves, peek: ShelfPeek, onOpen: (Shelved?) -> Unit, modifier: Modifier = Modifier) {
+    val all = shelves.timed + shelves.lasting
+    val live = peek.find(all)
+    val last = peek.last.takeIf { peek.key != null }
+    if (all.isEmpty() && last == null) return
+    val openAll = { item: Shelved ->
+        peek.close()
+        onOpen(item)
+    }
+    Box(modifier) {
+        FlowRow(
+            Modifier.clip(RibbonShape).background(RibbonVeil).padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+            maxItemsInEachRow = RIBBON_ROW,
+        ) {
+            all.forEach { item ->
+                Box {
+                    ShelfTile(item, RIBBON_TILE) { peek.open(item) }
+                    if (live != null && live.key == item.key) EffectPeek(item, item, { openAll(item) }, peek::close)
+                }
+            }
+            SheetChip(all.size) { onOpen(null) }
+        }
+        if (live == null && last != null) EffectPeek(null, last, { openAll(last) }, peek::close)
     }
 }
 

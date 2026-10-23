@@ -48,8 +48,8 @@ import kotlin.math.sin
  *
  * Эффекты: под портретом - кнопка «≡ N» ([LastingButton]) - лист эффектов «на весь бой» ([LastingSheet]: ауры и пассивные умения,
  * силы уникалок с именем вещи, носимые баффы, строки карты [mods], дары ✦); внизу карточки во всю ширину - плитка итога здоровья
- * в секунду первой и временная полка (оглушение, недуги, глотки, проклятия, заряды, силы-события). Касание полосы открывает лист
- * временных эффектов с итогом здоровья.
+ * в секунду первой и временная полка (оглушение, недуги, глотки, проклятия, заряды, силы-события). Касание плитки - её выноска у плитки
+ * ([EffectPeek], зона касания [SHELF_REACH]), касание полосы мимо плиток и «+N» - лист временных эффектов с итогом здоровья.
  *
  * Замах (последние 30% - рамка золотом), выпады и тряска - в рисовании кадра ([FightFrame]). Запас, что ауры держат целиком, - полной
  * штрихованной полосой.
@@ -81,6 +81,7 @@ import kotlin.math.sin
     val shelf = timed.filter { it.onShelf }
     val lasting = lastingShelf(fight, mods, holder)
     val openEffects = { effectsOpen = ShelfFocus(null) }
+    val peek = rememberShelfPeek()
     Column(
         modifier.fillMaxWidth().graphicsLayer {
             translationY = -acting() * 10.dp.toPx()
@@ -145,15 +146,15 @@ import kotlin.math.sin
             }
         }
         Row(
-            Modifier.fillMaxWidth().height(30.dp).clickable(role = Role.Button, onClick = openEffects),
+            Modifier.fillMaxWidth().height(SHELF_REACH).clickable(role = Role.Button, onClick = openEffects),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            FlowTile(fight.heroFlow, Modifier.size(30.dp))
+            FlowTile(fight.heroFlow, Modifier.size(SHELF_TILE))
             when {
+                shelf.isNotEmpty() || peek.key != null -> EffectShelf(shelf, SHELF_TILE, { effectsOpen = ShelfFocus(it?.key) }, peek, Modifier.weight(1f), gap = 0.dp, reach = SHELF_REACH)
                 timed.isEmpty() -> if (lasting.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
-                shelf.isEmpty() -> MutedText(ui("fight.effects_count", timed.size), style = MaterialTheme.typography.labelSmall)
-                else -> EffectShelf(shelf, 30.dp, { effectsOpen = ShelfFocus(it?.key) }, Modifier.weight(1f))
+                else -> MutedText(ui("fight.effects_count", timed.size), style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -192,6 +193,10 @@ import kotlin.math.sin
         Text(count.toString(), color = Vital, fontSize = 9.sp, lineHeight = 9.sp)
     }
 }
+
+/** Плитка полки героя и её зона касания: плитки идут шагом зоны, палец попадает в плитку с запасом. */
+private val SHELF_TILE = 30.dp
+private val SHELF_REACH = 40.dp
 
 /** Ширина портрета героя и кнопки «≡ N» под ним. */
 private val PORTRAIT = 64.dp

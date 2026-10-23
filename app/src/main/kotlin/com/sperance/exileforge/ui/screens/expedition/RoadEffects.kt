@@ -46,7 +46,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
     Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (timed.isNotEmpty()) {
             AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = ShelfFocus(null) }
-            EffectShelf(shelf, TILE, { open = ShelfFocus(it?.key) }, Modifier.weight(1f))
+            EffectShelf(shelf, TILE, { open = ShelfFocus(it?.key) }, null, Modifier.weight(1f))
         }
     }
     open?.let { focus -> EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow, focus.key) { open = null } }

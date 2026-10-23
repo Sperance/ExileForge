@@ -179,11 +179,8 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunCommand) -> Unit, onDismiss: () -> Unit) {
-    DisposableEffect(view.slot) {
-        onCommand(RunCommand.Hold(true))
-        onDispose { onCommand(RunCommand.Hold(false)) }
-    }
+internal fun FightSkillSheet(game: GameUi, view: SkillView, onDismiss: () -> Unit) {
+    ArenaHold()
     val index = game.index
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(

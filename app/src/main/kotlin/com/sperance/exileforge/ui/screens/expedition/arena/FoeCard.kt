@@ -139,6 +139,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     val shelf = remember(shelves) { shelves.timed + shelves.lasting }
     val tile = if (large) 16.dp else 14.dp
     val hits = remember { ShelfHits() }
+    val peek = rememberShelfPeek()
     val aiming = live && !foe.held && foe.swing >= AIM_FROM
     val aimNote = ui("fight.swing_at_you")
     Box(
@@ -240,9 +241,11 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 }
                 if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                 SwingBar({ swing() }, foe.held, Modifier.fillMaxWidth()) { if (acting() > 0f) LifeRed else SwingRed }
-                if (shelf.isNotEmpty()) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, Modifier.fillMaxWidth().height(tile), gap = 2.dp, hits = hits)
+                if (shelf.isNotEmpty() || peek.key != null) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, peek, Modifier.fillMaxWidth().height(tile), gap = 2.dp, hits = hits)
             }
-            if (shelf.isNotEmpty()) ShelfTouch(hits, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
+            if (shelf.isNotEmpty()) {
+                ShelfTouch(hits, Modifier.align(Alignment.BottomCenter)) { item -> if (item != null) peek.open(item) else effectsOpen = ShelfFocus(null) }
+            }
             if (fight.target == foe.index && foe.alive && fight.outcome == null) {
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp))
             }
@@ -262,8 +265,8 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
 
 /**
  * Зона касания полки эффектов врага - нижние [SHELF_TOUCH] карточки (полоса здоровья, замах и полка): плитки по 14-16 dp пальцу
- * не попасть, а вся карточка выбирает цель. Касание открывает лист эффектов ([onOpen]) на плитке под пальцем по горизонтали - её
- * называет раскладка самой полки ([ShelfHits]), мимо плиток и на «+N» - сверху.
+ * не попасть, а вся карточка выбирает цель. Касание - плитка под пальцем по горизонтали ([onOpen]: её выноска) - её называет раскладка
+ * самой полки ([ShelfHits]); мимо плиток и на «+N» - null (лист эффектов сверху).
  */
 @Composable private fun ShelfTouch(hits: ShelfHits, modifier: Modifier, onOpen: (Shelved?) -> Unit) {
     val pick by rememberUpdatedState(onOpen)

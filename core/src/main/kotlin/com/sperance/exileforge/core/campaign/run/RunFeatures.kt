@@ -12,6 +12,7 @@ import com.sperance.exileforge.rules.content.FeatureStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.TrapKind
+import com.sperance.exileforge.rules.content.WearRequest
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -114,10 +115,10 @@ internal fun ExpeditionRun.feature(action: FeatureAction) {
  *
  * Строки выбора (сделка, скорость за комнату, сила за узел) ложатся на героя и бои сразу.
  */
-internal fun ExpeditionRun.recordFeature(spot: FeatureSpot, choice: Int): RunEvent? {
+internal fun ExpeditionRun.recordFeature(spot: FeatureSpot, choice: Int, wear: WearRequest? = null): RunEvent? {
     spot.take(choice)
     rebargain()
-    return record { RunEvent.Feature(it, spot.id, choice) }?.also { featureEvents[it.n] = spot to choice }
+    return record { RunEvent.Feature(it, spot.id, choice, wear) }?.also { featureEvents[it.n] = spot to choice }
 }
 
 /** Событие с добычей объекта (сундук комнаты, сбор узла): её добыча вылетит в сумку, как у сундука, когда придёт ответ. */
@@ -130,6 +131,16 @@ internal fun ExpeditionRun.choose(choice: Int) {
     val spot = offer?.takeIf { phase == RunPhase.MAP && it.feature.accepts(choice, it.state(world)) } ?: return
     spot.resolve(this, choice)
     if (spot.spent || spot is AltarSpot) offer = null
+}
+
+/**
+ * «Купить и надеть» вещь [choice] бродячего торговца на место [wear]: только на карте и между боями ([gearLock]) - выбор с надеванием в
+ * журнал ([RunEvent.Feature.wear]); отказ сервера вернёт товар, как у простой покупки.
+ */
+internal fun ExpeditionRun.chooseWorn(choice: Int, wear: WearRequest) {
+    val spot = (offer as? MerchantSpot)?.takeIf { phase == RunPhase.MAP && gearLock == null && it.feature.accepts(choice, it.state(world)) } ?: return
+    recordFeature(spot, choice, wear)
+    if (spot.spent) offer = null
 }
 
 /**

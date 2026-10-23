@@ -123,7 +123,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
 }
 
 /** Имя места на теле для вкладки: своё у мест пары («Левая рука»), иначе имя слота. */
-private fun placeTitle(slot: Slot): String = uiOr(uiLanguage, "wear.place.${slot.name}", slotTitle(slot))
+internal fun placeTitle(slot: Slot): String = uiOr(uiLanguage, "wear.place.${slot.name}", slotTitle(slot))
 
 /** Итог героя для карточки [item] с выбором места [choice], или null, когда вещь не надевается: карта, самоцвет, уже надетая. */
 fun wearTotals(game: GameUi, item: ItemInstance, choice: WearChoice): (@Composable (RelicLook) -> Unit)? = if (!wearable(game, item) || item.equipped || item.socketed) null else ({ look -> WearTotals(game, item, choice, look) })

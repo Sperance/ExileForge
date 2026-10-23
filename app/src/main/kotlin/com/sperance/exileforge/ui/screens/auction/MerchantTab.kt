@@ -9,13 +9,19 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.run.GearLock
 import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fullIfShortened
+import com.sperance.exileforge.core.display.requirementShort
 import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.WearBar
+import com.sperance.exileforge.core.market.wearBar
 import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.session.Reads
@@ -23,11 +29,16 @@ import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.WearRequest
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.hero.HeroViewModel
+import com.sperance.exileforge.ui.screens.hero.WearChoice
+import com.sperance.exileforge.ui.screens.hero.placeTitle
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
+import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
@@ -104,7 +115,17 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     }
     if (filtering && shelf != null) ItemFilterSheet(filterState, shelf) { filtering = false }
     chosen?.let { offer ->
-        OfferSheet(game, offer.item, offer.price, onDismiss = { chosen = null }) {
+        OfferSheet(
+            game,
+            offer.item,
+            offer.price,
+            WearVenue.Town,
+            onDismiss = { chosen = null },
+            onBuyWorn = { wear ->
+                chosen = null
+                market.buyOfferWorn(offer.id, wear)
+            },
+        ) {
             chosen = null
             market.buyOffer(offer.id)
         }
@@ -137,35 +158,101 @@ private fun countdown(seconds: Long): String {
     return "%d:%02d".format(minutes / 60, minutes % 60)
 }
 
+/** Где покупают с надеванием: торговец Города или бродячий торговец в походе по карте с замком набора [lock] (null - сменить можно). */
+internal sealed interface WearVenue {
+    /** Торговец Города: надеть - по правилу убежища. */
+    data object Town : WearVenue
+
+    /** Бродячий торговец карты: надеть - по правилу смены набора похода, сейчас мешает [lock]. */
+    data class Map(val lock: GearLock?) : WearVenue
+}
+
 /**
  * An offer's full card: the item as the stash would show it, scrolling, and under it
  * the one way to buy it — a button held for the price. Short of gold, it says so and the button
  * stays off; what wearing it would change is added up here, as on a stash card.
  *
- * Общая для любого товара за золото: лавка Города и странствующий торговец карты.
+ * Общая для любого товара за золото: лавка Города и странствующий торговец карты ([venue]).
  *
  * Цена против кошелька - одним чипом рядом с кнопкой удержания «Купить» (у карточки плашки цены нет); не хватает - кнопка пишет
- * недостачу и гаснет.
+ * недостачу и гаснет. Под ней у вещи, что надевается, - «Купить и надеть» удержанием ([onBuyWorn]): мест несколько (кольца, фляги) -
+ * сперва лист «Куда надеть» ([WearPlaceSheet]); нельзя надеть ([wearBar], замок похода) - кнопка погашена, причина под ней.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss: () -> Unit, onBuy: () -> Unit) {
+internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, venue: WearVenue, onDismiss: () -> Unit, onBuyWorn: (WearRequest) -> Unit, onBuy: () -> Unit) {
     val view = game.view(item)
+    val choice = rememberWearChoice(game, item)
+    var picking by remember(item.id) { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item), seals = game.itemSeals(item)) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, choice), unmet = game.unmetNeeds(item), seals = game.itemSeals(item)) }
             }
             OrnateDivider()
-            Row(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                val bill = game.goldBill(price)
-                bill?.let { GoldCost(it) } ?: GoldPrice(price)
-                ForgeButton(onClick = onBuy, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy && bill?.affordable == true), hold = Hold()) {
-                    Text(bill?.payLabel(ui("auction.buy")) ?: ui("auction.buy"))
+            val bill = game.goldBill(price)
+            val affordable = !game.busy && bill?.affordable == true
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    bill?.let { GoldCost(it) } ?: GoldPrice(price)
+                    ForgeButton(onClick = onBuy, modifier = Modifier.weight(1f), state = ButtonState.of(affordable), hold = Hold()) {
+                        Text(bill?.payLabel(ui("auction.buy")) ?: ui("auction.buy"))
+                    }
+                }
+                if (wearable(game, item)) {
+                    val place = choice.target
+                    val reason = remember(item, game.hero, game.index, place, venue) { wearReason(game, item, place, venue) }
+                    ForgeButton(
+                        onClick = { if (choice.choosable) picking = true else onBuyWorn(WearRequest(null)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        kind = ButtonKind.Secondary,
+                        state = ButtonState.of(affordable && reason == null),
+                        hold = if (choice.choosable) null else Hold(),
+                    ) { Text(ui("merchant.buy_wear"), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    reason?.let { Text(it, color = LossText, style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+        }
+    }
+    if (picking) WearPlaceSheet(game, choice, onDismiss = { picking = false }) { slot ->
+        picking = false
+        onBuyWorn(WearRequest(slot))
+    }
+}
+
+/**
+ * Почему вещь [item] нельзя купить и сразу надеть на место [place] у торговца [venue]: замок набора похода, требования («Нужно: Сила 48»),
+ * поход по карте, забег Разлома, полный тайник, вторая копия уникалки; null - можно.
+ */
+private fun wearReason(game: GameUi, item: ItemInstance, place: Slot?, venue: WearVenue): String? {
+    if (venue is WearVenue.Map) venue.lock?.let { return ui(it.key) }
+    return when (game.wearBar(item, place, onMap = venue is WearVenue.Map)) {
+        WearBar.NEEDS -> ui("merchant.wear_needs", game.unmetFor(item).joinToString(", ") { requirementShort(it, game.lang) })
+        WearBar.MAP_RUN -> ui("merchant.wear_map_run")
+        WearBar.RIFT -> ui("merchant.wear_rift")
+        WearBar.STASH_FULL -> ui("merchant.wear_stash_full")
+        WearBar.TWIN -> ui("hero.unique_worn")
+        null -> null
+    }
+}
+
+/**
+ * Лист «Куда надеть» вещи слота с несколькими местами (кольца, фляги): строка на место - его имя и что там надето (свободно - так и
+ * сказано); касание удержанием покупает и надевает туда ([onPick]).
+ */
+@Composable private fun WearPlaceSheet(game: GameUi, choice: WearChoice, onDismiss: () -> Unit, onPick: (Slot) -> Unit) {
+    ForgeSheet(onDismissRequest = onDismiss, body = SheetBody.Scroll()) {
+        Text(ui("merchant.wear_where"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+        choice.places.forEach { place ->
+            ForgeButton(onClick = { onPick(place.slot) }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy), hold = Hold()) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text(placeTitle(place.slot), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (place.free) ui("wear.place_free") else ui("wear.instead", place.removed.joinToString { equipmentTitle(it.template) }),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }

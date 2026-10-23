@@ -40,6 +40,7 @@ import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
+import com.sperance.exileforge.core.campaign.run.GearLock
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.core.campaign.run.strideText
@@ -75,6 +76,7 @@ import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.OfferSheet
+import com.sperance.exileforge.ui.screens.auction.WearVenue
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
@@ -87,12 +89,13 @@ import kotlin.math.roundToInt
 
 /**
  * Лист объекта карты, по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
- * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука).
+ * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука). [gearLock] - почему набор похода сейчас не сменить
+ * (null - можно): им гаснет «Купить и надеть» торговца.
  */
-@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, gearLock: GearLock?, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
         is MapFeature.Altar -> AltarSheet(game, feature, onLeave = { onCommand(RunCommand.StepOff) }) { onCommand(RunCommand.Choose(it)) }
-        is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, onCommand)
+        is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, gearLock, onCommand)
         is MapFeature.Node -> NodeSheet(game, feature, view.guarded, onCommand)
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
@@ -216,11 +219,11 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
  * Странствующий торговец (шаблон объекта карты): в сводке - золото героя, сколько товаров осталось, куплено и скидка; под шапкой -
  * вещи плитами, в правом нижнем углу плиты - цена и под ней малая «Купить»; купленное помечено, золота не хватает - кнопка
  * погашена и пишет недостачу. Нажатие на товар открывает полную
- * карточку со сравнением с надетым - ту же, что у лавки Города.
+ * карточку со сравнением с надетым - ту же, что у лавки Города, с «Купить и надеть» по правилу смены набора похода ([gearLock]).
  *
  * Скидка против витрины Города - множитель цены торговца из правил меньше единицы; цена против кошелька - чип «цена / есть».
  */
-@Composable private fun MerchantSheet(game: GameUi, merchant: MapFeature.Merchant, bought: List<Int>, onCommand: (RunCommand) -> Unit) {
+@Composable private fun MerchantSheet(game: GameUi, merchant: MapFeature.Merchant, bought: List<Int>, gearLock: GearLock?, onCommand: (RunCommand) -> Unit) {
     val money = game.hero?.money ?: 0L
     var chosen by remember { mutableStateOf<Int?>(null) }
     val left = merchant.offers.indices.count { it !in bought }
@@ -260,7 +263,17 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
     )
     chosen?.takeIf { it !in bought }?.let { i ->
         val offer = merchant.offers.getOrNull(i) ?: return@let
-        OfferSheet(game, offer.item, offer.price, onDismiss = { chosen = null }) {
+        OfferSheet(
+            game,
+            offer.item,
+            offer.price,
+            WearVenue.Map(gearLock),
+            onDismiss = { chosen = null },
+            onBuyWorn = { wear ->
+                chosen = null
+                onCommand(RunCommand.ChooseWorn(i, wear))
+            },
+        ) {
             chosen = null
             onCommand(RunCommand.Choose(i))
         }

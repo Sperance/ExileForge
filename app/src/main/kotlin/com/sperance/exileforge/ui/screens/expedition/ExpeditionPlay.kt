@@ -167,7 +167,7 @@ import org.koin.compose.viewmodel.koinViewModel
                             run.pulse.action
                         }) { live.value.action?.progress }
                     } else {
-                        hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
+                        hud.feature?.let { FeatureSheet(game, it, hud.gearLock, onCommand = model::runCommand) }
                     }
                     if (leaving) {
                         ConfirmSheet(

@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.WearRequest
 import com.sperance.exileforge.rules.trade.LotMode
 import kotlinx.coroutines.CancellationException
 
@@ -153,6 +154,14 @@ class MarketActions(
 
     fun buyOffer(offerId: String) = trade(writing = true) {
         restocked { api.merchant.buy(heroes.heroId, offerId) }
+    }
+
+    /** Купить вещь витрины [offerId] и сразу надеть - на место [wear]; тост называет надетое. */
+    fun buyOfferWorn(offerId: String, wear: WearRequest) = trade(writing = true) {
+        restocked {
+            val bought = api.merchant.buyAndWear(heroes.heroId, offerId, wear)
+            notices.toast(ui("merchant.bought_worn", equipmentTitle(bought.item.template)), NoticeKind.DONE)
+        }
     }
 
     /**

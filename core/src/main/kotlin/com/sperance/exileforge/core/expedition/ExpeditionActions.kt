@@ -463,7 +463,7 @@ class ExpeditionActions(
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
             if (seesRefusals) notices.refused(report.rejected.filter { it !in engages }, pending.associate { it.n to it.kind.refusedKey() }, report.refusals)
             if (!report.open && j.settled) done(j, report) else journals.now()
-            if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
+            if ((heroes.state.value.readAt == 0L || dressedBy(pending, report)) && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -484,6 +484,13 @@ class ExpeditionActions(
             retryLater()
         }
     }
+
+    /**
+     * Пачка [batch] надела вещь: сервер принял покупку с надеванием ([RunEvent.Feature.wear]) - набор похода с ней придёт снимком героя
+     * ([resync]), поэтому он перечитывается сразу.
+     */
+    private fun dressedBy(batch: List<RunEvent>, report: RunReport): Boolean =
+        batch.any { it is RunEvent.Feature && it.wear != null && it.n < report.applied && it.n !in report.rejected }
 
     /** Пачка отвечена как дошедшая без отчёта: берётся до [end], добыча придёт с перечитанным героем. */
     private suspend fun landed(j: RunJournal, end: Int) {

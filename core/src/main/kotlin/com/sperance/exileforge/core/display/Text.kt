@@ -345,6 +345,13 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
     return UiStrings.table(lang)["req.need.$name"]?.let { ui(lang, "req.need.$name", need) } ?: ui(lang, "req.need", title, need)
 }
 
+/** Требование коротко, для причины под кнопкой: «Сила 48», «Уровень 52»; без числа - как [requirementReason]. */
+fun requirementShort(reason: String, lang: Lang = uiLanguage): String {
+    val name = reason.substringBefore(':').trim()
+    val need = NEED.find(reason.substringAfter(':', "").trim())?.groupValues?.get(1) ?: return requirementReason(reason, lang)
+    return "${uiOr(lang, "req.$name", displayName(name, lang))} $need"
+}
+
 private val CAMEL_GAP = Regex("([a-z])([A-Z])")
 private val UNIQUE_JEWEL = Regex("^unique jewel: one (\\S+) per hero")
 private val NEED = Regex("need\\s+(-?\\d+)")

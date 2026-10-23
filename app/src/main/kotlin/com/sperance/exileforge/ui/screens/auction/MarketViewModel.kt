@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.rules.content.WearRequest
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -50,6 +51,7 @@ class MarketViewModel(
     fun openAuction() = actions.loadAuction(fresh = true)
     fun glanceLots() = actions.loadMyLots(glance = true, fresh = true)
     fun buyOffer(offerId: String) = actions.buyOffer(offerId)
+    fun buyOfferWorn(offerId: String, wear: WearRequest) = actions.buyOfferWorn(offerId, wear)
     fun tradeTrophy(boss: String) = actions.tradeTrophy(boss)
     fun buy(lotId: String) = actions.buy(lotId)
     fun extend(lotId: String) = actions.extend(lotId)

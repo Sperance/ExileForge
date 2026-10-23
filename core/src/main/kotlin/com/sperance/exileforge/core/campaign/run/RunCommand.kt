@@ -28,6 +28,7 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.WearRequest
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -110,6 +111,12 @@ sealed interface RunCommand {
 
     /** Выбор на листе объекта карты: пара алтаря или вещь торговца по номеру. */
     data class Choose(val choice: Int) : RunCommand
+
+    /**
+     * «Купить и надеть» у бродячего торговца: вещь [choice] сразу на героя, на место [wear]; только между боями. Набор с ней приходит
+     * снимком героя после ответа сервера.
+     */
+    data class ChooseWorn(val choice: Int, val wear: WearRequest) : RunCommand
 
     /** «Собрать» у узла ремесла: сбор идёт его секунды, забег стоит. */
     data object Gather : RunCommand

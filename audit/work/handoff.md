@@ -87,6 +87,11 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Маршрут | `POST hero/merchant/buy?offerId=&wear=true&slot=` (покупка с надеванием) | 6 |
 | Провод: поле | `RunEvent.Feature.wear` (`WearRequest` правил: место надевания купленного у бродячего торговца) | 6 |
 | Ключи локали | `error.CH_048`, `merchant.buy_wear*`, `merchant.wear_*`, `auction.lot_*`, `auction.your_bid*` ; удалены `error.GR_001`, `guild.deposit_tester` | 6 |
+| Маршрут сервера | `POST admin/moderation/purge?id=<sanctionId>` (стереть из корзины сейчас, только администратор) | 8 |
+| Код ошибки | `MOD_015` - санкция не в корзине (не удаление, удаление героя вместе с аккаунтом, уже восстановлено) | 8 |
+| Провод: форма | `admin/moderation/rows` - `Page<ModerationRow>` (`account` + `hero`, null - удалённый аккаунт); поля `ModerationHero.guild/gold/createdAt/server`, `ModerationAccount.heroCount`; `SanctionView.targetId/parentId`; у `QueueSight` нет `kind` | 8 |
+| Ключи локали | `presence.online/just_now/minutes.*` (`presence.unknown` - «нет данных»), `calendar.*`, `moderation.purge.*`, `moderation.row.*`, `moderation.hero_count.*`; удалены `moderation.seen_*`, `dossier.seen.*`, `presence.now/hours/days/minutes`, `moderation.purge_in`; сервер: `error.MOD_015`, `enum.FeedbackKind.APPEAL` - «Модерация», `COMPLAINT` - «Жалоба» | 8 |
+| Ядро и UI | `core/display/PresenceText.kt` (`presenceText`, `calendarText`, `dayText`, `dayTimeText`, `dateText`), `core/admin/TrashTerm`, `core/network/epochOfStamp`; `ui/components/HoldRingButton`, `rememberPresence`/`LivePresence`, `ReportKindLabel`; удалены `BaseRepository.groupedPage` сервера, `epochOf`/`seenText` клиента | 8 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

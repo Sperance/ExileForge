@@ -88,16 +88,18 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
  * Кино поверх боя: сцена входа стража [intro] в границах поля [bounds]; каждая новая фаза - виньетка её цвета по краям (держится до
  * конца фазы) и короткая светлая вспышка; победа - золотая вспышка. Вспышек нет без анимаций и при упрощённых эффектах.
  *
- * Вспышка фазы - по счёту пройденных порогов: окно журнала её не теряет.
+ * Вспышка фазы - по счёту пройденных порогов: окно журнала её не теряет. Обе вспышки принадлежат бою ([FightHud.leader]) и его
+ * боссу: следующий бой, даже на ×2/×3 до конца гашения прошлой, начинает без них, а при живом боссе вспышки победы нет.
  */
 @Composable internal fun BossCinema(fight: FightHud, boss: BossHud, intro: BossIntro?, bounds: IntroBounds) {
     val simple = LocalSettings.current.simpleEffects || !LocalMotion.current
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val phase = phaseNumber(boss)
     val vignette by animateFloatAsState(((phase - 1).coerceIn(0, 2)) * .18f, tween(1200), label = "vignette")
-    val flash = remember(boss.index) { Animatable(0f) }
-    var seen by remember(boss.index) { mutableIntStateOf(phase) }
-    LaunchedEffect(boss.index, phase) {
+    val bout = fight.leader
+    val flash = remember(bout, boss.index) { Animatable(0f) }
+    var seen by remember(bout, boss.index) { mutableIntStateOf(phase) }
+    LaunchedEffect(bout, boss.index, phase) {
         if (phase <= seen) return@LaunchedEffect
         seen = phase
         if (!simple) {
@@ -105,11 +107,14 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
             flash.animateTo(0f, tween(420, easing = LinearEasing))
         }
     }
-    val win = remember { Animatable(0f) }
-    LaunchedEffect(foe.alive) {
-        if (!foe.alive && !simple) {
-            win.snapTo(.18f)
-            win.animateTo(0f, tween(900))
+    val win = remember(bout, boss.index) { Animatable(0f) }
+    LaunchedEffect(bout, boss.index, foe.alive) {
+        when {
+            foe.alive -> win.snapTo(0f)
+            !simple -> {
+                win.snapTo(.18f)
+                win.animateTo(0f, tween(900))
+            }
         }
     }
     Box(Modifier.fillMaxSize()) {

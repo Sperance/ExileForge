@@ -242,10 +242,13 @@ private fun riftTip(boss: BossHud, guard: RiftGuard): Tip = when (guard) {
     val burst = remember { Animatable(1f) }
     LaunchedEffect(whole) {
         if (whole < seen) {
+            seen = whole
             burst.snapTo(0f)
             burst.animateTo(1f, tween(BURST_MS, easing = LinearEasing))
+        } else {
+            seen = whole
+            burst.snapTo(1f)
         }
-        seen = whole
     }
     BossChip(
         "$whole/${boss.cords}",

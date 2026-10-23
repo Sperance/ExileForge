@@ -7,20 +7,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.groupedNumber
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 
 /**
  * A price in gold, as a lot's price in orbs is drawn: the coin and the figure — the merchant's shelf and, what he pays for an item.
- * Число - короткой записью ([compactNumber]); сокращённое касанием показывает полное ([FullNumberTipped]).
+ * Число - короткой записью ([compactNumber]); сокращённое касанием показывает полное ([FullNumberTipped]); чтение с экрана - полное
+ * число с валютой.
  */
 @Composable fun GoldPrice(gold: Long, modifier: Modifier = Modifier) {
     FullNumberTipped(gold, modifier) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.semantics(mergeDescendants = true) { contentDescription = ui("gold.amount", groupedNumber(gold)) },
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(14.dp))
             Text(compactNumber(gold), color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }

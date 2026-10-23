@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
@@ -47,7 +49,9 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.PickOptions
 import com.sperance.exileforge.core.display.compactNumber
+import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.filter.ItemShelf
@@ -68,10 +72,12 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DepositBar
 import com.sperance.exileforge.rules.content.GuildAction
+import com.sperance.exileforge.rules.content.GuildCoinRule
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.rules.sheet.StashTakePrice
+import com.sperance.exileforge.rules.sheet.StashTakeCost
+import com.sperance.exileforge.rules.sheet.StashValue
 import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
@@ -79,7 +85,9 @@ import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChipSize
 import com.sperance.exileforge.ui.components.ChoiceChips
+import com.sperance.exileforge.ui.components.CoinsRole
 import com.sperance.exileforge.ui.components.Engraved
+import com.sperance.exileforge.ui.components.FellowshipCoins
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
@@ -91,6 +99,7 @@ import com.sperance.exileforge.ui.components.ForgeSheetDefaults
 import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.InfoCard
+import com.sperance.exileforge.ui.components.InfoMark
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.ItemFilterSheet
@@ -107,6 +116,7 @@ import com.sperance.exileforge.ui.components.SearchBar
 import com.sperance.exileforge.ui.components.SearchFilter
 import com.sperance.exileforge.ui.components.SheetBody
 import com.sperance.exileforge.ui.components.StackCell
+import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -127,13 +137,14 @@ import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.rarityColor
 
 /**
  * The guild stash: tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
- * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. Список - плиты
- * «Ценника», как витрина аукциона, с её отбором (на клиенте, [StashFilter]); ярлык - цена взятия в золоте
- * ([StashTakePrice]), взять и положить - удержанием.
+ * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. Первая строка панели - счёт монет
+ * Содружества героя с ⓘ правила ([CoinsLine]). Список - плиты «Ценника», как витрина аукциона, с её отбором (на клиенте,
+ * [StashFilter]); ярлык - цена взятия в монетах и золоте ([StashValue.takeCost]), взять и положить - удержанием.
  *
  * Участник и офицер видят «N/M» на сегодня, глава - без ограничений; под ними - пределы каждой роли одной строкой.
  * Чипы вкладок - их имена ([GuildText.stashTab]); у кого право настраивать вкладки - порог ранга общим выбором ([ForgePicker]:
@@ -154,6 +165,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
+                game.index?.guilds?.stash?.coins?.let { CoinsLine(stash.coins, it) }
                 if (stash.tabs.size > 1 || stash.tabs.any { it.name.isNotBlank() }) {
                     val cue = rememberLazyRowScrollCue(rememberLazyListState(), tab)
                     LazyRow(Modifier.scrollCue(cue, Panel), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -230,6 +242,32 @@ import com.sperance.exileforge.ui.theme.rarityColor
     }
 }
 
+/**
+ * Счёт монет Содружества героя строкой панели: значок кольца, «Монеты Содружества: 120» и ⓘ - как их дают и сколько стоит взятие,
+ * числами правила [rule].
+ */
+@Composable private fun CoinsLine(coins: Long, rule: GuildCoinRule) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(26.dp).background(Rune.copy(alpha = .10f), RoundedCornerShape(5.dp)), contentAlignment = Alignment.Center) {
+            Icon(ForgeGlyphs.Fellowship, null, tint = Rune, modifier = Modifier.size(18.dp))
+        }
+        Text(ui("guild.coins_balance", compactNumber(coins)), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        InfoMark(ui("guild.coins_about"), tip = { Tip(ui("guild.coins_title"), coinsHelp(rule), Rune) })
+    }
+}
+
+/** Справка о монетах Содружества числами правила [rule]: очки редкостей, шаг уровня, шаг стопки и наценка взятия. */
+private fun coinsHelp(rule: GuildCoinRule): String = ui(
+    "guild.coins_help",
+    rule.rarity[Rarity.MAGIC] ?: 0,
+    rule.rarity[Rarity.RARE] ?: 0,
+    rule.rarity[Rarity.UNIQUE] ?: 0,
+    rule.rarity[Rarity.MYTHICAL] ?: 0,
+    rule.levelStep,
+    rule.pileStep,
+    number(rule.takeRate),
+)
+
 /** Строка поиска хранилища ([SearchBar]): имя, кнопка отбора и заданные поля чипами под ней ([StashFilter.narrowings]). */
 @Composable private fun StashSearch(game: GameUi, filter: StashFilter, onFilter: (StashFilter) -> Unit) {
     var sheet by remember { mutableStateOf(false) }
@@ -286,25 +324,32 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
 }
 
 /**
- * Плита записи хранилища «Ценником»: копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена
- * взятия в золоте. Касание - карточка, «Взять» в ней по удержанию; погашено, если взятий на сегодня нет или золота мало.
+ * Плита записи хранилища «Ценником»: копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена взятия в монетах
+ * Содружества и золоте ([StashValue.takeCost]). Касание - карточка, «Взять · 18 · 174 золота» в ней по удержанию; погашено с причиной,
+ * если взятий на сегодня нет, монет или золота мало.
  *
- * Цена взятия против кошелька героя - тот же счёт, что у всех цен в золоте.
+ * Цена взятия против кошелька героя - тот же счёт, что у всех цен в золоте; монеты - против счёта героя [GuildStashView.coins].
  */
 @Composable private fun EntryRow(game: GameUi, stash: GuildStashView, entry: GuildStashEntry, onTake: () -> Unit) {
     val index = game.index ?: return
     val view = entry.item?.let { game.view(it) }
     val inspect = rememberInspect()
-    val price = StashTakePrice.of(index, entry.item, entry.code, entry.amount)
-    val bill = game.goldBill(price)
+    val cost = remember(index, entry) { StashValue.takeCost(index, entry.item, entry.code, entry.amount) }
+    val coinsShort = cost.coins > stash.coins
+    val bill = game.goldBill(cost.gold)
     val reason = when {
         stash.takesLeft == 0 -> ui("guild.stash_no_takes")
+        coinsShort -> ui("guild.coins_short", groupedNumber(cost.coins))
         bill?.affordable == false -> bill.shortText()
         else -> null
     }
-    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = compactNumber(price).takeIf { price > 0 }) { onTake() }
+    val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = takeFigure(cost)) { onTake() }
     val open = { inspect(entry.item?.let { Inspect.Copy(it, action) } ?: Inspect.Stack(entry.code, action)) }
-    val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { bill?.takeIf { price > 0 }?.let { GoldCost(it) } ?: GoldPrice(price) }
+    val tag: @Composable RowScope.() -> Unit = {
+        if (cost.coins > 0) FellowshipCoins(cost.coins, CoinsRole.PRICE, affordable = !coinsShort)
+        if (cost.coins > 0 && cost.gold > 0) Text("·", color = Muted, style = MaterialTheme.typography.labelMedium)
+        if (cost.gold > 0) bill?.let { GoldCost(it, purse = false) } ?: GoldPrice(cost.gold)
+    }
     val by = listOf(ui("guild.stash_by", entry.by))
     if (view != null) {
         ItemTradeRow(view, enabled = true, unmet = game.unmetFor(view.item), extra = by, onClick = open, price = tag)
@@ -321,6 +366,14 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
     }
 }
 
+/** Число кнопки «Взять»: «18 · 174 золота», без монет - только золото, бесплатно - ничего. */
+private fun takeFigure(cost: StashTakeCost): String? = when {
+    cost.coins > 0 && cost.gold > 0 -> ui("guild.stash_take_both", compactNumber(cost.coins), compactNumber(cost.gold))
+    cost.coins > 0 -> compactNumber(cost.coins)
+    cost.gold > 0 -> ui("gold.amount", compactNumber(cost.gold))
+    else -> null
+}
+
 /**
  * Окно «Положить» во вкладку [tab] хранилища [stash] - всегда выбор пачкой: в шапке «Свободно N / M», строка поиска сумки
  * ([ItemSearchBar], список [ItemShelf.GUILD_DEPOSIT]), вкладки-чипы «Снаряжение / Стопки / Карты» с числом отмеченного и быстрые
@@ -328,8 +381,12 @@ private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.take
  * с числом; касание отмечает, удержание вещи - карточка, удержание стопки - поле «сколько» в шапке (по умолчанию вся стопка). У
  * запрещённого ([DepositLot.bar]: заперто, привязано к герою) вместо флажка замок, причина - в строке.
  *
- * Внизу закреплены «Отмена» и удерживаемая «Положить N · влезет K» ([PickDock]): K - по правилу сервера ([DepositBag.fits]), что не
- * влезет, останется у героя. Герою-тестировщику склад закрыт - причина в шапке, кнопка погашена.
+ * Справа у строки - начисление монет Содружества за неё ([DepositBag.award], «+0» серым), удержание вещи открывает карточку с
+ * «Положить · +12» - вклад одной этой вещи.
+ *
+ * Внизу закреплены «Отмена» и удерживаемая «Положить N · +S · влезет K» ([PickDock]): K - по правилу сервера ([DepositBag.fits]), что
+ * не влезет, останется у героя; S - монеты за то, что ляжет ([DepositBag.earned]). Герою-тестировщику склад закрыт - причина в шапке,
+ * кнопка погашена.
  */
 @Composable
 private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismiss: () -> Unit, onPut: (List<GuildDepositParcel>) -> Unit) {
@@ -374,8 +431,13 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
         },
         footer = {
             val fits = bag.fits(picked)
+            val earned = bag.earned(picked, typed)
             PickDock(
-                label = if (picked.isEmpty()) ui("sell.pick_hint") else ui("guild.deposit_do", picked.size),
+                label = when {
+                    picked.isEmpty() -> ui("sell.pick_hint")
+                    earned > 0 -> ui("guild.deposit_do_coins", picked.size, compactNumber(earned))
+                    else -> ui("guild.deposit_do", picked.size)
+                },
                 icon = ForgeGlyphs.Stash,
                 enabled = !game.busy && fits > 0,
                 figure = ui("guild.deposit_fits", fits).takeIf { picked.isNotEmpty() },
@@ -391,10 +453,13 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                 kind == DepositKind.STACKS -> item { MutedText(ui("guild.deposit_stack_hint")) }
             }
             items(shown, key = { it.id }) { lot ->
-                DepositLine(lot, pick.chosen(lot.id), onToggle = { pick.toggle(lot.id) }) {
+                val award = bag.award(lot, typed[lot.code])
+                DepositLine(lot, award, pick.chosen(lot.id), onToggle = { pick.toggle(lot.id) }) {
                     val piece = lot.piece
                     if (piece != null) {
-                        ItemTile(piece, Modifier.weight(1f), selected = pick.chosen(lot.id), onClick = { if (lot.bar == null) pick.toggle(lot.id) else inspect(Inspect.Copy(piece.item)) }, onLongClick = { inspect(Inspect.Copy(piece.item)) }) {
+                        val single = depositOne(lot, award, room = bag.free > 0, busy = game.busy) { onPut(listOf(lot.parcel(null))) }
+                        val card = { inspect(Inspect.Copy(piece.item, single)) }
+                        ItemTile(piece, Modifier.weight(1f), selected = pick.chosen(lot.id), onClick = { if (lot.bar == null) pick.toggle(lot.id) else card() }, onLongClick = card) {
                             lot.bar?.let { BarReason(it) }
                         }
                     } else {
@@ -417,8 +482,20 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
 /** Сколько цифр принимает поле количества стопки. */
 private const val AMOUNT_DIGITS = 12
 
-/** Строка окна вклада: слева флажок отметки ([chosen], касание - [onToggle]) или замок у запрещённого, справа - сама посылка [content]. */
-@Composable private fun DepositLine(lot: DepositLot, chosen: Boolean, onToggle: () -> Unit, content: @Composable RowScope.() -> Unit) {
+/**
+ * «Положить · +12» в карточке вещи окна вклада: одна эта вещь, удержанием. Запрещённая или без места во вкладке ([room] false) -
+ * погашено с причиной, пока идёт запрос ([busy]) - погашено.
+ */
+private fun depositOne(lot: DepositLot, award: Long, room: Boolean, busy: Boolean, onPut: () -> Unit): InspectAction {
+    val reason = lot.bar?.let { ui("guild.deposit_why.${it.name}") } ?: ui("guild.deposit_why.${DepositBar.FULL.name}").takeUnless { room }
+    return InspectAction(ui("guild.stash_put"), enabled = !busy && reason == null, reason = reason, hold = true, figure = "+${compactNumber(award)}") { onPut() }
+}
+
+/**
+ * Строка окна вклада: слева флажок отметки ([chosen], касание - [onToggle]) или замок у запрещённого, посередине - сама посылка
+ * [content], справа - начисление монет Содружества за неё [award] (у запрещённого - нет).
+ */
+@Composable private fun DepositLine(lot: DepositLot, award: Long, chosen: Boolean, onToggle: () -> Unit, content: @Composable RowScope.() -> Unit) {
     val bar = lot.bar
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         if (bar == null) {
@@ -427,6 +504,7 @@ private const val AMOUNT_DIGITS = 12
             Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Lock, ui("guild.deposit_why.${bar.name}"), tint = Muted, modifier = Modifier.size(18.dp)) }
         }
         content()
+        if (bar == null) FellowshipCoins(award, CoinsRole.AWARD)
     }
 }
 

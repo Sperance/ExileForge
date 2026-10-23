@@ -121,7 +121,7 @@ import kotlinx.serialization.Serializable
 /**
  * The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count);
  * [takesPerDay] - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава); [roleTakes] - дневной
- * лимит каждой роли с прибавкой древа гильдии (-1 - без счёта), строка пределов по ролям.
+ * лимит каждой роли с прибавкой древа гильдии (-1 - без счёта), строка пределов по ролям; [coins] - монеты Содружества героя.
  */
 @Serializable data class GuildStashView(
     val entries: List<GuildStashEntry> = emptyList(),
@@ -131,13 +131,17 @@ import kotlinx.serialization.Serializable
     val money: Long = 0,
     val takesPerDay: Int = -1,
     val roleTakes: Map<GuildRole, Int> = emptyMap(),
+    val coins: Long = 0,
 )
 
 /** Посылка пакетного вклада (тело `POST guild/stash/deposit`): копия тайника [itemId] или стопка сумки [code] в количестве [amount]. */
 @Serializable data class GuildDepositParcel(val itemId: String? = null, val code: String? = null, val amount: Long = 0)
 
-/** Ответ пакетного вклада: хранилище после него, сколько посылок легло ([placed]) и сколько осталось у героя - по причинам ([refused]). */
-@Serializable data class GuildDeposited(val stash: GuildStashView = GuildStashView(), val placed: Int = 0, val refused: Map<DepositBar, Int> = emptyMap())
+/**
+ * Ответ пакетного вклада: хранилище после него, сколько посылок легло ([placed]), сколько осталось у героя - по причинам ([refused]),
+ * и сколько монет Содружества начислено за легшее ([earned]).
+ */
+@Serializable data class GuildDeposited(val stash: GuildStashView = GuildStashView(), val placed: Int = 0, val refused: Map<DepositBar, Int> = emptyMap(), val earned: Long = 0)
 
 /** A contribution landed: the guild after it, the hero's row and the gold the hero has left. */
 @Serializable data class GuildContribution(val guild: GuildView, val me: GuildMember, val money: Long = 0)

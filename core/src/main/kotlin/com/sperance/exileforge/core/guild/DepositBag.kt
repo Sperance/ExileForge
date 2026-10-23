@@ -15,9 +15,11 @@ import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.pick.PickPreset
 import com.sperance.exileforge.core.pick.Pickable
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.DepositBar
 import com.sperance.exileforge.rules.content.GuildDeposit
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.sheet.StashValue
 
 /** Вкладка-чип окна вклада в хранилище гильдии: снаряжение (с инструментами), стопки сумки, карты; подпись - `guild.deposit_kind.<код>`. */
 enum class DepositKind { GEAR, STACKS, MAPS }
@@ -34,6 +36,9 @@ data class DepositLot(val kind: DepositKind, val piece: ItemView? = null, val co
 
     /** Число стопки в строке: «× 37», а часть стопки - «× 10 из 37». */
     fun countText(typed: String?): String = amountOf(typed).let { if (it < owned) ui("guild.deposit_stack_part", number(it.toDouble()), number(owned.toDouble())) else ui("guild.deposit_stack_all", number(owned.toDouble())) }
+
+    /** Сколько монет Содружества начислят за посылку при набранном [typed] - по правилу сервера ([StashValue.award]). */
+    fun award(index: ContentIndex, typed: String?): Long = StashValue.award(index, piece?.item, code, amountOf(typed))
 
     /** Посылка запроса: копия - по id, стопка - кодом и количеством из набранного [typed]. */
     fun parcel(typed: String?): GuildDepositParcel = piece?.let { GuildDepositParcel(itemId = it.id) } ?: GuildDepositParcel(code = code, amount = amountOf(typed))
@@ -59,9 +64,10 @@ sealed interface DepositPreset : PickPreset<DepositLot> {
 
 /**
  * Что герой может положить во вкладку хранилища: копии тайника, кроме надетого и вставленного (их сперва снимают), и стопки сумки -
- * по вкладкам окна ([DepositKind]); запертое и привязанное к герою - с причиной. [free] - свободных мест вкладки, [size] - всех.
+ * по вкладкам окна ([DepositKind]); запертое и привязанное к герою - с причиной. [free] - свободных мест вкладки, [size] - всех;
+ * начисление монет Содружества считается по контенту [index].
  */
-class DepositBag(val lots: List<DepositLot>, val free: Int, val size: Int) {
+class DepositBag(val lots: List<DepositLot>, val free: Int, val size: Int, private val index: ContentIndex) {
     /** Что можно отметить: без запрета. */
     val pickable: List<DepositLot> = lots.filter { it.bar == null }
 
@@ -85,7 +91,15 @@ class DepositBag(val lots: List<DepositLot>, val free: Int, val size: Int) {
     fun parcels(picked: List<DepositLot>, typed: Map<String, String>): List<GuildDepositParcel> = picked.map { it.parcel(typed[it.code]) }
 
     /** Сколько из отмеченного [picked] ляжет во вкладку - по правилу сервера, по порядку. */
-    fun fits(picked: List<DepositLot>): Int = GuildDeposit.plan(picked, free) { it.bar }.placed.size
+    fun fits(picked: List<DepositLot>): Int = placed(picked).size
+
+    /** Монеты Содружества за посылку [lot] при набранном количестве [typed]. */
+    fun award(lot: DepositLot, typed: String?): Long = lot.award(index, typed)
+
+    /** Монеты Содружества за отмеченное [picked]: только за то, что ляжет; [typed] - набранные количества стопок по коду. */
+    fun earned(picked: List<DepositLot>, typed: Map<String, String>): Long = placed(picked).sumOf { award(it, typed[it.code]) }
+
+    private fun placed(picked: List<DepositLot>): List<DepositLot> = GuildDeposit.plan(picked, free) { it.bar }.placed
 
     /** Подпись вкладки-чипа [kind]: имя и число посылок, а с отмеченным ([chosen]) - «отмечено/всего». */
     fun tab(kind: DepositKind, chosen: (String) -> Boolean): String {
@@ -107,5 +121,5 @@ fun GameUi.depositBag(stash: GuildStashView, tab: Int): DepositBag? {
     }
     val stacks = hero.bag.filter { it.value > 0 }.entries.sortedBy { itemTitle(it.key) }.map { (code, amount) -> DepositLot(DepositKind.STACKS, code = code, owned = amount, bar = GuildDeposit.bar(index, code)) }
     val lots = (pieces + stacks).sortedBy { it.kind.ordinal }
-    return DepositBag(lots, (stash.tabSize - stash.entries.count { it.tab == tab }).coerceAtLeast(0), stash.tabSize)
+    return DepositBag(lots, (stash.tabSize - stash.entries.count { it.tab == tab }).coerceAtLeast(0), stash.tabSize, index)
 }

@@ -115,3 +115,6 @@ fun pluralKey(key: String, n: Int, lang: Lang = uiLanguage): String = when (lang
 
 /** A counted noun in the current language: `plural("tree.node", 3)`. */
 fun plural(key: String, n: Int, lang: Lang = uiLanguage): String = ui(lang, pluralKey(key, n, lang))
+
+/** Счётное слово для большого числа [n]: форма зависит только от двух последних цифр, у сотни и больше единственного числа нет. */
+fun plural(key: String, n: Long, lang: Lang = uiLanguage): String = plural(key, if (n in 0L..99L) n.toInt() else (n % 100 + 100).toInt(), lang)

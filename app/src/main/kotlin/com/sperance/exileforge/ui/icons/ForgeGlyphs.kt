@@ -250,6 +250,18 @@ object ForgeGlyphs {
     /** A stack of coins — what the merchant pays. */
     val Coins = glyph("Coins", { ring(10f, 9f, 6f) }, { ring(14f, 15f, 6f) }, { line(14f, 12.5f, 14f, 17.5f) })
 
+    /** Кольцо из трёх звеньев - монеты Содружества гильдии. */
+    val Fellowship = glyph(
+        "Fellowship",
+        { ring(12f, 12f, 9.5f) },
+        { ring(12f, 8.3f, 2.2f) },
+        { ring(8.6f, 14.2f, 2.2f) },
+        { ring(15.4f, 14.2f, 2.2f) },
+        { line(10.6f, 9.6f, 9.6f, 12.2f) },
+        { line(13.4f, 9.6f, 14.4f, 12.2f) },
+        { line(10.8f, 14.2f, 13.2f, 14.2f) },
+    )
+
     /** An open book with a star on it — the grimoire of the class skills. */
     val Grimoire = glyph(
         "Grimoire",

@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.guild
 
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.phrase
+import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildDepositParcel
@@ -128,17 +129,18 @@ class GuildActions(
 
     /**
      * Пачка во вкладку [tab]: сервер кладёт по порядку, пока есть места. Тост - сколько легло, а легло не всё - из скольких и
-     * почему («Положено 7 из 9: нет места»).
+     * почему («Положено 7 из 9: нет места»); начислены монеты Содружества - и они («Положено 3 · +56 монет»).
      */
     fun deposit(tab: Int, parcels: List<GuildDepositParcel>) = command { id ->
         val done = api.guild.deposit(id, tab, parcels)
         guild { it.copy(stash = done.stash) }
         heroes.money(done.stash.money)
-        if (done.refused.isEmpty()) {
+        val placed = if (done.refused.isEmpty()) {
             ui("guild.toast.deposited_n", done.placed)
         } else {
             ui("guild.toast.deposited_part", done.placed, parcels.size, done.refused.keys.sortedBy { it.ordinal }.joinToString(", ") { ui("guild.deposit_bar.${it.name}") })
         }
+        if (done.earned > 0) ui("guild.toast.deposited_coins", placed, done.earned, plural("guild.coins_noun", done.earned)) else placed
     }
 
     fun take(entryId: String) = stashCommand(ui("guild.toast.taken")) { api.guild.take(it, entryId) }

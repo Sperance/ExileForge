@@ -53,7 +53,7 @@ import com.sperance.exileforge.ui.theme.Parchment
     Tipped(tip, modifier) {
         Row(
             Modifier.background(Abyss, shape).border(1.dp, Bronze, shape).padding(horizontal = 8.dp, vertical = 3.dp)
-                .semantics(mergeDescendants = true) { contentDescription = ui("gold.cost", groupedNumber(bill.price), groupedNumber(bill.have)) },
+                .semantics(mergeDescendants = true) { contentDescription = if (purse) ui("gold.cost", groupedNumber(bill.price), groupedNumber(bill.have)) else ui("gold.amount", groupedNumber(bill.price)) },
             horizontalArrangement = Arrangement.spacedBy(3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

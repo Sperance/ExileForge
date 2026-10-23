@@ -348,7 +348,7 @@ class ExpeditionWorld(
         val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing)
         for (cell in candidates) {
             if (fountains.size >= count) break
-            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, rule.heal, rule.flasks)
+            if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, rule)
         }
     }
 

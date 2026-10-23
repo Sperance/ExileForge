@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.rules.content.BehaviourRule
+import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -84,8 +85,8 @@ class Chest(val id: Int, val cell: Cell) {
     internal var event: Int? = null
 }
 
-/** Фонтан на карте: где стоит, сколько процентов здоровья и маны ([heal]) и ёмкости зарядов фляг ([flasks]) даёт, выпит ли. */
-class Fountain(val id: Int, val cell: Cell, val heal: Double, val flasks: Double) {
+/** Фонтан на карте: где стоит, что даёт глоток по правилу фонтанов [rule], выпит ли. */
+class Fountain(val id: Int, val cell: Cell, val rule: FountainRule) {
     var used = false
 }
 

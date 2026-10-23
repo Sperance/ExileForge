@@ -109,14 +109,16 @@ internal fun ExpeditionRun.walk(dt: Double) {
  */
 internal fun ExpeditionRun.stride(): Double = (1 / chillStretch(carry.ailments.strongestChill())).coerceAtLeast(pace.chillFloor)
 
-/** Фонтан выпит: его доля здоровья и маны назад, и каждой фляге - его доля её ёмкости зарядов ([charged]). */
+/** Фонтан выпит: его доля здоровья, маны и энергощита назад, и каждой фляге - его доля её ёмкости зарядов ([charged]). */
 internal fun ExpeditionRun.drink(spring: Fountain) {
+    val rule = spring.rule
     spring.used = true
     fountain = null
-    life = (life + hero.maxLife * spring.heal / 100).coerceAtMost(hero.maxLife)
-    mana = (mana + manaCap() * spring.heal / 100).coerceAtMost(manaCap())
+    life = (life + hero.maxLife * rule.heal / 100).coerceAtMost(hero.maxLife)
+    mana = (mana + manaCap() * rule.heal / 100).coerceAtMost(manaCap())
+    shield = (shield + hero.maxShield * rule.shield / 100).coerceAtMost(hero.maxShield)
     charges = kit.flasks.mapIndexed { slot, flask ->
-        flask?.sheet?.let { it.charged(charges.getOrElse(slot) { 0.0 }, it.maxCharges * spring.flasks / 100, hero::get) } ?: 0.0
+        flask?.sheet?.let { it.charged(charges.getOrElse(slot) { 0.0 }, it.maxCharges * rule.flasks / 100, hero::get) } ?: 0.0
     }
 }
 

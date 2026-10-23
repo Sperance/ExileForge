@@ -39,9 +39,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.display.fountainOffer
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
@@ -56,7 +58,6 @@ import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.roundToInt
 
 /**
  * A run of the campaign, over the whole screen: the scene underneath, the overlay above.
@@ -156,7 +157,7 @@ import kotlin.math.roundToInt
                         HoldsRun(run)
                         StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
                     }
-                    hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
+                    hud.fountain?.let { FountainOffer(it, run.index, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
                     if (hud.exitOffered) ExitOffer(run, hud, onTake = { model.runCommand(RunCommand.TakeExit) }) { model.runCommand(RunCommand.StepOff) }
                     if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                     val action = hud.action
@@ -419,10 +420,11 @@ internal const val FOUNTAIN_TAP = .9
  * A fountain offered, walked onto or tapped on the map: what it gives, and the choice — drink it now,
  * or step away and leave it standing for later. The map holds still until the answer.
  */
-@Composable internal fun FountainOffer(fountain: FountainView, onTake: () -> Unit, onLeave: () -> Unit) {
+@Composable internal fun FountainOffer(fountain: FountainView, index: ContentIndex?, onTake: () -> Unit, onLeave: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, ShieldCyan) {
-            Text(ui("fountain.offer", fountain.heal.roundToInt(), fountain.flasks.roundToInt()), color = ShieldCyan, style = MaterialTheme.typography.titleMedium)
+            val offer = remember(fountain, index) { fountainOffer(fountain, index) }
+            Text(offer, color = ShieldCyan, style = MaterialTheme.typography.titleMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ForgeButton(onClick = onLeave, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary) { Text(ui("fountain.leave")) }
                 ForgeButton(onClick = onTake, modifier = Modifier.weight(1f)) { Text(ui("fountain.take")) }

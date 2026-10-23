@@ -75,7 +75,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         drops = dropsShown,
         bag = bagShown,
         fountainsLeft = world.fountains.count { !it.used },
-        fountain = fountain?.let { FountainView(it.id, it.heal, it.flasks) },
+        fountain = fountain?.let { FountainView(it.id, shielded = hero.maxShield > 0) },
         exitOffered = exitOffered,
         featuresLeft = world.untouched,
         gate = gate, vaal = vaal,

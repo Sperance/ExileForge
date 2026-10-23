@@ -526,8 +526,8 @@ data class AbyssView(
  */
 data class FeatureView(val feature: MapFeature, val taken: List<Int>, val guarded: Boolean = false)
 
-/** Фонтан, как его читает предложение: какой, доля здоровья и маны и доля ёмкости зарядов фляг, что он даёт. */
-data class FountainView(val id: Int, val heal: Double, val flasks: Double)
+/** Фонтан, как его читает предложение: какой и есть ли у героя энергощит - без щита строки щита в предложении нет. */
+data class FountainView(val id: Int, val shielded: Boolean)
 
 /** A crystal of essences as its sheet shows it, what a Vaal orb on it did, and whether that orb's outcome is still the server's to tell. */
 data class CrystalView(

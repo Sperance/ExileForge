@@ -1330,7 +1330,7 @@
   "fight.focus_on": "Your target — tap again to let the class choose",
   "fight.focus_off": "Auto target: {0}. Tap a foe to pick it",
   "fight.stage": "Wave {0}/{1}",
-  "fight.feed_invite": "Tap a foe to learn about it",
+  "fight.feed_invite": "Tap a foe to learn more about it",
   "fight.pack_left": "{0} left",
   "fight.pause": "Pause",
   "fight.resume": "Resume",

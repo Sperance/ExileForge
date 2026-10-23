@@ -94,6 +94,10 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Ядро и UI | `core/display/PresenceText.kt` (`presenceText`, `calendarText`, `dayText`, `dayTimeText`, `dateText`), `core/admin/TrashTerm`, `core/network/epochOfStamp`; `ui/components/HoldRingButton`, `rememberPresence`/`LivePresence`, `ReportKindLabel`; удалены `BaseRepository.groupedPage` сервера, `epochOf`/`seenText` клиента | 8 |
 | Шаблоны уникалок | `LAST_BREATH_GIRDLE`, `FROSTCOUNT_QUIVER`, `RECRUITS_TARGE`, `WHISPERING_VAULT_CIRCLET`, `ASHEN_FLOCK_WINGS`, `SEAL_OF_A_HUNDRED_ROADS`, `LAST_BARGAIN_ROD`, `APPRAISERS_GLOVES`, `SAPPERS_CUIRASS`, `SECRET_PASSAGE_RING`, `FIRST_CLEARING_CLEAVER`, `SPROUTING_BLIGHT_RING`, `MOTHER_ROT_STAFF`, `TWO_MIRRORS_AMULET` | 10u |
 | Силы `POWER_*` | `LAST_BREATH`, `FROST_TALLY`, `VAULT_ECHO`, `ASHEN_DRIFT`, `EMBER_SCATTER`, `HUNDRED_ROADS`, `LAST_BARGAIN`, `APPRAISERS_EYE`, `SAPPERS_WARD`, `SAPPERS_BRACE`, `VAULT_SPOILS`, `FIRST_SWING`, `BLIGHT_SEED`, `MOTHERS_ROT`, `ROT_TOUCH`, `TWIN_MIRROR`; `stats.json` order 3768-3783 | 10u |
+| Разовая задача | `task.contestRestore` (`TaskKind.CONTEST_RESTORE`): призы дня 22.10 по оставшимся записям | 7 |
+| Коллекция | `ContestPeriod` (мера периода состязания, закреплённая первой записью) | 7 |
+| Провод: поле | `UserProfile.registeredAt`, `UserProfile.sanctions`, `HeroRoster.guilds` | 7 |
+| Ключи локали | `heroes.*` (выбор героя), `signin.*` (вход и карточка аккаунта), `contest.results.*` (итоги при входе), `contest.honour_until` | 7 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

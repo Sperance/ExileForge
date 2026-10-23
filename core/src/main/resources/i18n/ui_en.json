@@ -1237,6 +1237,7 @@
   "fight.behind_taunt": "While a taunter stands this foe cannot be picked",
   "fight.out_of_reach": "Out of reach: while a taunter stands, the blows go to it",
   "fight.level_short": "Lv {0}",
+  "fight.level_badge": "Level {0}",
   "fight.traits": "Traits ({0})",
   "fight.fallen": "Fallen",
   "fight.target_line": "Target: {0} · {1}",

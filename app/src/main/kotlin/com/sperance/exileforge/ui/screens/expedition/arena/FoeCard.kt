@@ -132,7 +132,8 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
  * The fallen go dark; one the hero's weapon cannot reach yet is dimmed.
  *
  * [narrow] - три и больше на поле: узкая плитка. Замах (последние 30% - рамка наливается кровью), выпады и тряска - в рисовании кадра
- * ([FightFrame]): карточка не перекомпонуется на каждом шаге боя. Свой уровень врага - на карте он бывает выше или ниже карты. Полка
+ * ([FightFrame]): карточка не перекомпонуется на каждом шаге боя. Уровень врага - плашкой [LevelBadge] на правом нижнем углу портрета
+ * в нити его редкости: свой, на карте он бывает выше или ниже карты, без своего - уровень зоны [level]. Полка
  * эффектов одна, не влезло - «+N». Фокус за провокатором держится (отметка «Следом»), удары идут провокатору. Плашка намерения проступает по доле замаха.
  */
 @Composable internal fun FoeCard(
@@ -143,6 +144,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     modifier: Modifier,
     large: Boolean,
     traits: List<TraitView>,
+    level: Int,
     narrow: Boolean = false,
     onTap: () -> Unit,
 ) {
@@ -197,18 +199,21 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
             ) {
                 val portrait: @Composable (Dp) -> Unit = { size ->
-                    Box(Modifier.size(size).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
-                        Canvas(Modifier.fillMaxSize()) {
-                            Portraits.monster(
-                                this,
-                                foe.monster.code.value,
-                                foe.monster.form,
-                                frame.breath,
-                                wash?.let(::ailmentTint),
-                                wash?.let(::washAmount) ?: 0f,
-                                flash(),
-                            )
+                    Box {
+                        Box(Modifier.size(size).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
+                            Canvas(Modifier.fillMaxSize()) {
+                                Portraits.monster(
+                                    this,
+                                    foe.monster.code.value,
+                                    foe.monster.form,
+                                    frame.breath,
+                                    wash?.let(::ailmentTint),
+                                    wash?.let(::washAmount) ?: 0f,
+                                    flash(),
+                                )
+                            }
                         }
+                        FoeLevelBadge(foe.monster.level.takeIf { it > 0 } ?: level, ring, Modifier.align(Alignment.BottomEnd))
                     }
                 }
                 val seals: @Composable () -> Unit = {
@@ -243,7 +248,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                                 overflow = TextOverflow.Ellipsis,
                                 lineHeight = 12.sp,
                             )
-                            if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
                             FoeMightMark(foe.monster)
                             seals()
                         }
@@ -260,9 +264,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 if (shelf.isNotEmpty()) EffectShelf(shelf, tile, { effectsOpen = ShelfFocus(it?.key) }, Modifier.fillMaxWidth().height(tile), gap = 2.dp, hits = hits)
             }
             if (shelf.isNotEmpty()) ShelfTouch(hits, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
-            if (narrow && foe.monster.level > 0) {
-                Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
-            }
             if (fight.target == foe.index && foe.alive && fight.outcome == null) {
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
             }
@@ -302,6 +303,15 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             detectTapGestures { at -> pick(hits.at(at.x)) }
         },
     )
+}
+
+/**
+ * Плашка уровня [level] врага или свиты на правом нижнем углу его портрета, нить цвета [tint] (редкость врага, у тотема - его цвет);
+ * сдвиг за угол - как у гнезда вещи ([LevelBadgeOffset]). Боссу плашки нет: его уровень - в полосе рамки.
+ */
+@Composable internal fun FoeLevelBadge(level: Int, tint: Color, modifier: Modifier = Modifier) {
+    if (level <= 0) return
+    LevelBadge(level, tint, ui("fight.level_badge", level), modifier.offset(x = LevelBadgeOffset.x, y = LevelBadgeOffset.y))
 }
 
 /** Высота зоны касания полки эффектов врага. */

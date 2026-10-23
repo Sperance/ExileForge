@@ -128,12 +128,14 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
  * головой и по три ниши склепа с каждой стороны: в них встаёт свита из портала и тотемы со своим сроком. Касание приспешника
  * выбирает его целью, а на паузе открывает его лист; касание тотема в бою - подсказка [onTotem] (он неуязвим), на паузе - его справка.
  *
- * Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам.
+ * Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам. Свита (приспешники, идолы, тотемы) - с плашкой
+ * уровня на углу портрета: свой уровень, без своего - уровень зоны [level]; у самого босса плашки нет.
  */
 @Composable internal fun BossBand(
     fight: FightHud,
     boss: BossHud,
     frame: FightFrame,
+    level: Int,
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
@@ -150,12 +152,12 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
         if (boss.slots.isEmpty()) {
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
+                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tap(fight, i, onFocus, onInspect) } }
                 PortraitStage(foe, name, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
-                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
+                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tap(fight, i, onFocus, onInspect) } }
             }
         } else {
-            NicheArena(foe, boss, fight, frame, chosen, track, name, onTotem) { tap(fight, it, onFocus, onInspect) }
+            NicheArena(foe, boss, fight, frame, chosen, track, name, level, onTotem) { tap(fight, it, onFocus, onInspect) }
         }
     }
 }
@@ -455,6 +457,7 @@ private val LevelInk = Color(0xFFE8D9C8)
     chosen: Int?,
     track: (Int) -> Modifier,
     name: String,
+    level: Int,
     onTotem: (SlotView.Totem) -> Unit,
     onTap: (Int) -> Unit,
 ) {
@@ -464,7 +467,7 @@ private val LevelInk = Color(0xFFE8D9C8)
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(Modifier.fillMaxWidth().height(242.dp).onGloballyPositioned { origin = it.positionInRoot() }) {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NicheColumn(0 until half, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTotem, onTap)
+            NicheColumn(0 until half, boss, fight, frame, chosen, track, name, level, { i, at -> centres[i] = at - origin }, onTotem, onTap)
             PortraitStage(
                 foe,
                 name,
@@ -474,7 +477,7 @@ private val LevelInk = Color(0xFFE8D9C8)
                 chosen == foe.index,
                 track(foe.index).weight(1f).fillMaxHeight().padding(vertical = 10.dp).onGloballyPositioned { portrait = it.boundsInRoot().translate(-origin) },
             ) { onTap(foe.index) }
-            NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTotem, onTap)
+            NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, level, { i, at -> centres[i] = at - origin }, onTotem, onTap)
         }
         Canvas(Modifier.fillMaxSize()) {
             val time = frame.time
@@ -507,6 +510,7 @@ private val LevelInk = Color(0xFFE8D9C8)
     chosen: Int?,
     track: (Int) -> Modifier,
     name: String,
+    level: Int,
     place: (Int, Offset) -> Unit,
     onTotem: (SlotView.Totem) -> Unit,
     onTap: (Int) -> Unit,
@@ -514,7 +518,7 @@ private val LevelInk = Color(0xFFE8D9C8)
     Column(Modifier.width(76.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
         range.forEach { i ->
             Box(Modifier.fillMaxWidth().height(74.dp).onGloballyPositioned { place(i, it.boundsInRoot().center) }) {
-                NicheSlot(boss.slots.getOrNull(i), fight, frame, chosen, track, name, onTotem, onTap)
+                NicheSlot(boss.slots.getOrNull(i), fight, frame, chosen, track, name, level, onTotem, onTap)
             }
         }
     }
@@ -540,6 +544,7 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
     chosen: Int?,
     track: (Int) -> Modifier,
     name: String,
+    level: Int,
     onTotem: (SlotView.Totem) -> Unit,
     onTap: (Int) -> Unit,
 ) {
@@ -562,12 +567,12 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
 
                 is SlotView.Minion -> {
                     val live = fight.foes.firstOrNull { it.index == view.index } ?: minion
-                    if (live != null) MinionNiche(live, fight, frame, chosen == live.index, track(live.index)) { onTap(live.index) }
+                    if (live != null) MinionNiche(live, fight, frame, chosen == live.index, level, track(live.index)) { onTap(live.index) }
                 }
 
                 is SlotView.Totem -> {
                     val now = (slot as? SlotView.Totem)?.takeIf { it.serial == view.serial } ?: view
-                    TotemNiche(now, frame) { if (fight.scouting) lore?.invoke(Lore.Totem(now.code, name, now.left)) else onTotem(now) }
+                    TotemNiche(now, frame, level) { if (fight.scouting) lore?.invoke(Lore.Totem(now.code, name, now.left)) else onTotem(now) }
                 }
             }
             if (view != null) PortalBurst(if (view is SlotView.Totem) totemTint(view) else PortalTint)
@@ -630,7 +635,7 @@ private fun DrawScope.archFrame(glow: Color?) {
  * Приспешник в нише: фокус игрока - золотые уголки и ярлык «Цель», фокус за провокатором - голубая рамка и «Следом», провокатор -
  * красная рамка и ярлык; цель, что выбрал класс, - тонкая золотая рамка.
  */
-@Composable private fun MinionNiche(foe: FoeView, fight: FightHud, frame: FightFrame, focused: Boolean, modifier: Modifier, onTap: () -> Unit) {
+@Composable private fun MinionNiche(foe: FoeView, fight: FightHud, frame: FightFrame, focused: Boolean, level: Int, modifier: Modifier, onTap: () -> Unit) {
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     val mark = focusMark(foe, fight)
     Box(modifier.fillMaxSize().clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
@@ -644,6 +649,7 @@ private fun DrawScope.archFrame(glow: Color?) {
                 focused -> Box(Modifier.matchParentSize().border(1.5.dp, FrameGoldBright.copy(alpha = .7f), ArchShape))
             }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
+            FoeLevelBadge(foe.monster.level.takeIf { it > 0 } ?: level, rarityTint(foe.monster.rarity), Modifier.align(Alignment.BottomEnd).padding(end = NICHE_BADGE_INSET))
         }
         mark?.let { FocusBadge(it, Modifier.align(Alignment.TopCenter).offset(y = (-6).dp)) }
         val share = if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f
@@ -655,10 +661,13 @@ private fun DrawScope.archFrame(glow: Color?) {
     }
 }
 
+/** Отступ плашки уровня от правого края ниши: сдвиг плашки за угол не выводит её за колонну ниш. */
+private val NICHE_BADGE_INSET = 8.dp
+
 /** Полоса здоровья идола стража на табличке: камень, не кровь. */
 private val IdolLife = Color(0xFFD9C27A)
 
-@Composable private fun TotemNiche(totem: SlotView.Totem, frame: FightFrame, onTap: () -> Unit) {
+@Composable private fun TotemNiche(totem: SlotView.Totem, frame: FightFrame, level: Int, onTap: () -> Unit) {
     val tint = totemTint(totem)
     Box(Modifier.fillMaxSize().clickable(onClick = onTap)) {
         Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
@@ -666,6 +675,7 @@ private val IdolLife = Color(0xFFD9C27A)
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape).background(Brush.radialGradient(listOf(tint.copy(alpha = .3f), Color(0xFF0A0807))))) {
                 totemFigure(tint, frame.time, totem.kind)
             }
+            FoeLevelBadge(level, tint, Modifier.align(Alignment.BottomEnd).padding(end = NICHE_BADGE_INSET))
         }
         Plaque("${totemTitle(totem.code)} · ${totem.left.roundToInt()} ${ui("boss.seconds_short")}", tint, totem.share, tint)
     }
@@ -878,7 +888,7 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     }
 }
 
-/** Свита сбоку без слотов: узкие карточки столбиком. */
+/** Свита сбоку без слотов: узкие карточки столбиком; касание - [onTap] (на паузе - лист, в бою - цель). */
 @Composable private fun Retinue(
     foes: List<FoeView>,
     fight: FightHud,
@@ -886,13 +896,14 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
+    level: Int,
     track: (Int) -> Modifier,
-    onFocus: (Int) -> Unit,
+    onTap: (Int) -> Unit,
 ) {
     Column(Modifier.width(72.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         foes.forEach { foe ->
             key(foe.index) {
-                FoeCard(foe, fight, frame, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), narrow = true) { onFocus(foe.index) }
+                FoeCard(foe, fight, frame, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), level, narrow = true) { onTap(foe.index) }
             }
         }
     }

@@ -105,7 +105,8 @@ object MapEffects {
     /**
      * «Меньше регенерации» карты - общая строка листа `STOCK_LIFE_REGEN_LESS` (её читает `Recovery`). Дары Атласа ложатся до «меньше»
      * карты: штраф карты урезает и их. Угроза высокого тира ставит флаг листа, что обнуляет регенерацию маны боя и прогулки. Ещё на героя
-     * ложатся проклятия и запреты карты, зелье алхимика (сопротивления, «больше» урона и здоровья) и дар алтаря сделки.
+     * ложатся проклятия и запреты карты и дар алтаря сделки. Строки зелья и древа гильдии ([BrewStat]) здесь не ложатся - они строки свода
+     * листа ([RunSheet]), до «больше»-множителей.
      */
     fun hero(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, Double> {
         if (effects.isEmpty()) return stats
@@ -139,10 +140,6 @@ object MapEffects {
         effects[MapStat.HERO_VULNERABILITY.code]?.let { add(CoreStat.PHYSICAL_TAKEN.code, it) }
         effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add(CoreStat.FLASK_EFFECT.code, -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
-        effects[BrewStat.RESIST]?.let { add(CoreStat.ALL_ELEMENTAL_RESISTANCES.code, it) }
-        effects[BrewStat.ALL_RESIST]?.let { v -> listOf(CoreStat.ALL_ELEMENTAL_RESISTANCES.code, CoreStat.RESIST_CHAOS.code).forEach { add(it, v) } }
-        effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
-        effects[BrewStat.LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
         effects[MapStat.HERO_DAMAGE.code]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
         return sheet
     }
@@ -154,18 +151,25 @@ object MapEffects {
      */
     fun heroShifts(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): Map<String, List<Shift>> {
         if (effects.isEmpty()) return emptyMap()
+        val parts = effects.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> source to hero(stats, mapOf(code to share)) } }
+        return sourced(stats, parts, hero(stats, effects))
+    }
+
+    /**
+     * Сдвиги листа [before] по источникам: каждая часть [parts] - лист под ней одной, а что части делают только вместе (лист под всеми -
+     * [joint]), ложится на последний сдвиг характеристики - сумма сдвигов равна `joint - before`.
+     */
+    internal fun sourced(before: Map<String, Double>, parts: List<Pair<StatSource, Map<String, Double>>>, joint: Map<String, Double>): Map<String, List<Shift>> {
         val shifts = LinkedHashMap<String, MutableList<Shift>>()
-        effects.forEach { (code, value) ->
-            origins.parts(code, value).forEach { (source, share) ->
-                hero(stats, mapOf(code to share)).forEach { (stat, moved) ->
-                    val delta = moved - (stats[stat] ?: 0.0)
-                    if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
-                }
+        parts.forEach { (source, sheet) ->
+            sheet.forEach { (stat, moved) ->
+                val delta = moved - (before[stat] ?: 0.0)
+                if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
             }
         }
-        hero(stats, effects).forEach { (stat, joint) ->
+        joint.forEach { (stat, together) ->
             val own = shifts[stat] ?: return@forEach
-            val rest = joint - (stats[stat] ?: 0.0) - own.sumOf { it.delta }
+            val rest = together - (before[stat] ?: 0.0) - own.sumOf { it.delta }
             if (abs(rest) >= MOVED) own[own.lastIndex] = own.last().let { it.copy(delta = it.delta + rest) }
         }
         return shifts
@@ -175,13 +179,13 @@ object MapEffects {
 
     /**
      * Строки карты, что меняют героя, для полки «на весь бой»: каждая строка карты (не дар Атласа) со сдвигами листа
-     * героя, что она дала по [heroShifts]; [index] метит вред. Порядок - карты. Доли древа гильдии и зелья ([origins]) -
-     * свои плитки со своим источником, а не строка карты.
+     * героя [shifts] - сдвигами листа захода по источникам ([RunSheet.shifts]); [index] метит вред. Порядок - карты. Доли древа
+     * гильдии и зелья - свои плитки со своим источником, а не строка карты.
      */
-    fun heroMods(index: ContentIndex, stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): List<HeroMapMod> {
+    fun heroMods(index: ContentIndex, shifts: Map<String, List<Shift>>): List<HeroMapMod> {
         val moved = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
-        heroShifts(stats, effects, origins).forEach { (stat, shifts) ->
-            shifts.filter { it.source.kind in SHELVED }.forEach { moved.getOrPut(it.source) { mutableListOf() } += stat to it.delta }
+        shifts.forEach { (stat, own) ->
+            own.filter { it.source.kind in SHELVED }.forEach { moved.getOrPut(it.source) { mutableListOf() } += stat to it.delta }
         }
         return moved.map { (source, shifts) -> HeroMapMod(source, shifts, source.kind == SourceKind.MAP && MapLineKind.of(index, source.ref) == MapLineKind.HARM) }
     }

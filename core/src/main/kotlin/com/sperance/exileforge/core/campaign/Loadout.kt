@@ -209,7 +209,7 @@ data class HeroGear(
 
 /**
  * How the hero's body is made in a run: the sheet with the passives and the lines of the
- * moment laid among its operations, then the map's and the atlas's share over it.
+ * moment laid among its operations, then the map's and the atlas's share over it. Зелье и древо гильдии - строки свода листа ([RunSheet]).
  */
 class HeroBuild(
     val gear: HeroGear,
@@ -222,8 +222,11 @@ class HeroBuild(
 ) : HeroModel {
     private fun sheet(lines: List<StatLine>): Map<String, Double> = (extra + lines).let { all -> gear.model?.with(all) ?: StatLines.fold(gear.stats, all, gear.percent) }
 
+    /** Лист под эффектами захода: зелье и гильдия - сводом листа, карта и Атлас - поверх. */
+    private val run = RunSheet(mapEffects, origins, ::sheet)
+
     /** The body without passives: what the passives' levels and the auras' effect are read off. */
-    val bare: Combatant by lazy { Combatant(MapEffects.hero(sheet(emptyList()), mapEffects), gear.level, rules) }
+    val bare: Combatant by lazy { Combatant(run.stats(), gear.level, rules) }
     private val passives: List<StatLine> by lazy { gear.kit.passiveLines(bare) }
 
     /** The body between fights: the passives on, the lines of a flask still running on top. */
@@ -233,22 +236,22 @@ class HeroBuild(
     private val bodies = LineMemo<Combatant>()
     private val growths = LineMemo<DamageGrowth>()
 
-    override fun body(lines: List<StatLine>): Combatant = bodies.get(lines) ?: Combatant(MapEffects.hero(sheet(passives + lines), mapEffects), gear.level, rules).also { bodies.put(lines, it) }
+    override fun body(lines: List<StatLine>): Combatant = bodies.get(lines) ?: Combatant(run.stats(passives + lines), gear.level, rules).also { bodies.put(lines, it) }
 
     /** The passives' lines that wait for low life; the fight lays them on while it lasts. */
     override val lowLife: List<StatLine> by lazy { gear.kit.lowLifeLines(bare) }
 
-    /** Рост урона листа с пассивами и [lines]: увеличения и «больше» вида, на них растут чары и урон во времени. */
+    /** Рост урона листа с пассивами, строками зелья и гильдии и [lines]: увеличения и «больше» вида, на них растут чары и урон во времени. */
     override fun growth(lines: List<StatLine>): DamageGrowth {
         val model = gear.model ?: return DamageGrowth.NONE
-        return growths.get(lines) ?: TypedGrowth(model.growth(passives + lines)).also { growths.put(lines, it) }
+        return growths.get(lines) ?: TypedGrowth(model.growth(run.boons + passives + lines)).also { growths.put(lines, it) }
     }
 
     override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
     override fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = gear.model?.conditionalSourced(active).orEmpty()
     override val explainer: SheetExplainer? get() = gear.model?.explainer
     override val passiveLines: List<StatLine> get() = passives
-    override fun shifts(): Map<String, List<Shift>> = MapEffects.heroShifts(sheet(passives), mapEffects, origins)
+    override fun shifts(): Map<String, List<Shift>> = run.shifts(passives)
     override fun against(states: Set<Condition>): Double = gear.model?.against(states) ?: 0.0
 }
 

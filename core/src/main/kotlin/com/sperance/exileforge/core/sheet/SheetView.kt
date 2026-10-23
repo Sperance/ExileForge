@@ -1,7 +1,9 @@
 package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.PoolReserve
+import com.sperance.exileforge.core.campaign.RunSheet
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdicts
@@ -199,6 +201,12 @@ fun GameUi.reserve(pool: ReservePool): PoolReserve? = HeroLens.reserve(hero, poo
  * разбор и сравнения вещи и узла дерева читают одни и те же цифры.
  */
 val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
+
+/**
+ * Лист героя под эффектами захода [effects] ([RunSheet]): лист боя сводки с зельем и гильдией в своде и картой поверх; до листа
+ * боя - над цифрами сводки как есть.
+ */
+fun HeroView.runSheet(effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet = combat?.run(effects, origins) ?: RunSheet.over(figures.stats, effects, origins)
 
 /** Мощь героя - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
 val HeroView.might: MightReading? get() = combat?.might

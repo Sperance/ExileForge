@@ -306,6 +306,12 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /** Что Мощь берёт сверх листа: урон умений, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
     val mightExtras: MightExtras get() = hero.extras
 
+    /**
+     * Лист боя под эффектами захода [effects] с источниками [origins]: строки зелья и гильдии - сводом листа с пассивными умениями,
+     * карта и Атлас - поверх ([RunSheet]), как тело героя в заходе.
+     */
+    fun run(effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet = RunSheet(effects, origins) { lines -> if (lines.isEmpty()) hero.stats else model.with(hero.passiveLines + lines) }
+
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }
 

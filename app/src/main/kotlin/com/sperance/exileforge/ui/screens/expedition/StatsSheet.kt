@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
-import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.run.FightHud
@@ -17,6 +16,7 @@ import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.SheetShift
 import com.sperance.exileforge.core.sheet.figures
+import com.sperance.exileforge.core.sheet.runSheet
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.Engraved
@@ -42,9 +42,9 @@ private enum class StatsTab(val key: String) {
 
 /**
  * The hero's figures over a map, in tabs at the foot as the gear's window has them: the hero's own sheet, and the same sheet under
- * the map's and the atlas's effects — [mapEffects], what the run was started with — each changed figure lit beside what it was.
+ * all the run's bonuses — [mapEffects], what the run was started with — each changed figure lit beside what it was.
  *
- * Карта ложится на лист боя героя, как в заходе (`HeroBuild`). Бой без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки
+ * Эффекты захода ложатся на лист боя героя одним листом захода ([com.sperance.exileforge.core.campaign.RunSheet]), как в бою. Бой без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки
  * «На карте» нет. В бою ([fight]) - третья вкладка «В бою», с неё лист и открывается: живое тело героя ([FightHud.heroBody]: баффы,
  * дебаффы, глотки, карта) против «На карте» (без карты - против «Героя»), сдвиг - стрелкой цвета сдвига, строка раскрывается -
  * из каких эффектов сложилась ([fightParts]). Числа идут вживую со снимком боя, строки не переставляются; бой арены стоит, пока
@@ -110,10 +110,12 @@ internal class FightSheets(
  * при смене героя, карты или тела боя, не каждый снимок.
  */
 @Composable internal fun rememberFightSheets(game: GameUi, mapEffects: Map<String, Double>?, origins: EffectOrigins, body: Map<String, Double>?): FightSheets {
-    val combat = game.hero?.combat
-    val mine = game.hero?.figures ?: StatFigures(emptyMap())
-    val onMap = remember(combat, mine, mapEffects) { mapEffects?.let { MapEffects.hero(mine.stats, it).let { stats -> combat?.figures(stats) ?: StatFigures(stats) } } }
-    val shifts = remember(mine, mapEffects, origins) { mapEffects?.let { MapEffects.heroShifts(mine.stats, it, origins) }.orEmpty() }
+    val hero = game.hero
+    val combat = hero?.combat
+    val mine = hero?.figures ?: StatFigures(emptyMap())
+    val run = remember(hero, mapEffects, origins) { mapEffects?.let { hero?.runSheet(it, origins) } }
+    val onMap = remember(run, combat, mine, mapEffects) { mapEffects?.let { run?.stats()?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } ?: mine } }
+    val shifts = remember(run) { run?.shifts().orEmpty() }
     val inFight = remember(combat, body) { body?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } }
     return remember(mine, onMap, shifts, inFight) { FightSheets(mine, onMap, shifts, inFight) }
 }

@@ -22,7 +22,6 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Buzz
-import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.sheet.MightExtras
@@ -107,9 +106,7 @@ private const val HERO_CARD = -1
         onCommand(RunCommand.Focus(index))
     }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
-    val mods = remember(mapEffects, origins, game.hero, game.index) {
-        if (mapEffects.isNullOrEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
-    }
+    val mods = remember(sheets.mapShifts, game.index) { game.index?.let { MapEffects.heroMods(it, sheets.mapShifts) }.orEmpty() }
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     val intro = rememberBossIntro(fight.boss?.index)
     val fx = intro ?: ArenaFxGate.OPEN

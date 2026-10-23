@@ -26,6 +26,7 @@ Issues: #529-#561 (33 бага). Вне работы: #445 (enhancement).
 |-----|----------|-------|
 | Задача `CollectionSchemas` | `task.bidLeaderBuyouts` (`TaskKind.BID_LEADER_BUYOUTS`) | 5 |
 | Задача `CollectionSchemas` | `task.slotConditions` (`TaskKind.SLOT_CONDITIONS`) | 3 |
+| Код ошибки | `GU_045` (не хватает монет Содружества) | 8 |
 
 ## Дальше
 Выбор пакетов владельцем. Разборы тем: audit/work/triage/.

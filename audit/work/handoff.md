@@ -25,6 +25,7 @@ Issues: #529-#561 (33 бага). Вне работы: #445 (enhancement).
 | Что | Значение | Пакет |
 |-----|----------|-------|
 | Задача `CollectionSchemas` | `task.bidLeaderBuyouts` (`TaskKind.BID_LEADER_BUYOUTS`) | 5 |
+| Задача `CollectionSchemas` | `task.slotConditions` (`TaskKind.SLOT_CONDITIONS`) | 3 |
 
 ## Дальше
 Выбор пакетов владельцем. Разборы тем: audit/work/triage/.

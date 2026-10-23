@@ -370,7 +370,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
 
 /**
  * Полоса-формула: вход цикла (с примесями [additives]) ячейками «есть/нужно» через «+» и стрелка - у работы без входа их нет, -
- * выход «×1» (с лишней добычей - «×1–N») и находки с шансом. Касание ячейки - [onOpen] с карточкой материала или выхода. Инструмента
+ * выход «×1» (с лишней добычей - «×1–N»), находки с шансом и находка камня (значок камня) с шансом. Касание ячейки - [onOpen] с карточкой материала или выхода. Инструмента
  * в формуле нет - он в окне профессии.
  */
 @Composable private fun RecipeFormula(game: GameUi, profession: ProfessionView, job: JobView, additives: List<String>, onOpen: (Inspect?) -> Unit) {
@@ -419,6 +419,10 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         val y = size.height / 2
         drawLine(Brush.horizontalGradient(listOf(Bronze, Gold)), Offset(0f, y), Offset(size.width - 4.dp.toPx(), y), strokeWidth = 2.dp.toPx())
         val tip = Path().apply {
+        if (job.gemChance > 0) {
+            FormulaPlus()
+            FormulaSlot(ui("crafts.percent", number(job.gemChance)), Brass, frame = Bronze) { GlyphIcon(Glyph.GEM, Brass, Modifier.size(28.dp)) }
+        }
             moveTo(size.width, y)
             lineTo(size.width - 7.dp.toPx(), y - 5.dp.toPx())
             lineTo(size.width - 7.dp.toPx(), y + 5.dp.toPx())

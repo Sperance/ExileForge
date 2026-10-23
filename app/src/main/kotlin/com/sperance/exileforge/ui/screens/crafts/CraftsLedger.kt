@@ -57,8 +57,10 @@ import com.sperance.exileforge.core.crafts.LedgerKind
 import com.sperance.exileforge.core.crafts.LedgerRow
 import com.sperance.exileforge.core.crafts.LedgerStep
 import com.sperance.exileforge.core.crafts.StepKind
+import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
 import com.sperance.exileforge.ui.theme.Bronze
@@ -103,7 +105,7 @@ private fun look(kind: LedgerKind): LedgerLook = when (kind) {
     LedgerKind.SAVE -> LedgerLook(Icons.Outlined.Replay, Vital)
     LedgerKind.FREE -> LedgerLook(Icons.Outlined.Redeem, Vital)
     LedgerKind.EXPERIENCE -> LedgerLook(Icons.Outlined.StarOutline, Rune)
-    LedgerKind.FIND -> LedgerLook(Icons.Outlined.Add, Brass)
+    LedgerKind.FIND, LedgerKind.GEM -> LedgerLook(Icons.Outlined.Add, Brass)
 }
 
 /** Строка поля: у раскрытой - золотая черта слева и повёрнутая стрелка. */
@@ -120,7 +122,11 @@ private fun look(kind: LedgerKind): LedgerLook = when (kind) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(Modifier.size(28.dp).background(PanelRaised, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
-            if (row.kind == LedgerKind.FIND) BagIcon(row.item, Modifier.size(20.dp)) else Icon(look.icon, null, tint = look.tint, modifier = Modifier.size(16.dp))
+            when (row.kind) {
+                LedgerKind.FIND -> BagIcon(row.item, Modifier.size(20.dp))
+                LedgerKind.GEM -> GlyphIcon(Glyph.GEM, look.tint, Modifier.size(18.dp))
+                else -> Icon(look.icon, null, tint = look.tint, modifier = Modifier.size(16.dp))
+            }
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

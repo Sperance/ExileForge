@@ -279,7 +279,7 @@ private class SourceIndex(private val index: ContentIndex) {
     /**
      * What the professions make: a work's product, what a work finds on the side, the condensed essences and the copied books.
      *
-     * Резьба руны - каждая руна, что падает не выше потолка работы.
+     * Резьба руны - каждая руна, что падает не выше потолка работы. Камни и осколки находки жил - с их долей шанса находки ([com.sperance.exileforge.rules.content.GemFinds.odds]).
      */
     private fun works() {
         val book = index.essences
@@ -303,6 +303,7 @@ private class SourceIndex(private val index: ContentIndex) {
                     else -> Unit
                 }
                 job.extra.forEach { add(it.item, ItemSource(SourceKind.FIND, chance = it.chance, ref = profession.code, detail = job.code)) }
+                if (job is Job.Item) profession.gems?.odds(job.level, job.gemChance).orEmpty().forEach { (code, chance) -> add(code, ItemSource(SourceKind.FIND, chance = chance, ref = profession.code, detail = job.code)) }
             }
         }
     }

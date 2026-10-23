@@ -75,41 +75,16 @@ object NodeArt {
                 body(poly(27, 45, 51, 38, 52, 41, 28, 48), 0xB0603A)
             }
 
-            NodeLook.TOPAZ_DEPOSIT -> {
-                rock(40, 15, 9, 0x3A3A40)
-                prism(32, 57, 12, 4.4, -2.5, 0xF6D365, 0xC8962A)
-                prism(42, 55, 17, 5, 1, 0xF6D365, 0xB8862A)
-                prism(51, 58, 9, 3.6, 3, 0xF2C94C, 0xA87A22)
-                glow(star4(43, 33, 3), 0xFFF6D0)
-            }
-
             NodeLook.SILVER_VEIN -> {
                 rock(40, 18, 24, 0x4A5058)
                 line(svg("M24 52L31 46L36 50L44 42L50 46L57 40"), 0xE6EEF5, 1.7)
                 glow(star4(44, 42, 4), 0xFFFFFF)
             }
 
-            NodeLook.SAPPHIRE_DEPOSIT -> {
-                rock(40, 15, 9, 0x3A3A44)
-                prism(33, 58, 15, 3, -4, 0x6FA0F0, 0x2A4FA0)
-                prism(41, 55, 26, 3.4, 0, 0x7FB0FF, 0x2A4FA0)
-                prism(48, 57, 18, 3, 3, 0x6FA0F0, 0x24448A)
-                prism(54, 60, 9, 2.4, 5, 0x6FA0F0, 0x24448A)
-            }
-
             NodeLook.MITHRIL_VEIN -> {
                 rock(40, 19, 26, 0x363E4C)
                 halo(41, 47, 13, 0x8FD3FF, .22)
                 glow(MITHRIL_SEAM, 0x8FD3FF)
-            }
-
-            NodeLook.RUBY_DEPOSIT -> {
-                rock(40, 15, 8, 0x3A3434)
-                prism(30, 59, 11, 3, -7, 0xF06070, 0x9A1E2E)
-                prism(35, 57, 17, 3.2, -3, 0xF06070, 0x9A1E2E)
-                prism(42, 56, 22, 3.4, 1, 0xFF7080, 0x9A1E2E)
-                prism(48, 57, 15, 3, 5, 0xF06070, 0x8A1A28)
-                prism(53, 60, 10, 2.6, 8, 0xF06070, 0x8A1A28)
             }
 
             NodeLook.ADAMANT_VEIN -> {
@@ -129,13 +104,6 @@ object NodeArt {
                 glow(star4(31, 41, 3.4), 0xD0C0FF)
                 glow(star4(50, 40, 2.4), 0xFFFFFF)
                 glow(star4(47, 56, 2), 0xD0C0FF)
-            }
-
-            NodeLook.ONYX_DEPOSIT -> {
-                rock(40, 14, 7, 0x3A3A40)
-                prism(39, 59, 28, 6, 0, 0x4A4A55, 0x16161C)
-                line(svg("M33 44L39 46.1L45 44"), 0xEEF0F4, 1.1)
-                prism(51, 61, 10, 3, 3, 0x4A4A55, 0x16161C)
             }
 
             NodeLook.WORMWOOD_PATCH -> repeat(11) { i ->
@@ -347,26 +315,10 @@ object NodeArt {
                 pebble(58, 67, 2.2, 0x45403D)
             }
 
-            NodeLook.TOPAZ_DEPOSIT -> {
-                rock(40, 15, 9, 0x34343A)
-                stub(32, 57, 3, 4.4, -.5, 0xB89A4A, 0x7E6428)
-                stub(42, 55, 4, 5, .3, 0xB89A4A, 0x7E6428)
-                stub(51, 58, 2.5, 3.6, .6, 0xB89A4A, 0x7E6428)
-                glow(star4(58, 66, 1.4), 0xF2C94C, .8)
-            }
-
             NodeLook.SILVER_VEIN -> {
                 rock(40, 15, 13, 0x41464D)
                 line(svg("M27 57L32 54M37 56L43 52"), 0x7E8890, 1.3)
                 rubble(0x41464D)
-            }
-
-            NodeLook.SAPPHIRE_DEPOSIT -> {
-                rock(40, 15, 9, 0x34343E)
-                stub(33, 58, 3, 3, -1, 0x5070A0, 0x2A3C66)
-                stub(41, 55, 5, 3.4, 0, 0x5070A0, 0x2A3C66)
-                stub(48, 57, 3, 3, .6, 0x5070A0, 0x2A3C66)
-                glow(star4(25, 66, 1.4), 0x6FA0F0, .8)
             }
 
             NodeLook.MITHRIL_VEIN -> {
@@ -374,14 +326,6 @@ object NodeArt {
                 hole(MITHRIL_SEAM)
                 pebble(58, 66, 2.4, 0x30363F)
                 glow(circle(26, 67, .9), 0x8FD3FF, .5)
-            }
-
-            NodeLook.RUBY_DEPOSIT -> {
-                rock(40, 15, 8, 0x332E2E)
-                listOf(Triple(30.0, 59.0, -1.5), Triple(35.0, 57.0, -.6), Triple(42.0, 56.0, .2), Triple(48.0, 57.0, 1.0), Triple(53.0, 60.0, 1.6)).forEach { (x, y, l) ->
-                    stub(x, y, 2.6, 2.8, l, 0x8A4048, 0x5A2028)
-                }
-                glow(star4(58, 67, 1.4), 0xF06070, .8)
             }
 
             NodeLook.ADAMANT_VEIN -> {
@@ -397,13 +341,6 @@ object NodeArt {
                 pebble(30, 63, 3, 0x2A2638)
                 pebble(52, 64, 3.4, 0x2A2638)
                 glow(star4(40, 60, 1.6), 0x8A80B0, .7)
-            }
-
-            NodeLook.ONYX_DEPOSIT -> {
-                rock(40, 14, 7, 0x33333A)
-                stub(39, 59, 5, 6, 0, 0x3A3A44, 0x141418)
-                line(svg("M33 56L39 58.1L45 56"), 0x8A8C90, .9)
-                pebble(55, 66, 2.6, 0x22222A)
             }
 
             NodeLook.WORMWOOD_PATCH -> {

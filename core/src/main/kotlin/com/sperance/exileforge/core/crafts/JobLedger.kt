@@ -28,6 +28,9 @@ enum class LedgerKind(val help: String) {
     FREE("bonuses"),
     EXPERIENCE("experience"),
     FIND("finds"),
+
+    /** Находка камня в жиле: камень по весам, целый или осколок. */
+    GEM("finds"),
 }
 
 /** Ступень разбора: база работы, вклад источника, пустое место инструмента или итог. */
@@ -48,7 +51,7 @@ data class LedgerRow(val key: String, val kind: LedgerKind, val caption: String,
 
 /**
  * Поля листа работы из разбора правил ([ProfessionView.breakdown]): цикл, в час, исход (впустую или гарантия, выход ×1–N, удвоение, утроение,
- * возврат и бесплатный цикл у работы с расходом), опыт и каждая находка. Мера без базы и без вкладов не показывается.
+ * возврат и бесплатный цикл у работы с расходом), опыт, каждая находка и находка камня. Мера без базы и без вкладов не показывается.
  */
 object JobLedger {
     fun of(rules: CraftsRules, profession: ProfessionView, job: JobView): List<LedgerRow> {
@@ -84,7 +87,8 @@ object JobLedger {
         val finds = breakdown.finds.mapIndexed { i, find ->
             ladder.row(LedgerKind.FIND, find.line, Scale.CHANCE, itemTitle(find.extra.item), ui("crafts.ledger.find"), percent(find.line.total), "${LedgerKind.FIND.name}$i", find.extra.item)
         }
-        return shown + finds
+        val gem = breakdown.gem?.let { ladder.row(LedgerKind.GEM, it, Scale.CHANCE, ui("crafts.ledger.gem"), ui("crafts.ledger.gem_note"), percent(it.total)) }
+        return shown + finds + listOfNotNull(gem)
     }
 
     /**

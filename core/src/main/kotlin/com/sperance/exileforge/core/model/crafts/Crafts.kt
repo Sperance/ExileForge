@@ -38,6 +38,8 @@ import kotlinx.serialization.Serializable
     /** Опыт профессии за удачный цикл - присылает сервер по кривой опыта ремесла с бонусом опыта героя ([Work.experience]). */
     val experience: Double = 0.0,
 ) {
+    /** Шанс находки камня за удачный цикл с уровнем и бонусом находок героя ([Work.gemChance]); у работы без камней - ноль. */
+    val gemChance: Double = 0.0,
     val code: String get() = job.code
     val kind: JobKind get() = job.kind
     val level: Int get() = job.level

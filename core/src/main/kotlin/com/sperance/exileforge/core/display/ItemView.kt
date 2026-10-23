@@ -306,7 +306,17 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val mapLevel: Int? get() = areaLevel?.takeIf { item.mapTier <= 0 }
 
     val trade: String? get() = tradeName(code, equipment = true)
-    val requirements: List<ItemNeed> get() = itemRequirements(template, Requirements.level(index, template, item))
+    /** Требование уровня копии - правилом [Requirements.level]: у экипировки, фляги и самоцвета - уровень предмета ([level]). */
+    val requiredLevel: Int get() = Requirements.level(template, item)
+
+    /**
+     * Требование уровня расходится с уровнем предмета (уникалка - уровень из контента, инструмент - база): карточка печатает его
+     * отдельным чипом «нужен N», иначе требование - сам значок уровня.
+     */
+    val levelNeedApart: Boolean get() = requiredLevel > 1 && requiredLevel != level
+
+    /** Требования чипами карточки: атрибуты, класс и уровень - только расходящийся с уровнем предмета ([levelNeedApart]). */
+    val requirements: List<ItemNeed> get() = itemRequirements(template, requiredLevel.takeIf { levelNeedApart })
     val visualKind: ItemVisualKind get() = itemVisualKind(template)
 
     private val text by lazy { modifierText(index) }
@@ -522,11 +532,11 @@ enum class NeedKind(val word: String?) {
 data class ItemNeed(val kind: NeedKind, val text: String)
 
 /**
- * Что герою нужно, чтобы вещь работала, коротко для строки: уровень [level] (у копии - [Requirements.level], у шаблона - база;
- * первый уровень не требование) и атрибуты шаблона [template]. Классовую уникалку носит только свой класс.
+ * Что герою нужно, чтобы вещь работала, коротко для строки: уровень [levelChip] чипом «нужен N» (null - уровня чипом нет, его несёт значок
+ * уровня; первый уровень не требование) и атрибуты шаблона [template]. Классовую уникалку носит только свой класс.
  */
-fun itemRequirements(template: ItemTemplate, level: Int = template.requiredLevel, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
-    level.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, "$it ${ui(lang, "req.short.requiredLevel")}") },
+fun itemRequirements(template: ItemTemplate, levelChip: Int?, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
+    levelChip?.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, ui(lang, "req.short.level_needed", it)) },
     template.requiredStrength.takeIf { it > 0 }?.let { ItemNeed(NeedKind.STRENGTH, "$it ${ui(lang, "req.short.requiredStrength")}") },
     template.requiredDexterity.takeIf { it > 0 }?.let { ItemNeed(NeedKind.DEXTERITY, "$it ${ui(lang, "req.short.requiredDexterity")}") },
     template.requiredIntelligence.takeIf { it > 0 }?.let { ItemNeed(NeedKind.INTELLIGENCE, "$it ${ui(lang, "req.short.requiredIntelligence")}") },

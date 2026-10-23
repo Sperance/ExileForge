@@ -199,15 +199,22 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
 /**
  * Уровень вещи на левом нижнем углу гнезда карточки (правый нижний - печать влияния): тот же [LevelBadge], что в списках, касание в
  * зоне [MarkTouchZone] - подсказка «Уровень предмета N» (у карты без тира - «Уровень карты N»), тот же текст - для чтения с экрана.
+ * Уровень предмета - и требование уровня копии: [early] - герою рано, значок `LifeRed`, в подсказке - «Нужен уровень героя N».
  * Уровня нет или уровень карты уже стоит плиткой базы ([ItemView.levelTiled]) - значка нет.
  */
-@Composable fun ItemLevelMark(item: ItemView, look: RelicLook, modifier: Modifier = Modifier) {
+@Composable fun ItemLevelMark(item: ItemView, look: RelicLook, early: Boolean, modifier: Modifier = Modifier) {
     if (item.levelTiled) return
     val map = item.mapLevel
     val level = map ?: item.level.takeIf { it > 0 } ?: return
     val text = if (map != null) ui("card.map_level", map) else ui("item.level_full", level)
-    Tipped({ Tip(text) }, modifier.touchOverhang(MarkTouchZone), contentAlignment = Alignment.Center) {
-        LevelBadge(level, if (map != null) Rune else look.rarity, text, ink = if (map != null) Rune else Parchment)
+    val need = if (early && map == null) ui("item.level_required", level) else null
+    val (tint, ink) = when {
+        map != null -> Rune to Rune
+        need != null -> LifeRed to LifeRed
+        else -> look.rarity to Parchment
+    }
+    Tipped({ Tip(text, need.orEmpty()) }, modifier.touchOverhang(MarkTouchZone), contentAlignment = Alignment.Center) {
+        LevelBadge(level, tint, listOfNotNull(text, need).joinToString(". "), ink = ink)
     }
 }
 

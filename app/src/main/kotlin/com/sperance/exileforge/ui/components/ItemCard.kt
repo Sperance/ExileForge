@@ -155,7 +155,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * значит. Короткая - значки в углу, гнездо по центру. У обеих числа базы - плитками под плашками, до разделителя и строк
  * ([BaseTiles]). Уникальная и мифическая вещь -
  * искры или звёзды, завитки по углам. [totals] - итог героя «сейчас → станет» под строками,
- * [unmet] отмечает чипы требований, [shortLines] - сколько строк печатает короткая карточка. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
+ * [unmet] отмечает чипы требований и красит значок уровня, когда герою рано ([levelEarly]), [shortLines] - сколько строк печатает короткая карточка. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
  * Цена торговца копии заменяет голую цену шаблона; [priced] false - плашки цены нет (место само печатает цену сделки). Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
@@ -189,6 +189,7 @@ fun ItemCard(
     val rolled = item.orderedLines
     val chipPrice = (price ?: item.template.price?.toLong()).takeIf { priced }
     var opened by remember { mutableStateOf<ItemLine?>(null) }
+    val early = levelEarly(item, unmet)
     Column(
         Modifier.fillMaxWidth().relicGround(look, shape, selected, sky = detailed)
             .clickable(enabled = enabled, onClick = onClick)
@@ -197,9 +198,9 @@ fun ItemCard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (detailed) {
-            MedallionHead(item, look, chipPrice, locked, waiting, selected)
+            MedallionHead(item, look, chipPrice, locked, waiting, selected, early)
         } else {
-            ShortHead(item, look, chipPrice, locked, waiting, selected)
+            ShortHead(item, look, chipPrice, locked, waiting, selected, early)
         }
         if (detailed) {
             RelicLines(item, seals) { opened = it }
@@ -283,7 +284,7 @@ private fun RelicChips(item: ItemView, price: Long?) {
  * Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру с уровнем на левом нижнем углу ([ItemLevelMark]), имя, тип с
  * номером экземпляра, плашки и плитки базы ([BaseTiles]).
  */
-@Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
+@Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean, early: Boolean) {
     val legend = look.legend != null
     Row(
         Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
@@ -300,7 +301,7 @@ private fun RelicChips(item: ItemView, price: Long?) {
         } else {
             RelicSocket(item, look, 88.dp)
         }
-        ItemLevelMark(item, look, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
+        ItemLevelMark(item, look, early, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
     }
     RelicTitle(item, look, if (legend) 23 else 22, maxLines = 2)
     RelicChips(item, price)
@@ -315,7 +316,7 @@ private fun RelicChips(item: ItemView, price: Long?) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
+private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean, early: Boolean) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Spacer(Modifier.weight(1f))
         Box {
@@ -324,7 +325,7 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
             } else {
                 RelicSocket(item, look, 72.dp)
             }
-            ItemLevelMark(item, look, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
+            ItemLevelMark(item, look, early, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
             item.influenceLine?.marks?.influence?.let { InfluenceSealMark(it, 26.dp, Modifier.align(Alignment.BottomEnd).offset(6.dp, 6.dp)) }
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -531,6 +532,12 @@ private const val ELEMENT_COLUMNS = 2
 private val TILE_GAP = 6.dp
 
 /**
+ * Герою рано носить копию [item] по уровню, а требование уровня - сам уровень предмета: значок уровня красный. Требование, что с
+ * уровнем предмета расходится ([ItemView.levelNeedApart]), отмечает свой чип «нужен N»; без героя ([unmet] null) - не рано.
+ */
+private fun levelEarly(item: ItemView, unmet: Set<NeedKind>?): Boolean = unmet != null && NeedKind.LEVEL in unmet && !item.levelNeedApart
+
+/**
  * Свёрнутые строки внизу карточки: требования. Требования всегда свёрнуты одной строкой цветом вердикта -
  * «Можно надеть» `Vital`, «Нельзя надеть» `LifeRed`, без героя для сравнения - «Требования»; касание раскрывает чипы с переносом,
  * у каждого своя отметка, и раскрытость помнится на устройстве ([GameSettings.requirementsOpen]) для всех карточек.
@@ -540,7 +547,7 @@ private val TILE_GAP = 6.dp
 private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     Column(Modifier.fillMaxWidth()) {
         item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->
-            val barred = unmet?.let { lacking -> needs.any { it.kind in lacking } }
+            val barred = unmet?.let { lacking -> NeedKind.LEVEL in lacking || needs.any { it.kind in lacking } }
             val (title, tint) = when (barred) {
                 null -> ui("relic.requirements") to Parchment
                 true -> ui("relic.cannot_wear") to LifeRed

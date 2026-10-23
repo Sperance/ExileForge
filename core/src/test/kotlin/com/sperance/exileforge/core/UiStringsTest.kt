@@ -277,7 +277,7 @@ class UiStringsTest {
             (DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }
             (Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
             listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
-            listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
+            listOf("requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("level", "strength", "dexterity", "intelligence").forEach { add("req.need.$it") }
             (listOf("corrupted", "mirrored", "fractured", "crafted", "equipped", "socketed") + com.sperance.exileforge.rules.content.Influence.entries.map { it.name.lowercase() }).forEach { add("state.$it") }
             com.sperance.exileforge.rules.content.Influence.entries.forEach { add("state.${it.name.lowercase()}_hint.map") }

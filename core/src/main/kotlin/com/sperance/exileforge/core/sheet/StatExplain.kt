@@ -309,6 +309,9 @@ class StatExplainer(private val game: GameUi) {
         }
     }
 
+    /** Имя источника сдвига эффектов захода ([com.sperance.exileforge.core.campaign.RunSheet.shifts]): строка карты, дар Атласа, узел гильдии, зелье. */
+    fun runSourceTitle(source: StatSource): String = shiftTitle(source) { emptyList() }
+
     /** A power's shift is named by the worn items that carry it, the power's own name when none is found. */
     private fun shiftTitle(source: StatSource, holders: (String) -> List<StatSource>): String {
         val prefix = when (source.kind) {

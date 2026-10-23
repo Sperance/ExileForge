@@ -42,6 +42,7 @@ import com.sperance.exileforge.core.sheet.StatExplainer
 import com.sperance.exileforge.core.sheet.Trend
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
+import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
@@ -94,8 +95,10 @@ import com.sperance.exileforge.ui.theme.*
  * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
  * effects held against the hero's own. [figures] - цифры сводки с отметками ауры и Предначертания.
  *
- * Цифра открывает своё окно. Разделы и порядок - реестр контента. С [trend] (лист боя) сдвинутая цифра - стрелкой цвета сдвига, её
- * строка раскрывается - из чего она сложилась ([SourcedSumRow]); раскрытые строки держатся, пока числа идут.
+ * Цифра открывает своё окно. Разделы и порядок - реестр контента. [sources] - откуда изменённая цифра (источники эффектов захода,
+ * сложенные по источнику): несколько - стрелка справа раскрывает их список, один - подпись под строкой. С [trend] (лист боя) сдвинутая
+ * цифра - стрелкой цвета сдвига, её строка раскрывается - из чего она сложилась ([SourcedSumRow]); раскрытые строки держатся, пока
+ * числа идут.
  */
 @Composable fun StatSheet(
     game: GameUi,
@@ -104,11 +107,12 @@ import com.sperance.exileforge.ui.theme.*
     shifts: Map<String, List<Shift>> = emptyMap(),
     conditional: List<ConditionalStat> = emptyList(),
     trend: StatTrend? = null,
+    sources: Map<String, List<Shift>> = emptyMap(),
 ) {
     var open by remember { mutableStateOf<String?>(null) }
     var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
     val show: (String) -> Unit = { open = it }
-    val fold = RowFold(trend)
+    val fold = RowFold(trend, sources)
     Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, fold, show) } }
@@ -247,7 +251,8 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /**
  * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding], значок строки и шапки раздела [icon], итог [figure],
- * шапка раздела с полями [headPadding], между карточками разделов [cardGap].
+ * шапка раздела с полями [headPadding], между карточками разделов [cardGap]; стрелка источников - касанием [toggle], строки
+ * источников - с отступом [sourceIndent] под именем.
  */
 private object SummaryMetrics {
     val rowHeight = 28.dp
@@ -256,15 +261,20 @@ private object SummaryMetrics {
     val figure = 14.sp
     val headPadding = 4.dp
     val cardGap = 6.dp
+    val toggle = 44.dp
+    val sourceIndent = 38.dp
 }
 
 /**
  * Сравнение строк листа с прежним листом: [trend] - сравнение боя (стрелки сдвига и доли источников); без него сдвинутой считается
- * любая цифра, что не равна прежней.
+ * любая цифра, что не равна прежней. [sources] - источники изменённых цифр эффектов захода по цифре.
  */
-private class RowFold(val trend: StatTrend?) {
+private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift>>) {
     /** Сдвиг цифры [key] сравнения; без сравнения - null. */
     fun trendOf(key: String): Trend? = trend?.shift?.of(key)
+
+    /** Источники эффектов захода изменённой цифры [key]. */
+    fun sourcesOf(key: String): List<Shift> = sources[key].orEmpty()
 
     /** Прежнее число цифры [key] со значением [value] против листа [before]; не сдвинулась - null. */
     fun was(key: String, value: Double, before: Map<String, Double>?): Double? {
@@ -275,11 +285,13 @@ private class RowFold(val trend: StatTrend?) {
 
 /**
  * Строка сводки: касание открывает разбор ([open]). Сдвинутая цифра сравнения боя ([fold]) - строка-сумма с источниками
- * ([SourcedSumRow]): стрелка справа раскрывает прежнее число листа сравнения, эффекты, что её сдвинули, и «Сейчас».
+ * ([SourcedSumRow]): стрелка справа раскрывает прежнее число листа сравнения, эффекты, что её сдвинули, и «Сейчас». Изменённая
+ * цифра с источниками эффектов захода ([RowFold.sourcesOf]): несколько - стрелка справа раскрывает их список, один - подписью под строкой.
  */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
     val trend = fold.trendOf(key)
     val compare = fold.trend
+    val sources = fold.sourcesOf(key)
     val lit = when {
         trend != null -> Modifier.background(trend.tint.copy(alpha = .06f))
         was != null -> Modifier.background(Ember.copy(alpha = .08f))
@@ -293,8 +305,41 @@ private class RowFold(val trend: StatTrend?) {
         SourcedSumRow(shares, Modifier.fillMaxWidth().then(lit)) {
             StatRow(key, value, was, before, accent, figures, game, trend, Modifier.weight(1f).then(row))
         }
+    } else if (was != null && sources.isNotEmpty()) {
+        RunSourcedCell(key, value, was, before, accent, figures, game, sources, lit, open)
     } else {
         StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(row))
+    }
+}
+
+/** Изменённая цифра [key] с источниками эффектов захода [sources]: несколько - стрелка справа раскрывает их список, один - подписью под строкой. */
+@Composable private fun RunSourcedCell(key: String, value: Double, was: Double, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, sources: List<Shift>, lit: Modifier, open: (String) -> Unit) {
+    val many = sources.size > 1
+    var unfolded by rememberSaveable(key) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().then(lit)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StatRow(key, value, was, before, accent, figures, game, null, Modifier.weight(1f).clickable { open(key) }.padding(start = 12.dp, end = if (many) 0.dp else 12.dp, top = SummaryMetrics.rowPadding, bottom = SummaryMetrics.rowPadding))
+            if (many) {
+                Box(Modifier.size(SummaryMetrics.toggle).foldToggle(unfolded, ui("stat.run_sources")) { unfolded = !unfolded }, contentAlignment = Alignment.Center) {
+                    FoldChevron(unfolded, size = SummaryMetrics.icon)
+                }
+            }
+        }
+        val indent = Modifier.padding(start = SummaryMetrics.sourceIndent, end = 12.dp, bottom = SummaryMetrics.rowPadding)
+        if (many) {
+            FoldBody(unfolded) { Column(indent) { sources.forEach { RunSourceLine(key, it, game) } } }
+        } else {
+            Column(indent) { RunSourceLine(key, sources.single(), game) }
+        }
+    }
+}
+
+/** Источник изменённой цифры [key]: его имя (строка карты, Атлас, узел гильдии, зелье) и что он дал. */
+@Composable private fun RunSourceLine(key: String, shift: Shift, game: GameUi) {
+    val explainer = remember(game) { StatExplainer(game) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(explainer.runSourceTitle(shift.source), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(explainer.fmt(key, shift.delta, Op.ADD, game.index?.stats?.isPercent(key) == true), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
 

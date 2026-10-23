@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BrewStat
 import com.sperance.exileforge.rules.sheet.Shift
+import kotlin.math.abs
 
 /**
  * Лист героя под эффектами захода [effects]: строки зелья и древа гильдии ([BrewStat.lines]) ложатся сводом листа [fold] среди его
@@ -51,3 +52,9 @@ class RunSheet(
             RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, percent) }
     }
 }
+
+/** Сдвиги, сложенные по источнику в порядке первого появления; сумма меньше [MOVED] - след округления, не источник. */
+fun List<Shift>.bySource(): List<Shift> = groupBy { it.source }.map { (source, own) -> Shift(source, own.sumOf { it.delta }) }.filter { abs(it.delta) >= MOVED }
+
+/** Сдвиг меньше этого - не сдвиг: десятые листа. */
+private const val MOVED = 0.05

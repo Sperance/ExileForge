@@ -384,8 +384,18 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      */
     fun explain(stat: String, layer: Map<String, List<Shift>> = emptyMap()): StatBreakdown {
         val own = readings.filter { it.stat == stat }
-        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + own.flatMap { it.shifts(body) } + lootPowers(stat) + layer[stat].orEmpty() + own.flatMap { read(it, layer) })
+        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + own.flatMap { it.shifts(body) } + lootPowers(stat) + layered(stat, layer))
     }
+
+    /**
+     * Что сдвиги [layer] (эффекты захода по источникам, [RunSheet.shifts]) сделали с цифрой сводки [stat]: свои сдвиги цифры и сдвиги
+     * того, что бой читает вместе с ней, - каждый источник своим сдвигом; сумма - разница цифры под эффектами и без них.
+     */
+    fun layered(stat: String, layer: Map<String, List<Shift>>): List<Shift> = layer[stat].orEmpty() + readings.filter { it.stat == stat }.flatMap { read(it, layer) }
+
+    /** Источники цифр сводки [stats] под сдвигами захода [layer]: по цифре - её сдвиги ([layered]), сложенные по источнику. */
+    fun sources(stats: Collection<String>, layer: Map<String, List<Shift>>): Map<String, List<Shift>> =
+        if (layer.isEmpty()) emptyMap() else stats.associateWith { layered(it, layer).bySource() }.filterValues { it.isNotEmpty() }
 
     /**
      * Что сдвиги [layer] сделали с чтением [reading]: каждый источник положен на лист один, а что они делают только вместе -

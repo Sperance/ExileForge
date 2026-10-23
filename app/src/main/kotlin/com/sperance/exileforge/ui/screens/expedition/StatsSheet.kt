@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.StatFigures
+import com.sperance.exileforge.core.campaign.bySource
 import com.sperance.exileforge.core.campaign.combat.EffectView
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.display.SkillText
@@ -42,10 +43,11 @@ private enum class StatsTab(val key: String) {
 
 /**
  * The hero's figures over a map, in tabs at the foot as the gear's window has them: the hero's own sheet, and the same sheet under
- * all the run's bonuses — [mapEffects], what the run was started with — each changed figure lit beside what it was.
+ * all the run's bonuses — [mapEffects], what the run was started with — each changed figure lit beside what it was, its sources
+ * ([origins]: карта, Атлас, древо гильдии, зелье) - стрелкой справа или подписью под строкой.
  *
- * Эффекты захода ложатся на лист боя героя одним листом захода ([com.sperance.exileforge.core.campaign.RunSheet]), как в бою. Бой без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки
- * «На карте» нет. В бою ([fight]) - третья вкладка «В бою», с неё лист и открывается: живое тело героя ([FightHud.heroBody]: баффы,
+ * Эффекты захода ложатся на лист боя героя одним листом захода ([com.sperance.exileforge.core.campaign.RunSheet]), как в бою. Бой
+ * без карты ([mapEffects] null: испытания, Разлом, башня) - вкладки «На карте» нет. В бою ([fight]) - третья вкладка «В бою», с неё лист и открывается: живое тело героя ([FightHud.heroBody]: баффы,
  * дебаффы, глотки, карта) против «На карте» (без карты - против «Героя»), сдвиг - стрелкой цвета сдвига, строка раскрывается -
  * из каких эффектов сложилась ([fightParts]). Числа идут вживую со снимком боя, строки не переставляются; бой арены стоит, пока
  * лист открыт ([ArenaHold]).
@@ -70,7 +72,7 @@ fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>?, origins: EffectOr
                 item {
                     when (tab) {
                         StatsTab.HERO -> StatSheet(game, sheets.mine)
-                        StatsTab.MAP -> sheets.onMap?.let { StatSheet(game, it, before = sheets.mine.values, shifts = sheets.mapShifts) }
+                        StatsTab.MAP -> sheets.onMap?.let { StatSheet(game, it, before = sheets.mine.values, shifts = sheets.mapShifts, sources = sheets.mapSources) }
                         StatsTab.FIGHT -> sheets.inFight?.let { StatSheet(game, it, before = sheets.fightBase.values, trend = trend) }
                     }
                 }
@@ -90,19 +92,26 @@ private fun hint(tab: StatsTab, sheets: FightSheets): String = when (tab) {
 }
 
 /**
- * Листы героя для сравнения: свой ([mine]), под картой ([onMap], без карты - null) со сдвигами по источникам ([mapShifts]), в бою
- * ([inFight], вне боя - null) и сдвиг боя ([fightShift]) против прежнего листа ([fightBase]: «На карте», без карты - свой).
+ * Листы героя для сравнения: свой ([mine]), под картой ([onMap], без карты - null) со сдвигами по источникам ([mapShifts]) и
+ * источниками изменённых цифр ([mapSources]), в бою ([inFight], вне боя - null) и сдвиг боя ([fightShift]) против прежнего листа
+ * ([fightBase]: «На карте», без карты - свой).
  */
 @Immutable
 internal class FightSheets(
     val mine: StatFigures,
     val onMap: StatFigures?,
     val mapShifts: Map<String, List<Shift>>,
+    val mapSources: Map<String, List<Shift>>,
     val inFight: StatFigures?,
 ) {
     val fightBase: StatFigures get() = onMap ?: mine
     val fightShift: SheetShift = inFight?.let { SheetShift.of(fightBase.values, it.values) } ?: SheetShift.NONE
-    val mapChanged: Int = onMap?.values?.count { (key, value) -> (mine.values[key] ?: 0.0) != value } ?: 0
+    val mapChanged: Int = onMap?.let { changed(mine, it).size } ?: 0
+
+    companion object {
+        /** Цифры листа [onMap], что не равны своим ([mine]). */
+        fun changed(mine: StatFigures, onMap: StatFigures): Set<String> = onMap.values.filter { (key, value) -> (mine.values[key] ?: 0.0) != value }.keys
+    }
 }
 
 /**
@@ -116,8 +125,11 @@ internal class FightSheets(
     val run = remember(hero, mapEffects, origins) { mapEffects?.let { hero?.runSheet(it, origins) } }
     val onMap = remember(run, combat, mine, mapEffects) { mapEffects?.let { run?.stats()?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } ?: mine } }
     val shifts = remember(run) { run?.shifts().orEmpty() }
+    val sources = remember(combat, shifts, mine, onMap) {
+        onMap?.let { FightSheets.changed(mine, it) }?.let { changed -> combat?.sources(changed, shifts) ?: shifts.filterKeys { it in changed }.mapValues { it.value.bySource() } }.orEmpty()
+    }
     val inFight = remember(combat, body) { body?.let { stats -> combat?.figures(stats) ?: StatFigures(stats) } }
-    return remember(mine, onMap, shifts, inFight) { FightSheets(mine, onMap, shifts, inFight) }
+    return remember(mine, onMap, shifts, sources, inFight) { FightSheets(mine, onMap, shifts, sources, inFight) }
 }
 
 /**

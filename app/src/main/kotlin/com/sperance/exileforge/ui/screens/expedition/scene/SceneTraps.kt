@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import com.sperance.exileforge.core.expedition.TrapJoints
 import androidx.compose.ui.graphics.Color
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.rules.content.TrapShape

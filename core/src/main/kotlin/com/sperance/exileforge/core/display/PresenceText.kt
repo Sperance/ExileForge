@@ -24,8 +24,8 @@ fun presenceText(lastSeenAt: Long, now: Long, online: Boolean, zone: ZoneId = Zo
 }
 
 /**
- * Миг [at] календарём относительно [now] в поясе [zone]: «сегодня в 14:05», «вчера в 21:30», в этом году - «12 окт. в 09:10», раньше -
- * «12.10.2025».
+ * Миг [at] календарём относительно [now] в поясе [zone]: «сегодня в 14:05», «вчера в 21:30», в этом году - «12 окт. в 09:10», раньше - дата
+ * цифрами ([dateText]).
  */
 fun calendarText(at: Long, now: Long, zone: ZoneId = ZoneId.systemDefault()): String {
     val moment = Instant.ofEpochMilli(at).atZone(zone)
@@ -44,7 +44,7 @@ fun dayText(at: Long, zone: ZoneId = ZoneId.systemDefault()): String = dayOf(Ins
 /** День [at] в поясе [zone] со временем: «24 нояб. в 09:10». */
 fun dayTimeText(at: Long, zone: ZoneId = ZoneId.systemDefault()): String = Instant.ofEpochMilli(at).atZone(zone).let { ui("calendar.day_time", dayOf(it), it.format(TIME)) }
 
-/** Дата [at] в поясе [zone] цифрами: «12.03.2026». */
+/** Дата [at] в поясе [zone] цифрами: день, месяц и год через точку. */
 fun dateText(at: Long, zone: ZoneId = ZoneId.systemDefault()): String = Instant.ofEpochMilli(at).atZone(zone).format(FULL_DATE)
 
 private fun dayOf(moment: ZonedDateTime): String = ui("calendar.day", moment.dayOfMonth, ui("calendar.month.${moment.monthValue}"))

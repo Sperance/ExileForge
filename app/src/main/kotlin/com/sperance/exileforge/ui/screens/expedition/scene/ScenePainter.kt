@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import com.sperance.exileforge.core.expedition.TrapJointsCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush

@@ -1,4 +1,4 @@
-package com.sperance.exileforge.ui.screens.expedition.scene
+package com.sperance.exileforge.core.expedition
 
 import com.sperance.exileforge.rules.run.TrapLayout
 import java.util.WeakHashMap
@@ -7,7 +7,7 @@ import java.util.WeakHashMap
  * Соседство клеток ловушки: у каждой клетки формы (по порядку [TrapLayout.cells]) - какие из восьми соседей тоже клетки этой ловушки,
  * битами [NORTH]..[NORTH_WEST]. Художник по ним сводит плиты многоклеточной ловушки в одну фигуру.
  */
-internal class TrapJoints private constructor(private val joints: IntArray) {
+class TrapJoints private constructor(private val joints: IntArray) {
     /** Соседи клетки номер [cell] формы. */
     operator fun get(cell: Int): Int = joints[cell]
 
@@ -51,7 +51,7 @@ internal class TrapJoints private constructor(private val joints: IntArray) {
 }
 
 /** Соседство клеток ловушек сцены: считается раз на ловушку и уходит вместе с её картой. */
-internal class TrapJointsCache {
+class TrapJointsCache {
     private val joints = WeakHashMap<TrapLayout, TrapJoints>()
 
     /** Соседство клеток ловушки [layout], посчитанное при первом обращении. */

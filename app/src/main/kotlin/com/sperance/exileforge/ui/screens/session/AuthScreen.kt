@@ -14,7 +14,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
@@ -25,23 +24,25 @@ import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.InfoCard
-import com.sperance.exileforge.ui.components.LengthCounter
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.VersionLabel
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.server.AccountRow
+import com.sperance.exileforge.ui.screens.server.LoginSheet
+import com.sperance.exileforge.ui.screens.server.RowGroup
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The way in, and the first screen the app ever shows.
  *
- * Two doors, side by side: the device's own account, which needs nothing typed, and a login for
- * whoever has one. The first is the game; the second is how an administrator reaches the tools.
+ * Two doors: the device's own account, which needs nothing typed, and a login for
+ * whoever has one. The first is the game - крупная «Играть»; the second is how an administrator reaches the tools - строкой с листом,
+ * в одном облике со страницей «Вход» Врат мира.
  *
  * The server is fixed; only the way back to it lives here, so an administrator's wrong address never
  * locks the app behind a gate that needs a session.
@@ -82,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
             MutedText(ui("auth.device_note"))
 
-            LoginPanel(game, vm)
+            LoginRow(game, vm)
             ServerReset(game, vm)
 
             game.refusal?.let { InfoCard(ui("auth.failed"), it.read(), failure = true) }
@@ -91,52 +92,16 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** The login half: an administrator's way in, and anyone who was given credentials. */
-@Composable private fun LoginPanel(game: GameUi, vm: SessionViewModel) {
+/**
+ * Вход по логину - строкой-действием в облике строк Врат мира: «Войти по логину» и «Если аккаунт уже есть»; касание открывает лист с
+ * полями ([LoginSheet]), отказ входа - под полями листа.
+ */
+@Composable private fun LoginRow(game: GameUi, vm: SessionViewModel) {
     var open by rememberSaveable { mutableStateOf(false) }
-    var login by rememberSaveable { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    ForgePanel {
-        Row(
-            Modifier.fillMaxWidth().clickable(enabled = !game.busy) { open = !open },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(10.dp))
-            Text(ui("auth.by_login"), modifier = Modifier.weight(1f))
-            Text(if (open) "−" else "+", color = Gold, style = MaterialTheme.typography.titleMedium)
-        }
-        if (open) {
-            OutlinedTextField(
-                login,
-                { login = it.take(game.inputs.login) },
-                enabled = !game.busy,
-                label = { Text(ui("account.login")) },
-                supportingText = { LengthCounter(login, game.inputs.login) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                password,
-                { password = it.take(game.inputs.password) },
-                enabled = !game.busy,
-                label = { Text(ui("account.password")) },
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            ForgeButton(
-                state = ButtonState.of(!game.busy && login.isNotBlank() && password.isNotEmpty()),
-                onClick = {
-                    vm.login(login, password)
-                    password = ""
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(ui("account.sign_in"))
-            }
-        }
+    RowGroup(null) {
+        AccountRow(ForgeGlyphs.Exile, ui("auth.by_login"), note = ui("auth.by_login_note"), enabled = !game.busy) { open = true }
     }
+    if (open) LoginSheet(game.inputs, game.busy, game.refusal?.read(), vm::login) { open = false }
 }
 
 /**

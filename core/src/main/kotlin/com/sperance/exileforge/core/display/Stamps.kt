@@ -15,6 +15,9 @@ fun dayText(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDef
 /** Дата мига в поясе устройства словами языка интерфейса: «12 марта 2026». */
 fun dateText(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag(uiLanguage.code)))
 
+/** Миг в поясе устройства словами языка интерфейса: «30 октября, 18:00» - срок санкции. */
+fun momentText(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMMM, HH:mm", Locale.forLanguageTag(uiLanguage.code)))
+
 private val STAMP = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
 
 private val DAY = DateTimeFormatter.ofPattern("dd.MM")

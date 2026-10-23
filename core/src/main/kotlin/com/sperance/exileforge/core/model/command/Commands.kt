@@ -19,7 +19,14 @@ import kotlinx.serialization.Serializable
     val countCharacters: Int = 0,
     /** Предначертание аккаунта (код `fates.json`); null - не выбрано: до списка героев - выбор (`GET fate`). */
     val fate: String? = null,
+    /** С какого мига аккаунт в игре, мс эпохи; 0 - сервер не прислал. */
+    val registeredAt: Long = 0,
+    /** Действующие немоты аккаунта и его героев и баны его героев - полосой в карточке аккаунта. */
+    val sanctions: List<AccountNotice> = emptyList(),
 )
+
+/** Санкция в карточке аккаунта: [notice] глазами наказанного и имя героя [hero], если цель - герой (иначе пусто). */
+@Serializable data class AccountNotice(val notice: com.sperance.exileforge.core.network.SanctionNotice, val hero: String = "")
 
 /**
  * The answer to a sign-in; a device registration also brings the secret of the device, once.

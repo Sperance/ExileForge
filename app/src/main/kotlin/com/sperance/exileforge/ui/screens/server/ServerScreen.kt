@@ -144,16 +144,19 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     }
 }
 
-/** Rows under a small caption, in one rounded panel, hairlines between them. */
-@Composable internal fun RowGroup(title: String, rows: @Composable ColumnScope.() -> Unit) {
+/** Rows under a small caption, in one rounded panel, hairlines between them; [title] null - без подписи (одна строка-действие). */
+@Composable internal fun RowGroup(title: String?, rows: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(Modifier.fillMaxWidth().clip(shape).depthPanel(shape)) {
-        Engraved(title, Muted, Modifier.padding(start = 12.dp, top = 9.dp, bottom = 2.dp))
+        title?.let { Engraved(it, Muted, Modifier.padding(start = 12.dp, top = 9.dp, bottom = 2.dp)) }
         rows()
     }
 }
 
-/** One row of a group: the glyph, the name, a value on the right — with a status dot when given — and a chevron where it opens a page. */
+/**
+ * One row of a group: the glyph, the name, a value on the right — with a status dot when given — and a chevron where it opens a page.
+ * [note] - пояснение мелко под названием; [danger] - опасное действие («Выйти»): знак и название цветом тревоги.
+ */
 @Composable internal fun AccountRow(
     icon: ImageVector,
     label: String,
@@ -161,6 +164,8 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     dot: Color? = null,
     enabled: Boolean = true,
     chevron: Boolean = true,
+    note: String? = null,
+    danger: Boolean = false,
     onClick: () -> Unit,
 ) {
     Row(
@@ -168,25 +173,21 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, null, tint = if (enabled) Gold else Muted, modifier = Modifier.size(20.dp))
-        Text(
-            label,
-            color = if (enabled) Parchment else Muted,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Icon(icon, null, tint = if (!enabled) Muted else if (danger) LifeRed else Gold, modifier = Modifier.size(20.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                label,
+                color = if (!enabled) Muted else if (danger) LifeRed else Parchment,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            note?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
+        }
         dot?.let { Box(Modifier.size(8.dp).background(it, CircleShape)) }
         value?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 1) }
         if (chevron) Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
-}
-
-/** The account: signing in, the password, signing out — and how the server keeps a session. */
-@Composable private fun SignInPage(account: AccountUi) {
-    ForgePanel { LoginForm(account) }
-    InfoCard(ui("account.signin_section"), ui("account.signin_note"))
 }
 
 /**

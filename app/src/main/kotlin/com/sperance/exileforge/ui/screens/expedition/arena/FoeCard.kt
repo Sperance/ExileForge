@@ -26,6 +26,9 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -134,7 +137,9 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
  * [narrow] - три и больше на поле: узкая плитка. Замах (последние 30% - рамка наливается кровью), выпады и тряска - в рисовании кадра
  * ([FightFrame]): карточка не перекомпонуется на каждом шаге боя. Уровень врага - плашкой [LevelBadge] на правом нижнем углу портрета
  * в нити его редкости: свой, на карте он бывает выше или ниже карты, без своего - уровень зоны [level]. Полка
- * эффектов одна, не влезло - «+N». Фокус за провокатором держится (отметка «Следом»), удары идут провокатору. Плашка намерения проступает по доле замаха.
+ * эффектов одна, не влезло - «+N». Фокус за провокатором держится (отметка «Следом»), удары идут провокатору. Замах по герою - ещё и
+ * стрелка ↓ в правом верхнем углу ([AimArrow]), проступает по доле замаха; для чтения с экрана - состояние карточки. Метка цели - в
+ * правом нижнем углу.
  */
 @Composable internal fun FoeCard(
     foe: FoeView,
@@ -162,8 +167,10 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     val shelf = remember(shelves) { shelves.timed + shelves.lasting }
     val tile = if (large) 16.dp else 14.dp
     val hits = remember { ShelfHits() }
+    val aiming = live && !foe.held && foe.swing >= AIM_FROM
+    val aimNote = ui("fight.swing_at_you")
     Box(
-        modifier.graphicsLayer {
+        modifier.semantics { if (aiming) stateDescription = aimNote }.graphicsLayer {
             translationY = acting() * 10.dp.toPx()
             translationX = shake(flash(), frame.time).dp.toPx()
             rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
@@ -265,8 +272,9 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             }
             if (shelf.isNotEmpty()) ShelfTouch(hits, Modifier.align(Alignment.BottomCenter)) { effectsOpen = ShelfFocus(it?.key) }
             if (fight.target == foe.index && foe.alive && fight.outcome == null) {
-                Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
+                Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp))
             }
+            if (live && !foe.held) AimArrow({ ((swing() - AIM_FROM) / AIM_FADE).coerceIn(0f, 1f) }, Modifier.align(Alignment.TopEnd).padding(3.dp))
             if (foe.taunt && foe.alive) TauntSeal(frame, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip() }
             if (!foe.alive) {
                 Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
@@ -275,17 +283,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             }
             if (foe.alive) foe.buildup?.let { BuildupMark(it, frame) }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
-        }
-        if (live && !foe.held) {
-            Text(
-                ui("fight.at_you"),
-                color = Color(0xFFFF8A83),
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                modifier = Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).graphicsLayer { alpha = ((swing() - AIM_FROM) / AIM_FADE).coerceIn(0f, 1f) }
-                    .background(Color(0xFF3A1414), RoundedCornerShape(10.dp)).border(1.dp, LifeRed, RoundedCornerShape(10.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
-            )
         }
     }
     effectsOpen?.let { focus -> EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), shelves.timed, shelves.lasting, null, focus.key) { effectsOpen = null } }
@@ -317,7 +314,25 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
 /** Высота зоны касания полки эффектов врага. */
 private val SHELF_TOUCH = 44.dp
 
-/** С какой доли замаха врага проступает плашка «→ по вам» и за какую долю она набирает силу. */
+/**
+ * Стрелка ↓ замаха врага по герою в углу карточки: проступает по доле замаха [shown] (0..1, читается в слое кадра); для чтения с экрана
+ * её нет - замах называет состояние карточки.
+ */
+@Composable private fun AimArrow(shown: () -> Float, modifier: Modifier) {
+    Box(
+        modifier.size(AIM_SIDE).graphicsLayer { alpha = shown() }.background(AimGround, CircleShape).border(1.dp, LifeRed, CircleShape).clearAndSetSemantics {},
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("↓", color = AimInk, fontSize = 10.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** Стрелка замаха: сторона, подложка и цвет знака. */
+private val AIM_SIDE = 16.dp
+private val AimGround = Color(0xFF3A1414)
+private val AimInk = Color(0xFFFF8A83)
+
+/** С какой доли замаха врага проступает стрелка ↓ и за какую долю она набирает силу. */
 private const val AIM_FROM = .55f
 private const val AIM_FADE = .2f
 

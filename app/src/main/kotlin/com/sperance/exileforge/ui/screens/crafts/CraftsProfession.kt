@@ -55,7 +55,6 @@ import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
@@ -248,7 +247,7 @@ internal fun ToolSheet(game: GameUi, profession: ProfessionView, onDismiss: () -
                 Engraved(ui("crafts.tool"))
                 val view = game.view(tool)
                 if (view != null) {
-                    ItemCard(view, detailed = true, price = game.sellPrice(view.item))
+                    ItemCard(view, detailed = true)
                 } else {
                     Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 }

@@ -187,7 +187,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, venue: We
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, item, choice), unmet = game.unmetNeeds(item), seals = game.itemSeals(item)) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, choice), unmet = game.unmetNeeds(item), seals = game.itemSeals(item)) }
             }
             OrnateDivider()
             val bill = game.goldBill(price)

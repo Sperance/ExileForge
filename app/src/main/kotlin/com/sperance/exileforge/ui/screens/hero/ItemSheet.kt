@@ -24,7 +24,6 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.itemSeals
 import com.sperance.exileforge.core.sheet.placeCandidates
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
@@ -62,7 +61,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     }
     val can = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     val loose = !instance.equipped && !instance.socketed
-    val price = game.sellPrice(instance)
     val locked = instance.locked
     val waiting = instance.id in game.link.waitingItems
     val deals = rememberItemDeals()
@@ -78,7 +76,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         view,
                         enabled = false,
                         detailed = true,
-                        price = price,
                         waiting = waiting,
                         totals = wearTotals(game, instance, wear),
                         seals = game.itemSeals(instance),

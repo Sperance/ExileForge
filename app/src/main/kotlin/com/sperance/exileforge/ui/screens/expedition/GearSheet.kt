@@ -48,7 +48,7 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
     val instance = worn?.let { id -> dressed.hero?.item(id) } ?: return
     ForgeSheet(onDismissRequest = { worn = null }) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp)) {
-            game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, price = game.sellPrice(instance), seals = game.itemSeals(instance)) }
+            game.view(instance)?.let { ItemCard(it, enabled = false, detailed = true, seals = game.itemSeals(instance)) }
         }
     }
 }

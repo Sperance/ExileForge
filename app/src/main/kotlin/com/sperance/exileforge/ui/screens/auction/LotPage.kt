@@ -201,9 +201,9 @@ private fun statusMark(lot: AuctionLot, stance: LotStance): Pair<String, Color> 
     var all by remember(lot.id) { mutableStateOf(false) }
     val unmet = game.unmetNeeds(copy)
     if (all) {
-        ItemCard(view, enabled = false, detailed = true, priced = false, totals = wearTotals(game, copy, rememberWearChoice(game, copy)), unmet = unmet, seals = game.itemSeals(copy))
+        ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, copy, rememberWearChoice(game, copy)), unmet = unmet, seals = game.itemSeals(copy))
     } else {
-        ItemCard(view, enabled = false, priced = false, action = false, unmet = unmet, shortLines = FOLDED_LINES)
+        ItemCard(view, enabled = false, action = false, unmet = unmet, shortLines = FOLDED_LINES)
     }
     ForgeButton(onClick = { all = !all }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Text) {
         Text(ui(if (all) "auction.lot_fold" else "auction.lot_all_props"), maxLines = 1)

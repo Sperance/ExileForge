@@ -36,7 +36,6 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.itemSeals
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
@@ -158,7 +157,7 @@ private val NO_CHOICE = InspectChoice(null)
         OwnItemActions(game, item, shown.forge, onDismiss)
     }
     CardSheet(onDismiss, footer.takeIf { acts }) {
-        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item), seals = game.itemSeals(item))
+        ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, wear), unmet = game.unmetNeeds(item), seals = game.itemSeals(item))
     }
 }
 

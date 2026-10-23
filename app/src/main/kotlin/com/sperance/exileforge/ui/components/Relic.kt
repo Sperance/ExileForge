@@ -219,13 +219,13 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
 }
 
 /** Зона касания значка уровня и номера экземпляра в карточке. */
-private val MarkTouchZone = 40.dp
+internal val MarkTouchZone = 40.dp
 
 /** Сдвиг значка уровня за правый нижний угол гнезда - одинаковый у плитки и плиты. */
 val LevelBadgeOffset = DpOffset(7.dp, 6.dp)
 
 /** Подложка значка уровня - темнее гнезда, чтобы число читалось поверх рисунка. */
-private val BadgeGround = Color(0xFF0B1013)
+internal val BadgeGround = Color(0xFF0B1013)
 
 /** Цвета значков тира: первый тир - янтарь, второй - мята, третий - лёд, ниже - серый. */
 private val TierAmber = Color(0xFFF5B547)

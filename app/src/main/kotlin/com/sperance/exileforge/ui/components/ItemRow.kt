@@ -108,12 +108,12 @@ fun ItemRow(
             }
             if (item.states.isNotEmpty() || waiting) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    QualityBadge(item, compact = true)
+                    QualityBadge(item)
                     RowStates(item)
                     if (waiting) PendingMark()
                 }
             } else {
-                QualityBadge(item, compact = true)
+                QualityBadge(item)
             }
             if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
             if (item.orderedLines.isNotEmpty()) FoldedLines(item.orderedLines, lines, look)

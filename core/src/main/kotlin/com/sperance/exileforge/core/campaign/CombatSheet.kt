@@ -310,7 +310,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      * Лист боя под эффектами захода [effects] с источниками [origins]: строки зелья и гильдии - сводом листа с пассивными умениями,
      * карта и Атлас - поверх ([RunSheet]), как тело героя в заходе.
      */
-    fun runSheet(effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet = RunSheet(effects, origins) { lines -> if (lines.isEmpty()) hero.stats else model.with(hero.passiveLines + lines) }
+    fun runSheet(effects: Map<String, Double>, origins: EffectOrigins): RunSheet = RunSheet(effects, origins) { lines -> if (lines.isEmpty()) hero.stats else model.with(hero.passiveLines + lines) }
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }

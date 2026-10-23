@@ -208,7 +208,7 @@ val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
  * Лист героя под эффектами захода [effects] ([RunSheet]): лист боя сводки с зельем и гильдией в своде и картой поверх; до листа
  * боя - над цифрами сводки как есть.
  */
-fun HeroView.runSheet(effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet = combat?.runSheet(effects, origins) ?: RunSheet.over(figures.stats, effects, origins)
+fun HeroView.runSheet(effects: Map<String, Double>, origins: EffectOrigins): RunSheet = combat?.runSheet(effects, origins) ?: RunSheet.over(figures.stats, effects, origins)
 
 /**
  * Откуда цифры сводки [stats] под сдвигами захода [shifts] ([RunSheet.shifts]): по цифре - её сдвиги, сложенные по источнику; лист боя

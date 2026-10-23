@@ -13,7 +13,7 @@ import com.sperance.exileforge.rules.sheet.Shift
  */
 class RunSheet(
     private val effects: Map<String, Double>,
-    private val origins: EffectOrigins = EffectOrigins.NONE,
+    private val origins: EffectOrigins,
     private val fold: (List<StatLine>) -> Map<String, Double>,
 ) {
     /** Строки зелья и древа гильдии в своде листа: их же берёт рост урона умений, как строки снаряжения. */
@@ -50,7 +50,7 @@ class RunSheet(
          * Лист эффектов захода над готовыми характеристиками [stats] - без листа героя за ними (лист боя ещё не собран): строки ложатся
          * сводом правил поверх готового ([StatLines.fold]).
          */
-        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet =
+        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins): RunSheet =
             RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, emptySet()) }
     }
 }

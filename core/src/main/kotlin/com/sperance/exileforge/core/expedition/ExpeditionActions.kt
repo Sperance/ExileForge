@@ -572,7 +572,10 @@ class ExpeditionActions(
         }
     }
 
-    /** Вещь [itemId] продана поштучно: её отметка к продаже уходит с экрана и из журнала захода ([RunJournal.saleMarks]). */
+    /**
+     * Вещь [itemId] продана поштучно или надета в заходе: её отметка к продаже - своя и от фильтра - уходит с экрана и из журнала захода
+     * ([RunJournal.saleMarks]) и не возвращается, когда вещь потом сменят.
+     */
     fun forget(itemId: String) {
         if (itemId in repository.state.value.saleMarks) expedition { it.copy(saleMarks = it.saleMarks - itemId) }
         runJournal?.takeIf { itemId in it.saleMarks }?.let { j ->
@@ -728,7 +731,7 @@ class ExpeditionActions(
      * (null - решают правила, как у сервера: [Sheets.worn]) между боями. Смены идут по одной: набор с вещью считается тем же расчётом листа,
      * что у сервера, поверх набора, что ушёл последней сменой (нет её в пути - что поход носит); поход берёт его, только если носит ровно
      * эту базу, и пишет смену в журнал с выбранным местом ([RunCommand.PutOn]); карта под зоной Ваал - следом, без своего события, только
-     * если поход смену принял. Сервер проверяет то же сам: отказ вернёт набор сервера ([resync]). Лист считается вне главного потока.
+     * если поход смену принял. Принятая смена снимает с надетой вещи метку продажи ([forget]), как сервер снимает её с отложенной продажи. Сервер проверяет то же сам: отказ вернёт набор сервера ([resync]). Лист считается вне главного потока.
      */
     fun wear(itemId: String, slot: Slot? = null) {
         val run = mutableRun.value ?: return
@@ -745,7 +748,10 @@ class ExpeditionActions(
                         gear.copy(stance = run.stance),
                         RunCommand.PutOn(itemId, place, over) { taken ->
                             sentWear.compareAndSet(sent, null)
-                            if (taken) outer?.send(RunCommand.Regear(gear.copy(stance = outer.stance)))
+                            if (taken) {
+                                forget(itemId)
+                                outer?.send(RunCommand.Regear(gear.copy(stance = outer.stance)))
+                            }
                         },
                     ),
                 )

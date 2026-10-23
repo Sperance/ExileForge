@@ -59,7 +59,7 @@ internal object HeroLens {
     fun wearing(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): WearOutcome {
         index ?: return WearOutcome.NONE
         hero ?: return WearOutcome.NONE
-        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, place, hero.info.laws, hero.info.fate, hero.skills)
+        return hero.wearBasis.wearing(index, item, place)
     }
 
     /**

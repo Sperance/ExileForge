@@ -88,17 +88,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable private fun FoldHeader(title: String, comparison: Comparison, might: MightShift?, open: Boolean, muted: Color, onToggle: () -> Unit) {
     val speech = comparison.speech(title, might, open)
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(FoldShape)
-            .border(1.dp, if (open) Gold else Seam, FoldShape)
-            .clickable(role = Role.Button, onClick = onToggle)
-            .semantics { contentDescription = speech }
-            .padding(start = 12.dp, top = 7.dp, end = 10.dp, bottom = 7.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
-    ) {
+    FoldFrame(if (open) Gold else Seam, Modifier.clickable(role = Role.Button, onClick = onToggle).semantics { contentDescription = speech }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, color = muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.8.sp, modifier = Modifier.weight(1f))
             Text(tally(comparison, muted), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 8.dp, end = 6.dp))
@@ -106,6 +96,31 @@ import com.sperance.exileforge.ui.theme.*
         }
         might?.let { MightShiftLine(it, muted) }
     }
+}
+
+/**
+ * Сравнение, которое ещё считается: заголовок [title] в той же рамке, что свёрнутое [StatComparison], без счёта, Мощи и кнопки -
+ * числа встанут, когда итог сложится, а карточка не прыгнет.
+ */
+@Composable fun StatComparisonPending(title: String, modifier: Modifier = Modifier, look: RelicLook? = null) {
+    val muted = look?.muted ?: Muted
+    FoldFrame(Seam, modifier) {
+        Text(title, color = muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.8.sp)
+    }
+}
+
+/** Рамка заголовка сравнения: тонкая обводка [border], высота кнопки, отступы заголовка; [behaviour] - нажатие и озвучка. */
+@Composable private fun FoldFrame(border: Color, behaviour: Modifier, content: @Composable () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(FoldShape)
+            .border(1.dp, border, FoldShape)
+            .then(behaviour)
+            .padding(start = 12.dp, top = 7.dp, end = 10.dp, bottom = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+    ) { content() }
 }
 
 /** Счёт строк «N лучше · M хуже»: лучше - `Vital`, хуже - [LossText], нулевые части не пишутся. */

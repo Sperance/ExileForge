@@ -67,15 +67,15 @@ fun SourcedSumRow(shares: List<SumShare>, modifier: Modifier = Modifier, sum: @C
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = SourcedSumMetrics.indent, bottom = 8.dp)) {
                 Box(Modifier.width(2.dp).fillMaxHeight().background(Bronze))
                 Column(Modifier.weight(1f).padding(start = 10.dp, top = 2.dp, bottom = 2.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    shares.forEach { ShareLine(it) }
+                    shares.forEach { SumShareLine(it) }
                 }
             }
         }
     }
 }
 
-/** Доля в раскрытом подсписке: источник слева, доля справа, сноска строкой ниже. */
-@Composable private fun ShareLine(share: SumShare) {
+/** Доля строки-суммы в раскрытом подсписке: источник слева, доля справа, сноска строкой ниже; её же печатает раскрытие сводки героя. */
+@Composable fun SumShareLine(share: SumShare) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(share.source, color = share.accent ?: Quiet, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))

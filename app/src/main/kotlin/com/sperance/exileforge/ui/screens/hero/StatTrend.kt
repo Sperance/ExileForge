@@ -2,21 +2,41 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.sheet.SheetShift
-import com.sperance.exileforge.core.sheet.Trend
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.components.SumShare
+import com.sperance.exileforge.ui.theme.Ember
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Vital
 
 /**
- * Сравнение листа с прежним листом [baseLabel] («На карте» или «Герой»): сдвинутая цифра ([shift]) - стрелкой ▲ зелёным или ▼ красным
- * и зачёркнутым прежним числом, её строка раскрывается - из чего сложилась: доли источников по цифре ([parts], [SumShare]).
+ * Сравнение листа похода с листом героя без похода [base]: сдвинутые цифры ([shift]) и вклады в каждую ([parts]: строки карты, Атласа,
+ * гильдии, зелья и эффекты боя - каждые своей меткой и сроком). Лучше или хуже - по смыслу характеристики ([StatPolarity]: у «меньше -
+ * лучше» рост - хуже), а не по знаку сдвига; сдвиг без оценки - нейтральным цветом и без стрелки.
  */
 @Immutable
-class StatTrend(val shift: SheetShift, val baseLabel: String, val parts: Map<String, List<SumShare>>)
+class StatTrend(val base: Map<String, Double>, val shift: SheetShift, val parts: Map<String, List<SumShare>>) {
+    /** Вердикт сдвинутой цифры [key] со значением [value]: не сдвинута - null. */
+    fun of(key: String, value: Double, index: ContentIndex?): TrendMark? {
+        if (shift.of(key) == null) return null
+        return when (StatPolarity.better(index, key, value - (base[key] ?: 0.0))) {
+            true -> TrendMark.BETTER
+            false -> TrendMark.WORSE
+            null -> TrendMark.NEUTRAL
+        }
+    }
 
-/** Цвет сдвига: рост - зелёным, падение - красным. */
-internal val Trend.tint: Color get() = if (this == Trend.UP) Vital else LifeRed
+    /** Сколько сдвинутых цифр листа [now] к лучшему и к худшему. */
+    fun count(now: Map<String, Double>, index: ContentIndex?): Pair<Int, Int> {
+        val marks = (shift.up + shift.down).mapNotNull { key -> of(key, now[key] ?: 0.0, index) }
+        return marks.count { it == TrendMark.BETTER } to marks.count { it == TrendMark.WORSE }
+    }
+}
 
-/** Знак сдвига у числа. */
-internal val Trend.mark: String get() = if (this == Trend.UP) "▲" else "▼"
+/** Отметка сдвинутой цифры: цвет полоски и числа и знак у числа ([mark], у нейтральной - нет). */
+enum class TrendMark(val tint: Color, val mark: String?) {
+    BETTER(Vital, "▲"),
+    WORSE(LifeRed, "▼"),
+    NEUTRAL(Ember, null),
+}

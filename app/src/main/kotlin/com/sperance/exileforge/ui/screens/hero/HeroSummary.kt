@@ -12,12 +12,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -35,25 +36,25 @@ import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.ConditionalStat
 import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.core.sheet.StatExplainer
-import com.sperance.exileforge.core.sheet.Trend
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
-import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.ui.components.ButtonKind
+import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.FoldBody
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
-import com.sperance.exileforge.ui.components.SourcedSumRow
 import com.sperance.exileforge.ui.components.SumShare
+import com.sperance.exileforge.ui.components.SumShareLine
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.components.foldToggle
@@ -92,31 +93,27 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * A sheet of figures (apart from the hero, so the map's window draws the same one). Given
- * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
- * effects held against the hero's own. [figures] - цифры сводки с отметками ауры и Предначертания.
+ * A sheet of figures (apart from the hero, so the run's window draws the same one). [figures] - цифры сводки с отметками ауры и
+ * Предначертания, [conditional] - раздел «С условием». Цифра открывает своё окно разбора ([shifts] - сдвиги эффектов захода по
+ * характеристике, их читает разбор). Разделы и порядок - реестр контента.
  *
- * Цифра открывает своё окно. Разделы и порядок - реестр контента. [sources] - откуда изменённая цифра (источники эффектов захода,
- * сложенные по источнику): несколько - стрелка справа раскрывает их список, один - подпись под строкой. С [trend] (лист боя) сдвинутая
- * цифра - стрелкой цвета сдвига, её строка раскрывается - из чего она сложилась ([SourcedSumRow]); раскрытые строки держатся, пока
- * числа идут.
+ * С [trend] (лист похода против листа героя без похода) сдвинутая строка - полоска слева, цвет и ▲/▼ по смыслу характеристики; касание
+ * раскрывает под ней вклады - «Герой без похода» первым, вклады карты и боя своими метками, итог последним - и кнопку разбора;
+ * раскрытые строки держатся, пока числа идут. Свёрнутые «Пределы» раздела раскрываются сами, если внутри сдвиг.
  */
 @Composable fun StatSheet(
     game: GameUi,
     figures: StatFigures,
-    before: Map<String, Double>? = null,
-    shifts: Map<String, List<Shift>> = emptyMap(),
     conditional: List<ConditionalStat> = emptyList(),
     trend: StatTrend? = null,
-    sources: Map<String, List<Shift>> = emptyMap(),
+    shifts: Map<String, List<Shift>> = emptyMap(),
 ) {
     var open by remember { mutableStateOf<String?>(null) }
     var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
     val show: (String) -> Unit = { open = it }
-    val fold = RowFold(trend, sources)
     Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, fold, show) } }
+        game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, trend, show) } }
         if (conditional.isNotEmpty()) ConditionalCard(conditional, game) { openConditional = it }
     }
     open?.let { StatBreakdownSheet(game, it, figures.stats, shifts) { open = null } }
@@ -196,16 +193,17 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /**
  * A section: a card headed by its icon and name in its colour, then its figures one to a row, a thin line between. Строки, что поднимают
- * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их. [open] -
- * разбор строки.
+ * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их, сдвиг
+ * сравнения [trend] среди них раскрывает их сам. [open] - разбор строки.
  */
-@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, fold: RowFold, open: (String) -> Unit) {
+@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, trend: StatTrend?, open: (String) -> Unit) {
     val accent = group.accent()
     val shape = RoundedCornerShape(10.dp)
     val raisers = remember(game.index) { game.index?.let(StatLimits::raisers).orEmpty() }
     val (limits, plain) = stats.partition { it.first in raisers }
     val reached = remember(plain, figures, game.index) { game.index?.campaign?.let { campaign -> plain.count { (key) -> StatLimits.of(key, figures.stats, campaign)?.reached == true } } ?: 0 }
-    var unfolded by rememberSaveable(group) { mutableStateOf(false) }
+    val shiftedInside = trend != null && limits.any { (key) -> trend.shift.of(key) != null }
+    var unfolded by rememberSaveable(group, shiftedInside) { mutableStateOf(shiftedInside) }
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
@@ -217,7 +215,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         }
         plain.forEach { (key, value) ->
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            StatCell(key, value, fold.was(key, value, before), before, accent, figures, game, fold, open)
+            StatCell(key, value, accent, figures, game, trend, open)
         }
         if (limits.isNotEmpty()) {
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
@@ -225,7 +223,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
             FoldBody(unfolded) {
                 limits.forEach { (key, value) ->
                     HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-                    StatCell(key, value, fold.was(key, value, before), before, accent, figures, game, fold, open)
+                    StatCell(key, value, accent, figures, game, trend, open)
                 }
             }
         }
@@ -252,7 +250,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /**
  * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding], значок строки и шапки раздела [icon], итог [figure],
- * шапка раздела с полями [headPadding], между карточками разделов [cardGap].
+ * шапка раздела с полями [headPadding], между карточками разделов [cardGap]; полоска сдвинутой строки [stripe], отступ её вкладов [indent].
  */
 private object SummaryMetrics {
     val rowHeight = 28.dp
@@ -261,76 +259,54 @@ private object SummaryMetrics {
     val figure = 14.sp
     val headPadding = 4.dp
     val cardGap = 6.dp
+    val stripe = 3.dp
+    val indent = 38.dp
 }
 
 /**
- * Сравнение строк листа с прежним листом: [trend] - сравнение боя (стрелки сдвига и доли источников); без него сдвинутой считается
- * любая цифра, что не равна прежней. [sources] - источники изменённых цифр эффектов захода по цифре.
+ * Строка сводки. Без сдвига сравнения [trend] касание открывает разбор ([open]). Сдвинутая - полоска слева, цвет и знак отметки
+ * ([TrendMark]); касание раскрывает под ней вклады ([ChangeSources]) с кнопкой разбора.
  */
-private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift>>) {
-    /** Сдвиг цифры [key] сравнения; без сравнения - null. */
-    fun trendOf(key: String): Trend? = trend?.shift?.of(key)
-
-    /** Источники эффектов захода изменённой цифры [key]. */
-    fun sourcesOf(key: String): List<Shift> = sources[key].orEmpty()
-
-    /** Прежнее число цифры [key] со значением [value] против листа [before]; не сдвинулась - null. */
-    fun was(key: String, value: Double, before: Map<String, Double>?): Double? {
-        val old = before?.let { it[key] ?: 0.0 } ?: return null
-        return if (trend != null) old.takeIf { trendOf(key) != null } else old.takeIf { it != value }
-    }
-}
-
-/**
- * Строка сводки: касание открывает разбор ([open]). Сдвинутая цифра с долями - строка-сумма ([SourcedSumRow]): несколько долей - стрелка
- * справа раскрывает их список, одна - подписью под строкой. Доли - сравнения боя ([fold]: прежнее число листа сравнения, эффекты, что
- * её сдвинули, и «Сейчас») или источники эффектов захода изменённой цифры ([RowFold.sourcesOf]).
- */
-@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
-    val trend = fold.trendOf(key)
-    val compare = fold.trend
-    val sources = fold.sourcesOf(key)
-    val lit = when {
-        trend != null -> Modifier.background(trend.tint.copy(alpha = .06f))
-        was != null -> Modifier.background(Ember.copy(alpha = .08f))
-        else -> Modifier
-    }
-    val shares = when {
-        trend != null && compare != null -> listOf(SumShare(compare.baseLabel, rowValue(key, was ?: 0.0, game.index, before.orEmpty()))) +
-            compare.parts[key].orEmpty() +
-            SumShare(ui("stat.trend.now"), rowValue(key, value, game.index, figures.stats), accent = trend.tint)
-
-        was != null && sources.isNotEmpty() -> runShares(key, sources, game)
-
-        else -> emptyList()
-    }
-    if (shares.isEmpty()) {
-        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
+@Composable private fun StatCell(key: String, value: Double, accent: Color, figures: StatFigures, game: GameUi, trend: StatTrend?, open: (String) -> Unit) {
+    val mark = trend?.of(key, value, game.index)
+    if (trend == null || mark == null) {
+        StatRow(key, value, accent, figures, game, null, Modifier.fillMaxWidth().clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
         return
     }
-    val end = if (shares.size > 1) 0.dp else 12.dp
-    SourcedSumRow(shares, lit) {
-        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.weight(1f).clickable { open(key) }.padding(start = 12.dp, end = end, top = SummaryMetrics.rowPadding, bottom = SummaryMetrics.rowPadding))
+    var unfolded by rememberSaveable(key) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().background(mark.tint.copy(alpha = .06f)).drawBehind { drawRect(mark.tint, size = Size(SummaryMetrics.stripe.toPx(), size.height)) }) {
+        StatRow(
+            key,
+            value,
+            accent,
+            figures,
+            game,
+            mark,
+            Modifier.fillMaxWidth().foldToggle(unfolded, ui(if (unfolded) "common.collapse" else "common.expand")) { unfolded = !unfolded }
+                .padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding),
+        )
+        FoldBody(unfolded) { ChangeSources(key, value, trend, mark, figures, game) { open(key) } }
     }
 }
 
-/** Доли изменённой цифры [key] по источникам [sources] (строка карты, Атлас, узел гильдии, зелье) - раз на строку и язык. */
-@Composable private fun runShares(key: String, sources: List<Shift>, game: GameUi): List<SumShare> {
-    val lang = uiLanguage
-    return remember(key, sources, game, lang) {
-        val explainer = StatExplainer(game)
-        val percent = game.index?.stats?.isPercent(key) == true
-        sources.map { SumShare(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) }
+/** Вклады в сдвинутую цифру [key]: «Герой без похода», вклады карты и боя, итог цветом отметки [mark]; под ними - кнопка разбора. */
+@Composable private fun ChangeSources(key: String, value: Double, trend: StatTrend, mark: TrendMark, figures: StatFigures, game: GameUi, onBreakdown: () -> Unit) {
+    val shares = listOf(SumShare(ui("stat.compare.base"), rowValue(key, trend.base[key] ?: 0.0, game.index, trend.base))) +
+        trend.parts[key].orEmpty() +
+        SumShare(ui("stat.compare.total"), rowValue(key, value, game.index, figures.stats), accent = mark.tint)
+    Column(Modifier.fillMaxWidth().padding(start = SummaryMetrics.indent, end = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        shares.forEach { SumShareLine(it) }
+        ForgeButton(onClick = onBreakdown, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui("stat.compare.breakdown")) }
     }
 }
 
 /**
- * Строка сводки в одну линию: значок характеристики, имя и итог справа; при [was] - старое число зачёркнуто, новое подсвечено.
+ * Строка сводки в одну линию: значок характеристики, имя и итог справа; сдвинутая ([mark]) - итог цветом отметки и её знак.
  * За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Подписей под именем нет: части, доля в резерве, предел
  * с набранным и рейтинг защиты - только в разборе. Пределы: печатается действующее число, упёршееся в предел - цветом
  * предупреждения; уклонение и броня - процентом защиты ([StatLimits.defence]).
  */
-@Composable private fun StatRow(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, trend: Trend?, modifier: Modifier) {
+@Composable private fun StatRow(key: String, value: Double, accent: Color, figures: StatFigures, game: GameUi, mark: TrendMark?, modifier: Modifier) {
     Row(
         modifier.heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
@@ -340,14 +316,11 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
         val level = game.hero?.level
         val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
-        val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
         Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: rowValue(key, it, game.index, before), color = Muted, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.LineThrough) }
         Text(
             defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: rowValue(key, limit?.effective ?: value, game.index, figures.stats),
             color = when {
-                trend != null -> trend.tint
-                was != null -> Ember
+                mark != null -> mark.tint
                 limit?.clamped == true -> Caution
                 else -> Parchment
             },
@@ -356,7 +329,7 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )
-        trend?.let { Text(it.mark, color = it.tint, fontSize = 11.sp) }
+        mark?.mark?.let { Text(it, color = mark.tint, fontSize = 11.sp) }
         if (key in figures.skilled) Tipped({ Tip(ui("hero.mark.aura"), ui("hero.mark.aura_body"), tint = Rune) }) { GlyphIcon(Glyph.AURA, Rune, Modifier.size(13.dp)) }
         if (key in figures.fated) Tipped({ Tip(ui("hero.mark.fate"), ui("hero.mark.fate_body"), tint = Caution) }) { Text("✦", color = Caution, fontSize = 11.sp) }
     }

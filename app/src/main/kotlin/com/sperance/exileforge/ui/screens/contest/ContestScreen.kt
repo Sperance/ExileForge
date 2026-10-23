@@ -186,7 +186,7 @@ private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () ->
     MonsterPortrait(boss.value, form, game.world.portraits, Modifier.size(38.dp, 46.dp).clip(RoundedCornerShape(6.dp)).background(Abyss))
 }
 
-/** Мини-пьедестал лиги: до трёх строк «I · имя · мера»; лига пуста - строкой. */
+/** Мини-пьедестал лиги: до трёх строк «I · имя · мера», касание строки - карточка игрока; лига пуста - строкой. */
 @Composable private fun MiniPodium(stand: ContestStand) {
     if (stand.podium.isEmpty()) {
         MutedText(ui("contest.empty_short"))
@@ -194,7 +194,7 @@ private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () ->
     }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         stand.podium.forEachIndexed { i, row ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().opensPlayer(row.id).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(roman(i + 1), color = medalOf(i + 1), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 24.dp))
                 Text(row.name, color = if (row.id == stand.own?.id) Vital else Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Text(contestValue(stand.metric, row.value), color = GoldBright, style = MaterialTheme.typography.bodySmall)

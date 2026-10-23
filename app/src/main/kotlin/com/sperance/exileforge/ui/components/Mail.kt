@@ -313,6 +313,7 @@ object MailLinks {
                     if (!mail.read) Box(Modifier.size(7.dp).background(Gold, CircleShape))
                     Text(
                         senderLine(mail),
+                        modifier = Modifier.opensPlayer(mail.from?.heroId),
                         color = senderTint(mail, if (mail.read) Muted else GoldBright),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = when {
@@ -413,7 +414,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, 
     ) {
         SenderMark(game, mail, PLATE_MARK)
         Column(Modifier.weight(1f).padding(top = 2.dp)) {
-            Text(senderLine(mail), color = senderTint(mail, GoldBright), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(senderLine(mail), color = senderTint(mail, GoldBright), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.opensPlayer(mail.from?.heroId))
             Text(about, color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         actions?.invoke(this)
@@ -519,7 +520,7 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
     if (feedback.ignored.isEmpty()) MutedText(ui("mail.ignore.empty"), Modifier.padding(vertical = 12.dp))
     feedback.ignored.forEach { hero ->
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).opensPlayer(hero.heroId)) {
                 Text(hero.name, color = Parchment, style = MaterialTheme.typography.labelLarge)
                 MutedText(classTitle(hero.heroClass), style = MaterialTheme.typography.labelSmall)
             }

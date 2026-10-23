@@ -174,7 +174,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             ForgeButton(state = ButtonState.of(!game.busy && target.isNotBlank()), onClick = { vm.lookup(target) }, kind = ButtonKind.Secondary) { Text(ui("guild.find")) }
         }
         found?.let { hero ->
-            ForgePanel {
+            ForgePanel(Modifier.opensPlayer(hero.heroId)) {
                 Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("guild.recruit_line", classTitle(hero.heroClass), hero.level, hero.number))
             }

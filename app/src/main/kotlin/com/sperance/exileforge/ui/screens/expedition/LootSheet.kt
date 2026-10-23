@@ -32,6 +32,7 @@ import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.OwnItemActions
 import com.sperance.exileforge.ui.components.SheetFooter
+import com.sperance.exileforge.ui.components.ownWearAction
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
@@ -48,8 +49,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * under the card.
  *
  * Карточка прокручивается, действия - в закреплённом подвале ([SheetFooter]). В походе по карте находку захода можно надеть между
- * боями - широкой «Надеть» с тем, что изменится, над ней ([runWearAction]); в бою она погашена с причиной; испытание и итоги закрытого
- * захода её не показывают. Сравнение и требования - с набором похода ([rememberRunGame]). Копия героя берётся по id: выданная сервером несёт номер экземпляра. Легшую в тайник вещь можно пометить к
+ * боями - широкой «Надеть» с тем, что изменится, над ней ([runWearAction]); в бою она погашена с причиной. Вне похода (итоги испытания и
+ * закрытого захода) своя вещь тайника надевается сразу - «Надеть» по замкам сервера ([ownWearAction]), нельзя - кнопки нет. Сравнение и требования - с набором похода ([rememberRunGame]). Копия героя берётся по id: выданная сервером несёт номер экземпляра. Легшую в тайник вещь можно пометить к
  * продаже (в итогах карты она уже отмечена) или продать торговцу сразу - удержанием в ряду своей вещи ([OwnItemActions]).
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,12 +83,13 @@ internal fun LootSheet(
                 extra()
             }
             val held = game.hero?.item(item.id)?.takeIf { stand == LootPresence.HELD }
+            val homeWear = held?.let { ownWearAction(game, it) }.takeIf { wearing == null }
             if (held != null) {
                 SheetFooter {
-                    wearing?.let {
-                        val wear = runWearAction(dressed, vm, held, null, it)
-                        wear.notes?.invoke(this)
-                        InspectButton(wear, InspectChoice(choice.target), onDismiss)
+                    val wear = wearing?.let { runWearAction(dressed, vm, held, null, it) } ?: homeWear
+                    wear?.let {
+                        it.notes?.invoke(this)
+                        InspectButton(it, InspectChoice(choice.target), onDismiss)
                     }
                     if (markable && (item.id in expedition.saleMarks || game.saleMarkable(item.id))) {
                         val marked = item.id in expedition.saleMarks

@@ -26,16 +26,28 @@ enum class WearBar {
 /**
  * Почему вещь [item] нельзя купить и сразу надеть на место [place] (null - по правилам); null - можно. [onMap] - бродячий торговец в
  * походе по карте: там поход сам меняет набор, и замок похода - не помеха (причину боя называет поход). Те же правила, что у сервера
- * (`MerchantService.buyAndWear`, `MapFeatureEvents`); забег Разлома - по открытому забегу снимка героя.
+ * (`MerchantService.buyAndWear`, `MapFeatureEvents`): замки надевания ([gearBar]) и место в тайнике под снятую вещь.
  */
 fun GameUi.wearBar(item: ItemInstance, place: Slot?, onMap: Boolean): WearBar? {
     val hero = hero ?: return null
-    val rules = index?.rules?.stash
+    val full = index?.rules?.stash?.let { hero.items.size >= it.capacity(hero.info.stashSlots) } == true
+    return gearBar(item, place, onMap) ?: WearBar.STASH_FULL.takeIf { full }
+}
+
+/**
+ * Почему свою вещь тайника [item] нельзя надеть на место [place] (null - по правилам) вне похода; null - можно. Места в тайнике она не
+ * просит: снятая вещь ложится на её место. Те же замки, что у сервера (`GearChange.requireOpen`, `RiftBuildLock`): поход по карте,
+ * забег Разлома, требования, вторая копия уникалки; испытание набор не держит.
+ */
+fun GameUi.equipBar(item: ItemInstance, place: Slot?): WearBar? = gearBar(item, place, onMap = false)
+
+/** Замки надевания вещи [item] на место [place]: требования, поход по карте (кроме торговца в нём, [onMap]), забег Разлома по открытому забегу снимка героя, вторая уникалка. */
+private fun GameUi.gearBar(item: ItemInstance, place: Slot?, onMap: Boolean): WearBar? {
+    val hero = hero ?: return null
     return when {
         unmetFor(item).isNotEmpty() -> WearBar.NEEDS
         !onMap && hero.campaign.run != null -> WearBar.MAP_RUN
         hero.campaign.trials.rift.run != null -> WearBar.RIFT
-        rules != null && hero.items.size >= rules.capacity(hero.info.stashSlots) -> WearBar.STASH_FULL
         index?.let { hero.uniqueWorn(it, item, place) } == true -> WearBar.TWIN
         else -> null
     }

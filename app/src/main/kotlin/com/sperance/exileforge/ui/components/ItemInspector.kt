@@ -68,7 +68,7 @@ sealed interface Inspect {
     val menu: List<InspectAction> get() = emptyList()
 
     /**
-     * Копия снаряжения [item]: полная карточка с ценой торговца и итогом «если надеть». [forge] - предлагать своей вещи «В кузницу»;
+     * Копия снаряжения [item]: полная карточка с итогом «если надеть». [forge] - предлагать своей вещи «В кузницу»;
      * место, что само ведёт в кузницу, его снимает.
      */
     data class Copy(
@@ -145,15 +145,18 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 private val NO_CHOICE = InspectChoice(null)
 
 /**
- * Карточка копии - как у добычи и товара торговца: цена, итог «если надеть», выполнены ли требования; действия знают выбранное место.
- * Своя вещь под действиями места получает ряд действий по умолчанию ([OwnItemActions]).
+ * Карточка копии - как у добычи и товара торговца: итог «если надеть», выполнены ли требования; действия знают выбранное место.
+ * Своя вещь тайника без действия места получает главным «Надеть» ([ownWearAction]), если её можно надеть, и под действиями - ряд действий
+ * по умолчанию ([OwnItemActions]).
  */
 @Composable private fun CopySheet(game: GameUi, view: ItemView, shown: Inspect.Copy, onDismiss: () -> Unit) {
     val item = view.item
     val wear = rememberWearChoice(game, item)
-    val acts = shown.action != null || game.hero?.item(item.id) != null
+    val own = ownWearAction(game, item).takeIf { shown.action == null }
+    val acted = own?.let { shown.copy(action = it) } ?: shown
+    val acts = acted.action != null || game.hero?.item(item.id) != null
     val footer: @Composable ColumnScope.() -> Unit = {
-        InspectActions(shown, InspectChoice(wear.target), onDismiss)
+        InspectActions(acted, InspectChoice(wear.target), onDismiss)
         OwnItemActions(game, item, shown.forge, onDismiss)
     }
     CardSheet(onDismiss, footer.takeIf { acts }) {

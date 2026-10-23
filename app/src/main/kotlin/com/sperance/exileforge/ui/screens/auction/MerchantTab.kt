@@ -164,7 +164,7 @@ internal sealed interface WearVenue {
     data object Town : WearVenue
 
     /** Бродячий торговец карты: надеть - по правилу смены набора похода, сейчас мешает [lock]. */
-    data class Map(val lock: GearLock?) : WearVenue
+    data class MapRun(val lock: GearLock?) : WearVenue
 }
 
 /**
@@ -225,8 +225,8 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, venue: We
  * поход по карте, забег Разлома, полный тайник, вторая копия уникалки; null - можно.
  */
 private fun wearReason(game: GameUi, item: ItemInstance, place: Slot?, venue: WearVenue): String? {
-    if (venue is WearVenue.Map) venue.lock?.let { return ui(it.key) }
-    return when (game.wearBar(item, place, onMap = venue is WearVenue.Map)) {
+    if (venue is WearVenue.MapRun) venue.lock?.let { return ui(it.key) }
+    return when (game.wearBar(item, place, onMap = venue is WearVenue.MapRun)) {
         WearBar.NEEDS -> ui("merchant.wear_needs", game.unmetFor(item).joinToString(", ") { requirementShort(it, game.lang) })
         WearBar.MAP_RUN -> ui("merchant.wear_map_run")
         WearBar.RIFT -> ui("merchant.wear_rift")

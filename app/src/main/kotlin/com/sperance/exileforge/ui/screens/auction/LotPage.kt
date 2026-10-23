@@ -55,7 +55,7 @@ import com.sperance.exileforge.ui.theme.*
     val hint by produceState<PriceHint?>(null, lot.id, stance) { value = if (lot.isBidding && stance != LotStance.CLOSED) vm.priceHint(lot) else null }
     val least = lot.minBid(rules)
     val draft = remember(lot.id, least) { mutableLongStateOf(least) }
-    val bid = BidDraft(lot, rules, index, game, cut, now, draft)
+    val bid = remember(lot, index, game, cut, now, draft) { BidDraft(lot, rules, index, game, cut, now, draft) }
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LotStatusLine(lot, stance, rules, now)

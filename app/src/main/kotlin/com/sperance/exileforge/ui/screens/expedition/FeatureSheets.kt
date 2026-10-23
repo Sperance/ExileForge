@@ -267,7 +267,7 @@ private data class FeatureFact(val text: String, val tone: Color = Muted)
             game,
             offer.item,
             offer.price,
-            WearVenue.Map(gearLock),
+            WearVenue.MapRun(gearLock),
             onDismiss = { chosen = null },
             onBuyWorn = { wear ->
                 chosen = null

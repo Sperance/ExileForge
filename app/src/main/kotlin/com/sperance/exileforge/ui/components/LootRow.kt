@@ -1,8 +1,6 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,13 +11,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,21 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.ItemVisualKind
-import com.sperance.exileforge.core.display.bagVisualKind
-import com.sperance.exileforge.core.display.itemDescription
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.weaponTitle
-import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.ItemCode
-import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.ui.icons.BagIcon
-import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Parchment
 
 /**
  * Метка короткой строки [text] цветом [color] (`▲ Лучше надетого`, «Новая фляга»): после имени, рамка строки - её цветом.
@@ -92,38 +75,6 @@ data class RowNote(val text: String, val color: Color)
     )
 }
 
-/**
- * Короткая строка стопки [code] ×[amount] - та же «Колонка цифр», что [LootRow]: гнездо со значком стопки и числом, имя, ниже - короткое
- * описание стопки; касание - [onClick] (карточка стопки).
- */
-@Composable fun LootStackRow(index: ContentIndex?, code: String, amount: Long, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val known = index?.item(ItemCode(code))
-    val description = remember(code, index) { itemDescription(code, index) }
-    LootRowFrame(
-        modifier.itemPlate(relicLook(Rarity.COMMON), selected = false, worn = false, accent = null),
-        socket = {
-            Box(Modifier.size(LootSocket).background(Ink, StackSocketShape).border(1.dp, Gold.copy(alpha = .35f), StackSocketShape), contentAlignment = Alignment.Center) {
-                BagIcon(code, Modifier.size(28.dp), tint = if (known != null) Gold else Muted, kind = known?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
-                if (amount > 1) {
-                    Text(
-                        "×$amount",
-                        color = GoldBright,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
-                    )
-                }
-            }
-        },
-        title = { LootName(itemTitle(code), Parchment, Modifier.weight(1f, fill = false)) },
-        kind = { if (description.isNotBlank()) LootKind(description, Modifier.weight(1f, fill = false)) },
-        figures = {},
-        onLongClick = null,
-        onClick = onClick,
-    )
-}
-
 /** Каркас короткой строки: подложка [plate], гнездо [socket], линия имени [title], линия типа [kind] и колонка цифр [figures]. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -155,16 +106,10 @@ private fun LootRowFrame(
     Text(text, color = color, style = itemName(15), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
 }
 
-/** Вторая линия короткой строки: тип вещи или описание стопки, одна линия с многоточием. */
+/** Вторая линия короткой строки: тип вещи, одна линия с многоточием. */
 @Composable private fun LootKind(text: String, modifier: Modifier) {
     Text(text, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
 }
 
 /** Ширина колонки цифр короткой строки: вердикт над ценой ровно по краю во всех строках. */
 private val FiguresWidth = 66.dp
-
-/** Сторона гнезда стопки - как у гнезда вещи [RowSocket]. */
-private val LootSocket = 44.dp
-
-/** Скругление гнезда стопки. */
-private val StackSocketShape = RoundedCornerShape(12.dp)

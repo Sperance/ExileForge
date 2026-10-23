@@ -60,6 +60,7 @@ import com.sperance.exileforge.ui.components.FoldBody
 import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.LootPanel
 import com.sperance.exileforge.ui.components.LootRow
 import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.components.rememberGearVerdict
@@ -90,13 +91,12 @@ internal class WorkSums(
     val spent: Map<String, Long>,
     val missed: Map<WorkMiss, Long>,
 ) {
-    /** Общая шкала мини-полос: самая большая стопка, добытая или потраченная. */
-    val scale: Long get() = (gathered.values + spent.values).maxOrNull()?.coerceAtLeast(1) ?: 1
+    /** Шкала мини-полос потраченного: самая большая потраченная стопка. */
+    val scale: Long get() = spent.values.maxOrNull()?.coerceAtLeast(1) ?: 1
 
     val isEmpty: Boolean get() = gathered.isEmpty() && spent.isEmpty()
 
-    /** Строки стопок по убыванию, раз на итог. */
-    val gatheredSorted: List<Pair<String, Long>> = gathered.entries.sortedByDescending { it.value }.map { it.key to it.value }
+    /** Строки потраченных стопок по убыванию, раз на итог. */
     val spentSorted: List<Pair<String, Long>> = spent.entries.sortedByDescending { it.value }.map { it.key to it.value }
 
     companion object {
@@ -119,8 +119,8 @@ internal class WorkSums(
  * Книга учёта ремесла: итоги плитками в ряд короткими числами без переноса - время в работе (вживую, [startedAt] > 0 по
  * часам сервера со сдвигом [offset]: «1:05»), циклы («130 −2» впустую), опыт («+150к ▲1» уровни), сделано (счёт сервера, плитки нет при 0)
  * и уровень профессии [level]; не влезло число - кегль плитки меньше; под плитками - почему циклы прошли впустую («Впустую ×3: нет
- * подходящих основ»); затем каждая стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное
- * красным); сделанные вещи [made] - короткими строками ([LootRow]): первые [MADE_SHOWN], прочие -
+ * подходящих основ»); затем добытое - ячейками стопок общего облика добычи ([LootPanel]), потраченное - строкой на стопку: иконка, имя,
+ * мини-полоса и «−N» красным; сделанные вещи [made] - короткими строками ([LootRow]): первые [MADE_SHOWN], прочие -
  * под «Ещё N». [onShow] - кнопка «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
  *
  * [folded] - книга плашки работы: видны только плитки со стрелкой, касание плиток раскрывает и сворачивает всё, что под ними.
@@ -178,12 +178,10 @@ internal fun WorkLedger(
             if (sums.isEmpty) {
                 Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
             } else {
-                Column {
-                    sums.gatheredSorted.forEach { (code, amount) ->
-                        LedgerRow(game, code, amount, sums.scale, gathered = true) { inspect(Inspect.Stack(code)) }
-                    }
-                    sums.spentSorted.forEach { (code, amount) ->
-                        LedgerRow(game, code, amount, sums.scale, gathered = false) { inspect(Inspect.Stack(code)) }
+                LootPanel<ItemInstance>(game.index, emptyList(), sums.gathered, emptyList(), onStack = { inspect(Inspect.Stack(it)) }) {}
+                if (sums.spentSorted.isNotEmpty()) {
+                    Column {
+                        sums.spentSorted.forEach { (code, amount) -> SpentRow(game, code, amount, sums.scale) { inspect(Inspect.Stack(code)) } }
                     }
                 }
             }
@@ -269,11 +267,11 @@ private val TILE_STEP = 0.5.sp
 private val TILE_NOTE = 11.sp
 
 /**
- * Строка стопки: иконка, имя, мини-полоса доли [amount] от общей шкалы [scale] и число - «+N» зелёным для добытого ([gathered]),
- * «−N» красным для потраченного. Касание - [onClick].
+ * Строка потраченной стопки: иконка, имя, мини-полоса доли [amount] от шкалы [scale] и «−N» красным. Добытое - ячейками общего облика
+ * добычи ([LootPanel]). Касание - [onClick].
  */
-@Composable private fun LedgerRow(game: GameUi, code: String, amount: Long, scale: Long, gathered: Boolean, onClick: () -> Unit) {
-    val tone: Color = if (gathered) Vital else LifeRed
+@Composable private fun SpentRow(game: GameUi, code: String, amount: Long, scale: Long, onClick: () -> Unit) {
+    val tone: Color = LifeRed
     val kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 3.dp),
@@ -286,7 +284,7 @@ private val TILE_NOTE = 11.sp
             Box(Modifier.fillMaxHeight().fillMaxWidth((amount.toFloat() / scale).coerceIn(MIN_BAR, 1f)).clip(RoundedCornerShape(3.dp)).background(tone))
         }
         Text(
-            (if (gathered) "+" else "−") + amount,
+            "−$amount",
             color = tone,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,

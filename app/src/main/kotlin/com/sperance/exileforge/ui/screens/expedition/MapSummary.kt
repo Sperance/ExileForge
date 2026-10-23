@@ -54,7 +54,7 @@ import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
-import com.sperance.exileforge.ui.components.LootCellSize
+import com.sperance.exileforge.ui.components.LootPanel
 import com.sperance.exileforge.ui.components.LootRow
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RowNote
@@ -63,9 +63,9 @@ import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellLine
 import com.sperance.exileforge.ui.components.SellPick
 import com.sperance.exileforge.ui.components.SellPresetRow
-import com.sperance.exileforge.ui.components.StackCell
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberSellPick
+import com.sperance.exileforge.ui.components.toastFloor
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -206,7 +206,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             ForgeButton(
                 onClick = { finish(emptyList()) },
                 state = ButtonState.of(armed),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().toastFloor(),
                 size = ButtonSize.Wide,
                 accent = head.accent,
             ) {
@@ -315,11 +315,11 @@ private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: S
 }
 
 /**
- * Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said.
+ * Everything the server granted for the map in the one look of loot ([LootPanel]): the recipe, the pieces a line each, the stacks as
+ * cells (gold and experience are the reward tiles above); on its way, or its absence said.
  * Метки «Лучше надетого» - против набора похода ([dressed]). Продажа - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
  * и отмечает её ([onSelect]); в режиме нажатие отмечает, над вещами - быстрые наборы.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?, selecting: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit, onSelect: (String) -> Unit) {
     val loot = tally.loot
@@ -334,27 +334,19 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
         if (selecting) SellPresetRow(it)
         MutedText(ui(if (selecting) "sell.summary_hint" else "sell.summary_hold"), style = MaterialTheme.typography.bodySmall)
     }
-    game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
-        game.view(instance)?.let { piece ->
-            val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
-            val (verdict, mark) = rememberLootVerdict(dressed, instance, flasks = false)
-            when {
-                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, verdict, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
+    val gear = game.presentLoot(loot.equipment, arriving = tally.receiving).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
+    LootPanel(game.index, gear, loot.items, emptyList(), onStack) { (piece, presence) ->
+        val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
+        val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = false)
+        when {
+            lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, verdict, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
 
-                lot != null -> {
-                    val marked = lot.chosen(piece.id)
-                    SaleMarked(marked) { PieceLine(piece, presence, verdict, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
-                }
+            lot != null -> {
+                val marked = lot.chosen(piece.id)
+                SaleMarked(marked) { PieceLine(piece, presence, verdict, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
+            }
 
-                else -> PieceLine(piece, presence, verdict, mark = mark) { onItem(piece) }
-            }
-        }
-    }
-    if (loot.items.isNotEmpty()) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
-                StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) })
-            }
+            else -> PieceLine(piece, presence, verdict, mark = mark) { onItem(piece) }
         }
     }
     if (tally.receiving) {

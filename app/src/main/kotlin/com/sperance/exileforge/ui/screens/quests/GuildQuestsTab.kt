@@ -88,7 +88,7 @@ private fun LazyListScope.goals(me: String, vm: QuestViewModel, busy: Boolean, t
                 color = if (view.mine >= view.need) Vital else Parchment,
                 style = MaterialTheme.typography.bodySmall,
             )
-            RewardChips(view.reward.copy(guildExperience = goal.guildExperience))
+            QuestRewardLoot(view.reward.copy(guildExperience = goal.guildExperience))
             view.contributions.entries.sortedByDescending { it.value }.take(TOP).forEachIndexed { place, (heroId, amount) ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MutedText("${place + 1}.")

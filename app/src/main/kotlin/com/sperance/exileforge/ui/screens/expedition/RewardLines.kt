@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,59 +11,35 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.ItemVisualKind
-import com.sperance.exileforge.core.display.bagVisualKind
-import com.sperance.exileforge.core.display.compactNumber
-import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.expedition.presentLoot
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.view
-import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as a short row ([LootRow]).
- * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
- * With [onItem] a card opens its comparison with what is worn. Каждая надеваемая вещь несёт стрелки урона и
- * защиты. Вещь показывается по её положению у героя ([presentLoot]): проданной нет, надетая - с меткой
- * «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя, ждут, а не пропадают. Вещь лучше надетого - с меткой
- * «▲ Лучше надетого» ([lootMark]) - по набору похода, когда он идёт ([rememberRunGame]).
- * Без [onItem] вещь и стопка открывают общую карточку предмета.
+ * What the server rolled - experience, gold, orbs and items - for a kill and a chest alike, in the one look of loot ([LootPanel]): items
+ * as short rows ([LootRow]), stacks as cells, gold and experience as chips. [awaiting]: some of it is still on its way, and the sheet
+ * says so instead of «nothing else». With [onItem] a card opens its comparison with what is worn. Вещь показывается по её положению у
+ * героя ([presentLoot]): проданной нет, надетая - с меткой «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя,
+ * ждут, а не пропадают. Вещь лучше надетого - с меткой «▲ Лучше надетого» ([lootMark]) - по набору похода, когда он идёт
+ * ([rememberRunGame]). Без [onItem] вещь и стопка открывают общую карточку предмета.
  *
  * Без нелокальных return из составных лямбд: D8 не переводит их в dex. Сравнение - с копией героя, когда она уже у него.
  */
 @Composable internal fun RewardLines(game: GameUi, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false, arriving: Boolean = awaiting) {
-    val gear = game.presentLoot(reward.equipment, arriving = awaiting || arriving)
+    val gear = game.presentLoot(reward.equipment, arriving = awaiting || arriving).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
     val inspect = rememberInspect()
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
-            if (reward.gold > 0) Text(ui("expedition.loot_gold", compactNumber(reward.gold)), color = GoldBright)
-        }
-        reward.items.forEach { (code, amount) ->
-            Row(Modifier.clickable { inspect(Inspect.Stack(code)) }, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                BagIcon(code, Modifier.size(20.dp), kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
-                Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment)
-            }
-        }
-        gear.forEach { (instance, presence) ->
-            key(instance.id) {
-                val piece = game.view(instance)
-                when {
-                    piece == null -> Unit
-
-                    presence.worn -> WornLootRow(piece)
-
-                    else -> {
-                        val (verdict, mark) = rememberLootVerdict(game, instance, flasks = false)
-                        LootRow(piece, verdict = verdict, price = game.sellPrice(instance), note = mark) {
-                            if (onItem != null) onItem(piece) else inspect(Inspect.Copy(instance))
-                        }
+        LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack = { inspect(Inspect.Stack(it)) }) { (piece, presence) ->
+            key(piece.id) {
+                if (presence.worn) {
+                    WornLootRow(piece)
+                } else {
+                    val (verdict, mark) = rememberLootVerdict(game, piece.item, flasks = false)
+                    LootRow(piece, verdict = verdict, price = piece.sellPrice(), note = mark) {
+                        if (onItem != null) onItem(piece) else inspect(Inspect.Copy(piece.item))
                     }
                 }
             }

@@ -155,7 +155,7 @@ import org.koin.compose.viewmodel.koinViewModel
             AtlasBlock(model.state.collectAsStateWithLifecycle().value.atlasPoints)
         }
         hud.report?.let { ForgeButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth(), kind = ButtonKind.Secondary) { Text(ui("run.menu.log")) } }
-        ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) { Text(ui("expedition.back_to_camp")) }
+        ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().toastFloor(), size = ButtonSize.Wide) { Text(ui("expedition.back_to_camp")) }
     }
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
     hud.report?.takeIf { journal }?.let { FightLogSheet(it) { journal = false } }

@@ -118,7 +118,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(questTitle(quest), color = GoldBright, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             QuestBar(quest.progress, quest.target, Gold)
             MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())))
-            RewardChips(quest.reward)
+            QuestRewardLoot(quest.reward)
         }
     }
 }

@@ -20,7 +20,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
@@ -30,9 +29,10 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.LootPanel
 import com.sperance.exileforge.ui.components.LootRow
-import com.sperance.exileforge.ui.components.LootStackRow
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.lootSums
 import com.sperance.exileforge.ui.components.rememberGearVerdict
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.theme.Caution
@@ -40,8 +40,8 @@ import com.sperance.exileforge.ui.theme.GoldBright
 
 /**
  * Итог открытых сундуков-добычи: заголовок - имя сундука, у «Открыть все» - «Из сундуков: M предметов» (M - строки стопок и вещей, без
- * золота); строка «Тайник полон - не открыто: K», когда часть стопки осталась; золото строкой, стопки и вещи - короткими строками
- * ([LootStackRow], [LootRow]: вердикт к надетому над ценой), вещи - по редкости, мифические и уникальные сверху; касание строки -
+ * золота); строка «Тайник полон - не открыто: K», когда часть стопки осталась; добыча - общим обликом ([LootPanel]): вещи короткими
+ * строками ([LootRow]: вердикт к надетому над ценой) по редкости, мифические и уникальные сверху, стопки ячейками, золото чипом; касание -
  * карточка стопки или вещи; затем «Забрать».
  */
 @Composable fun ChestOpenedSheet(game: GameUi, opening: ChestOpening, onDismiss: () -> Unit) {
@@ -58,9 +58,7 @@ import com.sperance.exileforge.ui.theme.GoldBright
                 Engraved(ui("chest.inside"))
             }
             if (opening.unopened > 0) UnopenedLine(opening.unopened)
-            if (opening.gold > 0) Text(ui("chest.gold", compactNumber(opening.gold)), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
-            opening.items.forEach { (code, amount) -> LootStackRow(game.index, code, amount) { inspect(Inspect.Stack(code)) } }
-            gear.forEach { (item, piece) ->
+            LootPanel(game.index, gear, opening.items, lootSums(opening.gold, 0.0), onStack = { inspect(Inspect.Stack(it)) }) { (item, piece) ->
                 key(item.id) { LootRow(piece, verdict = rememberGearVerdict(game, item), price = piece.sellPrice()) { inspect(Inspect.Copy(item)) } }
             }
             if (opening.gold <= 0 && opening.items.isEmpty() && opening.equipment.isEmpty()) MutedText(ui("chest.empty"))

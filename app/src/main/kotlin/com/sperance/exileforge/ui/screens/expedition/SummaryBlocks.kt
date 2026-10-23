@@ -6,8 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,18 +40,16 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.BoostSource
 import com.sperance.exileforge.core.campaign.LootBreakdown
 import com.sperance.exileforge.core.display.atlasPointSource
-import com.sperance.exileforge.core.display.compactNumber
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.rules.content.QuestReward
+import com.sperance.exileforge.ui.screens.quests.QuestRewardLoot
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
 import com.sperance.exileforge.ui.theme.Ember
 import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
@@ -169,8 +165,8 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
 
 /**
  * Сданные разом после карты задания двумя разделами: «За эту карту» - их продвинул заход, «Также сдано» - сдалось заодно, с меткой
- * вида; раздел без заданий не пишется. Задание - имя на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за
- * задания» - только при двух и больше: у одного задания она повторяла бы его фишки.
+ * вида; раздел без заданий не пишется. Задание - имя на всю ширину, под ним награда общим обликом добычи ([QuestRewardLoot]); между заданиями тонкая черта. «Всего за
+ * задания» - только при двух и больше: у одного задания она повторяла бы его награду.
  */
 @Composable internal fun TurnedInLines(turnedIn: List<QuestTurnIn>) {
     val (run, also) = turnedIn.partition { it.run }
@@ -181,7 +177,7 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
         HorizontalDivider(thickness = 1.dp, color = PanelRaised)
         Text(ui("summary.quests_total"), color = Muted, style = MaterialTheme.typography.labelMedium)
         val all = turnedIn.map { it.rewards }
-        RewardChips(
+        QuestRewardLoot(
             QuestReward(
                 gold = all.sumOf { it.gold },
                 experience = all.sumOf { it.experience },
@@ -206,7 +202,7 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
                 Text(quest.title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 if (tagged) KindTag(ui("summary.quest_kind.${quest.kind.name}"))
             }
-            RewardChips(quest.rewards, Modifier.padding(start = 18.dp))
+            QuestRewardLoot(quest.rewards, Modifier.padding(start = 18.dp))
         }
     }
 }
@@ -215,17 +211,6 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
 @Composable private fun KindTag(text: String) {
     val shape = RoundedCornerShape(6.dp)
     Text(text, color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, modifier = Modifier.border(1.dp, PanelRaised, shape).padding(horizontal = 5.dp))
-}
-
-/** Награда задания фишками: золото, опыт, сферы - с начала строки, с переносом. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
-    FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (reward.gold > 0) Chip(ui("quest.toast.gold", compactNumber(reward.gold)), GoldBright)
-        if (reward.experience > 0) Chip(ui("quest.toast.experience", number(reward.experience)), Rune)
-        reward.orbs.forEach { (code, amount) -> Chip(ui("quest.toast.orb", itemTitle(code), amount), Brass) }
-    }
 }
 
 @Composable private fun Chip(text: String, tone: Color) {

@@ -7,8 +7,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,9 +37,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.LootKind
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.expedition.presentLoot
 import com.sperance.exileforge.core.expedition.saleMarkable
 import com.sperance.exileforge.core.i18n.ui
@@ -50,16 +46,15 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect
-import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalBuzzes
-import com.sperance.exileforge.ui.components.LootCellSize
-import com.sperance.exileforge.ui.components.StackCell
+import com.sperance.exileforge.ui.components.LootChip
+import com.sperance.exileforge.ui.components.LootPanel
+import com.sperance.exileforge.ui.components.lootSums
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.delay
 
@@ -71,7 +66,6 @@ import kotlinx.coroutines.delay
  * панели забирает затемнение (стик их не видит, касание закрывает лист), «Назад» закрывает лист. Подпись «N мин назад» -
  * по часам захода шагом в полминуты. Пометка к продаже удержанием - монета на строке, отклик, счёт в шапке.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, bag: List<BagEntry>, gold: Long, experience: Double, awaiting: Int, onClose: () -> Unit) {
     val expedition by vm.state.collectAsStateWithLifecycle()
@@ -105,10 +99,9 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
                     Text(ui("expedition.bag.marked", expedition.saleMarks.size), color = GoldBright, style = MaterialTheme.typography.labelMedium)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (gold > 0) Text(ui("expedition.loot_gold", compactNumber(gold)), color = GoldBright)
-                if (experience > 0) Text(ui("expedition.loot_experience", number(experience)), color = Rune)
-                Text(ui("expedition.bag.kept"), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                lootSums(gold, experience).forEach { LootChip(it.text, it.tone) }
+                Text(ui("expedition.bag.kept"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 6.dp))
             }
             if (bag.isEmpty()) Text(ui("expedition.bag.empty"), color = Muted, style = MaterialTheme.typography.bodySmall)
             bag.forEachIndexed { at, entry ->
@@ -126,8 +119,10 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
     }
 }
 
-/** Порция одного события: «когда · откуда» (у новейшей - «новое»), вещи строками с метками против набора похода [dressed], стопки чипами. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Порция одного события: «когда · откуда» (у новейшей - «новое»), под ней её добыча общим обликом ([LootPanel]): вещи строками с метками
+ * против набора похода [dressed], стопки ячейками.
+ */
 @Composable
 private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Boolean, now: Long, arriving: Boolean, marks: Set<String>, onMark: (String) -> Unit, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
     val reward = entry.reward ?: return
@@ -143,26 +138,20 @@ private fun BagPortion(game: GameUi, dressed: GameUi, entry: BagEntry, fresh: Bo
             )
             if (fresh) Text(ui("expedition.bag.new"), color = Vital, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
         }
-        game.presentLoot(reward.equipment, arriving = arriving).forEach { (instance, presence) ->
-            key(instance.id) {
-                game.view(instance)?.let { piece ->
-                    val marked = piece.id in marks
-                    val (verdict, mark) = rememberLootVerdict(dressed, instance, flasks = true)
-                    PieceLine(
-                        piece,
-                        presence,
-                        verdict,
-                        selected = marked,
-                        onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
-                        trailing = if (marked) ({ SaleCoin() }) else null,
-                        mark = mark,
-                    ) { onItem(piece) }
-                }
-            }
-        }
-        if (reward.items.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                reward.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) }) }
+        val gear = game.presentLoot(reward.equipment, arriving = arriving).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
+        LootPanel(game.index, gear, reward.items, emptyList(), onStack) { (piece, presence) ->
+            key(piece.id) {
+                val marked = piece.id in marks
+                val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = true)
+                PieceLine(
+                    piece,
+                    presence,
+                    verdict,
+                    selected = marked,
+                    onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
+                    trailing = if (marked) ({ SaleCoin() }) else null,
+                    mark = mark,
+                ) { onItem(piece) }
             }
         }
     }

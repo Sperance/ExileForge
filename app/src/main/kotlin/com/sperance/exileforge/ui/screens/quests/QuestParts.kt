@@ -36,7 +36,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.compactNumber
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
@@ -44,9 +43,12 @@ import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.QuestReward
 import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.LocalContentIndex
+import com.sperance.exileforge.ui.components.LootPanel
+import com.sperance.exileforge.ui.components.LootSum
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.lootSums
 import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -79,21 +81,15 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
     )
 }
 
-/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience; сфера открывает карточку. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun RewardChips(reward: QuestReward) {
+/**
+ * Награда задания или шага сюжета общим обликом добычи ([LootPanel]): сферы ячейками (касание - карточка), золото, опыт и у задания
+ * гильдии опыт гильдии - чипами.
+ */
+@Composable internal fun QuestRewardLoot(reward: QuestReward, modifier: Modifier = Modifier) {
     val inspect = rememberInspect()
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Chip { GoldPrice(reward.gold) }
-        if (reward.experience > 0) Chip { Text(ui("quest.reward_xp", number(reward.experience)), color = Vital, style = MaterialTheme.typography.labelMedium) }
-        reward.orbs.forEach { (code, amount) -> Chip({ inspect(Inspect.Stack(code)) }) { Text(ui("quest.reward_orb", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
-        if (reward.guildExperience > 0) Chip { Text(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), color = Rune, style = MaterialTheme.typography.labelMedium) }
-    }
-}
-
-@Composable private fun Chip(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
-    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(PanelRaised).then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier).padding(horizontal = 6.dp, vertical = 2.dp)) { content() }
+    val sums = lootSums(reward.gold, reward.experience) +
+        listOfNotNull(LootSum(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), Rune).takeIf { reward.guildExperience > 0 })
+    LootPanel<Unit>(LocalContentIndex.current, emptyList(), reward.orbs, sums, onStack = { inspect(Inspect.Stack(it)) }, modifier = modifier) {}
 }
 
 @Composable internal fun QuestBar(progress: Long, target: Long, color: Color, thickness: Dp = 6.dp) {

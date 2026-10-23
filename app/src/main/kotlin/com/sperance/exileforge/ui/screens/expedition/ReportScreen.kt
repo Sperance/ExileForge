@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -20,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,7 +32,6 @@ import com.sperance.exileforge.core.campaign.run.PhaseMark
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.monsterTitle
@@ -315,26 +312,13 @@ private fun counted(label: String, count: Int) = if (count > 0) "$label · $coun
     }
 }
 
-@Composable private fun Chip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
-    val shape = RoundedCornerShape(3.dp)
-    Text(
-        text,
-        color = tone,
-        style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.clip(shape).let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
-            .background(Abyss, shape).border(1.dp, if (onClick != null) tone.copy(alpha = .6f) else PanelRaised, shape)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    )
-}
-
 /**
- * What the kill brought, by section, as the server's answers bring it; on its way, or its absence said plainly.
+ * What the kill brought, by section ([LootPanel] with captions), as the server's answers bring it; on its way, or its absence said plainly.
  *
  * По положению у героя: проданная вещь уходит из списка, надетая - с меткой «Надето». Строка на вещь, карточка - по касанию, удержание
  * помечает к продаже. Вещь лучше набора похода - с меткой «▲ Лучше надетого», фляга - «Новая фляга · 0 зар.» ([lootMark]); пока
  * набор можно сменить, подсказка под списком: надевают в карточке, до начала следующего боя.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
@@ -343,37 +327,30 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     val index = game.index
     reward.recipe?.let { code ->
         Caption(ui("expedition.report_recipe"))
-        Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
+        LootChip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
     val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
-    if (gear.isNotEmpty()) {
-        Caption(ui("expedition.report_gear"))
-        val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
-        gear.forEach { (piece, presence) ->
-            val marked = piece.id in marks
-            val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
-            SaleMarked(marked) {
-                PieceLine(piece, presence, verdict, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
-            }
-        }
-        if (hud.gearLock == null) MutedText(ui("expedition.report_wear_hint"))
-    }
-    if (reward.items.isNotEmpty()) {
-        Caption(ui("expedition.report_orbs"))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            reward.items.forEach { (code, amount) -> StackCell(game.index, code, amount, size = LootCellSize, onClick = { onStack(code) }) }
+    val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
+    LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack, heading = { Caption(ui(it.caption())) }) { (piece, presence) ->
+        val marked = piece.id in marks
+        val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
+        SaleMarked(marked) {
+            PieceLine(piece, presence, verdict, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
         }
     }
-    Caption(ui("expedition.report_reward"))
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip(ui("expedition.loot_gold", compactNumber(reward.gold)), GoldBright)
-        Chip(ui("expedition.loot_experience", number(reward.experience)), Rune)
-    }
+    if (gear.isNotEmpty() && hud.gearLock == null) MutedText(ui("expedition.report_wear_hint"))
     if (hud.rewardAwaiting > 0) {
         Receiving()
     } else if (reward.items.isEmpty() && reward.equipment.isEmpty()) {
         MutedText(ui("expedition.loot_nothing"))
     }
+}
+
+/** Подпись части добычи итогов боя. */
+private fun LootPart.caption(): String = when (this) {
+    LootPart.PIECES -> "expedition.report_gear"
+    LootPart.STACKS -> "expedition.report_orbs"
+    LootPart.SUMS -> "expedition.report_reward"
 }
 
 /**
@@ -422,9 +399,8 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     }
     Caption(ui("expedition.report_run"))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip(ui("expedition.report_kills", hud.kills))
-        Chip(ui("expedition.loot_gold", compactNumber(hud.gold)), GoldBright)
-        Chip(ui("expedition.loot_experience", number(hud.experience)), Rune)
+        LootChip(ui("expedition.report_kills", hud.kills))
+        lootSums(hud.gold, hud.experience).forEach { LootChip(it.text, it.tone) }
     }
     if (hud.awaiting > 0) Receiving()
 }

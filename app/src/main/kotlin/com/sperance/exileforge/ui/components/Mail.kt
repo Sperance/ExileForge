@@ -42,9 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.classTitle
-import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mailBody
 import com.sperance.exileforge.core.display.mailSubject
 import com.sperance.exileforge.core.display.title
@@ -69,14 +67,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Что несёт письмо, кроме копий вещей, строкой каждое: золото, стопки, вещи витрины - с карточкой, которую строка открывает; у золота
- * её нет. Копии вещей письмо показывает короткими строками ([LootRow]).
+ * Вещи витрины во вложении письма (шаблоны, не копии) строкой каждая - с карточкой витрины, которую строка открывает. Золото, стопки и
+ * копии вещей письмо показывает общим обликом добычи ([LootPanel]).
  */
-fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
-    if (mail.attachment.gold > 0) add(ui("mail.gold", compactNumber(mail.attachment.gold)) to null)
-    mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
-    mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
-}
+private fun showcaseLines(mail: Mail): List<Pair<String, Inspect>> =
+    mail.attachment.equipment.map { equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template) }
 
 /** Вкладка ящика: какие письма она держит. Новая вкладка - запись перечисления, не ветка экрана. */
 internal enum class MailBox(val holds: (MailKind) -> Boolean) {
@@ -471,13 +466,15 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
 }
 
 /**
- * Вложение письма - рамкой в конце текста: строки золота, стопок и витрины, копии вещей - короткими строками ([LootRow]: вердикт к
- * надетому и цена торговца), касание - карточка; ниже «Забрать» героем в игре, один раз.
+ * Вложение письма - рамкой в конце текста: добыча общим обликом ([LootPanel]) - копии вещей короткими строками ([LootRow]: вердикт к
+ * надетому и цена торговца), стопки ячейками, золото чипом; ниже строки вещей витрины; касание - карточка; внизу «Забрать» героем в
+ * игре, один раз.
  */
 @Composable private fun Attachment(game: GameUi, model: FeedbackModel, busy: Boolean, mail: Mail) {
-    val lines = attachmentLines(mail)
+    val lines = showcaseLines(mail)
     val copies = remember(mail.attachment.instances, game.index) { mail.attachment.instances.mapNotNull { item -> game.view(item)?.let { item to it } } }
-    if (lines.isEmpty() && copies.isEmpty()) return
+    val attached = mail.attachment
+    if (lines.isEmpty() && copies.isEmpty() && attached.items.isEmpty() && attached.gold <= 0) return
     val inspect = rememberInspect()
     val shape = RoundedCornerShape(12.dp)
     Column(
@@ -485,13 +482,13 @@ private fun senderAbout(mail: Mail): AnnotatedString = buildAnnotatedString {
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Text(ui("mail.attachment"), color = Muted, style = MaterialTheme.typography.labelMedium)
+        LootPanel(game.index, copies, attached.items, lootSums(attached.gold, 0.0), onStack = { inspect(Inspect.Stack(it)) }, modifier = Modifier.padding(vertical = 3.dp)) { (item, piece) ->
+            key(item.id) { LootRow(piece, verdict = rememberGearVerdict(game, item), price = piece.sellPrice()) { inspect(Inspect.Copy(item)) } }
+        }
         lines.forEach { (line, card) ->
-            Box(Modifier.fillMaxWidth().heightIn(min = ATTACHMENT_LINE).then(card?.let { Modifier.clickable { inspect(it) } } ?: Modifier), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.fillMaxWidth().heightIn(min = ATTACHMENT_LINE).clickable { inspect(card) }, contentAlignment = Alignment.CenterStart) {
                 Text(line, color = Vital, style = MaterialTheme.typography.labelLarge)
             }
-        }
-        copies.forEach { (item, piece) ->
-            LootRow(piece, verdict = rememberGearVerdict(game, item), price = piece.sellPrice(), modifier = Modifier.padding(vertical = 3.dp)) { inspect(Inspect.Copy(item)) }
         }
         if (mail.claimable) {
             ForgeButton(state = ButtonState.of(!busy && game.heroId.isNotBlank()), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp)) {

@@ -203,6 +203,12 @@ object ServerClock {
     val experience: Double = 0.0,
     val money: Long = 0,
     val title: String = "",
+    /** Мощь героя по документу; null - ещё не посчитана сервером. */
+    val might: Double? = null,
+    /** Членство в гильдии; null - не состоит. Название гильдии - в [com.sperance.exileforge.core.network.HeroRoster.guilds]. */
+    val guild: HeroGuildRef? = null,
+    /** Когда герой был в игре последний раз, мс эпохи; 0 - не знаем. */
+    val lastSeenAt: Long = 0,
     /** Удалён модерацией в корзину: виден до очистки, играть им нельзя - санкция в [com.sperance.exileforge.core.session.Session.sanctions]. */
     val deleted: Boolean = false,
     /** Когда герой создан: время сервера в UTC, как документ его хранит; пусто - сервер не прислал. */
@@ -214,7 +220,15 @@ object ServerClock {
 ) {
     /** [createdAt] в мс эпохи; null - не прочитать. */
     val createdAtMs: Long? get() = runCatching { java.time.LocalDateTime.parse(createdAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull()
+
+    companion object {
+        /** Герои списка в порядке меню: последний игравший первым, не игравшие с тех пор, как это пишется, - в прежнем порядке после. */
+        fun lastPlayedFirst(heroes: List<HeroSummary>): List<HeroSummary> = heroes.sortedByDescending { it.lastSeenAt }
+    }
 }
+
+/** Гильдия героя в документе героя: только её id. */
+@kotlinx.serialization.Serializable data class HeroGuildRef(val id: String = "")
 
 /** The hero's statistics: key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())

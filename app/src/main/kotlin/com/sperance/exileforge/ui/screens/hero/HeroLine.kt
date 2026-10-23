@@ -142,6 +142,9 @@ internal fun heroLevelTip(hero: HeroHeaderState): Tip {
     return Tip(hero.name, tint = GoldBright, facts = heroClass + listOf(ui("hero.level_tip.level") to "${hero.level}") + steps)
 }
 
+/** Доля полосы опыта в уровне [level] при опыте [experience] (0..1); без таблицы опыта [classes] или на последнем уровне - 1. */
+internal fun experienceShare(classes: ClassesFile?, level: Int, experience: Double): Float = experienceOf(classes, level, experience).fraction
+
 /**
  * Сколько пройдено в этом уровне. Таблица опыта классов говорит, сколько стоит следующий уровень, - клиент читает её, чтобы
  * показать, что впереди, а не чтобы считать уровень: уровень решает сервер. На последнем уровне полоса полна и говорит это;

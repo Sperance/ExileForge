@@ -25,6 +25,8 @@ data class Session(
     val charactersRead: Boolean = false,
     /** Действующие санкции героев аккаунта по id героя: бан или удаление - карточка героя говорит, кто, за что и до когда. */
     val sanctions: Map<String, SanctionNotice> = emptyMap(),
+    /** Названия гильдий героев аккаунта: id гильдии - название. */
+    val guilds: Map<String, String> = emptyMap(),
     /** Доступ закрыт санкцией: её id для экрана санкции; пустая строка - аккаунт удалён и стирается. */
     val notice: String? = null,
     /** Токен апелляции санкции [notice] из отказа входа: секрет наказанного, с ним экран санкции подаёт апелляцию. */
@@ -75,5 +77,5 @@ class SessionRepository(initialServer: String) {
     fun update(transform: (Session) -> Session) = mutable.update(transform)
 
     /** Выход или смена сервера: всё, что принадлежало аккаунту, забывается, эпоха растёт. */
-    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, sanctions = emptyMap(), signedIn = false, profile = null, fate = null, sessionEpoch = it.sessionEpoch + 1) }
+    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, sanctions = emptyMap(), guilds = emptyMap(), signedIn = false, profile = null, fate = null, sessionEpoch = it.sessionEpoch + 1) }
 }

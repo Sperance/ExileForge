@@ -309,6 +309,6 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 }
 
-/** Герои аккаунта и санкции по id героя: бан или удаление. */
+/** Герои аккаунта, санкции по id героя (бан или удаление) и названия их гильдий [guilds]: id гильдии - название. */
 @kotlinx.serialization.Serializable
-data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionNotice> = emptyMap())
+data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionNotice> = emptyMap(), val guilds: Map<String, String> = emptyMap())

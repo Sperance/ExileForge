@@ -41,7 +41,7 @@ class CharacterActions(
             val roster = if (owner.isBlank()) HeroRoster() else api.hero.rosterOf(owner)
             val characters = roster.heroes
             val sanctions = roster.sanctions
-            sessions.update { it.copy(characters = characters, charactersRead = true, sanctions = sanctions) }
+            sessions.update { it.copy(characters = characters, charactersRead = true, sanctions = sanctions, guilds = roster.guilds) }
             if (autoEnter) characters.singleOrNull()?.takeIf { it.id !in sanctions }?.let { only -> entered(only.id) }
         }
     }

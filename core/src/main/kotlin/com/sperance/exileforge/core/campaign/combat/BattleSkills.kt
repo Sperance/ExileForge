@@ -116,7 +116,7 @@ private fun Battle.applied(slot: Int, kitSkill: KitSkill, level: Int) {
 /**
  * Цена - сперва из перелива маны (Переполнение), у Обета крови - здоровьем. Резонанс слышит применение до удара и до перезарядки, что он
  * укорачивает. Холод и замедление растягивают перезарядку, как замах; она идёт с конца применения. Кость эха руны тянется лишь у умения с
- * эхом.
+ * эхом. Силы слышат применение после него: клич будит ещё и силы клича, умение с лечением - силы лечения умением.
  */
 private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
     val hero = heroFighter
@@ -130,7 +130,10 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     perform(kitSkill, level)
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
     trigger(SkillEvent.SKILL_USE, refund = if (free) 0.0 else cost)
-    powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level, slot = slotKey(slot)))
+    val moment = PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level, slot = slotKey(slot))
+    powers.fire(PowerEvent.SKILL_USE, moment)
+    if (skill.type == SkillType.WARCRY) powers.fire(PowerEvent.WARCRY, moment)
+    if (skill.heal != null) powers.fire(PowerEvent.SKILL_HEAL, moment)
 }
 
 /**

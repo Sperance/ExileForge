@@ -354,7 +354,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     if (fighter.side != Side.MONSTER || fighter.index in fallenOrder || fighter.index in retinueDown) return
     marks[fighter.index]?.let { detonate(fighter, it) }
     val ailing = fighter.ailments.toList()
-    val cursed = fighter.cursed
+    val curses = fighter.curses
     fighter.ailments.clear()
     fighter.effects.clear()
     if (foes[fighter.index].summoned) retinueDown += fighter.index else fallenOrder += fighter.index
@@ -380,7 +380,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     }
     trigger(SkillEvent.KILL)
     if (spell) trigger(SkillEvent.SPELL_KILL)
-    powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing, cursed = cursed))
+    powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing, curses = curses))
     lastWords(fighter)
     fateFell(fighter, ailing)
 }

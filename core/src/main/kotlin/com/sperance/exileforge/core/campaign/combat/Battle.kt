@@ -260,6 +260,9 @@ class Battle(
         val alive: Boolean get() = engaged && life > 0
         val held: Boolean get() = heldUntil > time || ailments.any { it.ailment == Ailment.FROZEN && it.until > time }
         val cursed: Boolean get() = effects.any { it.kind == EffectKind.CURSE }
+
+        /** Источники проклятий на бойце: коды умений-проклятий и сил, что их наложили. */
+        val curses: Set<String> get() = effects.filter { it.kind == EffectKind.CURSE }.mapTo(HashSet()) { it.source }
         val invulnerable: Boolean get() = invulnerableUntil > time
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 
@@ -430,6 +433,9 @@ class Battle(
     }
 
     internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType?>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
+
+    /** Стихийные состояния правил ([com.sperance.exileforge.rules.content.CombatRules.elementalAilments]), что знает клиент. */
+    internal val elementalAilments: List<Ailment> = rules.elementalAilments.mapNotNull { Ailment.of(it.ailment) }.filter { it in ruleOf }
 
     /** Недуги-уязвимости (правило `exposes`: Разложение) и вид урона, что они растят. */
     private val exposing: List<Pair<Ailment, DamageType>> = ruleOf.mapNotNull { (ailment, ruled) -> ruled.second?.takeIf { ruled.first.exposes }?.let { ailment to it } }

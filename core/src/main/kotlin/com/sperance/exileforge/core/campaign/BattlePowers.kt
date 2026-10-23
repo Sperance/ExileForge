@@ -54,8 +54,8 @@ import kotlin.math.roundToInt
 /**
  * What a power's event was about: the foe struck or striking, what the blow did, whether a
  * spell's, the ailment laid, and a fallen foe's ailments before they were cleared. У `SKILL_USE` - умение [cast]
- * на уровне [level], что сила `RECAST` повторяет. [cursed] - павший был проклят до снятия эффектов, [slot] - слот только что применённого умения, [flask] - характеристики, что кладёт выпитая
- * фляга.
+ * на уровне [level], что сила `RECAST` повторяет. [curses] - источники проклятий, что лежали на павшем до снятия эффектов, [slot] - слот только что
+ * применённого умения, [flask] - характеристики, что кладёт выпитая фляга.
  */
 internal class PowerMoment(
     val target: Battle.Fighter? = null,
@@ -65,7 +65,7 @@ internal class PowerMoment(
     val ailments: List<ActiveAilment> = emptyList(),
     val cast: KitSkill? = null,
     val level: Int = 1,
-    val cursed: Boolean = false,
+    val curses: Set<String> = emptySet(),
     val slot: String? = null,
     val flask: Set<String>? = null,
     /** Удар для недугов силы: до и после защит цели; null - удара нет, недуг берёт урон листа. */
@@ -357,7 +357,8 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             PowerCheckKind.TARGET_BLIGHTED -> target != null && battle.foes[target.index].tainted
             PowerCheckKind.TARGET_AILED -> target != null && (target.ailed || moment.ailments.any { it.ailment.ailing })
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }
-            PowerCheckKind.TARGET_CURSED -> target != null && (target.cursed || moment.cursed)
+            PowerCheckKind.TARGET_CURSED -> target != null && (target.cursed || moment.curses.isNotEmpty())
+            PowerCheckKind.TARGET_CURSE -> target != null && check.word?.let { word -> word in target.curses || word in moment.curses } == true
             PowerCheckKind.TARGET_LIFE_BELOW -> target != null && target.life < target.body.maxLife * share
             PowerCheckKind.TARGET_LIFE_ABOVE -> target != null && target.life > target.body.maxLife * share
             PowerCheckKind.FIGHT_BEFORE -> battle.time < check.value
@@ -465,8 +466,12 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
                     battle.afflictSelf(ailment, duration)
                     return 0.0
                 }
-                val hit = moment.hit ?: AilingHit.of(moment.taken.ifEmpty { body.damage })
-                targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, hit) }
+                afflict(ailment, effect.to, moment)
+            }
+
+            PowerAct.ELEMENTAL_AILMENT -> {
+                val choices = battle.elementalAilments
+                if (choices.isNotEmpty()) afflict(choices[battle.random.nextInt(choices.size)], effect.to, moment)
             }
 
             PowerAct.CURSE -> targets(effect.to, moment).forEach(battle::hex)
@@ -527,6 +532,12 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             }
         }
         return 0.0
+    }
+
+    /** Недуг [ailment] силы на врагов [to] момента: основа - удар события, без него - урон листа героя. */
+    private fun afflict(ailment: Ailment, to: PowerTarget, moment: PowerMoment) {
+        val hit = moment.hit ?: AilingHit.of(moment.taken.ifEmpty { hero.body.damage })
+        targets(to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, hit) }
     }
 
     /**
@@ -602,7 +613,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     private companion object {
         /** Effects that show nothing of their own in the log: a blow logs itself, a curse and an ailment land on the foe's line. */
         val SILENT = setOf(
-            PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
+            PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.ELEMENTAL_AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
             PowerAct.CHARGE, PowerAct.RECAST,
         )
 

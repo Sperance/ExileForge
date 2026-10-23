@@ -47,8 +47,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Витрина аукциона: список лотов, строка поиска и фильтры. */
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
-@Composable internal fun ColumnScope.ShowcaseTab(game: GameUi, market: Market, vm: MarketViewModel) {
-    ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase, onRetry = vm::loadShowcase)
+@Composable internal fun ColumnScope.ShowcaseTab(game: GameUi, market: Market, vm: MarketViewModel, onOpen: (String) -> Unit) {
+    ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onOpen = onOpen, onMore = vm::moreShowcase, onRetry = vm::loadShowcase)
 }
 
 /**
@@ -57,24 +57,20 @@ import org.koin.compose.viewmodel.koinViewModel
  * The filter travels in as a header so the list can be driven without a view model: what is worth
  * checking here is which lot offers a Buy button and what the price says, not the form wiring.
  *
- * Buying happens in the lot's own sheet and nowhere else. A line in a list is not enough to decide
+ * Buying happens on the lot's own page ([onOpen], [LotPage]) and nowhere else. A line in a list is not enough to decide
  * on — the rolls are what a trader is paying for — and a purchase is irreversible, so it is worth
  * the extra tap that guarantees the item was looked at.
  *
- * Поиск и фильтры уходят при прокрутке вниз. Не загрузилась витрина - отказ и «Повторить», а не «ничего не найдено». Свой лот не купить.
- * Нехватку видно сразу: «Купить» гаснет, под ней - чего не хватает. Покупку не отменить, поэтому она спрашивается, а вещь, которую не
- * надеть, называется в том же вопросе. Сбор золотом называет долю цены лота, «Останется» - тем же счётом, что у всех оплат.
+ * Поиск и фильтры уходят при прокрутке вниз. Не загрузилась витрина - отказ и «Повторить», а не «ничего не найдено».
  */
 @Composable internal fun ColumnScope.ShowcaseList(
     game: GameUi,
     market: Market,
     header: @Composable () -> Unit = {},
-    onBuy: (String) -> Unit,
+    onOpen: (String) -> Unit,
     onMore: () -> Unit,
     onRetry: () -> Unit = {},
 ) {
-    var openLot by remember { mutableStateOf<String?>(null) }
-    var confirmBuy by remember { mutableStateOf<String?>(null) }
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
     val showcase = market.showcase
     PagedColumn(showcase.items.size, showcase.next != null, Reads.AUCTION in game.loading, onMore, market.filter, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -96,54 +92,8 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         items(market.showcase.items, key = { it.id }) { lot ->
-            LotRow(game, lot, marks = if (lot.belongsTo(game.heroId)) listOf(TradeMark(ui("auction.your_lot"))) else emptyList()) { openLot = lot.id }
+            LotRow(game, lot, marks = if (lot.belongsTo(game.heroId)) listOf(TradeMark(ui("auction.your_lot"))) else emptyList()) { onOpen(lot.id) }
         }
-    }
-    market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        val own = lot.belongsTo(game.heroId)
-        val short = game.shortfall(lot.cost)?.text()
-        LotSheet(
-            game,
-            lot,
-            action = ui("auction.buy"),
-            enabled = !game.busy && !own && short == null,
-            note = if (own) ui("auction.own_lot") else short,
-            onDismiss = { openLot = null },
-            seller = !own,
-        ) {
-            openLot = null
-            confirmBuy = lot.id
-        }
-    }
-    market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
-        val blocked = lotUnmet(game, lot)
-        val orb = orbTitle(lot)
-        val have = game.bagAmount(lot.priceOrb)
-        val fee = lot.fee
-        val feeRate = game.index?.rules?.auction?.buyerFee?.let { r -> if (r % 1.0 == 0.0) r.toLong().toString() else r.toString() }
-        val short = game.shortfall(lot.cost)?.text()
-        ConfirmSheet(
-            title = ui("auction.buy_q"),
-            subtitle = lot.title,
-            icon = { LotIcon(game, lot, 44.dp) },
-            ledger = listOfNotNull(
-                LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                fee.takeIf { it > 0 }?.let { goldLine(feeLabel(feeRate, market.feeCut), it, Tone.SPEND) },
-                have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
-                game.goldBill(fee)?.takeIf { fee > 0 && it.affordable }?.let { goldLine(ui("confirm.left"), it.left) },
-                LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
-                LedgerLine(ui("auction.seller"), sellerName(lot)),
-            ),
-            warning = listOfNotNull(
-                short,
-                blocked.takeIf { it.isNotEmpty() }?.let {
-                    ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, game.lang) })
-                },
-            ).joinToString("\n").ifBlank { null },
-            blocked = short != null,
-            confirm = ui("auction.buy_do"),
-            onDismiss = { confirmBuy = null },
-        ) { onBuy(lot.id) }
     }
 }
 
@@ -249,11 +199,4 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         onDismiss = onDismiss,
         header = { LevelRangeHeader(draft.level, game.heroLevel) { draft = draft.copy(level = it) } },
     )
-}
-
-/** Подпись сбора в счёте покупки: доля цены лота [rate] (правила), со скидкой грамоты гильдии [cut] - и она; без доли - просто «Сбор». */
-private fun feeLabel(rate: String?, cut: Double): String = when {
-    rate == null -> ui("auction.fee")
-    cut > 0 -> ui("auction.fee_rate_cut", rate, number(cut))
-    else -> ui("auction.fee_rate", rate)
 }

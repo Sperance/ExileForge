@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -23,7 +24,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * The market opens at a level the server keeps to itself, so the screen does not guard the gate:
  * it asks, and turns the refusal into an explanation.
  *
- * Без шапки: строка Города уже называет здание; места лотов - числом «занято/всего» у вкладки «Мои лоты» ([slotsBadge]). Открытие вкладки наполняет списки; лист героя нужен правилам, чтобы
+ * Лот открывается страницей - уровнем цепочки «Рынок › <вкладка> › Лот» вместо вкладок ([LotPage]); лота больше нигде нет - страница
+ * закрывается сама. Без шапки: строка Города уже называет здание; места лотов - числом «занято/всего» у вкладки «Мои лоты» ([slotsBadge]). Открытие вкладки наполняет списки; лист героя нужен правилам, чтобы
  * пометить лот, который не надеть. Вещь выставляют из её карточки, стопку - из сумки. Вкладки перечитываются потягиванием.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,15 +52,27 @@ fun AuctionScreen() {
             return@Column
         }
         val tab = market.tab
+        var opened by rememberSaveable { mutableStateOf<String?>(null) }
+        val close = { opened = null }
+        val open = { id: String -> opened = id }
+        opened?.let { id ->
+            val lot = market.lot(id)
+            LaunchedEffect(lot == null) { if (lot == null) close() }
+            lot ?: return@Column
+            TrailLevel(tabTitle(tab), onBack = close) {
+                TrailLevel(ui("auction.lot_title"), onBack = close) { LotPage(game, lot, market.feeCut, model, onClose = close) }
+            }
+            return@Column
+        }
         val chores by model.chores.collectAsStateWithLifecycle()
         MarketTabs(market, due = chores.total > 0, enabled = !busy) { model.tab(it) }
         PullToRefreshBox(isRefreshing = busy || Reads.AUCTION in activity.loading || Reads.LOTS in activity.loading, onRefresh = model::loadAuction, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (tab) {
-                    MarketTab.SHOWCASE -> ShowcaseTab(game, market, model)
-                    MarketTab.AUCTION -> BidsTab(game, market, model)
-                    MarketTab.LOTS -> MyLotsTab(game, market, model)
-                    MarketTab.HISTORY -> HistoryTab(game, market)
+                    MarketTab.SHOWCASE -> ShowcaseTab(game, market, model, open)
+                    MarketTab.AUCTION -> BidsTab(game, market, model, open)
+                    MarketTab.LOTS -> MyLotsTab(game, market, model, open)
+                    MarketTab.HISTORY -> HistoryTab(game, market, open)
                 }
             }
         }

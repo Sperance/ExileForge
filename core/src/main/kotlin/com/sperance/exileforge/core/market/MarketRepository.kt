@@ -40,6 +40,13 @@ data class Market(
      * вернулся ([AuctionLot.expiredBack]).
      */
     val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning || it.expiredBack }.sortedBy { it.expiredBack }
+
+    /**
+     * Лот [id] для его страницы - самый свежий из прочитанного: свои лоты и ставки (их перечитывает каждая команда над лотом), затем
+     * страницы витрины и торгов, затем история - сделкой с проданной копией ([AuctionLot.deal]; купленный лот уже там); null - лота больше нигде нет.
+     */
+    fun lot(id: String): AuctionLot? = sequenceOf(myLots, myBids, auctions.items, showcase.items).firstNotNullOfOrNull { lots -> lots.firstOrNull { it.id == id } }
+        ?: history.firstOrNull { it.id == id }?.deal
 }
 
 /**

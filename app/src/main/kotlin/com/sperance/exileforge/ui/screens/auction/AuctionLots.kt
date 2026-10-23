@@ -70,19 +70,17 @@ import com.sperance.exileforge.ui.theme.*
  * The hero's own lots that are still on sale, and those whose time ran out; withdrawn and sold lots leave this list.
  *
  * Места лотов и торгов общие, одинаковы у всех героев и не покупаются; сколько занято - числом у вкладки, сколько ставок лидирует - в
- * строке над списком. Сверху - свои торги на витрине ([BidRow]: ставок N, лист - [OwnBidSheet]), под ними - свои ставки в чужих торгах
- * (лидирую / перебита, лист ставки - [BidSheet]), ниже - лоты за цену и вернувшиеся. Строка лота - «ещё 14 ч 05 мин»
+ * строке над списком. Сверху - свои торги на витрине ([BidRow]: ставок N), под ними - свои ставки в чужих торгах (лидирую / перебита),
+ * ниже - лоты за цену и вернувшиеся; касание строки открывает страницу лота ([onOpen], [LotPage]). Строка лота - «ещё 14 ч 05 мин»
  * ([lotMarks]: в последний день - цветом [Caution], в окне продления - «· можно продлить»). Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату выставления
- * против кошелька: в листе лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
+ * против кошелька: на странице лота кнопка «Продлить на N дн.», рядом один чип платы и ⓘ с правилом. Истёкший лот возвращается сразу в тайник
  * (письмом - только когда места нет), строка ниже продающихся называет, куда он вернулся.
  *
  * Разделы - [myLotSections] ядра. Дела рынка - поток ядра ([MarketViewModel.chores]): строка, что ждёт действия, несёт жёлтую точку у
  * своей пометки, заголовок раздела - «● ждут: N». Вход с плитки Города - разовая просьба ([MarketViewModel.focus]): вкладка листает к
  * строке и обводит её, пока вкладка открыта и строка ещё ждёт действия.
  */
-@Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
-    var openLot by remember { mutableStateOf<String?>(null) }
-    var openBid by remember { mutableStateOf<String?>(null) }
+@Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel, onOpen: (String) -> Unit) {
     val rules = game.index?.rules?.auction
     val now = rememberServerNow(LOT_TICK_MS)
     val chores by vm.chores.collectAsStateWithLifecycle()
@@ -114,52 +112,14 @@ import com.sperance.exileforge.ui.theme.*
                 is MyLotsRow.Lot -> Box(Modifier.spotlit(row.key == spotlight && chores[row.key] != null)) {
                     val lot = row.lot
                     when (row.kind) {
-                        MyLotKind.AUCTIONS -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openLot = lot.id }
-                        MyLotKind.BIDS -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { openBid = lot.id }
-                        MyLotKind.FIXED -> LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { openLot = lot.id }
+                        MyLotKind.AUCTIONS, MyLotKind.BIDS -> BidRow(lot, bidFacts(game.lang, lot), lotVisualKind(game, lot), rules, now, enabled = !game.busy, due = chores[lot.id]) { onOpen(lot.id) }
+                        MyLotKind.FIXED -> LotRow(game, lot, marks = lotMarks(lot, rules, now), withSeller = false) { onOpen(lot.id) }
                     }
                 }
             }
         }
     }
-    market.myBids.firstOrNull { it.id == openBid }?.let { lot -> BidSheetOf(game, lot, market.feeCut, now, vm) { openBid = null } }
-    sections.lotsOf(MyLotKind.AUCTIONS).firstOrNull { it.id == openLot }?.let { lot ->
-        OwnBidSheet(game, lot, now, onDismiss = { openLot = null }, onWithdraw = {
-            openLot = null
-            vm.cancel(lot.id)
-        }) {
-            openLot = null
-            vm.accept(lot.id)
-        }
-    }
-    sections.lotsOf(MyLotKind.FIXED).firstOrNull { it.id == openLot }?.let { lot ->
-        LotSheet(
-            game,
-            lot,
-            action = ui("auction.withdraw"),
-            enabled = !game.busy && lot.onSale,
-            note = lotReturn(lot),
-            onDismiss = { openLot = null },
-            left = lotLeft(lot, now),
-            extra = if (rules != null && lot.extendable(rules, now)) {
-                {
-                    ExtendRow(game, game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L, rules) {
-                        openLot = null
-                        vm.extend(lot.id)
-                    }
-                }
-            } else {
-                null
-            },
-        ) {
-            openLot = null
-            vm.cancel(lot.id)
-        }
-    }
 }
-
-/** Лоты раздела [kind]; раздела нет - пусто. */
-private fun List<MyLotSection>.lotsOf(kind: MyLotKind): List<AuctionLot> = firstOrNull { it.kind == kind }?.lots.orEmpty()
 
 /** Имя раздела «Моих лотов» в словаре. */
 private fun sectionTitle(kind: MyLotKind): String = when (kind) {
@@ -223,34 +183,6 @@ private fun Modifier.spotlit(on: Boolean): Modifier = if (on) border(2.dp, Cauti
 }
 
 /**
- * Лист своих торгов: товар и факты торгов, как у лота, текущая ставка и число ставок строкой места. «Снять с продажи» - удержанием, при
- * ставке - с предупреждением, что ставка вернётся покупателю письмом; при ставке рядом «Продать за N» - удержанием: торги кончаются сейчас,
- * предмет уходит лучшей ставке ([acceptable]).
- */
-@Composable private fun OwnBidSheet(game: GameUi, lot: AuctionLot, now: Long, onDismiss: () -> Unit, onWithdraw: () -> Unit, onAccept: () -> Unit) {
-    val bid = lot.currentBid
-    val note = if (bid > 0) "${ui("auction.current_bid")}: ${number(bid.toDouble())} ${orbTitle(lot)} · ${ui("auction.bids_count", lot.bidCount)}" else ui("auction.no_bids")
-    LotSheet(game, lot, action = null, enabled = false, note = note, onDismiss = onDismiss, left = lotLeft(lot, now), extra = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (bid > 0) {
-                MutedText(ui("auction.withdraw_bid_warn", "${number(bid.toDouble())} ${orbTitle(lot)}"))
-                MutedText(ui("auction.accept_note"))
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeButton(onClick = onWithdraw, modifier = Modifier.weight(1f), kind = ButtonKind.Secondary, state = ButtonState.of(!game.busy && lot.onSale), hold = Hold()) {
-                    Text(ui("auction.withdraw"), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                if (lot.acceptableAt(now)) {
-                    ForgeButton(onClick = onAccept, modifier = Modifier.weight(1f), state = ButtonState.of(!game.busy), hold = Hold()) {
-                        Text(ui("auction.accept_do", number(bid.toDouble())), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
-    })
-}
-
-/**
  * Пометки строки своего лота к «сейчас» [now] (часы сервера): куда вернулся истёкший ([lotReturn]), иначе «ещё N» - в окне продления
  * (последний день, [rules]) цветом [Caution] - и «можно продлить» с точкой дела, пока продления не кончились; срока нет - пометок нет.
  */
@@ -268,7 +200,7 @@ private fun lotMarks(lot: AuctionLot, rules: AuctionRules?, now: Long): List<Tra
  * Продление своего лота в листе: «Продлить на N дн.» (не хватает золота - недостача, кнопка погашена), рядом один чип платы [fee]
  * против кошелька и ⓘ - когда и сколько раз продлевают ([rules]).
  */
-@Composable private fun ExtendRow(game: GameUi, fee: Long, rules: AuctionRules, onExtend: () -> Unit) {
+@Composable internal fun ExtendRow(game: GameUi, fee: Long, rules: AuctionRules, onExtend: () -> Unit) {
     val bill = game.goldBill(fee)
     val label = ui("auction.extend_days", rules.lotDays)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -288,21 +220,19 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
  * changed hands a tap away; on top - подпись, что здесь только сделки между игроками (торговец сюда не входит), и две свёрнутые таблички
  * «Получено» и «Потрачено» ([DealLedger]), сколько хранятся сделки - в ⓘ у отбора и в подсказке пустой истории (`auction.historyDays`).
  *
- * Стопку и сферу открывает общая карточка, товар - карточка лота.
+ * Стопку и сферу открывает общая карточка, товар - страница лота ([onOpen]).
  */
-@Composable internal fun ColumnScope.HistoryTab(game: GameUi, market: Market) {
+@Composable internal fun ColumnScope.HistoryTab(game: GameUi, market: Market, onOpen: (String) -> Unit) {
     var filter by remember { mutableStateOf(DealFilter.ALL) }
-    var openLot by remember { mutableStateOf<String?>(null) }
     val heroId = game.heroId
     val deals = market.history.map { it.deal }
     val ledger = remember(deals, heroId) { DealLedger.of(deals, heroId) }
-    var opened by remember { mutableStateOf<DealEntry?>(null) }
     val inspect = rememberInspect()
     val open = { entry: DealEntry ->
-        if (entry is DealEntry.Stack) {
-            inspect(Inspect.Stack(entry.code))
-        } else {
-            opened = entry
+        when (entry) {
+            is DealEntry.Stack -> inspect(Inspect.Stack(entry.code))
+            is DealEntry.Goods -> onOpen(entry.lot.id)
+            is DealEntry.Gold -> Unit
         }
     }
     val shown = deals.filter { deal ->
@@ -330,15 +260,8 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
         }
         if (shown.isEmpty() && rules != null) item { InfoCard(ui("auction.history_empty"), ui("auction.history_empty_hint", rules.historyDays)) }
         items(shown, key = { it.id }) { deal ->
-            LotRow(game, deal, marks = listOf(TradeMark(dealMark(deal, heroId))), withSeller = false) { openLot = deal.id }
+            LotRow(game, deal, marks = listOf(TradeMark(dealMark(deal, heroId))), withSeller = false) { onOpen(deal.id) }
         }
-    }
-    shown.firstOrNull { it.id == openLot }?.let { deal ->
-        LotSheet(game, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
-    }
-    when (val entry = opened) {
-        is DealEntry.Goods -> LotSheet(game, entry.lot, action = null, enabled = false, note = dealMark(entry.lot, heroId), onDismiss = { opened = null })
-        is DealEntry.Stack, is DealEntry.Gold, null -> Unit
     }
 }
 

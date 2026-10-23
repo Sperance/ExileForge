@@ -155,7 +155,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * значит. Короткая - значки в углу, гнездо по центру. У обеих числа базы - плитками под плашками, до разделителя и строк
  * ([BaseTiles]). Уникальная и мифическая вещь -
  * искры или звёзды, завитки по углам. [totals] - итог героя «сейчас → станет» под строками,
- * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
+ * [unmet] отмечает чипы требований, [shortLines] - сколько строк печатает короткая карточка. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
  * Цена торговца копии заменяет голую цену шаблона; [priced] false - плашки цены нет (место само печатает цену сделки). Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
@@ -180,6 +180,7 @@ fun ItemCard(
     totals: (@Composable (RelicLook) -> Unit)? = null,
     unmet: Set<NeedKind>? = null,
     seals: List<CardSeal> = emptyList(),
+    shortLines: Int = SHORT_LINES,
     onClick: () -> Unit = {},
 ) {
     val look = relicLook(item.rarity)
@@ -203,8 +204,8 @@ fun ItemCard(
         if (detailed) {
             RelicLines(item, seals) { opened = it }
         } else {
-            ShortLines(rolled.take(SHORT_LINES))
-            if (rolled.size > SHORT_LINES) MutedText(ui("card.more_properties", rolled.size - SHORT_LINES), style = MaterialTheme.typography.labelMedium)
+            ShortLines(rolled.take(shortLines))
+            if (rolled.size > shortLines) MutedText(ui("card.more_properties", rolled.size - shortLines), style = MaterialTheme.typography.labelMedium)
         }
         FatedSlot(item.item, explained = detailed)
         if (detailed && item.slot.isFlask) FlaskYours(look)

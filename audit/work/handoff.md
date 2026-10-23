@@ -27,6 +27,9 @@ Issues: #529-#561 (33 бага). Вне работы: #445 (enhancement).
 | Задача `CollectionSchemas` | `task.bidLeaderBuyouts` (`TaskKind.BID_LEADER_BUYOUTS`) | 5 |
 | Задача `CollectionSchemas` | `task.slotConditions` (`TaskKind.SLOT_CONDITIONS`) | 3 |
 | Код ошибки | `GU_045` (не хватает монет Содружества) | 8 |
+| Задача `CollectionSchemas` | `task.stonePolishing` (`TaskKind.STONE_POLISHING`) | 7 |
+| Задача `CollectionSchemas` | `task.gemDeposits` (`TaskKind.GEM_DEPOSITS`) | 7 |
+| Код ошибки | `CF_009` (уровень карты выше героя) | 7 |
 
 ## Дальше
 Выбор пакетов владельцем. Разборы тем: audit/work/triage/.

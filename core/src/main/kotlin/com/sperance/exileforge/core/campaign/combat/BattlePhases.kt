@@ -15,8 +15,8 @@ data class FoePhase(val step: PhaseStep, val skill: MonsterSkill? = null, val to
 internal fun phaseSource(code: String, step: Int) = "$code#$step"
 
 /**
- * Фазы босса: каждый шаг, до чьего порога опустилось здоровье [foe], срабатывает раз за бой - строки, умение, свита,
- * удар, лечение, барьер, неуязвимость - и пишется в журнал заметкой фазы.
+ * Фазы босса: каждый шаг, до чьего порога опустилось здоровье [foe], срабатывает раз за бой - строки, умение (готово сразу),
+ * свита, удар, лечение, барьер, неуязвимость - и пишется в журнал заметкой фазы.
  *
  * Взрыв фазы - вторичный урон: от него не уклониться.
  */
@@ -31,7 +31,10 @@ internal fun Battle.phase(foe: Fighter) {
         if (step.lines.isNotEmpty()) {
             buff(foe, phaseSource(code, i), step.lines.map { StatLine(it.stat, it.op, it.value) }, if (step.duration > 0) step.duration else FOREVER)
         }
-        phase.skill?.let { learned.getOrPut(foe.index) { mutableListOf() } += it }
+        phase.skill?.let {
+            learned.getOrPut(foe.index) { mutableListOf() } += it
+            foe.readyAt[it.code] = time
+        }
         if (step.heal > 0) foe.life = min(max, foe.life + max * step.heal / 100)
         if (step.shield > 0) {
             foe.barrier += max * step.shield / 100

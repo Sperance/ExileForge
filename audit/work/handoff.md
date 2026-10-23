@@ -80,6 +80,9 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Компонент UI | `ui/components/LootRow` (компактная строка предмета), `SerialMark`, `ItemLevelMark` | 4 |
 | Ключи локали | `fight.level_badge`, `fight.swing_at_you`, `fight.pack_left`, `fight.feed_invite`, `fight.peek.*`, `fight.flask_card`, `fight.stats_button`, `expedition.stats_fight*`, `stat.trend.now`; удалены `fight.at_you`, `expedition.pack_left`, `expedition.monster_line`, `fight.skills_title`, `fight.influence`, `fight.modifiers`, `fight.line_map`, `fight.stat_damage`; `fight.stage` - «Волна» | 2 |
 | Компонент UI | `LevelBadge(level, tint, label)` (Relic.kt), `ItemCardSheet` (ItemInspector.kt), `ArenaHold`/`LocalArenaHold`, `core/sheet/SheetShift` | 2 |
+| Маршрут | `POST hero/autosell/shelves` | 5 |
+| Поле провода | `AutoSell.shelves` (`BagCategory` правил, именами) | 5 |
+| Ключи локали | `bag.section_omens`, `bag.section_shards`, `bag.section_keys`, `bag.section_potions`, `bag.books_other`, `autosell.tab.*`, `autosell.all`, `autosell.group`, `autosell.sell_shelf`, `autosell.bag_note` | 5 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

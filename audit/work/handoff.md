@@ -97,7 +97,7 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Разовая задача | `task.contestRestore` (`TaskKind.CONTEST_RESTORE`): призы дня 22.10 по оставшимся записям | 7 |
 | Коллекция | `ContestPeriod` (мера периода состязания, закреплённая первой записью) | 7 |
 | Провод: поле | `UserProfile.registeredAt`, `UserProfile.sanctions`, `HeroRoster.guilds` | 7 |
-| Ключи локали | `heroes.*` (выбор героя), `signin.*` (вход и карточка аккаунта), `contest.results.*` (итоги при входе), `contest.honour_until` | 7 |
+| Ключи локали | `heroes.*` (выбор героя), `signin.*` (вход и карточка аккаунта), `contest.results.*` (итоги при входе), `contest.honour_until`, `contest.honour_tip`, `hero.level_tip.class`, `auth.by_login_note`; изменены `contest.mail.kind.DAY/WEEK` (ru: «дня»/«недели»); удалены `account.change_password`, `account.bind_title`, `account.bind`, `account.player`, `account.administrator`, `account.sign_out` | 7 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

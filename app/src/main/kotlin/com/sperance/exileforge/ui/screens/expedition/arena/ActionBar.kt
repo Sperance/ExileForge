@@ -40,7 +40,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.SkillDefinition
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
@@ -51,11 +53,11 @@ import com.sperance.exileforge.ui.theme.*
  * The hero's skills and belt in the fight: фляги слева, умения справа - каждое квадратной
  * иконкой «Неон рун» ([NeonSkillIcon]) своего тира: откат - тёмный сектор и секунды, нехватка маны - синяя подложка, пустой
  * слот - пунктирный квадрат того же размера. A tap uses a skill or drinks a flask at once, whatever its condition; a long press
- * on a skill, or its «i», opens its page.
+ * on a skill, or its «i», opens its page. Долгое нажатие на флягу - её карточка предмета ([onFlask], [FlaskCardSheet]) - и до боя, и на паузе.
  *
  * Четыре слота умений с тремя флягами - плитки меньше, чтобы ряд влез в узкий экран.
  */
-@Composable internal fun ActionBar(game: GameUi, fight: FightHud, frame: FightFrame, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
+@Composable internal fun ActionBar(game: GameUi, fight: FightHud, frame: FightFrame, onCommand: (RunCommand) -> Unit, onFlask: (FlaskView) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null
     val index = game.index
     val skills = game.hero?.skills ?: HeroSkills()
@@ -68,7 +70,7 @@ import com.sperance.exileforge.ui.theme.*
             if (view == null) {
                 Box(Modifier.size(flask).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
             } else {
-                FlaskGain(view.charges, flaskTint(view.kind)) { FlaskButton(view, live, flask) { onCommand(RunCommand.Drink(view.slot)) } }
+                FlaskGain(view.charges, flaskTint(view.kind)) { FlaskButton(view, live, flask, { onFlask(view) }) { onCommand(RunCommand.Drink(view.slot)) } }
             }
         }
         Spacer(Modifier.weight(1f))
@@ -192,14 +194,20 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onDismiss: () -> Uni
     }
 }
 
-/** Фляга пояса в бою; погашенная из-за глотка впустую - касание называет полные полосы ([flaskTap]). */
-@Composable private fun FlaskButton(view: FlaskView, live: Boolean, side: Dp, onTap: () -> Unit) {
+/**
+ * Фляга пояса в бою; погашенная из-за глотка впустую - касание называет полные полосы ([press]). Долгое нажатие - её карточка ([onInfo]),
+ * в любой миг боя.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FlaskButton(view: FlaskView, live: Boolean, side: Dp, onInfo: () -> Unit, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
     val why = remember { mutableStateOf<String?>(null) }
+    val label = ui("fight.flask_card")
     Box(
         Modifier.size(side).clip(CircleShape).background(Color(0xE60A0D12))
             .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
-            .flaskTap(view, why, live, onTap),
+            .combinedClickable(onLongClickLabel = label, onLongClick = onInfo) { if (live) view.press(why, onTap) },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -218,7 +226,24 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onDismiss: () -> Uni
  * Касание фляги [view], пока [live]: годная пьётся ([onDrink]), погашенная из-за глотка впустую кладёт в [why] слова её полных полос -
  * их показывает [FlaskWhy].
  */
-internal fun Modifier.flaskTap(view: FlaskView, why: MutableState<String?>, live: Boolean = true, onDrink: () -> Unit): Modifier = clickable(enabled = live && (view.usable || view.wasted)) { if (view.usable) onDrink() else why.value = view.wastedWhy }
+internal fun Modifier.flaskTap(view: FlaskView, why: MutableState<String?>, live: Boolean = true, onDrink: () -> Unit): Modifier = clickable(enabled = live && (view.usable || view.wasted)) { view.press(why, onDrink) }
+
+/** Касание фляги: годная пьётся ([onDrink]), погашенная из-за глотка впустую кладёт в [why] слова её полных полос, прочая - ничего. */
+private fun FlaskView.press(why: MutableState<String?>, onDrink: () -> Unit) {
+    when {
+        usable -> onDrink()
+        wasted -> why.value = wastedWhy
+    }
+}
+
+/** Вещь фляги места пояса [slot] у героя: места пояса - места фляг правил по порядку ([Slot.FLASKS]); место пусто - null. */
+internal fun GameUi.beltFlask(slot: Int): ItemInstance? = Slot.FLASKS.getOrNull(slot)?.let { hero?.equipped?.get(it) }
+
+/** Карточка фляги пояса [item] поверх боя - тот же лист карточки предмета, что везде ([ItemCardSheet]); бой арены стоит, пока она открыта. */
+@Composable internal fun FlaskCardSheet(game: GameUi, item: ItemInstance, onDismiss: () -> Unit) {
+    ArenaHold()
+    ItemCardSheet(game, Inspect.Copy(item, forge = false), onDismiss)
+}
 
 /** Подсказка погашенной фляги - почему её глоток впустую ([flaskTap]); касание её прячет. */
 @Composable internal fun FlaskWhy(why: MutableState<String?>) {

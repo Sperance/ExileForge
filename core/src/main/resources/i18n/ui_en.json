@@ -3366,6 +3366,7 @@
   "expedition.loot_gone": "This piece is not in the stash: it was sold for lack of room.",
   "expedition.loot_arriving": "The loot is still on its way…",
   "fight.skill_info": "About the skill",
+  "fight.flask_card": "Flask card",
   "fight.charge.FRENZY": "Frenzy charges",
   "fight.charge.POWER": "Power charges",
   "fight.charge.ENDURANCE": "Endurance charges",

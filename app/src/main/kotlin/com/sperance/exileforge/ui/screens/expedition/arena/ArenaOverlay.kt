@@ -44,7 +44,8 @@ private const val HERO_CARD = -1
  * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
  * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра; [top] - полоса режима над врагами (Честь Разлома). Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
  * раз при падении здоровья через свою черту, вибрация - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
- * бой. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
+ * бой, карточка фляги (долгое нажатие на флягу, [FlaskCardSheet]) - тоже. [game] - срез героя в наборе боя (в походе - с находками
+ * захода), по нему - карточка фляги. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
  * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление. Касание врага за
  * живым провокатором ставит фокус в очередь и говорит об этом подсказкой ([FocusHint]); касание тотема в бою - что он неуязвим.
  */
@@ -84,6 +85,7 @@ private const val HERO_CARD = -1
     val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index
     val large = fight.scouting
     var info by remember { mutableStateOf<SkillView?>(null) }
+    var flaskCard by remember { mutableStateOf<Int?>(null) }
     var inspect by remember { mutableStateOf<Int?>(null) }
     var hint by remember { mutableStateOf<FocusHint?>(null) }
     val prefs = koinViewModel<SettingsViewModel>()
@@ -147,7 +149,7 @@ private const val HERO_CARD = -1
                 if (boss == null) PackLine(fight)
                 Box(Modifier.weight(1f).fillMaxWidth()) { FightFeed(game, fight, names, onCommand, onLogFilter) }
                 HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD).then(introField), large, mods, onCommand)
-                if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
+                if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand, { flaskCard = it.slot }) { info = it }
                 Controls(fight, onCommand)
             }
             StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
@@ -172,6 +174,7 @@ private const val HERO_CARD = -1
             }
             hint?.let { FocusHintCard(it, { hint = null }, Modifier.align(Alignment.Center).padding(horizontal = 12.dp)) }
             info?.let { view -> FightSkillSheet(game, view) { info = null } }
+            flaskCard?.let(game::beltFlask)?.let { item -> FlaskCardSheet(game, item) { flaskCard = null } }
             fight.outcome?.takeIf { it != Outcome.WIN }?.let {
                 Text(
                     ui("expedition.outcome_${it.name.lowercase()}"),

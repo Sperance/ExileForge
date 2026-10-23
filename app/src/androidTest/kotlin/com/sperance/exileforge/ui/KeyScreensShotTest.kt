@@ -256,7 +256,7 @@ class KeyScreensShotTest {
             FlaskView(2, "utility", FlaskKind.UTILITY, 0, 3, 1, 0f, SlotCondition.READY),
         )
         val fight = FightHud(leader, emptyList(), 420, 0, emptyList(), 1, null, heroMana = 60, heroMaxMana = 120, skills = views, flasks = flasks)
-        ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}) {}
+        ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}, {}) {}
     }
 
     /** Арена до боя с одним врагом: широкая карточка без строки стаи, в центре - пустой журнал с приглашением коснуться врага. */

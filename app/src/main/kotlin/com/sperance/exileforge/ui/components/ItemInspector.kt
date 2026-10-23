@@ -113,23 +113,29 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 /** Открыватель карточки предмета из [LocalItemInspector]; без хозяина - пустой. */
 @Composable fun rememberInspect(): (Inspect) -> Unit = LocalItemInspector.current ?: NO_INSPECT
 
-/** Хозяин карточек предметов: всё внутри открывает их через [LocalItemInspector]; лист один, поверх. */
+/** Хозяин карточек предметов: всё внутри открывает их через [LocalItemInspector]; лист один, поверх ([ItemCardSheet]). */
 @Composable fun ItemInspectorHost(game: GameUi, content: @Composable () -> Unit) {
     var open by remember { mutableStateOf<Inspect?>(null) }
     val opener: (Inspect) -> Unit = remember { { open = it } }
     CompositionLocalProvider(LocalItemInspector provides opener) { content() }
-    val shown = open ?: return
-    val close = { open = null }
-    val footer: @Composable ColumnScope.() -> Unit = { InspectActions(shown, NO_CHOICE, close) }
-    when (shown) {
-        is Inspect.Stack -> StackInfoSheet(game, shown.code, footer, close)
+    open?.let { shown -> ItemCardSheet(game, shown) { open = null } }
+}
 
-        is Inspect.Copy -> game.view(shown.item)?.let { CopySheet(game, it, shown, close) }
+/**
+ * Лист карточки предмета [shown] - один для хозяина карточек и мест, что держат лист сами (фляга в бою): стопка, копия с ценой и
+ * итогом «если надеть», витрина шаблона; под карточкой - действия места. Закрытие и любое действие - [onDismiss].
+ */
+@Composable fun ItemCardSheet(game: GameUi, shown: Inspect, onDismiss: () -> Unit) {
+    val footer: @Composable ColumnScope.() -> Unit = { InspectActions(shown, NO_CHOICE, onDismiss) }
+    when (shown) {
+        is Inspect.Stack -> StackInfoSheet(game, shown.code, footer, onDismiss)
+
+        is Inspect.Copy -> game.view(shown.item)?.let { CopySheet(game, it, shown, onDismiss) }
 
         is Inspect.Showcase -> {
             val index = game.index ?: return
             val view = remember(shown.template, index) { index.template(shown.template)?.let { ItemView.showcase(it, index) } } ?: return
-            CardSheet(close, footer.takeIf { shown.action != null }) {
+            CardSheet(onDismiss, footer.takeIf { shown.action != null }) {
                 ItemCard(view, enabled = false, detailed = true, action = false)
             }
         }

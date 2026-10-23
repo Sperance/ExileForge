@@ -65,7 +65,7 @@ import com.sperance.exileforge.ui.theme.*
     val compact = fight.skills.size > COMPACT_FROM
     val side = if (compact) COMPACT_SIDE else SKILL_SIDE
     val flask = if (compact) COMPACT_FLASK else FLASK_SIDE
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().toastFloor(), horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.flasks.forEach { view ->
             if (view == null) {
                 Box(Modifier.size(flask).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))

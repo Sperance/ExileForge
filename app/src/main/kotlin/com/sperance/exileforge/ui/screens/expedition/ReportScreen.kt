@@ -110,14 +110,14 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
             }
         }
         if (won) {
-            ForgeButton(state = ButtonState.of(!holding), onClick = onContinue, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+            ForgeButton(state = ButtonState.of(!holding), onClick = onContinue, modifier = Modifier.fillMaxWidth().toastFloor(), size = ButtonSize.Wide) {
                 Text(ui("expedition.continue"), style = MaterialTheme.typography.titleMedium)
             }
         } else {
             ForgeButton(
                 state = ButtonState.of(!holding),
                 onClick = onContinue,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().toastFloor(),
                 kind = ButtonKind.Danger,
                 size = ButtonSize.Wide,
                 icon = ForgeGlyphs.Skull,
@@ -244,7 +244,7 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
                 else -> FightPane(report) { breakdown = true }
             }
         }
-        ForgeButton(onClick = onContinue, modifier = Modifier.fillMaxWidth(), size = ButtonSize.Wide) {
+        ForgeButton(onClick = onContinue, modifier = Modifier.fillMaxWidth().toastFloor(), size = ButtonSize.Wide) {
             Text(ui("expedition.continue"), style = MaterialTheme.typography.titleMedium)
         }
     }

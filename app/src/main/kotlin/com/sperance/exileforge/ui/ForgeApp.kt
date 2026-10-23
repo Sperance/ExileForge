@@ -46,7 +46,6 @@ import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.ReportsSheet
 import com.sperance.exileforge.ui.components.StartActions
 import com.sperance.exileforge.ui.components.StartStages
-import com.sperance.exileforge.ui.components.ToastBelow
 import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.UpdateHintState
@@ -114,6 +113,7 @@ import org.koin.compose.viewmodel.koinViewModel
     CompositionLocalProvider(
         LocalUpdates provides updates,
         LocalUpdateHint provides remember(hardVersionCode) { UpdateHintState() },
+        com.sperance.exileforge.ui.components.LocalToastFloors provides remember { com.sperance.exileforge.ui.components.ToastFloors() },
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
         com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
@@ -237,9 +237,6 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Тост под шапкой игры: оболочка с баннером опускает его ниже баннера. */
-private val BANNER_TOAST_TOP = 60.dp
-
 /**
  * Стек экранов: `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
@@ -321,7 +318,6 @@ private val BANNER_TOAST_TOP = 60.dp
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }
-            if (bars) ToastBelow(BANNER_TOAST_TOP)
         }
     }
 }

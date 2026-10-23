@@ -61,6 +61,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.EngineRules
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
+import com.sperance.exileforge.ui.components.toastFloor
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.solid
 import com.sperance.exileforge.ui.nav.Route
@@ -146,7 +147,7 @@ private const val CAPSULE_GROW = 2.4f
     val invites by shell.guildInvites.collectAsStateWithLifecycle()
     val plate = RoundedCornerShape(24.dp)
     Row(
-        Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(plate, elevation = 16.dp).clip(plate)
+        Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).toastFloor().depthPanel(plate, elevation = 16.dp).clip(plate)
             .fillMaxWidth().height(68.dp).padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),

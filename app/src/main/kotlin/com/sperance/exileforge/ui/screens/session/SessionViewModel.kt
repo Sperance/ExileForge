@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.app.SessionActions
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notice
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
@@ -39,7 +40,7 @@ class SessionViewModel(
     fun logout() = sessionActions.logout()
     fun language(lang: Lang) = loader.language(lang)
     fun dismissMessage() = commands.dismissMessage()
-    fun dismissNotice() = notices.dismiss()
+    fun dismissNotice(shown: Notice) = notices.dismiss(shown)
 
     fun changePassword(current: String, replacement: String) = sessionActions.changePassword(current, replacement)
     fun bind(login: String, password: String) = sessionActions.bind(login, password)

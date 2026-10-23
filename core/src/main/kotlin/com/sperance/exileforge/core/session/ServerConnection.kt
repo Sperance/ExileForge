@@ -74,18 +74,42 @@ enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS, FAILED }
 
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 
-/** Тосты: успех, достойный строки; новая заменяет показанную и уходит сама. */
+/**
+ * Тосты успеха очередью: показан первый ([state]), прочие ждут и выходят по одному, когда показанный уйдёт ([dismiss]), - два успеха
+ * подряд не теряют первый. Тот же текст, что показан, начинает его срок заново, тот же, что ждёт, второй раз не встаёт; ждущих не больше
+ * [WAITING] - лишний вытесняет самый старый.
+ */
 class Notices {
     private val mutable = MutableStateFlow<Notice?>(null)
     val state: StateFlow<Notice?> = mutable
+    private val waiting = ArrayDeque<Notice>()
 
     fun toast(text: String, kind: NoticeKind = NoticeKind.DONE) {
         if (text.isBlank()) return
-        mutable.value = Notice(text, kind)
+        val notice = Notice(text, kind)
+        synchronized(waiting) {
+            val shown = mutable.value
+            when {
+                shown == null || shown.text == text -> mutable.value = notice
+                waiting.any { it.text == text } -> Unit
+                else -> {
+                    if (waiting.size >= WAITING) waiting.removeFirst()
+                    waiting.addLast(notice)
+                }
+            }
+        }
     }
 
-    fun dismiss() {
-        mutable.value = null
+    /** Убирает показанный тост [shown] и выводит следующий; уже ушедший (второе касание, срок после касания) ничего не меняет. */
+    fun dismiss(shown: Notice) {
+        synchronized(waiting) {
+            if (mutable.value != shown) return
+            mutable.value = waiting.removeFirstOrNull()
+        }
+    }
+
+    private companion object {
+        const val WAITING = 3
     }
 }
 

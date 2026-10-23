@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.SessionActions
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notice
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.world.WorldLoader
 import kotlinx.coroutines.flow.StateFlow
@@ -28,5 +29,5 @@ class FateViewModel(
     fun logout() = sessionActions.logout()
     fun language(lang: Lang) = loader.language(lang)
     fun dismissMessage() = commands.dismissMessage()
-    fun dismissNotice() = notices.dismiss()
+    fun dismissNotice(shown: Notice) = notices.dismiss(shown)
 }

@@ -29,6 +29,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.core.session.Notice
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
@@ -176,7 +177,7 @@ class ShellViewModel(
     fun announce(text: String) = notices.toast(text)
 
     fun dismissMessage() = commands.dismissMessage()
-    fun dismissNotice() = notices.dismiss()
+    fun dismissNotice(shown: Notice) = notices.dismiss(shown)
 
     /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков. */
     fun logFilter(kinds: Set<LogKind>) {

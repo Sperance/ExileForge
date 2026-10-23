@@ -216,7 +216,6 @@ import org.koin.compose.viewmodel.koinViewModel
 
                 RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
             }
-            ToastBelow(0.dp)
         }
     }
 }

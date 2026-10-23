@@ -46,7 +46,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * заголовок Cinzel, абзацы [paragraphs] печатаются по буквам один за другим. Касание дописывает абзац, касание по дописанному -
  * следующий, после последнего - [onDone]. «Пропустить» и «назад» ([onSkip], по умолчанию - [onDone]) работают, если [skippable], и не
  * раньше [skipAfterMs]. Без анимаций (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета; тосты над сценой - общего слоя
- * ([ToastLayer]), сцена лишь снимает отступ шапки под ней ([ToastBelow]).
+ * ([ToastLayer]).
  *
  * Счёт напечатанных букв абзаца сбрасывается синхронно в `advance()`, иначе новый абзац мигнёт целиком.
  */
@@ -59,7 +59,6 @@ import org.koin.compose.viewmodel.koinViewModel
     skipAfterMs: Long = 0,
     onSkip: () -> Unit = onDone,
 ) {
-    ToastBelow()
     val moving = LocalMotion.current
     var shown by remember(paragraphs) { mutableIntStateOf(1) }
     var typed by remember(paragraphs) { mutableIntStateOf(if (moving) 0 else paragraphs.firstOrNull().orEmpty().length) }

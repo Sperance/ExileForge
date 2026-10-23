@@ -125,7 +125,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         } else {
             val taken = state.allocated.toSet()
             Sky(index, taken, atlas.selected, camera, Modifier.fillMaxSize(), centerOn, { centerOn = null }, onSelect = model::selectAtlasNode)
-            Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.align(Alignment.BottomCenter).toastFloor(), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
                 node?.let {
@@ -184,7 +184,6 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
         }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
-        ToastBelow(64.dp)
     }
 }
 

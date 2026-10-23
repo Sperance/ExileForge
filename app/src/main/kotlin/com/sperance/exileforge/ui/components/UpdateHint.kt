@@ -160,10 +160,10 @@ val LocalUpdateHint = staticCompositionLocalOf { UpdateHintState() }
     }
 }
 
-/** Карточка тоста и плашки: панель «Глубины» с оттенком [accent] и тонкой окантовкой его цвета, не шире окна обновления. */
+/** Карточка тоста и плашки (тост слоя [ToastLayer] ложится над ней, [toastFloor]): панель «Глубины» с оттенком [accent] и тонкой окантовкой его цвета, не шире окна обновления. */
 @Composable private fun UpdateCard(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        Modifier.widthIn(max = CARD_WIDTH).fillMaxWidth().depthPanel(CardShape, accent = accent, elevation = 14.dp)
+        Modifier.toastFloor().widthIn(max = CARD_WIDTH).fillMaxWidth().depthPanel(CardShape, accent = accent, elevation = 14.dp)
             .border(1.dp, accent.copy(alpha = .35f), CardShape).padding(horizontal = 14.dp, vertical = 12.dp),
         content = content,
     )

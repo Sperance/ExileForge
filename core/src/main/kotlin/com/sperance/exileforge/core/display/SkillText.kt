@@ -47,13 +47,15 @@ object SkillText {
      * What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. Пороги низкого
      * здоровья строк - из правил боя контента [index], не из словаря; числа строк характеристик - тоже из него ([statLine]).
      *
-     * Урон во времени называет своё состояние (яд или свой урон умения); руны - эхо и дары применения.
+     * Урон во времени называет своё состояние (яд или свой урон умения) и вид урона («Яд: 66–98 урона хаосом за 7,5 с»), под ним - от чего
+     * он растёт и чем режется; руны - эхо и дары применения.
      */
     fun lines(skill: SkillDefinition, level: Int, index: ContentIndex): List<String> = buildList {
         if (skill.reserve > 0) add(ui("skill.line.reserve.${skill.reserves}", number(skill.reserve)))
         skill.hit?.let { addAll(hit(it, level, index)) }
         skill.dot?.let { dot ->
-            add(ui("skill.line.dot", number(dot.min.at(level)), number(dot.max.at(level)), element(dot.element), fineNumber(dot.duration), ailment(dot.ailment)))
+            add(ui("skill.line.dot", ui("skill.dot.${dot.ailment}"), number(dot.min.at(level)), number(dot.max.at(level)), ui("skill.damage_of.${dot.element}"), fineNumber(dot.duration)))
+            add(ui("skill.dot_growth.${dot.ailment}"))
             if (dot.targets != 1) add(targets(dot.targets))
             addAll(ailments(dot.ailments, level))
         }

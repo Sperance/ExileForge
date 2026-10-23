@@ -294,6 +294,11 @@ class UiStringsTest {
             SkillType.entries.forEach { add("skills.type.${it.name}") }
             SkillEvent.entries.forEach { add("skill.on.${it.name}") }
             (DamageType.entries.map { it.name } + "RANDOM").forEach { add("skill.element.$it") }
+            DamageType.entries.forEach { add("skill.damage_of.${it.name}") }
+            com.sperance.exileforge.rules.content.SkillBook.DOT_AILMENTS.forEach {
+                add("skill.dot.$it")
+                add("skill.dot_growth.$it")
+            }
             (Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
             listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
             listOf("requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }

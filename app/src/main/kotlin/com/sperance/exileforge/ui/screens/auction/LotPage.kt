@@ -256,7 +256,7 @@ private const val FOLDED_LINES = 2
 
 /**
  * Чек «Ваша ставка» внизу страницы чужих торгов: сумма шагами «−» / «+», наименьшая ставка и шаг, сколько сфер в сумке, сбор ставки,
- * итог «Спишется сейчас» - сферы и сбор (своя лидирует - «Ваш залог в торгах»), «Выкуп после ставки» - нынешний → после ставки
+ * итог «Спишется сейчас» - сферы и сбор (своя лидирует - «Ваш залог в торгах»), «После ставки N выкуп станет M» - от набранной суммы
  * ([buyoutAfterBid]), когда кончатся торги, если поставить ([BidTailLine]), и сбор выкупа. Недостача и запрет своего аккаунта -
  * текстом [LossText] под чеком.
  */
@@ -302,9 +302,9 @@ private const val FOLDED_LINES = 2
             GoldPrice(fee)
         }
         if (bid.bidding && !lot.buysOut(amount)) {
-            val after = lot.buyoutAfterBid(bid.rules)
-            CheckRow(ui("auction.your_bid_buyout")) {
-                FullNumberTipped(after) { Text(ui("auction.your_bid_buyout_value", compactNumber(lot.price), compactNumber(after)), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+            val after = lot.buyoutAfterBid(bid.rules, amount)
+            CheckRow(ui("auction.your_bid_buyout", compactNumber(amount))) {
+                FullNumberTipped(after) { Text(compactNumber(after), color = Parchment, style = MaterialTheme.typography.bodySmall) }
             }
         }
         BidTailLine(lot, bid.rules, bid.now)

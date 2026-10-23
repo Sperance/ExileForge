@@ -83,9 +83,10 @@ data class HazardAilment(val ailment: Ailment, val type: DamageType, val strengt
 
 /**
  * Что ловушка сделает с героем сейчас - подсказка по касанию и сам удар: вид [kind], тип урона [type], сколько снимет удар до щита
- * [damage] (защиты героя, потолок удара правил) и недуг [ailment]; [every] - раз в сколько секунд бьёт.
+ * [damage] - [lifeShare] процентов максимума здоровья (защита от ловушек и потолок удара правил уже легли), и недуг [ailment];
+ * [every] - раз в сколько секунд бьёт.
  */
-data class TrapThreat(val kind: TrapKind, val type: DamageType, val damage: Double, val ailment: HazardAilment?, val every: Double)
+data class TrapThreat(val kind: TrapKind, val type: DamageType, val damage: Double, val lifeShare: Double, val ailment: HazardAilment?, val every: Double)
 
 /** Число урона карты на экране и сколько секунд ему ещё висеть. */
 internal class ShownHazard(val view: HazardView, var left: Double)
@@ -232,16 +233,16 @@ internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
 /**
  * Удар ловушки [feature] видом [kind] по герою сейчас, не нанесённый: доля максимума здоровья её стихией с силой ловушек карты
  * ([MapFeature.Trap.power]: тир и сила механики), не больше потолка удара правил (`traps.maxHit`) - одним срабатыванием не убивает;
- * броня режет физический, сопротивление - стихийный. Защита героя от ловушек - общая (`TRAP_WARD`) и стихии (`TRAP_WARD_<стихия>`),
- * 100% - ловушка не ранит. Состояние - из типа урона; основа до защит (яд) - сопротивление режет тик, а не наложение.
+ * броня, сопротивления и прочие защиты листа его не режут, энергощит принимает его первым, как любой урон ([hurt]). Режет только защита
+ * героя от ловушек - общая (`TRAP_WARD`) и стихии (`TRAP_WARD_<стихия>`), 100% - ловушка не ранит. Состояние - из типа урона; недуг
+ * ловушки сопротивление режет на тике ([carried]), а не на наложении.
  */
 internal fun ExpeditionRun.threat(feature: MapFeature.Trap, kind: TrapKind = feature.trap): TrapThreat {
     val type = DamageType.element(kind.element) ?: DamageType.PHYSICAL
     val ward = (FeatureStat.ward(kind.element)?.let { run.context.feature(it) } ?: 0.0) + run.context.feature(FeatureStat.TRAP_WARD)
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
-    val raw = hero.maxLife * minOf(kind.hit * share, traps?.maxHit ?: 100.0) / 100
-    val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    return TrapThreat(kind, type, dealt * hero.damageTaken(type), HazardAilment.of(kind, type, share), kind.every)
+    val lifeShare = minOf(kind.hit * share, traps?.maxHit ?: 100.0)
+    return TrapThreat(kind, type, hero.maxLife * lifeShare / 100, lifeShare, HazardAilment.of(kind, type, share), kind.every)
 }
 
 /** Что ловушка [spot] сделает с героем сейчас - подсказка по касанию: её вид этого мига (у пульсирующей зоны - стихия цикла). */

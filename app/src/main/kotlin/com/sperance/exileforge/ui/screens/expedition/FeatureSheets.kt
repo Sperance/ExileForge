@@ -372,7 +372,8 @@ private fun hazardLine(hazard: HazardView): String {
 }
 
 /**
- * Подсказка по касанию ловушки [spot]: имя вида, «стихия · недуг · урон» - что удар снимет с героя сейчас ([trapThreat]; у
+ * Подсказка по касанию ловушки [spot]: имя вида, «стихия · недуг · урон (доля здоровья)» - что удар снимет с героя сейчас мимо брони и
+ * сопротивлений ([trapThreat]; у
  * пульсирующей зоны - стихия этого цикла, у жернова вместо недуга - отброс) и «Бьёт раз в N с, пока стоишь в зоне» ([MapTip]);
  * касание другой ловушки сменяет её.
  */
@@ -381,10 +382,11 @@ private fun hazardLine(hazard: HazardView): String {
     val type = ui(threat.type.key())
     val effect = threat.ailment?.let { ui(it.ailment.key()) } ?: ui("trap.knock").takeIf { threat.kind.knock > 0 }
     val damage = threat.damage.roundToInt()
+    val share = number(threat.lifeShare)
     val tint = tickTint(null, threat.type, onHero = true)
     MapTip(spot, tint, onDone) {
         Text(ui("trap.${spot.trap.trap.code}"), color = Parchment, style = MaterialTheme.typography.titleSmall)
-        Text(if (effect != null) ui("trap.tip", type, effect, damage) else ui("trap.tip_plain", type, damage), color = tint, style = MaterialTheme.typography.bodySmall)
+        Text(if (effect != null) ui("trap.tip", type, effect, damage, share) else ui("trap.tip_plain", type, damage, share), color = tint, style = MaterialTheme.typography.bodySmall)
         MutedText(ui("trap.every", number(threat.every)))
     }
 }

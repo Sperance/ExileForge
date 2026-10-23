@@ -68,6 +68,10 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 ## Занято
 | Что | Значение | Пакет |
 |-----|----------|-------|
+| Провод: enum | `RefusalReason` (rules/run): RULE, GONE, BOSS_COOLDOWN, BOSS_SEALED, NO_PORTAL, NO_VAAL_ZONE, PRICE, CHOICE, TOOL, STASH, DEPTH, SUMMON, GEAR, FIGHT; поле `RunReport.refusals` | 1 |
+| Провод: поле | `VaalZone.atlasEffect`, `FountainRule.shield` | 1 |
+| Ключи локали | `expedition.refused.because`, `expedition.refused.reason.*`, `run.mods.*` (окно модификаторов карты) | 1 |
+| Компонент UI | `ui/components/SourcedSumList` (строка-сумма с источниками) | 1 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

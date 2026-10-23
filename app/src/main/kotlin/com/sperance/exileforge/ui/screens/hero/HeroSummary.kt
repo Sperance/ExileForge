@@ -283,18 +283,18 @@ private class RowFold(val trend: StatTrend?, val unfolded: Set<String>, val togg
         was != null -> Modifier.background(Ember.copy(alpha = .08f))
         else -> Modifier
     }
-    val folding = trend != null && fold.trend != null
-    val opened = folding && key in fold.unfolded
-    val tap = if (folding) Modifier.foldToggle(opened) { fold.toggle(key) } else Modifier.clickable { open(key) }
+    val compare = fold.trend
+    val opened = trend != null && key in fold.unfolded
+    val tap = if (trend != null) Modifier.foldToggle(opened) { fold.toggle(key) } else Modifier.clickable { open(key) }
     StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(tap).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
-    if (folding && trend != null && fold.trend != null) {
+    if (trend != null && compare != null) {
         FoldBody(opened) {
             TrendFold(
-                fold.trend.baseLabel,
+                compare.baseLabel,
                 rowValue(key, was ?: 0.0, game.index, before.orEmpty()),
                 rowValue(key, value, game.index, figures.stats),
                 trend,
-                fold.trend.parts[key].orEmpty(),
+                compare.parts[key].orEmpty(),
             ) { open(key) }
         }
     }

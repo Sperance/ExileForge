@@ -178,7 +178,7 @@ internal fun WorkLedger(
             if (sums.isEmpty) {
                 Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
             } else {
-                LootPanel<ItemInstance>(game.index, emptyList(), sums.gathered, emptyList(), onStack = { inspect(Inspect.Stack(it)) }) {}
+                LootPanel(game.index, sums.gathered, emptyList(), onStack = { inspect(Inspect.Stack(it)) })
                 if (sums.spentSorted.isNotEmpty()) {
                     Column {
                         sums.spentSorted.forEach { (code, amount) -> SpentRow(game, code, amount, sums.scale) { inspect(Inspect.Stack(code)) } }

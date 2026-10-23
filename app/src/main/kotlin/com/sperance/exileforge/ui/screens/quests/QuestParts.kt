@@ -89,7 +89,7 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
     val inspect = rememberInspect()
     val sums = lootSums(reward.gold, reward.experience) +
         listOfNotNull(LootSum(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), Rune).takeIf { reward.guildExperience > 0 })
-    LootPanel<Unit>(LocalContentIndex.current, emptyList(), reward.orbs, sums, onStack = { inspect(Inspect.Stack(it)) }, modifier = modifier) {}
+    LootPanel(LocalContentIndex.current, reward.orbs, sums, onStack = { inspect(Inspect.Stack(it)) }, modifier = modifier)
 }
 
 @Composable internal fun QuestBar(progress: Long, target: Long, color: Color, thickness: Dp = 6.dp) {

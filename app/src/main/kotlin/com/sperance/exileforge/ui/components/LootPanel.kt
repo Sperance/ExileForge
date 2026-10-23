@@ -81,6 +81,12 @@ fun <T> LootPanel(
     }
 }
 
+/** Добыча без вещей - стопки [stacks] ячейками и суммы [sums] чипами в облике [LootPanel] (награда задания, добытое ремеслом). */
+@Composable
+fun LootPanel(index: ContentIndex?, stacks: Map<String, Long>, sums: List<LootSum>, onStack: (String) -> Unit, modifier: Modifier = Modifier) {
+    LootPanel<Nothing>(index, emptyList(), stacks, sums, onStack, modifier) {}
+}
+
 /** Чип суммы добычи и прочих чисел итогов (убито, рецепт): текст цветом [tone] в тёмной рамке; с [onClick] - кнопка в рамке его цвета. */
 @Composable fun LootChip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
     val shape = RoundedCornerShape(3.dp)

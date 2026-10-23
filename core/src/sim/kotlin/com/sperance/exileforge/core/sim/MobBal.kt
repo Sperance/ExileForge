@@ -1555,8 +1555,8 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
 
 /** Раш (RULES «Общее», цели баланса): ступень I зачищает эталон уровня финала региона в [FIRST] попыток, дальше линейно до [LAST] на последней. */
 object RushTarget {
-    const val FIRST = 0.50
-    const val LAST = 0.15
+    const val FIRST = 0.60
+    const val LAST = 0.05
 
     /** Цель ступени [tier] (с 0) из [tiers]. */
     fun at(tier: Int, tiers: Int): Double = if (tiers <= 1) FIRST else FIRST + (LAST - FIRST) * tier / (tiers - 1)

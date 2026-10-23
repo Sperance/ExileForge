@@ -216,7 +216,8 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
     val levels = game.index?.chartLevels?.takeIf { it.chooses(work.job) }
     val chartLevel = rememberChartLevel(game, vm, levels, work, held)
-    val job = levels?.let { work.charted(it, chartLevel.value) } ?: work.options.firstOrNull { it.choice == picked } ?: work
+    val charted = remember(levels, work, chartLevel.value) { levels?.let { work.charted(it, chartLevel.value) } }
+    val job = charted ?: work.options.firstOrNull { it.choice == picked } ?: work
     val variants = if (levels != null) listOf(job) else work.options.ifEmpty { listOf(work) }
     val targets = remember(work.code, game.hero?.items, game.index) { itemTargets(game, work.job) }
     var target by remember(work.code) { mutableStateOf("") }

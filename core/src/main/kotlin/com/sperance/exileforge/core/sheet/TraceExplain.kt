@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.preciseNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
+import com.sperance.exileforge.core.display.weaknessTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.BuffKind
@@ -74,6 +75,8 @@ class TraceExplainer(private val game: GameUi) {
                 MonsterShareKind.MODIFIER -> index.modifier(ModifierCode(share.ref))?.let { def ->
                     monster.modifiers.firstOrNull { it.code.value == share.ref }?.let { mod -> modifierLine(index, def, def.lineValues(mod.effects.map { it.value })) }
                 } ?: share.ref
+
+                MonsterShareKind.WEAKNESS -> ui("trace.src.weakness", weaknessTitle(share.ref))
 
                 MonsterShareKind.POWER -> ui("trace.src.guardian_power", fineNumber(share.ref.toDouble()))
 

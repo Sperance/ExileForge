@@ -98,16 +98,7 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
     val hero = heroFighter
     skill.hit?.let { hit ->
         val element = DamageType.element(hit.element)
-        val share = (hit.weapon?.at(1) ?: 100.0) / 100
-        val damage = me.body.damage.mapValues { it.value * share }.toMutableMap()
-        val magical = me.body[CoreStat.ATTACK_MAGICAL.code]
-        if (skill.spell && magical > 0) damage.merge(element ?: me.body.leading, magical * share, Double::plus)
-        val convert = (hit.convert?.at(1) ?: 0.0).coerceIn(0.0, 100.0) / 100
-        if (element != null && convert > 0) {
-            val total = damage.values.sum()
-            damage.replaceAll { _, value -> value * (1 - convert) }
-            damage.merge(element, total * convert, Double::plus)
-        }
+        val damage = monsterSkillBlow(skill, me.body) ?: return@let
         val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
         val target = hero
         strike(

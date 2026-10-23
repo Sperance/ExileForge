@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.campaign.run.ChallengeView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.traitViews
+import com.sperance.exileforge.core.display.MonsterMarkView
 import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.RatePrecision
 import com.sperance.exileforge.core.display.SkillText
@@ -59,7 +60,8 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Досье босса перед боем: портрет, уровень и здоровье, доля героев сервера [record], победивших его, умения, свойства и фазы - всё открывает свой лист;
+ * Досье босса перед боем: портрет, уровень и здоровье, доля героев сервера [record], победивших его, силы и слабости (слабости - после
+ * первой победы над ним), умения, свойства и фазы - всё открывает свой лист;
  * «Снаряжение», «Разведка» и «В бой». Отойти нельзя: подошёл к логову - бой.
  *
  * Кодекс стража - строка лора хранителя трона или стража механики, если она есть.
@@ -84,6 +86,8 @@ internal fun BossDossier(
     val body = remember(boss, level) { Combatant(boss.stats, level, rules) }
     val server by produceState<BossRecord?>(null, boss.code) { value = record() }
     val traits = remember(boss, index) { traitViews(boss, index) }
+    val hunt = rememberHunt(index, game.heroId)
+    val nature = remember(boss.code, index, hunt) { MonsterMarkView.of(index, boss.code, hunt?.kills(boss.code)) }
     val lore = LocalLore.current
     var gear by remember { mutableStateOf(false) }
     var scout by remember { mutableStateOf(false) }
@@ -115,6 +119,10 @@ internal fun BossDossier(
             color = Parchment,
             style = MaterialTheme.typography.labelMedium,
         )
+        if (!nature.empty) {
+            Caption(ui("marks.title"))
+            MarkChips(nature)
+        }
         if (boss.skills.isNotEmpty()) {
             Caption(ui("challenge.skills"))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

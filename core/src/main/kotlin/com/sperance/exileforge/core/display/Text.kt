@@ -107,6 +107,14 @@ fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 fun traitTitle(code: String): String = loc(LocaleKey.traitName(code))
 fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0, stacks: Int = 0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds), stacks.toString()))
 
+/** Сила вида монстра по коду словаря ([com.sperance.exileforge.rules.content.Strength.key]): название и пояснение с числом `{0}` и порогом `{1}`. */
+fun strengthTitle(key: String): String = loc(LocaleKey.strengthName(key))
+fun strengthText(key: String, value: String, threshold: Double): String = loc(LocaleKey.strengthDescription(key), listOf(value, fineNumber(threshold)))
+
+/** Слабость вида монстра: название и пояснение с числом её строки `{0}` и порогом `{1}`. */
+fun weaknessTitle(code: String): String = loc(LocaleKey.weaknessName(code))
+fun weaknessText(code: String, value: Double, threshold: Double): String = loc(LocaleKey.weaknessDescription(code), listOf(fineNumber(value), fineNumber(threshold)))
+
 /** Фаза босса: название шаблона и что он делает. */
 fun phaseTitle(code: String): String = loc("phase.$code.name")
 fun phaseText(code: String): String = locOr("phase.$code.description", "")

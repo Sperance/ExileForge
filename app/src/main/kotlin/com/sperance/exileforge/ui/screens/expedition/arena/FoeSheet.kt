@@ -30,6 +30,8 @@ import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.SlotView
+import com.sperance.exileforge.core.display.BestiaryTally
+import com.sperance.exileforge.core.display.MonsterMarkView
 import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.RatePrecision
 import com.sperance.exileforge.core.display.SkillText
@@ -58,7 +60,8 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 
 /**
  * Лист врага до боя и на паузе - разведка арены: босс или приспешник целиком; под именем - достаёт ли его оружие героя и кого бьёт
- * герой ([ScoutHints] по стойке [stance]); - защита с тем, что от неё остаётся против героя, урон, умения и
+ * герой ([ScoutHints] по стойке [stance]), над вкладками - силы и слабости вида чипами ([MarkChips]; слабости открывает счёт Бестиария
+ * [hunt]); - защита с тем, что от неё остаётся против героя, урон, умения и
  * свойства с сутью, фазы и тотемы босса, его строки с источниками - монстр, карта, атлас, сделки алтаря. Внизу - «Бить первым»
  * ([onFocus]: ставит фокус на него); null - кнопки нет (он уже цель, пал или бой кончен).
  */
@@ -71,10 +74,12 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     boss: BossHud?,
     shares: List<BuffShare>,
     stance: HeroStance,
+    hunt: BestiaryTally?,
     onFocus: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val index = LocalContentIndex.current
+    val nature = remember(foe.monster.code, index, hunt) { index?.let { MonsterMarkView.of(it, foe.monster.code, hunt?.kills(foe.monster.code)) } ?: MonsterMarkView.NONE }
     val body = remember(foe.monster, level) { Combatant(foe.monster.stats, level, rules) }
     val hero = fight.heroBody
     val ownBoss = boss?.takeIf { it.index == foe.index }
@@ -96,6 +101,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 MutedText(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
                 FoeSheetMight(foe)
                 ScoutHints(foe, fight, stance)
+                MarkChips(nature, Modifier.padding(top = 6.dp))
             }
             ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0), containerColor = PanelRaised, contentColor = Gold, edgePadding = 12.dp) {
                 tabs.forEach { t -> Tab(selected = t == tab, onClick = { tab = t }, text = { Text(ui(if (foe.monster.power != null) t.bossKey else t.key)) }) }

@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Bestiary
 import com.sperance.exileforge.core.display.BestiaryTally
 import com.sperance.exileforge.core.display.BestiaryZone
+import com.sperance.exileforge.core.display.MonsterMarkView
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterTitle
@@ -196,8 +197,8 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
 }
 
 /**
- * Строка вида: силуэт, имя (неоткрытый - «???») и под ним у открытого заметка [note] («босс зоны», «только здесь», «ещё в N зонах»);
- * у открытого справа - убийства и ступень. Касание открытого - лист вида.
+ * Строка вида: силуэт, имя (неоткрытый - «???») и под ним у открытого значки сил и слабостей ([MarkGlyphs]) и заметка [note] («босс
+ * зоны», «только здесь», «ещё в N зонах»); у открытого справа - убийства и ступень. Касание открытого - лист вида.
  */
 @Composable private fun SpeciesRow(look: Look, tally: BestiaryTally, code: MonsterCode, boss: Boolean, note: String?, onClick: () -> Unit) {
     val open = tally.open(code)
@@ -210,6 +211,10 @@ private fun BestiaryZone.matches(needle: String, tally: BestiaryTally): Boolean 
         Silhouette(look, code, open, boss = boss, size = ROW)
         Column(Modifier.weight(1f)) {
             Text(if (open) monsterTitle(code) else ui("bestiary.unknown"), color = if (open) Parchment else Muted, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (open) {
+                val marks = remember(look, code, kills) { MonsterMarkView.of(look.index, code, kills) }
+                MarkGlyphs(marks, Modifier.padding(top = 3.dp))
+            }
             if (open && note != null) MutedText(note, style = MaterialTheme.typography.labelSmall)
         }
         if (open) {
@@ -288,8 +293,8 @@ private val ROW = 38.dp
 }
 
 /**
- * Лист вида: силуэт, имя, глава (или «Иное»), босс или монстр и ступень; факты - убито героем и его гибели; лестница ступеней
- * 10/100/1000 - взята, сколько ещё до следующей, дальше прочерк; где встречается - зоны чипами.
+ * Лист вида: силуэт, имя, глава (или «Иное»), босс или монстр и ступень; силы и слабости чипами ([MarkChips]); факты - убито героем и
+ * его гибели; лестница ступеней 10/100/1000 - взята, сколько ещё до следующей, дальше прочерк; где встречается - зоны чипами.
  */
 @Composable private fun SpeciesSheet(look: Look, bestiary: Bestiary, tally: BestiaryTally, code: MonsterCode, onDismiss: () -> Unit) {
     val kills = tally.kills(code)
@@ -312,6 +317,7 @@ private val ROW = 38.dp
                     )
                 }
             }
+            MarkChips(remember(look, code, kills) { MonsterMarkView.of(look.index, code, kills) })
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Fact(groupedNumber(kills), ui(if (boss) "bestiary.wins" else "bestiary.kills"), GoldBright, Modifier.weight(1f))
                 val deaths = tally.deaths(code)

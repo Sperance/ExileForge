@@ -14,6 +14,8 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.StatSpread
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 
@@ -215,10 +217,10 @@ class TraceOrigin(val hero: HeroModel, val foes: List<Foe>)
 data class MonsterShare(val kind: MonsterShareKind, val ref: String, val op: Op, val value: Double)
 
 /**
- * Источник доли стата монстра: шаблон, редкость, строка модификатора, сила стража ([MonsterShare.ref] - её множитель), сила от уровня
- * героя ([RolledMonster.heroScale]), карта.
+ * Источник доли стата монстра: шаблон, редкость, строка модификатора, слабость вида ([MonsterShare.ref] - её код), сила стража
+ * ([MonsterShare.ref] - её множитель), сила от уровня героя ([RolledMonster.heroScale]), карта.
  */
-enum class MonsterShareKind { BASE, RARITY, MODIFIER, POWER, HERO, MAP }
+enum class MonsterShareKind { BASE, RARITY, MODIFIER, WEAKNESS, POWER, HERO, MAP }
 
 /**
  * A monster's stat taken apart by the roller's own fold: the template grown to the level, the rarity's lines,
@@ -236,6 +238,10 @@ object MonsterBreakdown {
         template?.let { roller.stats(it, level)[stat] }?.takeIf { it != 0.0 }?.let { add(MonsterShare(MonsterShareKind.BASE, monster.code.value, Op.ADD, it)) }
         rarityLines(monster.rarity).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.RARITY, monster.rarity.name, it.op, it.value)) }
         monster.modifiers.forEach { mod -> mod.effects.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MODIFIER, mod.code.value, it.op, it.value)) } }
+        template?.weaknesses?.forEach { weakness ->
+            roller.weaknessEffects(weakness).filter { line -> StatSpread.parts(line.stat, line.op, GuardianFloor.STRIKES).any { it.stat == stat } }
+                .forEach { add(MonsterShare(MonsterShareKind.WEAKNESS, weakness.name, it.op, it.value)) }
+        }
         val power = monster.power
         if (template != null && power != null) {
             roller.powerEffects(template, power).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.POWER, (1 + it.value / 100).toString(), it.op, it.value)) }

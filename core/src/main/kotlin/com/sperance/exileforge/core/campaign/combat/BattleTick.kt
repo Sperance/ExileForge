@@ -230,7 +230,7 @@ internal fun Battle.watch() {
     if (slotHolders.isNotEmpty()) totemTick()
     foeFighters.forEach { foe ->
         val low = foe.alive && foe.life < foe.body.maxLife * rules.passiveLowLife
-        if (low != foe.low && foe.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code] > 0) {
+        if (low != foe.low && foe.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code] != 0.0) {
             foe.low = low
             remake(foe)
         }
@@ -246,10 +246,10 @@ internal fun Battle.remake(fighter: Fighter) {
     }
 }
 
-/** Что лежит на враге [fighter] сейчас: строки эффектов и прибавка скорости при низком здоровье. */
+/** Что лежит на враге [fighter] сейчас: строки эффектов и сдвиг скорости атаки при низком здоровье (Яростный быстрее, Трусливый медленнее). */
 internal fun Battle.foeLines(fighter: Fighter): List<StatLine> {
     val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
-    return fighter.actingEffects.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
+    return fighter.actingEffects.flatMap { it.lines } + if (fighter.low && speed != 0.0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
 }
 
 /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */

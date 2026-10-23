@@ -108,6 +108,7 @@ private const val HERO_CARD = -1
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     val mods = remember(sheets.mapShifts, game.index) { game.index?.let { MapEffects.heroMods(it, sheets.mapShifts) }.orEmpty() }
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
+    val hunt = rememberHunt(game.index, game.heroId)
     val intro = rememberBossIntro(fight.boss?.index)
     val fx = intro ?: ArenaFxGate.OPEN
     val introBounds = remember { IntroBounds() }
@@ -169,6 +170,7 @@ private const val HERO_CARD = -1
                     fight.boss,
                     remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
                     stance,
+                    hunt,
                     onFocus = {
                         focusOn(foe.index)
                         inspect = null

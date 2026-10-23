@@ -50,6 +50,8 @@ import com.sperance.exileforge.ui.components.FoldBody
 import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
+import com.sperance.exileforge.ui.components.SourcedSumRow
+import com.sperance.exileforge.ui.components.SumShare
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.components.foldToggle
@@ -92,8 +94,8 @@ import com.sperance.exileforge.ui.theme.*
  * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
  * effects held against the hero's own. [figures] - цифры сводки с отметками ауры и Предначертания.
  *
- * Цифра открывает своё окно. Разделы и порядок - реестр контента. С [trend] (лист боя) сдвинутая цифра - стрелкой цвета сдвига, а её
- * касание раскрывает строку - из чего она сложилась ([TrendFold]); раскрытые строки держатся, пока числа идут.
+ * Цифра открывает своё окно. Разделы и порядок - реестр контента. С [trend] (лист боя) сдвинутая цифра - стрелкой цвета сдвига, её
+ * строка раскрывается - из чего она сложилась ([SourcedSumRow]); раскрытые строки держатся, пока числа идут.
  */
 @Composable fun StatSheet(
     game: GameUi,
@@ -105,9 +107,8 @@ import com.sperance.exileforge.ui.theme.*
 ) {
     var open by remember { mutableStateOf<String?>(null) }
     var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
-    var unfolded by remember { mutableStateOf(emptySet<String>()) }
     val show: (String) -> Unit = { open = it }
-    val fold = RowFold(trend, unfolded) { key -> unfolded = if (key in unfolded) unfolded - key else unfolded + key }
+    val fold = RowFold(trend)
     Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, fold, show) } }
@@ -258,10 +259,10 @@ private object SummaryMetrics {
 }
 
 /**
- * Раскрытие строк листа со сравнением [trend]: какие строки раскрыты ([unfolded]) и как раскрыть или свернуть строку ([toggle]). Без
- * сравнения строки не раскрываются, а сдвинутой считается любая цифра, что не равна прежней.
+ * Сравнение строк листа с прежним листом: [trend] - сравнение боя (стрелки сдвига и доли источников); без него сдвинутой считается
+ * любая цифра, что не равна прежней.
  */
-private class RowFold(val trend: StatTrend?, val unfolded: Set<String>, val toggle: (String) -> Unit) {
+private class RowFold(val trend: StatTrend?) {
     /** Сдвиг цифры [key] сравнения; без сравнения - null. */
     fun trendOf(key: String): Trend? = trend?.shift?.of(key)
 
@@ -273,30 +274,27 @@ private class RowFold(val trend: StatTrend?, val unfolded: Set<String>, val togg
 }
 
 /**
- * Строка сводки: касание открывает разбор ([open]); у сдвинутой цифры сравнения ([fold]) - раскрывает строку источников ([TrendFold]),
- * разбор - ссылкой в ней.
+ * Строка сводки: касание открывает разбор ([open]). Сдвинутая цифра сравнения боя ([fold]) - строка-сумма с источниками
+ * ([SourcedSumRow]): стрелка справа раскрывает прежнее число листа сравнения, эффекты, что её сдвинули, и «Сейчас».
  */
-@Composable private fun ColumnScope.StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
+@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
     val trend = fold.trendOf(key)
+    val compare = fold.trend
     val lit = when {
         trend != null -> Modifier.background(trend.tint.copy(alpha = .06f))
         was != null -> Modifier.background(Ember.copy(alpha = .08f))
         else -> Modifier
     }
-    val compare = fold.trend
-    val opened = trend != null && key in fold.unfolded
-    val tap = if (trend != null) Modifier.foldToggle(opened) { fold.toggle(key) } else Modifier.clickable { open(key) }
-    StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(tap).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
+    val row = Modifier.clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding)
     if (trend != null && compare != null) {
-        FoldBody(opened) {
-            TrendFold(
-                compare.baseLabel,
-                rowValue(key, was ?: 0.0, game.index, before.orEmpty()),
-                rowValue(key, value, game.index, figures.stats),
-                trend,
-                compare.parts[key].orEmpty(),
-            ) { open(key) }
+        val shares = listOf(SumShare(compare.baseLabel, rowValue(key, was ?: 0.0, game.index, before.orEmpty()))) +
+            compare.parts[key].orEmpty() +
+            SumShare(ui("stat.trend.now"), rowValue(key, value, game.index, figures.stats), accent = trend.tint)
+        SourcedSumRow(shares, Modifier.fillMaxWidth().then(lit)) {
+            StatRow(key, value, was, before, accent, figures, game, trend, Modifier.weight(1f).then(row))
         }
+    } else {
+        StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(row))
     }
 }
 

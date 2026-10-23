@@ -23,12 +23,12 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.LocalContentIndex
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.SumShare
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaHold
 import com.sperance.exileforge.ui.screens.expedition.arena.Shelved
 import com.sperance.exileforge.ui.screens.expedition.arena.effectTint
 import com.sperance.exileforge.ui.screens.expedition.arena.effectTitle
 import com.sperance.exileforge.ui.screens.expedition.arena.row
-import com.sperance.exileforge.ui.screens.hero.StatPart
 import com.sperance.exileforge.ui.screens.hero.StatSheet
 import com.sperance.exileforge.ui.screens.hero.StatTrend
 import com.sperance.exileforge.ui.theme.*
@@ -122,13 +122,13 @@ internal class FightSheets(
  * Из чего сложились цифры героя в бою: каждый эффект героя [effects] ([FightHud.heroEffects]: с таймером и носимый весь бой) - строкой
  * на каждую цифру, что сдвигает его строка: имя, вид, срок и вклад строки; числа строк - из контента [index].
  */
-internal fun fightParts(effects: List<EffectView>, index: ContentIndex?): Map<String, List<StatPart>> {
-    val parts = LinkedHashMap<String, MutableList<StatPart>>()
+internal fun fightParts(effects: List<EffectView>, index: ContentIndex?): Map<String, List<SumShare>> {
+    val parts = LinkedHashMap<String, MutableList<SumShare>>()
     effects.filter { !it.halted }.forEach { view ->
         val row = Shelved.Effect(view).row(index)
         val left = if (view.lasting) ui("fight.shelf.whole") else ui("fight.fact_seconds", fineNumber(view.seconds))
         view.lines.forEach { line ->
-            parts.getOrPut(line.stat) { mutableListOf() } += StatPart(effectTitle(view), row.source, left, SkillText.statLine(line.stat, line.op, line.value, index), effectTint(view))
+            parts.getOrPut(line.stat) { mutableListOf() } += SumShare("${effectTitle(view)} · ${row.source}", SkillText.statLine(line.stat, line.op, line.value, index), left, effectTint(view))
         }
     }
     return parts

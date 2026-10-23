@@ -756,7 +756,6 @@
   "expedition.stats_hero_hint": "Every figure of the hero: gear, tree and class, without the map.",
   "expedition.stats_map_hint": "The figures under the map's and the atlas's effects. Changed: {0} — the old value is struck through.",
   "expedition.stats_map_none": "The map and the atlas leave the hero's figures as they are.",
-  "stat.trend.explain": "Full breakdown",
   "stat.trend.now": "Now",
   "expedition.stats_fight_none": "The fight leaves the hero's figures as they are so far.",
   "expedition.stats_fight_hint": "With the fight's effects: buffs, debuffs, flasks and the map. Up: {0}, down: {1} — the old value is struck through, tap a row to see what it is made of.",

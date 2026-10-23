@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.campaign.BuffShare
 import com.sperance.exileforge.core.campaign.TraitView
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.monsterSkillDamage
 import com.sperance.exileforge.core.campaign.monsterLineParts
 import com.sperance.exileforge.core.campaign.monsterLineText
@@ -56,7 +57,8 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 }
 
 /**
- * Лист врага на паузе: босс или приспешник целиком - защита с тем, что от неё остаётся против героя, урон, умения и
+ * Лист врага до боя и на паузе - разведка арены: босс или приспешник целиком; под именем - достаёт ли его оружие героя и кого бьёт
+ * герой ([ScoutHints] по стойке [stance]); - защита с тем, что от неё остаётся против героя, урон, умения и
  * свойства с сутью, фазы и тотемы босса, его строки с источниками - монстр, карта, атлас, сделки алтаря. Внизу - «Бить первым»
  * ([onFocus]: ставит фокус на него); null - кнопки нет (он уже цель, пал или бой кончен).
  */
@@ -68,6 +70,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     traits: List<TraitView>,
     boss: BossHud?,
     shares: List<BuffShare>,
+    stance: HeroStance,
     onFocus: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
@@ -92,6 +95,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 Text(name, color = rarityTint(foe.monster.rarity), fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 MutedText(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
                 FoeSheetMight(foe)
+                ScoutHints(foe, fight, stance)
             }
             ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0), containerColor = PanelRaised, contentColor = Gold, edgePadding = 12.dp) {
                 tabs.forEach { t -> Tab(selected = t == tab, onClick = { tab = t }, text = { Text(ui(if (foe.monster.power != null) t.bossKey else t.key)) }) }
@@ -114,6 +118,27 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
                 }
             }
         }
+    }
+}
+
+/**
+ * Подсказки разведки под именем врага: провокатор впереди или оружие не достаёт его - кровью; затем кого бьёт герой - его фокус или
+ * правило стойки [stance].
+ */
+@Composable private fun ScoutHints(foe: FoeView, fight: FightHud, stance: HeroStance) {
+    val taunting = fight.foes.any { it.alive && it.taunt }
+    when {
+        foe.taunt -> Unit
+        fight.focus == foe.index && !foe.reachable -> ScoutHint(ui("fight.out_of_reach"), LifeRed)
+        taunting -> ScoutHint(ui("fight.behind_taunt"), LifeRed)
+    }
+    ScoutHint(if (fight.focus == foe.index) ui("fight.focus_on") else ui("fight.focus_off", ui("fight.rule.${stance.rule.name}")), GoldBright)
+}
+
+@Composable private fun ScoutHint(text: String, tint: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Rhombus(tint, 4.dp)
+        Text(text, color = tint, style = MaterialTheme.typography.labelSmall)
     }
 }
 

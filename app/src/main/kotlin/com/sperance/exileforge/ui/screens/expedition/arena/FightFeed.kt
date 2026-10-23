@@ -5,9 +5,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
@@ -22,7 +26,8 @@ import com.sperance.exileforge.ui.theme.*
  * The live log: its shelves as chips over it, and a line tapped opens its card — the fight holds still while
  * it is read, and goes on as it was when the card is closed.
  *
- * Последние удары, пока бой идёт, новые сверху, каждый под именем своего врага. Отбор полок - по новой строке или смене полок, не каждый
+ * Окно в центре арены - всегда журнал: до боя пустой, с приглашением коснуться врага ([FeedInvite]). Последние удары, пока бой идёт,
+ * новые сверху, каждый под именем своего врага. Отбор полок - по новой строке или смене полок, не каждый
  * кадр.
  */
 @Composable internal fun FightFeed(game: GameUi, fight: FightHud, names: Map<Int, String>, onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit) {
@@ -31,14 +36,18 @@ import com.sperance.exileforge.ui.theme.*
     var held by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
         LogShelves(game.logFilter, onLogFilter)
-        if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
-        val shown = remember(fight.events, game.logFilter) { fight.events.filter { LogKind.of(it) in game.logFilter } }
-        FightLog(shown, names) { event ->
-            if (fight.started && !fight.paused && fight.outcome == null) {
-                onCommand(RunCommand.Pause)
-                held = true
+        if (fight.events.isEmpty() && !fight.started) {
+            FeedInvite()
+        } else {
+            if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
+            val shown = remember(fight.events, game.logFilter) { fight.events.filter { LogKind.of(it) in game.logFilter } }
+            FightLog(shown, names) { event ->
+                if (fight.started && !fight.paused && fight.outcome == null) {
+                    onCommand(RunCommand.Pause)
+                    held = true
+                }
+                open = event
             }
-            open = event
         }
     }
     open?.let { event ->
@@ -49,6 +58,14 @@ import com.sperance.exileforge.ui.theme.*
                 held = false
             }
         }
+    }
+}
+
+/** Пустой журнал до боя: знак касания и «Коснитесь врага, чтобы узнать о нём» посреди окна - разведка в листе врага. */
+@Composable private fun ColumnScope.FeedInvite() {
+    Column(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Outlined.TouchApp, null, tint = Muted, modifier = Modifier.size(28.dp))
+        Text(ui("fight.feed_invite"), color = Muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
     }
 }
 

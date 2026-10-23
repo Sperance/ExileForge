@@ -35,14 +35,11 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val HERO_CARD = -1
 
 /**
- * The fight as cards (the owner's mockup B «карточки против карточек»): the foes on screen across the
- * top in one line — any of them is in reach of any weapon — the hero's card at the foot, and between them
- * either the scouting panel or the latest blows. Whoever swings is lifted toward the other side and
- * lit — gold for the hero, blood for a foe — and a line runs from them to whom they struck. A tap on
- * a foe singles it out as the hero's target; the same tap again gives the choice back to the class.
- *
- * Before «В бой», and whenever paused, nothing moves: the tapped foe — or the one the hero would
- * strike — is laid open, its numbers held against the hero's.
+ * Бой карточками: враги поля одной строкой сверху - всё о враге в его карточке ([FoeCard]: имя, плашка уровня, редкость рамкой, Мощь,
+ * печати, полосы, полка эффектов), карточка героя внизу, между ними всегда журнал боя ([FightFeed]); над журналом - строка стаи
+ * ([PackLine]: волна, сколько осталось, ярость). Кто бьёт - приподнят к другой стороне и подсвечен, от него к цели - линия удара.
+ * Касание врага в бою - цель героя (то же касание снимает); до «В бой» и на паузе - лист врага ([FoeSheet]) с разведкой. Один враг
+ * без волн - карточка шире ([SOLO_CARD]), строки стаи нет. Бой с боссом - тот же принцип: рамка босса, журнал в центре.
  *
  * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
  * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра; [top] - полоса режима над врагами (Честь Разлома). Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
@@ -123,46 +120,31 @@ private const val HERO_CARD = -1
                 val boss = fight.boss
                 if (boss != null) {
                     BossBand(fight, boss, frame, level, chosen, large, traits, ::track, ::focusOn, onIntroFrame, { hint = FocusHint.Totem(it.left) }) { inspect = it }
-                } else {
-                    PackHeader(fight, level)
-                    if (fight.field.isNotEmpty()) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                            fight.field.forEach { foe ->
-                                key(foe.index) {
-                                    FoeCard(
-                                        foe,
-                                        fight,
-                                        frame,
-                                        chosen == foe.index && fight.scouting,
-                                        track(foe.index).weight(1f).widthIn(max = 180.dp),
-                                        large,
-                                        traits[foe.index].orEmpty(),
-                                        level,
-                                        narrow = fight.field.size >= 3,
-                                    ) {
-                                        focusOn(foe.index)
-                                    }
+                } else if (fight.field.isNotEmpty()) {
+                    val cardWidth = if (fight.field.size == 1) SOLO_CARD else PACK_CARD
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                        fight.field.forEach { foe ->
+                            key(foe.index) {
+                                FoeCard(
+                                    foe,
+                                    fight,
+                                    frame,
+                                    chosen == foe.index && fight.scouting,
+                                    track(foe.index).weight(1f).widthIn(max = cardWidth),
+                                    large,
+                                    traits[foe.index].orEmpty(),
+                                    level,
+                                    narrow = fight.field.size >= 3,
+                                ) {
+                                    tapFoe(fight, foe.index, ::focusOn) { inspect = it }
                                 }
                             }
                         }
                     }
                 }
                 if (firstTip) FocusTip({ prefs.change { copy(focusTipSeen = true) } })
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    val shown = fight.field.firstOrNull { it.index == chosen }
-                    if (fight.scouting && shown != null) {
-                        ScoutPanel(
-                            shown,
-                            fight,
-                            shown.monster.level.takeIf { it > 0 } ?: level,
-                            rules,
-                            stance,
-                            traits[shown.index].orEmpty(),
-                        )
-                    } else {
-                        FightFeed(game, fight, names, onCommand, onLogFilter)
-                    }
-                }
+                if (boss == null) PackLine(fight)
+                Box(Modifier.weight(1f).fillMaxWidth()) { FightFeed(game, fight, names, onCommand, onLogFilter) }
                 HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD).then(introField), large, mods, onCommand)
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
                 Controls(fight, onCommand)
@@ -180,6 +162,7 @@ private const val HERO_CARD = -1
                     traits[foe.index].orEmpty(),
                     fight.boss,
                     remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
+                    stance,
                     onFocus = {
                         focusOn(foe.index)
                         inspect = null
@@ -199,6 +182,10 @@ private const val HERO_CARD = -1
         }
     }
 }
+
+/** Предел ширины карточки врага: одного на поле - шире, стаи - уже. */
+private val SOLO_CARD = 220.dp
+private val PACK_CARD = 180.dp
 
 /** The life share under which the phone warns of danger. */
 private const val DANGER_SHARE = .3f

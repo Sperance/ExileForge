@@ -152,18 +152,18 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
         if (boss.slots.isEmpty()) {
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tap(fight, i, onFocus, onInspect) } }
-                PortraitStage(foe, name, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
-                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tap(fight, i, onFocus, onInspect) } }
+                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tapFoe(fight, i, onFocus, onInspect) } }
+                PortraitStage(foe, name, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tapFoe(fight, foe.index, onFocus, onInspect) }
+                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, level, track) { i -> tapFoe(fight, i, onFocus, onInspect) } }
             }
         } else {
-            NicheArena(foe, boss, fight, frame, chosen, track, name, level, onTotem) { tap(fight, it, onFocus, onInspect) }
+            NicheArena(foe, boss, fight, frame, chosen, track, name, level, onTotem) { tapFoe(fight, it, onFocus, onInspect) }
         }
     }
 }
 
 /** Касание врага: на паузе и до боя - его лист, в бою - выбор цели. */
-private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
+internal fun tapFoe(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
 
 /**
  * Рамка босса в три ряда, одна для любого босса: имя (сжимается до минимума, дальше многоточие) с чипами фазы, неуязвимости с

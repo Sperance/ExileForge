@@ -31,10 +31,15 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
+import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
+import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.ObjectAction
+import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.RoomSpot
+import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.ItemView
@@ -120,6 +125,7 @@ import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
 import com.sperance.exileforge.ui.screens.expedition.NodeSheet
 import com.sperance.exileforge.ui.screens.expedition.ObjectActionPanel
 import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
+import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.hero.StatSheet
@@ -143,7 +149,8 @@ import java.io.File
  * Снимки ключевых экранов: каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
  * Экраны: задания и контракты, гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
- * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, карточка редкой вещи с плашками
+ * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), арена с одним врагом, стаей из четырёх и боссом
+ * (страж раскладки: всё о враге - в карточке, в центре - журнал), окно сбора, админка, карточка редкой вещи с плашками
  * особых строк, карточка захваченной карты, полка кузницы с карточкой вещи и её действиями, окно обновления, модерация отчётов,
  * плашка идущей работы.
  */
@@ -250,6 +257,50 @@ class KeyScreensShotTest {
         )
         val fight = FightHud(leader, emptyList(), 420, 0, emptyList(), 1, null, heroMana = 60, heroMaxMana = 120, skills = views, flasks = flasks)
         ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}) {}
+    }
+
+    /** Арена до боя с одним врагом: широкая карточка без строки стаи, в центре - пустой журнал с приглашением коснуться врага. */
+    @Test fun arenaSolo() = shot("arena_1", scroll = false, frozen = true) { Arena(ArenaScene(foes = 1)) }
+
+    /** Арена на паузе со стаей из четырёх: узкие карточки, строка «Волна 2/3 · осталось 4» с яростью над журналом, первый замахивается на героя. */
+    @Test fun arenaPack() = shot("arena_4", scroll = false, frozen = true) { Arena(ArenaScene(foes = 4, round = 2, rounds = 3)) }
+
+    /** Арена с боссом до боя: рамка босса, журнал в центре, без строки стаи. */
+    @Test fun arenaBoss() = shot("arena_boss", scroll = false, frozen = true) { Arena(ArenaScene(foes = 1, boss = true)) }
+
+    /** Сцена снимка арены: сколько врагов, волна из скольких и бой ли с боссом. */
+    private class ArenaScene(val foes: Int, val round: Int = 1, val rounds: Int = 1, val boss: Boolean = false)
+
+    /** Арена [scene] стоящим снимком боя высотой экрана телефона: начатый бой - на паузе, до боя - ещё не начат. */
+    @Composable private fun Arena(scene: ArenaScene) {
+        val level = 30
+        val zone = index.campaign.zones.first { it.monsters.size >= 2 }
+        val foes = (0 until scene.foes).map { i ->
+            val monster = MonsterRoller(index).roll(zone, zone.monsters[i % zone.monsters.size], emptyList(), Dice(7L + i))
+            FoeView(i, monster, 300 - 40 * i, 400, 0, 0, if (i == 0) .9f else .3f, emptyList(), held = false, alive = true, reachable = true)
+        }
+        val started = scene.foes > 1
+        val fight = FightHud(
+            foes.first().monster,
+            foes,
+            420,
+            0,
+            emptyList(),
+            1,
+            null,
+            started = started,
+            paused = started,
+            round = scene.round,
+            rounds = scene.rounds,
+            heroMaxLife = 500,
+            boss = if (scene.boss) BossHud(0, null, emptyList(), emptyList(), null) else null,
+            rage = RageView(2, 20.0, 8.0).takeIf { started },
+            target = 0,
+        )
+        val hud = RunHud(RunPhase.FIGHT, zone.code, 420, 500, 0, 0, scene.foes, scene.foes, fight = fight)
+        Box(Modifier.fillMaxWidth().height(ARENA_HEIGHT)) {
+            ArenaOverlay(game(level), hud, fight, level, index.campaign.combat, HeroStance(), mutableFloatStateOf(0f), {})
+        }
     }
 
     /** Сбор на карте: лист узла ремесла и нижняя панель действия у объекта с полосой сбора на 40%. */
@@ -431,6 +482,9 @@ class KeyScreensShotTest {
 
         /** Активных слотов умений. */
         const val SLOTS = 4
+
+        /** Высота арены: экран телефона под карточки, журнал, карточку героя и кнопки. */
+        val ARENA_HEIGHT = 760.dp
 
         /** Высота листа алтаря: два варианта и «Пройти мимо» целиком (на 640 dp кнопка срезалась). */
         val ALTAR_HEIGHT = 780.dp

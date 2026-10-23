@@ -3,6 +3,8 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -31,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -53,37 +56,6 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.sin
-
-/**
- * The pack's leader by name and what the pack is: its rarity, the map's level, the fight of a chain, how many are left standing.
- *
- * Мощь вожака стаи - цвета его стойки против героя; ярость боя видна и у стаи.
- */
-@Composable internal fun PackHeader(fight: FightHud, level: Int) {
-    val leader = fight.leader
-    Box(Modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 44.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                monsterTitle(leader.code),
-                color = rarityTint(leader.rarity),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val line = listOfNotNull(
-                ui("expedition.monster_line", ui(leader.rarity.key()), level),
-                ui("fight.stage", fight.round, fight.rounds).takeIf { fight.rounds > 1 },
-                ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 },
-            ).joinToString(" · ")
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
-                FoeMightMark(leader)
-            }
-            fight.rage?.let { RageMark(it) }
-        }
-    }
-}
 
 /** Мощь врага [monster] мелко: печать и число цвета его стойки против героя; вне оверлея боя и у босса - ничего. Не прогноз боя. */
 @Composable internal fun FoeMightMark(monster: RolledMonster, modifier: Modifier = Modifier) {
@@ -239,7 +211,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 }
                 if (narrow) {
                     portrait(FOE_AVATAR_NARROW)
-                    FittedName(monsterTitle(foe.monster.code), ring)
+                    FoeName(monsterTitle(foe.monster.code), ring)
                     FoeMightMark(foe.monster)
                     seals()
                 } else {
@@ -347,19 +319,14 @@ private val FOE_AVATAR = 52.dp
 /** The portrait of a narrow tile (variant A). */
 private val FOE_AVATAR_NARROW = 46.dp
 
-/** A foe's name on one line, its type stepping down from 11sp to 8.5sp until it fits, cut only past that. */
-@Composable private fun FittedName(name: String, color: Color) {
-    var size by remember(name) { mutableFloatStateOf(11f) }
-    Text(
+/** Имя врага узкой плитки - до двух строк по центру: кегль от 11sp вниз до 8.5sp, сколько влезет, дальше многоточие. */
+@Composable private fun FoeName(name: String, color: Color) {
+    BasicText(
         name,
-        color = color,
-        fontSize = size.sp,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        softWrap = false,
-        overflow = if (size > 8.5f) TextOverflow.Clip else TextOverflow.Ellipsis,
-        textAlign = TextAlign.Center,
-        onTextLayout = { if (it.hasVisualOverflow && size > 8.5f) size -= .5f },
+        style = TextStyle(color = color, fontWeight = FontWeight.Bold, fontSize = 11.sp, lineHeight = 12.sp, textAlign = TextAlign.Center),
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        autoSize = TextAutoSize.StepBased(minFontSize = 8.5.sp, maxFontSize = 11.sp, stepSize = .5.sp),
     )
 }
 

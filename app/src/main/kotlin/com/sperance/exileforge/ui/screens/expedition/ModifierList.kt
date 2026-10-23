@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -35,8 +36,10 @@ internal fun ModifierList(window: ModifierWindow, index: ContentIndex, modifier:
         if (titled) Engraved(ui("run.mods.title", rows.size))
         if (rows.isEmpty()) MutedText(ui("map.no_modifiers"))
         rows.forEach { (sum, shares) ->
-            SourcedSumRow(shares) {
-                ModifierLine(effectText(sum.stat, sum.total, index), Glyph.ofStat(sum.stat), stats = listOf(sum.stat), index = index)
+            key(sum.stat) {
+                SourcedSumRow(shares) {
+                    ModifierLine(effectText(sum.stat, sum.total, index), Glyph.ofStat(sum.stat), stats = listOf(sum.stat), index = index)
+                }
             }
         }
     }

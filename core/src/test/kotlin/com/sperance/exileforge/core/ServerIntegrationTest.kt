@@ -47,7 +47,7 @@ class ServerIntegrationTest {
      * Манифест называет ревизию клиента и каждый чанк с отпечатком; маршруты - по сессии. Каждый POST героя приносит сдвинутые части. Без
      * Предначертания герой не создаётся. Выдачи - администратором любому герою; выданная вещь метки не несёт. Заход - семя сервера, награды
      * катит только он; насильная механика и страж сразу со входа - только тестировщику со свободным прогрессом (`CP_028`, иначе отказ темпа); Ваал-зона живёт только в своём заходе; новое семя не чаще `run.newSeedSeconds`; закрытый заход отвергает журнал
-     * `CP_018`. Аукцион забирает вещь и возвращает при снятии; плата за место - золотом; герою-тестировщику аукцион закрыт (`GR_001`); лот
+     * `CP_018`. Аукцион забирает вещь и возвращает при снятии; плата за место - золотом; тестировщик торгует, как любой герой; лот
      * героя под баном не продаётся, без места в тайнике - `CH_020`. Код погашается один раз на аккаунт и устройство. Чужое и
      * только-администраторское - отказ.
      */
@@ -145,7 +145,6 @@ class ServerIntegrationTest {
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             api.hero.grant(heroId, "level", "level" to auctionLevel.toString())
             api.hero.grant(heroId, "gold", "amount" to LISTING_GOLD.toString())
-            assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1) }.code)
             assertEquals(false, api.moderation.setTester(heroId, false))
             val held = bag(starterOrb)
             val lot = assertNotNull(api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1).lot)
@@ -160,7 +159,6 @@ class ServerIntegrationTest {
             api.hero.grant(traderHero, "level", "level" to auctionLevel.toString())
             api.hero.grant(traderHero, "gold", "amount" to LISTING_GOLD.toString())
             val grantedRing = api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE)
-            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
             api.moderation.setTester(traderHero, false)
             api.moderation.setTester(heroId, true)
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)

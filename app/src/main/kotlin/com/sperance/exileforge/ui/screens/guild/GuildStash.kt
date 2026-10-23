@@ -347,7 +347,6 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
     val pick = rememberPick(bag.pickable, remember(shown) { shown.mapTo(HashSet()) { it.id } })
     val picked = pick.picked
     val inspect = rememberInspect()
-    val tester = game.isTester
     ForgeSheet(
         onDismissRequest = onDismiss,
         body = ForgeSheetDefaults.Bare,
@@ -357,7 +356,6 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                     Engraved(ui("guild.stash_put"), modifier = Modifier.weight(1f))
                     Text(ui("guild.deposit_free", bag.free, bag.size), color = if (bag.free == 0) LifeRed else Parchment, style = MaterialTheme.typography.labelMedium)
                 }
-                if (tester) Text(ui("guild.deposit_tester"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 ItemSearchBar(filterState, ui("guild.deposit_search"), game.lang, onFilter = { filtering = true })
                 val cue = rememberLazyRowScrollCue(rememberLazyListState(), DepositKind.entries.indexOf(kind))
                 LazyRow(Modifier.scrollCue(cue, Panel), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -379,7 +377,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
             PickDock(
                 label = if (picked.isEmpty()) ui("sell.pick_hint") else ui("guild.deposit_do", picked.size),
                 icon = ForgeGlyphs.Stash,
-                enabled = !game.busy && !tester && fits > 0,
+                enabled = !game.busy && fits > 0,
                 figure = ui("guild.deposit_fits", fits).takeIf { picked.isNotEmpty() },
                 onCancel = onDismiss,
                 modifier = Modifier.weight(1f),

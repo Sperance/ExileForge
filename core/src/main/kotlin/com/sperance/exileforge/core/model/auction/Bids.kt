@@ -42,11 +42,11 @@ fun AuctionLot.bidUp(rules: AuctionRules, amount: Long): Long = (amount + Biddin
 /** Ставка на шаг ниже [amount], но не ниже наименьшей. */
 fun AuctionLot.bidDown(rules: AuctionRules, amount: Long): Long = (amount - Bidding.step(rules, amount)).coerceAtLeast(minBid(rules))
 
-/** Выкуп торгов растёт со ставкой: выкуп при выставлении выше первой ставки ([Bidding.buyoutAt]). */
-val AuctionLot.buyoutGrows: Boolean get() = bidding?.let { state -> state.listed?.let { it > state.minPrice } } == true
-
-/** Выкуп торгов после ставки [amount] - та же точка [Bidding.buyoutAt], что поднимет его на сервере; лот за цену - его цена. */
-fun AuctionLot.buyoutAfter(amount: Long): Long = bidding?.takeIf { it.listed != null }?.let { Bidding.buyoutAt(it, amount) } ?: price
+/**
+ * Выкуп торгов, если ставку по правилам [rules] примут, - та же точка [Bidding.buyoutAfterBid], что поднимет его на сервере: каждая
+ * принятая ставка поднимает выкуп на шаг; лот за цену и торги без выкупа при выставлении - нынешняя цена.
+ */
+fun AuctionLot.buyoutAfterBid(rules: AuctionRules): Long = bidding?.takeIf { it.listed != null }?.let { Bidding.buyoutAfterBid(rules, it) } ?: price
 
 /** Ставка [amount] - выкуп: не ниже цены выкупа. */
 fun AuctionLot.buysOut(amount: Long): Boolean = amount >= price

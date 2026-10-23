@@ -129,13 +129,13 @@ internal fun ExpeditionRun.exit() {
 }
 
 /**
- * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], регенерация и основа против дегена, основа - через
- * паузу после последнего урона; под ранящим недугом - ни того, ни другого), мана (поток маны [Recovery.manaFlow] - под долей восстановления листа; недуги на
+ * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], регенерация листа против дегена; под ранящим недугом
+ * регенерации нет), мана (поток маны [Recovery.manaFlow] - под долей восстановления листа; недуги на
  * герое режут и её), энергощит
  * и идущие флаконы; глоток, что только лечит, гаснет на полном здоровье, как в бою.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
-    life = RoadLife.of(hero, pace, seconds - hitAt, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), stalling()).after(life, hero.maxLife, dt)
+    life = RoadLife.of(hero, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), stalling()).after(life, hero.maxLife, dt)
     mana = (mana + Recovery.manaFlow(hero, rules.mana, curb(RecoveryPool.MANA)).total * dt).coerceAtMost(manaCap())
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {

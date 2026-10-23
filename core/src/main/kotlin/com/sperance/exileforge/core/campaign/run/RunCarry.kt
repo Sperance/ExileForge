@@ -65,18 +65,18 @@ internal fun ExpeditionRun.curb(pool: RecoveryPool): Double = law.curb(hero, car
  */
 private fun ExpeditionRun.hurtingRates(): List<Pair<CarriedAilment, Double>> = carry.ailments.filter { it.ailment.hurts }.map { it to law.perSecond(hero, carry.ailments, it) }
 
-/** Ранящий недуг, что глушит регенерацию и отдых на карте: сильнейший по урону в секунду; нет - null. */
+/** Ранящий недуг, что глушит регенерацию на карте: сильнейший по урону в секунду; нет - null. */
 internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { it.second }?.first?.ailment
 
 /**
- * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
+ * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) - только без ранящего
  * недуга ([RoadLife]), деген листа, урон недугов и отложенный урон боя; что из него принимает энергощит (яд и хаос - мимо), здоровья не
  * трогает ([LifeFlow.shielded]). Метка на полосе жизни и лист эффектов карты.
  */
 internal fun ExpeditionRun.roadFlow(): LifeFlow {
     val rates = hurtingRates()
     val total = rates.sumOf { it.second }
-    return RoadLife.flow(hero, pace, seconds - hitAt, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
+    return RoadLife.flow(hero, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
         .copy(ailments = total, delayed = carry.delayed.sumOf { it.rate }, shielded = EnergyShield.absorbed(shield, rates.map { (active, rate) -> law.type(active) to rate }))
 }
 

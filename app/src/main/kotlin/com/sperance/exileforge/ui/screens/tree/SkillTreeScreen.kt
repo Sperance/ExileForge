@@ -27,12 +27,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -169,36 +167,37 @@ fun SkillTreePanel(
                 modifier = Modifier.background(Abyss.copy(alpha = .85f), PILL).border(1.dp, Bronze, PILL).padding(horizontal = 12.dp, vertical = 6.dp),
             )
         }
-        Column(
-            Modifier.align(Alignment.TopEnd).padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MapButton(
-                Icons.Outlined.Search,
-                ui("tree.search_filters"),
-                tint = if (filtering) Vital else Gold,
-                badge = highlight.size.takeIf { filtering },
-            ) { filtersOpen = true }
-            MapButton(Icons.Outlined.Functions, ui("tree.totals_button")) { totalsOpen = true }
-            Box {
-                MapButton(Icons.Outlined.MoreVert, ui("common.more")) { menuOpen = true }
-                ForgeMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
-                    DropdownMenuItem(text = { Text(ui("tree.details")) }, onClick = {
+        val moreMenu = @Composable {
+            ForgeMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
+                DropdownMenuItem(text = { Text(ui("tree.details")) }, onClick = {
+                    menuOpen = false
+                    detailsOpen = true
+                })
+                DropdownMenuItem(
+                    text = { Text(ui("tree.reset_all"), color = if (enabled && hero.tree.size > 1) LifeRed else Muted) },
+                    enabled = enabled && hero.tree.size > 1,
+                    onClick = {
                         menuOpen = false
-                        detailsOpen = true
-                    })
-                    DropdownMenuItem(
-                        text = { Text(ui("tree.reset_all"), color = if (enabled && hero.tree.size > 1) LifeRed else Muted) },
-                        enabled = enabled && hero.tree.size > 1,
-                        onClick = {
-                            menuOpen = false
-                            confirmReset = true
-                        },
-                    )
-                }
+                        confirmReset = true
+                    },
+                )
             }
         }
+        CanvasToolbar(
+            listOf(
+                CanvasTool(
+                    Icons.Outlined.Search,
+                    ui("tree.search_filters"),
+                    enabled = true,
+                    onClick = { filtersOpen = true },
+                    tint = if (filtering) Vital else null,
+                    badge = highlight.size.takeIf { filtering },
+                ),
+                CanvasTool(Icons.Outlined.Functions, ui("tree.totals_button"), enabled = true, onClick = { totalsOpen = true }),
+                CanvasTool(Icons.Outlined.MoreVert, ui("common.more"), enabled = true, onClick = { menuOpen = true }, anchored = moreMenu),
+            ),
+            Modifier.align(Alignment.TopEnd).padding(8.dp),
+        )
         if (nodeOpen) {
             val shape = RoundedCornerShape(12.dp)
             Column(
@@ -311,11 +310,6 @@ internal fun pointsTip(index: ContentIndex, tree: TreeState, bonus: Int): Tip {
             bonus.takeIf { it > 0 }?.let { ui("tree.points_tip.rewards") to "+$it" },
         ),
     )
-}
-
-/** Кнопка поверх древа: круглая тональная компактная иконка-кнопка, со счётчиком [badge] в углу. */
-@Composable internal fun MapButton(icon: ImageVector, label: String, tint: Color = Gold, badge: Int? = null, onClick: () -> Unit) {
-    ForgeIconButton(icon, label, onClick = onClick, kind = ButtonKind.Secondary, size = ButtonSize.Compact, accent = tint, shape = IconButtonShape.Circle, badge = badge, badgeColor = Vital)
 }
 
 /**

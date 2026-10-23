@@ -165,9 +165,9 @@ data class RunMenuItem(
     items.forEach { item -> MenuRow(item.copy(onClick = closing(item.onClick))) }
 }
 
-/** ☰ меню забега: круглая тональная иконка-кнопка, как кнопки карты. */
+/** ☰ меню забега: своя капсула из одной кнопки ([CanvasToolbar]), как ряды кнопок над картами. */
 @Composable fun RunMenuButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ForgeIconButton(Icons.Outlined.Menu, ui("run.menu"), onClick = onClick, modifier = modifier, kind = ButtonKind.Secondary, shape = IconButtonShape.Circle)
+    CanvasToolbar(listOf(CanvasTool(Icons.Outlined.Menu, ui("run.menu"), enabled = true, onClick = onClick)), modifier)
 }
 
 /** Настройки, что нужны посреди боя: анимации и цифры урона - те же строки, что на экране настроек. */

@@ -117,12 +117,16 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var summary by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var centerOn by remember { mutableStateOf<String?>(null) }
+    var menuOpen by remember { mutableStateOf(false) }
+    val camera = remember { SkyCamera() }
+    val canZoomOut by remember(camera) { derivedStateOf { camera.canZoomOut } }
+    val canZoomIn by remember(camera) { derivedStateOf { camera.canZoomIn } }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
         } else {
             val taken = state.allocated.toSet()
-            Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), centerOn, { centerOn = null }, onSelect = model::selectAtlasNode)
+            Sky(index, taken, atlas.selected, camera, Modifier.fillMaxSize(), centerOn, { centerOn = null }, onSelect = model::selectAtlasNode)
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
@@ -135,10 +139,14 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
         }
         val spent = (state?.allocated?.size ?: 1) - 1
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
-            if (index != null) ForgeIconButton(Icons.Outlined.Search, ui("atlas.search"), onClick = { searching = true }, shape = IconButtonShape.Circle, accent = Sky.text)
-            AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
+        val menu = @Composable {
+            AtlasMenu(menuOpen, summary = spent > 0, reset = spent > 0 && !game.busy, onDismiss = { menuOpen = false }, onSummary = { summary = true }, onReset = { resetting = true })
         }
+        val tools = listOfNotNull(
+            CanvasTool(Icons.Outlined.Search, ui("atlas.search"), enabled = true, onClick = { searching = true }).takeIf { index != null },
+            CanvasTool(Icons.Outlined.MoreVert, ui("common.more"), enabled = true, onClick = { menuOpen = true }, anchored = menu),
+        ) + zoomTools(canZoomOut, canZoomIn, { camera.zoomBy(1 / MAP_ZOOM_STEP) }, { camera.zoomBy(MAP_ZOOM_STEP) }).takeIf { index != null }.orEmpty()
+        CanvasToolbar(tools, Modifier.align(Alignment.TopEnd).padding(horizontal = 12.dp, vertical = 8.dp), accent = Sky.text)
         if (searching && index != null) {
             AtlasSearch(index, state?.allocated?.toSet().orEmpty(), { searching = false }) { code ->
                 model.selectAtlasNode(code)
@@ -237,22 +245,18 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     )
 }
 
-/** «⋮» шапки атласа: итоги и сброс узлов - заголовок остаётся на полосе. */
-@Composable internal fun AtlasMenu(summary: Boolean, reset: Boolean, onSummary: () -> Unit, onReset: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        ForgeIconButton(Icons.Outlined.MoreVert, ui("common.more"), onClick = { open = true }, accent = Sky.text)
-        ForgeMenu(expanded = open, onDismissRequest = { open = false }) {
-            val entries = listOf(
-                Triple(ui("atlas.summary"), summary, onSummary),
-                Triple(ui("atlas.reset"), reset, onReset),
-            )
-            entries.forEach { (label, enabled, action) ->
-                DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = {
-                    open = false
-                    action()
-                })
-            }
+/** Меню «⋮» ряда Атласа ([open]): итоги ([summary]) и сброс узлов ([reset]); выбор пункта закрывает меню ([onDismiss]). */
+@Composable private fun AtlasMenu(open: Boolean, summary: Boolean, reset: Boolean, onDismiss: () -> Unit, onSummary: () -> Unit, onReset: () -> Unit) {
+    ForgeMenu(expanded = open, onDismissRequest = onDismiss) {
+        val entries = listOf(
+            Triple(ui("atlas.summary"), summary, onSummary),
+            Triple(ui("atlas.reset"), reset, onReset),
+        )
+        entries.forEach { (label, enabled, action) ->
+            DropdownMenuItem(text = { Text(label) }, enabled = enabled, onClick = {
+                onDismiss()
+                action()
+            })
         }
     }
 }

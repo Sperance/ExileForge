@@ -18,17 +18,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -242,49 +241,65 @@ private val RING_CORE = Color(0xFF2F4A3A)
 private val RING_EDGE = Color(0xFF121A16)
 
 /**
- * Кнопка сюжета над картой «Похода»: том в кольце прогресса шага, точка `Vital` -
- * награда ждёт, свечение - трон ждёт закона. Нажатие - лист с текущим шагом: глава, цель, прогресс, награда и «Весь сюжет».
- * Сюжет пройден и закон выбран - кнопки нет.
+ * Сюжет над картой «Похода»: доля прогресса шага [share], ждёт ли награда или закон ([ready]), ждёт ли трон закона ([law]).
+ * Сюжет пройден и закон выбран - знака нет ([of] - null).
  */
-@Composable fun StoryButton(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
-    val index = game.index ?: return
-    board ?: return
-    val law = StoryChoice.pending(index, board, game.heroInfo?.laws.orEmpty()) != null
-    val quest = board.story
-    if (!law && (quest == null || index.quests.story.getOrNull(board.chapter) == null)) return
-    var open by remember { mutableStateOf(false) }
-    val ready = law || quest?.let { it.done && !it.claimed } == true
-    val share = quest?.let { (it.progress.toFloat() / it.target.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 1f
-    Box(modifier) {
-        ForgeIconButton(
-            ForgeGlyphs.Tome,
-            ui("story.button"),
-            onClick = { open = true },
-            modifier = Modifier.drawWithContent {
-                drawContent()
-                val stroke = 2.dp.toPx()
-                val inset = 8.dp.toPx()
-                val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
-                drawArc(Bronze, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
-                drawArc(Caution, -90f, 360f * share, false, Offset(inset, inset), arc, style = Stroke(stroke))
-            },
-            kind = ButtonKind.Secondary,
-            accent = if (law) GoldBright else null,
-        )
-        if (ready) Box(Modifier.align(Alignment.TopEnd).padding(3.dp).size(8.dp).clip(CircleShape).background(Vital))
+class StoryMark private constructor(val share: Float, val ready: Boolean, val law: Boolean) {
+    /**
+     * Кнопка-том для ряда над картой ([CanvasToolbar]): кольцо прогресса шага, точка `Vital` - награда или закон ждут, трон без закона -
+     * светлым значком; готовность читается с экрана состоянием кнопки, не только точкой. Нажатие - [onOpen].
+     */
+    fun tool(onOpen: () -> Unit): CanvasTool = CanvasTool(
+        ForgeGlyphs.Tome,
+        ui("story.button"),
+        enabled = true,
+        onClick = onOpen,
+        tint = if (law) GoldBright else Parchment,
+        state = when {
+            law -> ui("story.card_law")
+            ready -> ui("story.ready_to_turn_in")
+            else -> null
+        },
+        marks = { storyRing(share, ready) },
+    )
+
+    companion object {
+        /** Знак сюжета героя [game] по доске [board]; null - кнопки нет. */
+        fun of(game: GameUi, board: QuestBoard?): StoryMark? {
+            val index = game.index ?: return null
+            board ?: return null
+            val law = StoryChoice.pending(index, board, game.heroInfo?.laws.orEmpty()) != null
+            val quest = board.story
+            if (!law && (quest == null || index.quests.story.getOrNull(board.chapter) == null)) return null
+            val ready = law || quest?.let { it.done && !it.claimed } == true
+            val share = quest?.let { (it.progress.toFloat() / it.target.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 1f
+            return StoryMark(share, ready, law)
+        }
     }
-    if (open) {
-        ForgeSheet(onDismissRequest = { open = false }) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                StoryCard(game, board, onOpen = {
-                    open = false
-                    vm.openStory()
-                })
-                ForgeButton(onClick = {
-                    open = false
-                    vm.openStory()
-                }, modifier = Modifier.fillMaxWidth()) { Text(ui("story.open_all")) }
-            }
+}
+
+/** Кольцо прогресса шага [share] вокруг значка и точка `Vital` в углу, когда [ready]. */
+private fun DrawScope.storyRing(share: Float, ready: Boolean) {
+    val stroke = 2.dp.toPx()
+    val inset = 6.dp.toPx()
+    val arc = Size(size.width - 2 * inset, size.height - 2 * inset)
+    drawArc(Bronze, 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(stroke))
+    drawArc(Caution, -90f, 360f * share, false, Offset(inset, inset), arc, style = Stroke(stroke))
+    if (ready) drawCircle(Vital, 4.dp.toPx(), Offset(size.width - 9.dp.toPx(), 9.dp.toPx()))
+}
+
+/** Лист сюжета над картой: текущий шаг ([StoryCard]) и «Весь сюжет»; оба открывают сюжет и закрывают лист ([onDismiss]). */
+@Composable fun StorySheet(game: GameUi, board: QuestBoard, vm: QuestViewModel, onDismiss: () -> Unit) {
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            StoryCard(game, board, onOpen = {
+                onDismiss()
+                vm.openStory()
+            })
+            ForgeButton(onClick = {
+                onDismiss()
+                vm.openStory()
+            }, modifier = Modifier.fillMaxWidth()) { Text(ui("story.open_all")) }
         }
     }
 }

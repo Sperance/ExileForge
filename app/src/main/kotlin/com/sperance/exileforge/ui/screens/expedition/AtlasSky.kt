@@ -50,12 +50,14 @@ import kotlin.math.sin
  * всё небо видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг
  * касания, жест не перезапускается каждый кадр. Атлас - колесо вокруг старта: пунктирные кольца - кольцевые дороги раскладки, у каждой
  * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев. Разовая просьба [centerOn] (узел, найденный поиском) ставит его
- * звезду посреди открытого листом места, как только небо измерено, и гасится [onCentered]; смена размера неба её не повторяет.
+ * звезду посреди открытого листом места, как только небо измерено, и гасится [onCentered]; смена размера неба её не повторяет. Масштаб и
+ * сдвиг держит [camera] - их же двигают кнопки «−/+» ряда Атласа.
  */
 @Composable internal fun Sky(
     index: ContentIndex,
     taken: Set<String>,
     selected: String,
+    camera: SkyCamera,
     modifier: Modifier,
     centerOn: String? = null,
     onCentered: () -> Unit = {},
@@ -67,8 +69,8 @@ import kotlin.math.sin
     val density = LocalDensity.current
     val floor = with(density) { 240.dp.toPx() }
     val margin = with(density) { 28.dp.toPx() }
-    var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    val scale by camera::scale
+    val pan by camera::pan
     var framed by remember { mutableStateOf(false) }
     var area by remember { mutableStateOf(IntSize.Zero) }
     val centered by rememberUpdatedState(onCentered)
@@ -78,7 +80,7 @@ import kotlin.math.sin
         val width = sized.width.toFloat()
         val height = sized.height.toFloat()
         val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(node)
-        pan = Placement(bounds, width, height, floor, margin, scale, Offset(width / 2 - at.x, (height - floor) / 2 - at.y)).held()
+        camera.moveTo(Placement(bounds, width, height, floor, margin, scale, Offset(width / 2 - at.x, (height - floor) / 2 - at.y)).held())
         centered()
     }
     val clock = com.sperance.exileforge.ui.components.decorTime()
@@ -104,7 +106,7 @@ import kotlin.math.sin
                 val width = size.width.toFloat()
                 val height = size.height.toFloat()
                 val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
-                pan = Offset(width / 2 - at.x, (height - floor) / 2 - at.y)
+                camera.moveTo(Offset(width / 2 - at.x, (height - floor) / 2 - at.y))
                 framed = true
             }
             .pointerInput(nodes) {
@@ -114,8 +116,7 @@ import kotlin.math.sin
                     val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
                     val anchor = Offset(width / 2, (height - floor) / 2)
                     val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
-                    scale = next
-                    pan = Placement(bounds, width, height, floor, margin, next, moved).held()
+                    camera.pinch(next, Placement(bounds, width, height, floor, margin, next, moved).held())
                 }
             }
             .pointerInput(shown) {
@@ -163,6 +164,47 @@ internal class SkyBrushes {
 
     /** A taken or chosen star's halo of [hue] reaching [r] pixels, centred at the origin. */
     fun halo(hue: Color, r: Float): Brush = halos.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), Offset.Zero, r) }
+}
+
+/**
+ * Масштаб и сдвиг неба Атласа: общие у щипка и кнопок «−/+» ряда. Масштаб - в пределах жеста [MIN_ZOOM]..[MAX_ZOOM], сдвиг - от середины
+ * открытого листом места.
+ */
+@Stable
+internal class SkyCamera {
+    var scale by mutableFloatStateOf(OPEN_ZOOM)
+        private set
+
+    var pan by mutableStateOf(Offset.Zero)
+        private set
+
+    val canZoomIn: Boolean get() = scale < MAX_ZOOM - ZOOM_EPSILON
+    val canZoomOut: Boolean get() = scale > MIN_ZOOM + ZOOM_EPSILON
+
+    /** Ставит сдвиг [pan] при том же масштабе. */
+    fun moveTo(pan: Offset) {
+        this.pan = pan
+    }
+
+    /** Щипок: масштаб [scale] и сдвиг [pan], уже удержанный в пределах неба. */
+    fun pinch(scale: Float, pan: Offset) {
+        this.scale = scale
+        this.pan = pan
+    }
+
+    /**
+     * Шаг кнопки: масштаб × [factor] в пределах жеста вокруг середины открытого места; сдвиг растёт вместе с масштабом, как и пределы
+     * сдвига ([Placement.held]), - небо не уходит из вида.
+     */
+    fun zoomBy(factor: Float) {
+        val next = (scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
+        pan *= next / scale
+        scale = next
+    }
+
+    private companion object {
+        const val ZOOM_EPSILON = .001f
+    }
 }
 
 /**

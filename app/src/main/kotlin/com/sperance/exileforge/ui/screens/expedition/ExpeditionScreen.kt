@@ -2,9 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
@@ -26,13 +24,13 @@ import com.sperance.exileforge.core.campaign.Places
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
 import com.sperance.exileforge.ui.screens.expedition.world.WorldChart
 import com.sperance.exileforge.ui.screens.quests.QuestViewModel
-import com.sperance.exileforge.ui.screens.quests.StoryButton
+import com.sperance.exileforge.ui.screens.quests.StoryMark
+import com.sperance.exileforge.ui.screens.quests.StorySheet
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -52,8 +50,7 @@ private const val CARD_TOP = .48f
  *
  * The zones are tokens on a parchment chart, linked from the start upward: a passed one is ticked,
  * an open one glows, the «???» one past it is dark with its level, and the fog hides the rest. The
- * map opens on the frontier; it drags and pinches, «+» and «−» zoom it and the crosshair flies back
- * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
+ * map opens on the frontier; it drags and pinches, «−» and «+» zoom it. A tapped token raises its card over the map's foot — the way into the zone.
  *
  * Сюжет - над картой с первого уровня, доска заданий читается и без раздела, если её ещё нет. Вкладка нажата снова - лист зоны закрывается.
  * Карта мира, туман и надписи собираются вне главного потока ([WorldChart]); собранная прежде рисуется с первого кадра, а первая сборка
@@ -120,15 +117,17 @@ private const val CARD_TOP = .48f
             WorldCanvas(drawn, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         var searching by remember { mutableStateOf(false) }
-        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
-            WorldBar(Modifier) { searching = true }
-            Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StoryButton(game, quests.board, questModel)
-                ZoomButtons(camera, Modifier) { factor -> scope.launch { camera.zoomBy(factor) } }
-            }
-        }
+        var storyOpen by remember { mutableStateOf(false) }
+        val board = quests.board
+        val canZoomOut by remember(camera) { derivedStateOf { camera.canZoomOut } }
+        val canZoomIn by remember(camera) { derivedStateOf { camera.canZoomIn } }
+        val tools = listOfNotNull(StoryMark.of(game, board)?.tool { storyOpen = true }) +
+            zoomTools(canZoomOut, canZoomIn, { scope.launch { camera.zoomBy(1 / MAP_ZOOM_STEP) } }, { scope.launch { camera.zoomBy(MAP_ZOOM_STEP) } }) +
+            CanvasTool(Icons.Outlined.Search, ui("expedition.search"), enabled = true, onClick = { searching = true })
+        WorldBar(tools, Modifier.align(Alignment.TopCenter))
         if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, Modifier.align(Alignment.BottomCenter))
         if (searching) ZoneSearch(game, vm) { searching = false }
+        if (storyOpen && board != null) StorySheet(game, board, questModel) { storyOpen = false }
     }
 }
 
@@ -149,8 +148,8 @@ private const val CARD_TOP = .48f
 /** Такт часов поиска зон: «страж убит» хватает раз в минуту. */
 private const val SEARCH_TICK_MS = 60_000L
 
-/** Шапка карты: заголовок на вуали, что гаснет к карте, справа - лупа поиска зоны [onSearch]. */
-@Composable private fun WorldBar(modifier: Modifier, onSearch: () -> Unit) {
+/** Шапка карты: заголовок на вуали, что гаснет к карте, справа - ряд кнопок [tools] (сюжет, масштаб, поиск зоны). */
+@Composable private fun WorldBar(tools: List<CanvasTool>, modifier: Modifier) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
             .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
@@ -158,21 +157,12 @@ private const val SEARCH_TICK_MS = 60_000L
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        ForgeIconButton(Icons.Outlined.Search, ui("expedition.search"), onClick = onSearch, shape = IconButtonShape.Circle, accent = GoldBright)
+        CanvasToolbar(tools)
     }
 }
 
-/** «+» and «−»: nearer and farther by a step, about the middle of what is seen. */
-@Composable private fun ZoomButtons(camera: WorldCamera, modifier: Modifier, onZoom: (Float) -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Column(modifier.background(Abyss.copy(alpha = .88f), shape).border(1.dp, Gold.copy(alpha = .4f), shape)) {
-        ForgeIconButton(ForgeGlyphs.Plus, ui("expedition.zoom_in"), onClick = { onZoom(ZOOM_STEP) }, state = ButtonState.of(camera.canZoomIn), accent = GoldBright)
-        HorizontalDivider(Modifier.width(44.dp), color = Gold.copy(alpha = .25f))
-        ForgeIconButton(ForgeGlyphs.Minus, ui("expedition.zoom_out"), onClick = { onZoom(1 / ZOOM_STEP) }, state = ButtonState.of(camera.canZoomOut), accent = GoldBright)
-    }
-}
-
-private const val ZOOM_STEP = 1.35f
+/** Шаг кнопок масштаба карты мира и Атласа: «+» - ближе во столько раз, «−» - дальше. */
+internal const val MAP_ZOOM_STEP = 1.35f
 
 /** Сколько камера стоит, прежде чем запомниться, мс. */
 private const val KEEP_VIEW_MS = 600L

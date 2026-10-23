@@ -12,8 +12,9 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Ловушки «Механизмы»: каждая клетка зоны - материальная плита своего вида (дыры шипов, решётка с жаром, вентиляция яда, иней,
- * медная шина между столбами, ромб пульсирующей зоны), жернов - каменное колесо в жёлобе, маятник - лезвие на столбе. Плиты лежат
+ * Ловушки «Механизмы»: зона - материальная плита своего вида, многоклеточная - одной фигурой: клетки без зазора, шов и свет стихии
+ * только по наружному краю видимых клеток, вспышка перед ударом - по общему контуру; узор вида - в каждой клетке (дыры шипов, решётка с
+ * жаром, вентиляция яда, иней, медная шина между столбами, ромб пульсирующей зоны). Клетки в тумане не рисуются. Жернов - каменное колесо в жёлобе, маятник - лезвие на столбе. Плиты лежат
  * на полу под всем стоящим ([drawTrapFloor]); что встаёт из пола при ударе - шипы, огонь, ледяные иглы, - столбы, колесо и лезвие
  * стоят в очереди глубины ([standTrap], [drawTrapPart]). Ритм - часы карты ([TrapSpot.rhythm]): плита вспыхивает перед ударом.
  */
@@ -23,7 +24,10 @@ internal fun ScenePainter.drawTrapFloor(spot: TrapSpot, t: Double) {
     when (layout.kind.shape) {
         TrapShape.ROLLER -> groove(layout)
         TrapShape.PENDULUM -> arcGroove(layout)
-        else -> layout.cells.forEach { plate(layout, it, beat) }
+        else -> {
+            val joints = trapJoints.of(layout)
+            layout.cells.forEachIndexed { i, cell -> if (explored(cell.x, cell.y)) plate(layout, cell, visibleJoints(cell, joints[i]), beat) }
+        }
     }
     if (layout.kind.shape == TrapShape.CLOUD) cloud(layout, beat)
 }
@@ -54,11 +58,11 @@ internal fun ScenePainter.drawTrapPart(spot: TrapSpot, part: Int, t: Double) {
     val beat = TrapBeat(spot, t)
     val layout = spot.layout
     when (layout.kind.shape) {
-        TrapShape.LINE -> layout.cells.getOrNull(part)?.let { spikes(it, beat) }
+        TrapShape.LINE -> layout.cells.getOrNull(part)?.takeIf { explored(it.x, it.y) }?.let { spikes(it, beat) }
 
-        TrapShape.PATCH -> layout.cells.getOrNull(part)?.let { flames(it, part, beat) }
+        TrapShape.PATCH -> layout.cells.getOrNull(part)?.takeIf { explored(it.x, it.y) }?.let { flames(it, part, beat) }
 
-        TrapShape.CROSS -> layout.cells.getOrNull(part)?.let { needles(it, beat) }
+        TrapShape.CROSS -> layout.cells.getOrNull(part)?.takeIf { explored(it.x, it.y) }?.let { needles(it, beat) }
 
         TrapShape.CHAIN -> {
             layout.posts.getOrNull(part - POST)?.let { stormPost(it, beat) }
@@ -112,8 +116,11 @@ private fun hueOf(shape: TrapShape, element: String): Color = when {
     else -> Color(0xFFE0E6EE)
 }
 
-/** Плита клетки [cell] формы [layout]: основа своего вида, контур в цвет стихии и знак плиты. */
-private fun ScenePainter.plate(layout: TrapLayout, cell: TrapCell, beat: TrapBeat) {
+/**
+ * Плита клетки [cell] формы [layout]: основа своего вида впритык к соседним клеткам той же ловушки, шов и контур в цвет стихии - только
+ * по наружным рёбрам ([joints] - видимые соседи-клетки той же ловушки, биты [TrapJoints]), знак плиты - свой в каждой клетке.
+ */
+private fun ScenePainter.plate(layout: TrapLayout, cell: TrapCell, joints: Int, beat: TrapBeat) {
     val (x, y) = cell
     val light = glow(x, y)
     val shape = layout.kind.shape
@@ -122,12 +129,12 @@ private fun ScenePainter.plate(layout: TrapLayout, cell: TrapCell, beat: TrapBea
         TrapShape.CHAIN -> Color(0xFF241C14)
         else -> Color(0xFF1C1F23)
     }.copy(alpha = light)
-    cellQuad(x, y, .05)
+    cellQuad(x, y, 0.0)
     pen.color = Seam.copy(alpha = light)
-    cellRim(x, y, .05, unit * .03f)
+    outerRim(x, y, joints, RIM_INSET, unit * .03f)
     if (beat.edge > 0) {
         pen.color = beat.hue.copy(alpha = beat.edge * light)
-        cellRim(x, y, .05, unit * .05f)
+        outerRim(x, y, joints, RIM_INSET, unit * .05f)
     }
     when (shape) {
         TrapShape.LINE -> HOLES.forEach { (a, b) ->
@@ -137,7 +144,7 @@ private fun ScenePainter.plate(layout: TrapLayout, cell: TrapCell, beat: TrapBea
 
         TrapShape.PATCH -> {
             pen.color = beat.hue.copy(alpha = beat.edge * light)
-            cellQuad(x, y, .14)
+            outerQuad(x, y, joints, .14)
             pen.color = Color(0xFF4E4741).copy(alpha = light)
             for (b in GRATE) segment(x + .14, y + b, x + .86, y + b, unit * .06f)
         }
@@ -177,7 +184,7 @@ private fun ScenePainter.plate(layout: TrapLayout, cell: TrapCell, beat: TrapBea
             cellRim(x, y, .22, unit * .04f)
             if (beat.hit || beat.warn > 0) {
                 pen.color = beat.hue.copy(alpha = beat.edge * .45f * light)
-                cellQuad(x, y, .05)
+                cellQuad(x, y, 0.0)
             }
         }
 
@@ -454,6 +461,57 @@ private fun ScenePainter.cellRim(x: Int, y: Int, ins: Double, width: Float) {
     segment(x0, y1, x0, y0, width)
 }
 
+/**
+ * Плита клетки [x], [y] с отступом [ins] только от наружных рёбер ([joints] - соседи той же ловушки): у соседних клеток заливки
+ * смыкаются в одну фигуру.
+ */
+private fun ScenePainter.outerQuad(x: Int, y: Int, joints: Int, ins: Double) {
+    val x0 = x + if (joints and TrapJoints.WEST == 0) ins else 0.0
+    val y0 = y + if (joints and TrapJoints.NORTH == 0) ins else 0.0
+    val x1 = x + 1 - if (joints and TrapJoints.EAST == 0) ins else 0.0
+    val y1 = y + 1 - if (joints and TrapJoints.SOUTH == 0) ins else 0.0
+    pen.quad(isoX(x0, y0), isoY(x0, y0), isoX(x1, y0), isoY(x1, y0), isoX(x1, y1), isoY(x1, y1), isoX(x0, y1), isoY(x0, y1))
+}
+
+/**
+ * Наружный контур клетки [x], [y] толщиной [width] с отступом [ins]: рёбра без соседа той же ловушки ([joints]); у соседа ребро продолжается
+ * до края клетки, во внутреннем углу формы - на [ins] дальше, к ребру соседа. Так контуры клеток сходятся в один контур фигуры.
+ */
+private fun ScenePainter.outerRim(x: Int, y: Int, joints: Int, ins: Double, width: Float) {
+    if (joints and TrapJoints.NORTH == 0) {
+        segment(x + rimEnd(joints, TrapJoints.WEST, TrapJoints.NORTH_WEST, ins), y + ins, x + 1 - rimEnd(joints, TrapJoints.EAST, TrapJoints.NORTH_EAST, ins), y + ins, width)
+    }
+    if (joints and TrapJoints.EAST == 0) {
+        segment(x + 1 - ins, y + rimEnd(joints, TrapJoints.NORTH, TrapJoints.NORTH_EAST, ins), x + 1 - ins, y + 1 - rimEnd(joints, TrapJoints.SOUTH, TrapJoints.SOUTH_EAST, ins), width)
+    }
+    if (joints and TrapJoints.SOUTH == 0) {
+        segment(x + 1 - rimEnd(joints, TrapJoints.EAST, TrapJoints.SOUTH_EAST, ins), y + 1 - ins, x + rimEnd(joints, TrapJoints.WEST, TrapJoints.SOUTH_WEST, ins), y + 1 - ins, width)
+    }
+    if (joints and TrapJoints.WEST == 0) {
+        segment(x + ins, y + 1 - rimEnd(joints, TrapJoints.SOUTH, TrapJoints.SOUTH_WEST, ins), x + ins, y + rimEnd(joints, TrapJoints.NORTH, TrapJoints.NORTH_WEST, ins), width)
+    }
+}
+
+/**
+ * Где кончается наружное ребро у бока [side] клетки: бок наружный - угол фигуры, ребро короче на [ins]; бок к соседу и угол [corner] тоже
+ * сосед - внутренний угол, ребро длиннее на [ins]; иначе ребро идёт до края клетки.
+ */
+private fun rimEnd(joints: Int, side: Int, corner: Int, ins: Double): Double = when {
+    joints and side == 0 -> ins
+    joints and corner != 0 -> -ins
+    else -> 0.0
+}
+
+/** Видимые соседи клетки [cell] той же ловушки: из соседей формы [joints] - лишь исследованные клетки. */
+private fun ScenePainter.visibleJoints(cell: TrapCell, joints: Int): Int {
+    var seen = 0
+    for (bit in 0 until TrapJoints.SIDES) {
+        val mask = 1 shl bit
+        if (joints and mask != 0 && explored(cell.x + TrapJoints.dx(bit), cell.y + TrapJoints.dy(bit))) seen = seen or mask
+    }
+    return seen
+}
+
 /** Отрезок по полу между точками карты. */
 private fun ScenePainter.segment(x0: Double, y0: Double, x1: Double, y1: Double, width: Float) = pen.line(isoX(x0, y0), isoY(x0, y0), isoX(x1, y1), isoY(x1, y1), width)
 
@@ -463,6 +521,9 @@ private fun ScenePainter.dot(x: Double, y: Double, rx: Float, ry: Float) {
     val py = isoY(x, y)
     pen.ellipse(px - unit * rx, py - unit * ry, unit * rx * 2, unit * ry * 2)
 }
+
+/** Отступ шва и контура плиты от наружного края фигуры, клеток. */
+private const val RIM_INSET = .03
 
 /** Части стоящего: клетки - своим номером, столбы и тело - отдельно. */
 private const val POST = 1000

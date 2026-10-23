@@ -82,6 +82,9 @@ internal class ScenePainter {
     /** Перо кадра: одно на сцену, часы - декора. */
     private val frame = SceneFrame(pen, unit, 0f)
 
+    /** Соседство клеток ловушек карты: считается раз на ловушку ([TrapJoints]). */
+    internal val trapJoints = TrapJointsCache()
+
     /** Свет карты по клеткам: середина клетки героя и радиус факела - без мерцания, меняется со сменой клетки. */
     private var world: ExpeditionWorld? = null
     private var lightX = 0.0
@@ -116,6 +119,9 @@ internal class ScenePainter {
         val d = (hypot(x + .5 - lightX, y + .5 - lightY) / lightRadius).toFloat().coerceIn(0f, 1f)
         return 1f - (1f - REMEMBERED) * d * d
     }
+
+    /** Исследована ли клетка: до первой карты - да. */
+    internal fun explored(x: Int, y: Int): Boolean = world?.explored(x, y) ?: true
 
     /** Свет скалы: глубокая клетка светится, как самый светлый сосед, - крышка массива не темнеет пятном. */
     internal fun rockGlow(rock: WallRelief, x: Int, y: Int): Float {

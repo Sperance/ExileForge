@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.RolledMonster
 
 /** One line of what a monster carries: a stat and an operation, summed — its two sources apart, [own] from the monster, [map] from the map's buffs. */
@@ -20,13 +21,26 @@ data class MonsterLine(val stat: String, val op: Op, val own: Double, val map: D
     val split: Boolean get() = fromMap && own != 0.0
 }
 
-/** A monster's modifiers and its map's buffs as one list, summed per stat and operation — the same sum the fight folds; display only. */
+/**
+ * A monster's modifiers and its map's buffs as one list, summed per stat and operation — the same sum the fight folds; display only.
+ * «Больше» ударов всех видов одним числом (сила ступени раша, «урон монстров» карты - [GuardianFloor.STRIKES]) - одна строка урона
+ * монстра, а не шесть строк по видам урона, что читаются как его сопротивления.
+ */
 fun monsterLines(monster: RolledMonster): List<MonsterLine> = (monster.modifiers.flatMap { it.effects }.map { it to false } + monster.mapBuffs.map { it to true })
     .groupBy { (effect, _) -> effect.stat to effect.op }
     .map { (key, parts) ->
         val (map, own) = parts.partition { it.second }
         MonsterLine(key.first, key.second, own.sumOf { it.first.value }, map.sumOf { it.first.value }, map.isNotEmpty())
     }
+    .let(::strikesAsDamage)
+
+private fun strikesAsDamage(lines: List<MonsterLine>): List<MonsterLine> {
+    val strikes = lines.filter { it.op == Op.MORE && it.stat in GuardianFloor.STRIKES }
+    if (strikes.size != GuardianFloor.STRIKES.size || strikes.distinctBy { it.own to it.map }.size != 1) return lines
+    val first = lines.indexOf(strikes.first())
+    val rest = lines.filterNot { it in strikes }
+    return rest.take(first) + strikes.first().copy(stat = CoreStat.DAMAGE.code) + rest.drop(first)
+}
 
 /** Провокация либо есть, либо нет: сколько строк её дали, не говорит ничего. */
 fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {

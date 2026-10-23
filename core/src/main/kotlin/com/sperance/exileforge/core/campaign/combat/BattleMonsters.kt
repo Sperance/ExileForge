@@ -56,7 +56,7 @@ internal fun Battle.monsterCast(me: Fighter) {
     val skills = foes[me.index].skills + learned[me.index].orEmpty()
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
-        val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown * rules.cast.firstReady(me.chief) * me.slow() }
+        val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown * rules.cast.firstReadyShare(me.chief) * me.slow() }
         if (time < ready || !wanted(me, skill)) continue
         beginCast(me, skill.code, skill.code, CastTime.of(skill, me.body, rules) * me.slow()) { monsterApplied(me, skill) }
         return

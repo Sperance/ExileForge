@@ -47,14 +47,14 @@ class RunSheet(
     }
 
     companion object {
-        /** Лист эффектов захода над готовыми характеристиками [stats] - без листа героя за ними: строки ложатся сводом правил ([StatLines]). */
-        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE, percent: Set<String> = emptySet()): RunSheet =
-            RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, percent) }
+        /**
+         * Лист эффектов захода над готовыми характеристиками [stats] - без листа героя за ними (лист боя ещё не собран): строки ложатся
+         * сводом правил поверх готового ([StatLines.fold]).
+         */
+        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): RunSheet =
+            RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, emptySet()) }
     }
 }
 
-/** Сдвиги, сложенные по источнику в порядке первого появления; сумма меньше [MOVED] - след округления, не источник. */
-fun List<Shift>.bySource(): List<Shift> = groupBy { it.source }.map { (source, own) -> Shift(source, own.sumOf { it.delta }) }.filter { abs(it.delta) >= MOVED }
-
-/** Сдвиг меньше этого - не сдвиг: десятые листа. */
-private const val MOVED = 0.05
+/** Сдвиги, сложенные по источнику в порядке первого появления; сумма меньше [MapEffects.MOVED] - след округления, не источник. */
+fun List<Shift>.bySource(): List<Shift> = groupBy { it.source }.map { (source, own) -> Shift(source, own.sumOf { it.delta }) }.filter { abs(it.delta) >= MapEffects.MOVED }

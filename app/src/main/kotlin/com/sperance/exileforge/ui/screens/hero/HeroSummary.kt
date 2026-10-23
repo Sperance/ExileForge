@@ -326,20 +326,21 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
             }
         }
         val indent = Modifier.padding(start = SummaryMetrics.sourceIndent, end = 12.dp, bottom = SummaryMetrics.rowPadding)
+        val explainer = remember(game) { StatExplainer(game) }
+        val percent = game.index?.stats?.isPercent(key) == true
         if (many) {
-            FoldBody(unfolded) { Column(indent) { sources.forEach { RunSourceLine(key, it, game) } } }
+            FoldBody(unfolded) { Column(indent) { sources.forEach { RunSourceLine(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) } } }
         } else {
-            Column(indent) { RunSourceLine(key, sources.single(), game) }
+            sources.single().let { Column(indent) { RunSourceLine(explainer.runSourceTitle(it.source), explainer.fmt(key, it.delta, Op.ADD, percent)) } }
         }
     }
 }
 
-/** Источник изменённой цифры [key]: его имя (строка карты, Атлас, узел гильдии, зелье) и что он дал. */
-@Composable private fun RunSourceLine(key: String, shift: Shift, game: GameUi) {
-    val explainer = remember(game) { StatExplainer(game) }
+/** Источник изменённой цифры: его имя [title] (строка карты, Атлас, узел гильдии, зелье) и что он дал - [amount]. */
+@Composable private fun RunSourceLine(title: String, amount: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(explainer.runSourceTitle(shift.source), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        Text(explainer.fmt(key, shift.delta, Op.ADD, game.index?.stats?.isPercent(key) == true), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        Text(title, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(amount, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
 

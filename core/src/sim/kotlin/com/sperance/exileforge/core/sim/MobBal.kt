@@ -1086,7 +1086,7 @@ fun main(args: Array<String>) {
                         val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(region.zones.last().code, false))
                         (0 until seeds).map { s ->
                             val r = modes.rush(hero, region, 0, SimKit.SEED + 101L * s + act)
-                            Row(listOf("rush", act + 1, level, c.code, r.killed, r.bosses, r.wall, r.fast))
+                            Row(listOf("rush", act + 1, level, c.code, r.killed, r.bosses, r.wall))
                         }
                     }
                 }
@@ -1447,7 +1447,7 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
         val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(region.zones.last().code, false))
         val r = modes.rush(hero, region, tier, SimKit.SEED + 101L * seed + 7L * tier + level)
         val share = r.killed.toDouble() / r.bosses.coerceAtLeast(1)
-        return RushTry(region.code, level, heroClass.code, tier, r.killed >= r.bosses && r.bosses > 0, rules.rush.tier(tier).runs * share, r.wall, r.fast)
+        return RushTry(region.code, level, heroClass.code, tier, r.killed >= r.bosses && r.bosses > 0, rules.rush.tier(tier).runs * share, r.wall)
     }
 
     /** Башня эталоном класса [heroClass] уровня [level] с первого этажа до этажа цели ([TowerTarget.floor]) или гибели, кости [seed]. */
@@ -1500,9 +1500,9 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
         return RunTry(level, heroClass.code, (row.values[11] as Double) / speed + (row.values[12] as Double))
     }
 
-    /** Попытка раша: ступень [tier], зачищен ли, «заходов» награды [runs] по доле павших, секунды стены [wall], уложился ли в `rush.seconds` ([fast]). */
-    data class RushTry(val region: String, val level: Int, val heroClass: String, val tier: Int, val cleared: Boolean, val runs: Double, val wall: Double, val fast: Boolean) {
-        fun row(act: Int) = Row(listOf("rush", act, region, level, heroClass, tier, cleared, runs, wall, fast))
+    /** Попытка раша: ступень [tier], зачищен ли, «заходов» награды [runs] по доле павших, секунды стены [wall]. */
+    data class RushTry(val region: String, val level: Int, val heroClass: String, val tier: Int, val cleared: Boolean, val runs: Double, val wall: Double) {
+        fun row(act: Int) = Row(listOf("rush", act, region, level, heroClass, tier, cleared, runs, wall))
     }
 
     /** Подъём на башню: этаж [floor] из цели [goal], «заходов» награды [runs] (этажи и клады), секунды стены [wall]. */
@@ -1527,8 +1527,7 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
 
         /**
          * Сводка `-Pmode=trials`: доля зачисток раша по ступени против [RushTarget], доля героев, дошедших до этажа цели башни,
-         * и награда испытаний в минуту долей заходов в минуту и в цели ли она ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта; у раша ещё
-         * доля зачисток, что уложились в `rush.seconds` на босса (бонус скорости).
+         * и награда испытаний в минуту долей заходов в минуту и в цели ли она ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта.
          */
         fun summary(index: ContentIndex, rows: List<Row>): List<Row> {
             val runs = rows.filter { it.values[0] == "run" }
@@ -1537,9 +1536,7 @@ class Trials(private val index: ContentIndex, private val sim: MobBal, private v
             val rush = rows.filter { it.values[0] == "rush" }.groupBy { it.values[5] as Int }.toSortedMap().map { (tier, list) ->
                 val clear = list.count { it.values[6] == true }.toDouble() / list.size
                 val pay = list.sumOf { it.values[7] as Double } / (list.sumOf { it.values[8] as Double } / 60) / perMinute
-                val cleared = list.filter { it.values[6] == true }
-                val fast = if (cleared.isEmpty()) 0.0 else cleared.count { it.values[9] == true }.toDouble() / cleared.size
-                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, RewardTarget.rush(pay), fast))
+                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay, RewardTarget.rush(pay)))
             }
             val farms = rows.filter { it.values[0] == "farm" }.groupBy { it.values[1] as Int }
             val tower = rows.filter { it.values[0] == "tower" }.groupBy { it.values[1] as Int }.toSortedMap().map { (level, list) ->

@@ -45,8 +45,8 @@ import com.sperance.exileforge.rules.run.RunContext
 class ModesBal(private val index: ContentIndex) {
     private val trials = checkNotNull(index.campaign.trials)
 
-    /** Итог раша: боссов пало из [bosses], полная зачистка, секунды стены и уложился ли в лимит бонуса. */
-    data class Rush(val killed: Int, val bosses: Int, val wall: Double, val fast: Boolean)
+    /** Итог раша: боссов пало из [bosses] и секунды стены. */
+    data class Rush(val killed: Int, val bosses: Int, val wall: Double)
 
     /** Итог башни: последний пройденный этаж (с учётом этажа входа) и уровень его врагов, секунды боёв и стены (высшая скорость боя). */
     data class Tower(val floor: Int, val level: Int, val seconds: Double, val wall: Double)
@@ -68,9 +68,7 @@ class ModesBal(private val index: ContentIndex) {
             now += (DT * 1000).toLong()
         }
         val hud = arena.hud.value
-        val wall = now / 1000.0
-        val full = hud.phase == TrialPhase.DONE && hud.cleared >= hud.steps
-        return Rush(hud.cleared, hud.steps, wall, full && wall <= trials.rush.seconds * hud.steps)
+        return Rush(hud.cleared, hud.steps, now / 1000.0)
     }
 
     /** Подъём на башню героем [hero] с этажа [from] до этажа [maxFloor] или гибели. */

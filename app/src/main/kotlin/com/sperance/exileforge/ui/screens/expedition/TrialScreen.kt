@@ -119,12 +119,7 @@ import org.koin.compose.viewmodel.koinViewModel
             style = MaterialTheme.typography.labelLarge,
         )
         if (hud.kind == TrialKind.RUSH && hud.tier > 0) Text(ui("trials.rush_tier", roman(hud.tier + 1)), color = Rune, style = MaterialTheme.typography.labelSmall)
-        val time = clock(hud.elapsed)
-        Text(
-            if (hud.limit > 0) ui("trials.clock_limit", time, clock(hud.limit)) else time,
-            color = if (hud.limit > 0 && hud.elapsed > hud.limit) Muted else Parchment,
-            style = MaterialTheme.typography.labelSmall,
-        )
+        Text(clock(hud.elapsed), color = Parchment, style = MaterialTheme.typography.labelSmall)
         val lines = remember(hud.mods) { hud.mods.flatMap { it.lines } }
         lines.forEach { Text(SkillText.statLine(it.stat, it.op, it.value, index), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
         if (hud.awaiting > 0) Receiving()

@@ -191,7 +191,7 @@ private class SourceIndex(private val index: ContentIndex) {
         rift()
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
-        index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
+        index.campaign.trials?.let { trials -> trials.rush.orbTables.flatMap { stacks(it).keys }.distinct().forEach { add(it, ItemSource(SourceKind.RUSH)) } }
         index.rules.sell.shards.entries.groupBy { it.value.shard }.forEach { (shard, grants) ->
             add(shard, ItemSource(SourceKind.SALE, ref = grants.joinToString(",") { it.key.name }, level = grants.first().value.amount.toInt()))
         }

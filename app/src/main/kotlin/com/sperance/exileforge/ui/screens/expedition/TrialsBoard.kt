@@ -152,7 +152,7 @@ import org.koin.compose.viewmodel.koinViewModel
             TrialMode.RUSH,
             note = null,
             chip = null,
-            info = { Tip(TrialMode.RUSH.label, ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()) + "\n\n" + ui("trials.rush_tiers_hint"), TrialMode.RUSH.accent) },
+            info = { Tip(TrialMode.RUSH.label, ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt()) + "\n\n" + ui("trials.rush_tiers_hint"), TrialMode.RUSH.accent) },
             open = opened == TrialMode.RUSH,
             phase = 2f / 3,
             onToggle = { toggle(TrialMode.RUSH) },

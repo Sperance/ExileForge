@@ -48,7 +48,7 @@ enum class TrialPhase { FIGHT, DEAD, DONE }
 
 /**
  * The trial as its screen prints it: the fight for the arena's cards, which boss of how many or which floor, the level
- * the foes stand at, the seconds of fighting so far and the rush's limit for its bonus, the floor's lines, and what the
+ * the foes stand at, the seconds of fighting so far, the floor's lines, and what the
  * server's answers brought — the tower's hoards as they come, the rush's chest at the end.
  */
 data class TrialHud(
@@ -60,7 +60,6 @@ data class TrialHud(
     val steps: Int,
     val level: Int,
     val elapsed: Double,
-    val limit: Double,
     val mods: List<TowerMod> = emptyList(),
     val cleared: Int = 0,
     val gained: Reward = Reward.NONE,
@@ -434,7 +433,7 @@ class TrialArena(
         return TrialHud(
             kind = trial.kind, phase = phase, run = runHud, fight = fightHud,
             step = if (trial.kind == TrialKind.RUSH) (step + 1).coerceAtMost(plan?.size ?: 0) else step, steps = plan?.size ?: 0,
-            level = level, elapsed = elapsed(fight), limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
+            level = level, elapsed = elapsed(fight),
             mods = floor?.mods.orEmpty(), cleared = cleared, gained = gained, awaiting = (next - answered).coerceAtLeast(0), lastHoard = lastHoard,
             summary = stats.summary(kills),
             choice = choice,

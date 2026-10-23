@@ -1,7 +1,8 @@
 #!/bin/bash
-# Хук старта облачной сессии Claude Code: ставит то, чего нет в контейнере, - JDK 17 для тулчейна Gradle клиента и
-# kotlin-language-server для плагина KotlinSense. Идемпотентен: готовое не качает заново; состояние контейнера после
-# хука кэшируется. Локально (не в облаке) ничего не делает.
+# Хук старта облачной сессии Claude Code: ставит то, чего нет в контейнере, - JDK 17 для тулчейна Gradle клиента,
+# Android SDK для сборки :app, kotlin-language-server для диагностики Kotlin; подписывает коммиты владельцем и включает
+# сторож сообщений коммитов (.githooks) в клиенте и сабмодуле сервера. Идемпотентен: готовое не качает заново; состояние
+# контейнера после хука кэшируется. Локально (не в облаке) ничего не делает.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -39,7 +40,33 @@ if [ ! -x "$LS_HOME/bin/kotlin-language-server" ]; then
 fi
 ln -sf "$LS_HOME/bin/kotlin-language-server" "$BIN_DIR/kotlin-language-server"
 
+# Android SDK: :app собирается против compileSdk 37; лицензии принимаются, local.properties указывает на SDK.
+SDK_HOME="$HOME/android-sdk"
+CLT_URL="https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip"
+if [ ! -x "$SDK_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+  echo "session-start: downloading Android command-line tools"
+  tmp=$(mktemp -d)
+  curl -fsSL "$CLT_URL" -o "$tmp/clt.zip"
+  unzip -q "$tmp/clt.zip" -d "$tmp"
+  mkdir -p "$SDK_HOME/cmdline-tools" && rm -rf "$SDK_HOME/cmdline-tools/latest" && mv "$tmp/cmdline-tools" "$SDK_HOME/cmdline-tools/latest"
+  rm -rf "$tmp"
+fi
+if [ ! -d "$SDK_HOME/platforms/android-37.0" ]; then
+  yes | "$SDK_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_HOME" --licenses >/dev/null 2>&1 || true
+  "$SDK_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_HOME" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
+fi
+echo "sdk.dir=$SDK_HOME" > "$CLAUDE_PROJECT_DIR/local.properties"
+
+# Подпись коммитов и сторож сообщений: клиент и сабмодуль сервера (если он инициализирован).
+for repo in "$CLAUDE_PROJECT_DIR" "$CLAUDE_PROJECT_DIR/backend"; do
+  if git -C "$repo" rev-parse --git-dir >/dev/null 2>&1; then
+    git -C "$repo" config user.name "Sperance"
+    git -C "$repo" config user.email "dmitriymalaye@gmail.com"
+    git -C "$repo" config core.hooksPath "$CLAUDE_PROJECT_DIR/.githooks"
+  fi
+done
+
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$CLAUDE_ENV_FILE"
 fi
-echo "session-start: JDK 17 at $JDK_HOME, kotlin-language-server at $BIN_DIR"
+echo "session-start: JDK 17 at $JDK_HOME, Android SDK at $SDK_HOME, kotlin-language-server at $BIN_DIR, commits by Sperance"

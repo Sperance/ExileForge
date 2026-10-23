@@ -1,0 +1,25 @@
+#!/bin/bash
+# Сторож сообщения коммита (клиент ExileForge и сервер ktor-bestgame, правила CLAUDE.md и RULES.md):
+# - без упоминаний Claude, Claude Code, ИИ и трейлеров соавторства;
+# - у коммита кода есть трейлеры Server-Update и Server-Wipe (кроме слияний, docs:, style:, ci:, test:);
+# - в репозитории сервера нет «Closes #N»: номер Issue клиента закрыл бы чужой Issue сервера - там «Refs Sperance/ExileForge#N».
+set -euo pipefail
+msg_file="$1"
+msg=$(grep -v '^#' "$msg_file")
+fail() { echo "commit-msg: $1" >&2; exit 1; }
+
+# Имена рабочих веток (claude/...) - не упоминание, их не считаем.
+if sed -E 's#claude/[A-Za-z0-9._-]+##g' <<<"$msg" | grep -qiE 'claude|anthropic|co-authored-by|generated (by|with)|\bAI\b|\bИИ\b|нейросет'; then
+  fail "сообщение упоминает Claude/ИИ или соавторство - убери"
+fi
+
+subject=$(head -n1 <<<"$msg")
+if ! grep -qE '^(Merge |Revert |(docs|style|ci|test)(\(.+\))?!?: )' <<<"$subject"; then
+  grep -qE '^Server-Update: (yes|no)$' <<<"$msg" || fail "нет трейлера «Server-Update: yes|no»"
+  grep -qE '^Server-Wipe: (yes|no)$' <<<"$msg" || fail "нет трейлера «Server-Wipe: yes|no»"
+fi
+
+remote=$(git config --get remote.origin.url || true)
+if [[ "$remote" == *ktor-bestgame* ]] && grep -qiE '(close[sd]?|fix(e[sd])?|resolve[sd]?) #[0-9]+' <<<"$msg"; then
+  fail "в сервере не закрывай Issue номером - пиши «Refs Sperance/ExileForge#N»"
+fi

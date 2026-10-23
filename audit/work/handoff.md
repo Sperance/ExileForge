@@ -83,6 +83,10 @@ Issues: открытые bug #486-#528 (43 шт.). Вне работы: #445 (en
 | Маршрут | `POST hero/autosell/shelves` | 5 |
 | Поле провода | `AutoSell.shelves` (`BagCategory` правил, именами) | 5 |
 | Ключи локали | `bag.section_omens`, `bag.section_shards`, `bag.section_keys`, `bag.section_potions`, `bag.books_other`, `autosell.tab.*`, `autosell.all`, `autosell.group`, `autosell.sell_shelf`, `autosell.bag_note` | 5 |
+| Код ошибки | `CH_048` (купленную вещь не надеть: в тайнике нет места) | 6 |
+| Маршрут | `POST hero/merchant/buy?offerId=&wear=true&slot=` (покупка с надеванием) | 6 |
+| Провод: поле | `RunEvent.Feature.wear` (`WearRequest` правил: место надевания купленного у бродячего торговца) | 6 |
+| Ключи локали | `error.CH_048`, `merchant.buy_wear*`, `merchant.wear_*`, `auction.lot_*`, `auction.your_bid*` ; удалены `error.GR_001`, `guild.deposit_tester` | 6 |
 
 ## dev-notes
 Записаны: 524 496 510 511 512. Не записаны (запись прервана проверкой безопасности, gh на запись запрещён): 526 522 518 525 513 514 515 516 517 519 520 521 — записать через MCP позже.

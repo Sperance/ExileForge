@@ -7,6 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -64,7 +65,7 @@ import kotlin.math.roundToInt
 /**
  * The map in small: round, framed in bronze, the hero at its centre and the explored ground moving
  * under them — rock darker than floor, the exit once seen, the chests and fountains still
- * standing. «−» and «+» in a capsule under the circle zoom out and in, and a tap opens the whole map.
+ * standing. A pinch on the circle zooms it out and in, and a tap opens the whole map.
  * It redraws a few times a second on its own tick — the scene's clock is the scene's.
  *
  * Изометрия сцены своим масштабом: «вверх» на мини-карте - «вверх» на сцене.
@@ -80,24 +81,18 @@ import kotlin.math.roundToInt
             tick++
         }
     }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MINIMAP_GAP)) {
-        Canvas(Modifier.size(MINIMAP_SIDE).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
-            if (tick < 0) return@Canvas
-            drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
-            val centre = Offset(size.width / 2, size.height / 2)
-            val radius = size.width / 2
-            drawCircle(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, Color(0xB30A0D12)), centre, radius), radius, centre)
-            drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
-            drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
-        }
-        CanvasToolbar(
-            zoomTools(
-                canZoomOut = cells < MINIMAP_MAX,
-                canZoomIn = cells > MINIMAP_MIN,
-                onZoomOut = { cells = (cells * MINIMAP_STEP).coerceAtMost(MINIMAP_MAX) },
-                onZoomIn = { cells = (cells / MINIMAP_STEP).coerceAtLeast(MINIMAP_MIN) },
-            ),
-        )
+    Canvas(
+        Modifier.size(MINIMAP_SIDE).clip(CircleShape).background(Color(0xE60A0D12))
+            .pointerInput(Unit) { detectTransformGestures { _, _, zoom, _ -> cells = (cells / zoom).coerceIn(MINIMAP_MIN, MINIMAP_MAX) } }
+            .clickable { full = true },
+    ) {
+        if (tick < 0) return@Canvas
+        drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
+        val centre = Offset(size.width / 2, size.height / 2)
+        val radius = size.width / 2
+        drawCircle(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, Color(0xB30A0D12)), centre, radius), radius, centre)
+        drawCircle(Bronze, radius - 1.5.dp.toPx(), centre, style = Stroke(3.dp.toPx()))
+        drawCircle(GoldBright.copy(alpha = .35f), radius - 5.dp.toPx(), centre, style = Stroke(1.dp.toPx()))
     }
     if (full) {
         HoldsRun(run)
@@ -107,12 +102,6 @@ import kotlin.math.roundToInt
 
 /** Поперечник мини-карты в углу полосы карты. */
 internal val MINIMAP_SIDE = 96.dp
-
-/** Зазор между кругом мини-карты и капсулой «−/+» под ним: зоны касания кнопок не наезжают на круг. */
-private val MINIMAP_GAP = 4.dp
-
-/** Шаг «−/+» мини-карты: клеток в поперечнике больше или меньше во столько раз. */
-private const val MINIMAP_STEP = 1.4f
 
 /**
  * The explored ground through [projection], only what falls on the canvas: floor lighter where lit, rock dark, the chests,

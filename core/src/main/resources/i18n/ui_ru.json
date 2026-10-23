@@ -1179,8 +1179,6 @@
   "card.seal.capture": "монстры +{0}% · вещь с влиянием {1}%",
   "card.seal.quality": "+{0}% к количеству добычи",
   "card.seal.quality_source": "качество {0}%",
-  "expedition.zoom_in": "Приблизить",
-  "expedition.zoom_out": "Отдалить",
   "map.monsters_left": "Монстров: {0} из {1}",
   "map.chests_left": "Сундуков: {0}",
   "map.fountains_left": "Фонтанов: {0}",

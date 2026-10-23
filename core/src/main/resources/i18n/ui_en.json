@@ -1179,8 +1179,6 @@
   "card.seal.capture": "monsters +{0}% · influenced item {1}%",
   "card.seal.quality": "+{0}% item quantity",
   "card.seal.quality_source": "quality {0}%",
-  "expedition.zoom_in": "Zoom in",
-  "expedition.zoom_out": "Zoom out",
   "map.monsters_left": "Monsters: {0} of {1}",
   "map.chests_left": "Chests: {0}",
   "map.fountains_left": "Fountains: {0}",

@@ -51,7 +51,7 @@ import kotlin.math.sin
  * касания, жест не перезапускается каждый кадр. Атлас - колесо вокруг старта: пунктирные кольца - кольцевые дороги раскладки, у каждой
  * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев. Разовая просьба [centerOn] (узел, найденный поиском) ставит его
  * звезду посреди открытого листом места, как только небо измерено, и гасится [onCentered]; смена размера неба её не повторяет. Масштаб и
- * сдвиг держит [camera] - их же двигают кнопки «−/+» ряда Атласа.
+ * сдвиг держит [camera].
  */
 @Composable internal fun Sky(
     index: ContentIndex,
@@ -167,7 +167,7 @@ internal class SkyBrushes {
 }
 
 /**
- * Масштаб и сдвиг неба Атласа: общие у щипка и кнопок «−/+» ряда. Масштаб - в пределах жеста [MIN_ZOOM]..[MAX_ZOOM], сдвиг - от середины
+ * Масштаб и сдвиг неба Атласа: их двигает щипок. Масштаб - в пределах жеста [MIN_ZOOM]..[MAX_ZOOM], сдвиг - от середины
  * открытого листом места.
  */
 @Stable
@@ -178,9 +178,6 @@ internal class SkyCamera {
     var pan by mutableStateOf(Offset.Zero)
         private set
 
-    val canZoomIn: Boolean get() = scale < MAX_ZOOM - ZOOM_EPSILON
-    val canZoomOut: Boolean get() = scale > MIN_ZOOM + ZOOM_EPSILON
-
     /** Ставит сдвиг [pan] при том же масштабе. */
     fun moveTo(pan: Offset) {
         this.pan = pan
@@ -190,20 +187,6 @@ internal class SkyCamera {
     fun pinch(scale: Float, pan: Offset) {
         this.scale = scale
         this.pan = pan
-    }
-
-    /**
-     * Шаг кнопки: масштаб × [factor] в пределах жеста вокруг середины открытого места; сдвиг растёт вместе с масштабом, как и пределы
-     * сдвига ([Placement.held]), - небо не уходит из вида.
-     */
-    fun zoomBy(factor: Float) {
-        val next = (scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
-        pan *= next / scale
-        scale = next
-    }
-
-    private companion object {
-        const val ZOOM_EPSILON = .001f
     }
 }
 

@@ -26,8 +26,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -71,12 +69,6 @@ class CanvasTool(
         }
     }
 }
-
-/** Пара масштаба для [CanvasToolbar]: «−» ([onZoomOut], пока [canZoomOut]) и «+» ([onZoomIn], пока [canZoomIn]) - в этом порядке. */
-fun zoomTools(canZoomOut: Boolean, canZoomIn: Boolean, onZoomOut: () -> Unit, onZoomIn: () -> Unit): List<CanvasTool> = listOf(
-    CanvasTool(ForgeGlyphs.Minus, ui("expedition.zoom_out"), canZoomOut, onZoomOut),
-    CanvasTool(ForgeGlyphs.Plus, ui("expedition.zoom_in"), canZoomIn, onZoomIn),
-)
 
 /** Кнопка капсулы: значок без фона; погашенная - штриховка под значком, а не только цвет; знаки [CanvasTool.marks] - поверх. */
 @Composable private fun ToolButton(tool: CanvasTool) {

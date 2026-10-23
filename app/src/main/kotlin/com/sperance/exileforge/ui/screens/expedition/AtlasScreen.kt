@@ -119,8 +119,6 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var centerOn by remember { mutableStateOf<String?>(null) }
     var menuOpen by remember { mutableStateOf(false) }
     val camera = remember { SkyCamera() }
-    val canZoomOut by remember(camera) { derivedStateOf { camera.canZoomOut } }
-    val canZoomIn by remember(camera) { derivedStateOf { camera.canZoomIn } }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = Sky.text)
@@ -145,7 +143,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         val tools = listOfNotNull(
             CanvasTool(Icons.Outlined.Search, ui("atlas.search"), enabled = true, onClick = { searching = true }).takeIf { index != null },
             CanvasTool(Icons.Outlined.MoreVert, ui("common.more"), enabled = true, onClick = { menuOpen = true }, anchored = menu),
-        ) + zoomTools(canZoomOut, canZoomIn, { camera.zoomBy(1 / MAP_ZOOM_STEP) }, { camera.zoomBy(MAP_ZOOM_STEP) }).takeIf { index != null }.orEmpty()
+        )
         CanvasToolbar(tools, Modifier.align(Alignment.TopEnd).padding(horizontal = 12.dp, vertical = 8.dp), accent = Sky.text)
         if (searching && index != null) {
             AtlasSearch(index, state?.allocated?.toSet().orEmpty(), { searching = false }) { code ->

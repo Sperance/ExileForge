@@ -39,7 +39,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Where a picked zone's token is flown to while its card covers the map's foot: this share down the screen. */
@@ -92,7 +91,6 @@ private const val CARD_TOP = .48f
     val world = chart?.world
     val density = screen.density
     val camera = remember(campaign.world, density) { WorldCamera(campaign.world, density) }
-    val scope = rememberCoroutineScope()
     val launch = expedition.launch?.takeIf { world?.token(it.mapCode) != null }
     val stash = remember(game.hero?.items, index) { stashCounts(game) }
     val awakening = rememberAwakeningDay(index.awakenings, game.hero?.campaign?.awakened ?: AwakenedWins())
@@ -123,10 +121,7 @@ private const val CARD_TOP = .48f
         var searching by remember { mutableStateOf(false) }
         var storyOpen by remember { mutableStateOf(false) }
         val board = quests.board
-        val canZoomOut by remember(camera) { derivedStateOf { camera.canZoomOut } }
-        val canZoomIn by remember(camera) { derivedStateOf { camera.canZoomIn } }
         val tools = listOfNotNull(StoryMark.of(game, board)?.tool { storyOpen = true }) +
-            zoomTools(canZoomOut, canZoomIn, { scope.launch { camera.zoomBy(1 / MAP_ZOOM_STEP) } }, { scope.launch { camera.zoomBy(MAP_ZOOM_STEP) } }) +
             CanvasTool(Icons.Outlined.Search, ui("expedition.search"), enabled = true, onClick = { searching = true })
         WorldBar(tools, Modifier.align(Alignment.TopCenter))
         if (launch != null && world != null) ZoneCard(game, vm, world, launch, expedition.forced, awakening, Modifier.align(Alignment.BottomCenter))
@@ -157,7 +152,7 @@ private const val CARD_TOP = .48f
 /** Такт часов поиска зон: «страж убит» хватает раз в минуту. */
 private const val SEARCH_TICK_MS = 60_000L
 
-/** Шапка карты: заголовок на вуали, что гаснет к карте, справа - ряд кнопок [tools] (сюжет, масштаб, поиск зоны). */
+/** Шапка карты: заголовок на вуали, что гаснет к карте, справа - ряд кнопок [tools] (сюжет, поиск зоны). */
 @Composable private fun WorldBar(tools: List<CanvasTool>, modifier: Modifier) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
@@ -169,9 +164,6 @@ private const val SEARCH_TICK_MS = 60_000L
         CanvasToolbar(tools)
     }
 }
-
-/** Шаг кнопок масштаба карты мира и Атласа: «+» - ближе во столько раз, «−» - дальше. */
-internal const val MAP_ZOOM_STEP = 1.35f
 
 /** Сколько камера стоит, прежде чем запомниться, мс. */
 private const val KEEP_VIEW_MS = 600L

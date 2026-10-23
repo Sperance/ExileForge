@@ -92,20 +92,11 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
         }
     }
 
-    /** Nearer or farther by [factor], about the middle of what is seen. */
-    suspend fun zoomBy(factor: Float) {
-        val middle = toWorld(Offset(viewport.width / 2f, viewport.height * .4f))
-        glide(WorldPoint(middle.x.toInt(), middle.y.toInt()), (scale * factor).coerceIn(minScale, MAX), down = .4f)
-    }
-
     /** Whether [point] is on the screen with [margin] pixels to spare above [bottom] (a share of its height). */
     fun sees(point: WorldPoint, margin: Float, bottom: Float = 1f): Boolean {
         val p = toScreen(point.x.toFloat(), point.y.toFloat())
         return p.x in margin..viewport.width - margin && p.y in margin..viewport.height * bottom - margin
     }
-
-    val canZoomIn: Boolean get() = scale < MAX - EPSILON
-    val canZoomOut: Boolean get() = scale > minScale + EPSILON
 
     private fun clamp() {
         val width = world.width * unit
@@ -121,7 +112,6 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
         const val HOME = .85f
         const val MAX = 1.6f
         private const val MIN = .3f
-        private const val EPSILON = .001f
         private const val GLIDE_MS = 550
 
         /** Below this nearness a token's name would be a smudge: names fade out. */

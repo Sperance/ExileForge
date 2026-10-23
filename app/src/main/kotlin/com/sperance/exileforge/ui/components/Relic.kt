@@ -171,12 +171,22 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
 @Composable fun LevelBadge(item: ItemView, look: RelicLook, modifier: Modifier) {
     val map = item.mapLevel
     val level = map ?: item.level.takeIf { it > 0 } ?: return
-    val tint = if (map != null) Rune else look.rarity
+    if (map != null) {
+        LevelBadge(level, Rune, ui("card.map_level", map), modifier, ink = Rune)
+    } else {
+        LevelBadge(level, look.rarity, ui("row.level", level), modifier)
+    }
+}
+
+/**
+ * Значок уровня [level] на углу портрета или гнезда: число цветом [ink] на тёмной подложке в нити [tint]; [label] - подпись для
+ * чтения с экрана целиком. Один вид для вещей и врагов арены.
+ */
+@Composable fun LevelBadge(level: Int, tint: Color, label: String, modifier: Modifier = Modifier, ink: Color = Parchment) {
     val shape = RoundedCornerShape(8.dp)
-    val label = if (map != null) ui("card.map_level", map) else ui("row.level", level)
     Text(
         level.toString(),
-        color = if (map != null) Rune else Parchment,
+        color = ink,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Bold,
         textAlign = TextAlign.Center,
@@ -185,6 +195,24 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
             .padding(horizontal = 4.dp).clearAndSetSemantics { contentDescription = label },
     )
 }
+
+/**
+ * Уровень вещи на левом нижнем углу гнезда карточки (правый нижний - печать влияния): тот же [LevelBadge], что в списках, касание в
+ * зоне [MarkTouchZone] - подсказка «Уровень предмета N» (у карты без тира - «Уровень карты N»), тот же текст - для чтения с экрана.
+ * Уровня нет или уровень карты уже стоит плиткой базы ([ItemView.levelTiled]) - значка нет.
+ */
+@Composable fun ItemLevelMark(item: ItemView, look: RelicLook, modifier: Modifier = Modifier) {
+    if (item.levelTiled) return
+    val map = item.mapLevel
+    val level = map ?: item.level.takeIf { it > 0 } ?: return
+    val text = if (map != null) ui("card.map_level", map) else ui("item.level_full", level)
+    Tipped({ Tip(text) }, modifier.touchOverhang(MarkTouchZone), contentAlignment = Alignment.Center) {
+        LevelBadge(level, if (map != null) Rune else look.rarity, text, ink = if (map != null) Rune else Parchment)
+    }
+}
+
+/** Зона касания значка уровня и номера экземпляра в карточке. */
+private val MarkTouchZone = 40.dp
 
 /** Сдвиг значка уровня за правый нижний угол гнезда - одинаковый у плитки и плиты. */
 val LevelBadgeOffset = DpOffset(7.dp, 6.dp)
@@ -343,16 +371,23 @@ private fun starPath(r: Float, c: Offset): Path = Path().apply {
     close()
 }
 
-/** «◆ № 41 из всех миров ◆»: сквозной по всем мирам номер экземпляра уникальной или мифической вещи, между двух нитей золота. */
-@Composable fun SerialSeal(serial: Long, look: RelicLook) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.width(30.dp).height(1.dp).background(Brush.horizontalGradient(listOf(look.gold.copy(alpha = 0f), look.gold))))
+/**
+ * Номер экземпляра уникальной или мифической вещи продолжением подписи «тип · редкость»: «· № 12» цветом [color] шрифтом [style]
+ * подписи. Касание в зоне не меньше 40 dp - подсказка «Экземпляр № 12 из всех миров», тот же текст - для чтения с экрана. Номер 0
+ * (старая копия без номера) не печатается.
+ */
+@Composable fun SerialMark(serial: Long, color: Color, style: TextStyle, modifier: Modifier = Modifier) {
+    if (serial <= 0) return
+    val full = ui("relic.serial", serial)
+    Tipped({ Tip(full) }, modifier.touchOverhang(MarkTouchZone), contentAlignment = Alignment.Center) {
         Text(
-            "◆ ${ui("relic.serial", serial)} ◆",
-            color = look.gold,
-            style = TextStyle(fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.4.sp),
+            "· " + ui("relic.serial_short", serial),
+            color = color,
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.clearAndSetSemantics { contentDescription = full },
         )
-        Box(Modifier.width(30.dp).height(1.dp).background(Brush.horizontalGradient(listOf(look.gold, look.gold.copy(alpha = 0f)))))
     }
 }
 

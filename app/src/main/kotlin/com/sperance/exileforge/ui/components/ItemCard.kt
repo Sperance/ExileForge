@@ -37,14 +37,12 @@ import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.BaseTile
 import com.sperance.exileforge.core.display.CardSeal
 import com.sperance.exileforge.core.display.DamageBlock
-import com.sperance.exileforge.core.display.DpsFigure
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemNeed
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.PropertyValue
-import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.TileGrid
 import com.sperance.exileforge.core.display.TileInk
 import com.sperance.exileforge.core.display.TileLayout
@@ -151,12 +149,12 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 
 /**
  * Предмет как страница «Реликвария» (выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
- * под ним что это и плашки уровня, качества и цены; строки - со значком тира, нажатие открывает тир и место ролла.
+ * под ним что это с номером экземпляра легенды, плашки качества и цены, уровень - значком на углу гнезда; строки - со значком тира, нажатие открывает тир и место ролла.
  * Полная карточка начинается «Медальоном» ([MedallionHead]): гнездо по центру, кольцо качества роллов и значки состояний
  * справа, у легенды гнездо в «Астролябии» 112dp; касание имени - английское имя для поиска на аукционе, касание значка - что он
  * значит. Короткая - значки в углу, гнездо по центру. У обеих числа базы - плитками под плашками, до разделителя и строк
  * ([BaseTiles]). Уникальная и мифическая вещь -
- * искры или звёзды, завитки по углам и номер экземпляра. [totals] - итог героя «сейчас → станет» под строками,
+ * искры или звёзды, завитки по углам. [totals] - итог героя «сейчас → станет» под строками,
  * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
  *
  * Цена торговца копии заменяет голую цену шаблона; [priced] false - плашки цены нет (место само печатает цену сделки). Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
@@ -164,7 +162,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * требований - галка или крест, null - не с чем сравнить.
  * Строки - в порядке [ItemView.lineGroups]: у полной - строка влияния печатью первой, врождённые над чертой, особые источники и
  * [seals] (`GameUi.itemSeals`: захват и качество карты с Атласом героя) плашками особого блока, основные - списком;
- * стороны аффиксов - чипами под именем; у короткой - тот же порядок без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
+ * у короткой - тот же порядок без плашек. Судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -250,44 +248,39 @@ fun ItemCard(
     Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
 }
 
-/** Имя предмета цветом редкости по центру; под ним - «тип или оружие · редкость» (у легенды заглавными). */
+/**
+ * Имя предмета цветом редкости по центру; под ним - «тип или оружие · редкость» (у легенды заглавными) и у уникальной и мифической -
+ * номер экземпляра «· № N» цветом акцента в той же строке ([SerialMark]).
+ */
 @Composable private fun RelicTitle(item: ItemView, look: RelicLook, size: Int, maxLines: Int) {
     val legend = look.legend != null
     Text(item.title, color = look.name, style = look.nameStyle(size), textAlign = TextAlign.Center, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
     val kind = listOfNotNull(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), rarityTitle(item.rarity)).joinToString(" · ")
-    Text(
-        if (legend) kind.uppercase() else kind,
-        color = look.muted,
-        style = MaterialTheme.typography.labelMedium,
-        letterSpacing = if (legend) 2.4.sp else .4.sp,
-        textAlign = TextAlign.Center,
-    )
+    val style = MaterialTheme.typography.labelMedium.copy(letterSpacing = if (legend) 2.4.sp else .4.sp)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+        Text(if (legend) kind.uppercase() else kind, color = look.muted, style = style, textAlign = TextAlign.Center, modifier = Modifier.weight(1f, fill = false))
+        SerialMark(item.item.serial, look.accent, style)
+    }
 }
 
-/**
- * Плашки шапки одной линией: уровень (кроме [noLevel] - уровень уже напечатан у гнезда), качество и цена [price]
- * (null - без плашки цены); [serial] - номер экземпляра легенды последней плашкой.
- */
+/** Плашки шапки одной линией: качество и цена [price] (null - без плашки цены); нет ни того, ни другого - ряда нет. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: Boolean = false, serial: Boolean = false) {
+private fun RelicChips(item: ItemView, price: Long?) {
+    if (item.quality <= 0 && price == null) return
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
-        if (!noLevel) {
-            RelicChip { Text(item.mapLevel?.let { ui("card.map_level", it) } ?: ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
-        }
         QualityBadge(item)
         price?.let { RelicChip { GoldPrice(it) } }
-        if (serial && item.item.serial > 0) SerialChip(item.item.serial, look)
     }
 }
 
 /**
- * Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру, имя, тип, печать номера, плашки и плитки базы ([BaseTiles];
- * уровень карты плиткой - без плашки уровня).
+ * Шапка короткой карточки: значки в углу, гнездо или «Астролябия» по центру с уровнем на левом нижнем углу ([ItemLevelMark]), имя, тип с
+ * номером экземпляра, плашки и плитки базы ([BaseTiles]).
  */
 @Composable private fun ShortHead(item: ItemView, look: RelicLook, price: Long?, locked: Boolean, waiting: Boolean, selected: Boolean) {
     val legend = look.legend != null
@@ -300,22 +293,24 @@ private fun RelicChips(item: ItemView, look: RelicLook, price: Long?, noLevel: B
         Spacer(Modifier.weight(1f))
         if (selected) SelectedMark()
     }
-    if (legend) {
-        Astrolabe(look, size = 140.dp, socket = 76.dp) { ItemIcon(item, look.rarity, Modifier.size(46.dp)) }
-    } else {
-        RelicSocket(item, look, 88.dp)
+    Box {
+        if (legend) {
+            Astrolabe(look, size = 140.dp, socket = 76.dp) { ItemIcon(item, look.rarity, Modifier.size(46.dp)) }
+        } else {
+            RelicSocket(item, look, 88.dp)
+        }
+        ItemLevelMark(item, look, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
     }
     RelicTitle(item, look, if (legend) 23 else 22, maxLines = 2)
-    if (item.item.serial > 0) SerialSeal(item.item.serial, look)
-    RelicChips(item, look, price, noLevel = item.levelTiled)
+    RelicChips(item, price)
     BaseTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
 }
 
 /**
- * Шапка полной карточки - «Медальон»: в центре гнездо или «Астролябия» 112dp с печатью влияния, справа кольцо качества роллов и
- * значки состояний. Ниже имя (касание - английское имя для поиска на аукционе), тип, плашки и плитки базы ([BaseTiles]; уровень карты
- * плиткой - без плашки уровня), под ними разделитель.
+ * Шапка полной карточки - «Медальон»: в центре гнездо или «Астролябия» 112dp, на её углах - уровень слева снизу ([ItemLevelMark]) и
+ * печать влияния справа снизу; справа кольцо качества роллов и значки состояний. Ниже имя (касание - английское имя для поиска на
+ * аукционе), тип с номером экземпляра, плашки и плитки базы ([FullTiles]), под ними разделитель.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -328,6 +323,7 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
             } else {
                 RelicSocket(item, look, 72.dp)
             }
+            ItemLevelMark(item, look, Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y))
             item.influenceLine?.marks?.influence?.let { InfluenceSealMark(it, 26.dp, Modifier.align(Alignment.BottomEnd).offset(6.dp, 6.dp)) }
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -344,21 +340,9 @@ private fun MedallionHead(item: ItemView, look: RelicLook, price: Long?, locked:
             RelicTitle(item, look, MEDALLION_NAME, maxLines = 4)
         }
     }
-    SideChips(item)
-    RelicChips(item, look, price, noLevel = item.levelTiled, serial = true)
+    RelicChips(item, price)
     FullTiles(item, look)
     RelicDivider(look, Modifier.padding(horizontal = 4.dp))
-}
-
-/** Номер экземпляра легенды плашкой шапки: Cinzel цветом акцента в золотой нити. */
-@Composable private fun SerialChip(serial: Long, look: RelicLook) {
-    val shape = RoundedCornerShape(12.dp)
-    Box(
-        Modifier.height(RelicChipHeight).background(look.gold.copy(alpha = .08f), shape).border(1.dp, look.gold.copy(alpha = .4f), shape).padding(horizontal = 9.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(ui("relic.serial", serial), color = look.accent, style = TextStyle(fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 11.5.sp, letterSpacing = .6.sp), maxLines = 1)
-    }
 }
 
 /** Кегль имени полной карточки. */
@@ -367,10 +351,10 @@ private const val MEDALLION_NAME = 21
 /** Цвет крупного числа базы, не сдвинутого строками копии. */
 private val FigureInk = Color(0xFFFFF6E6)
 
-/** Высота плашек шапки карточки: уровень, жетон качества, цена. */
+/** Высота плашек шапки карточки: жетон качества, цена. */
 internal val RelicChipHeight = 24.dp
 
-/** Плашка шапки карточки: тихий фон-пилюля под уровнем, качеством и ценой. */
+/** Плашка шапки карточки: тихий фон-пилюля под качеством, ценой и требованием. */
 @Composable private fun RelicChip(content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.height(RelicChipHeight).background(Color.White.copy(alpha = .05f), RoundedCornerShape(12.dp)).padding(horizontal = 9.dp),
@@ -469,10 +453,7 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
     item.base.filter { property -> property.values.all { it.stat.isBlank() } }.forEach { BasePropertyLine(it) }
 }
 
-/**
- * Блок урона полной карточки: урон [DamageBlock.main] крупно по центру, прочие виды подстроками по две в ряд (один - во всю ширину),
- * ниже - урон в секунду равными долями.
- */
+/** Блок урона полной карточки: урон [DamageBlock.main] крупно по центру, прочие виды подстроками по две в ряд (один - во всю ширину). */
 @Composable private fun DamageBlockCell(block: DamageBlock, look: RelicLook) {
     Column(
         Modifier.fillMaxWidth().background(TILE_GROUND, TILE_SHAPE).border(1.dp, Bronze, TILE_SHAPE).padding(horizontal = 10.dp, vertical = 8.dp),
@@ -495,12 +476,6 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
                 if (row.size < columns) Spacer(Modifier.weight((columns - row.size).toFloat()))
             }
         }
-        if (block.dps.isNotEmpty()) {
-            HorizontalDivider(thickness = .5.dp, color = Bronze.copy(alpha = .5f))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TILE_GAP)) {
-                block.dps.forEach { DpsCell(it, look, Modifier.weight(1f)) }
-            }
-        }
     }
 }
 
@@ -511,20 +486,6 @@ internal fun implicitEnds(line: ItemLine, next: ItemLine?): Boolean = line.marks
         Box(Modifier.size(6.dp).background(ink, CircleShape))
         Text(tile.label, color = look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Text(tile.value, color = ink, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-    }
-}
-
-/** Урон в секунду блока урона: число по центру, под ним подпись. */
-@Composable private fun DpsCell(figure: DpsFigure, look: RelicLook, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        BasicText(
-            figure.value,
-            style = MaterialTheme.typography.titleSmall.copy(color = FigureInk, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
-            maxLines = 1,
-            softWrap = false,
-            autoSize = FIGURE_SIZE,
-        )
-        Text(ui(figure.kind.key), color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
 
@@ -569,15 +530,13 @@ private const val ELEMENT_COLUMNS = 2
 private val TILE_GAP = 6.dp
 
 /**
- * Свёрнутые строки внизу карточки: требования и термины строк. Требования всегда свёрнуты одной строкой цветом вердикта -
+ * Свёрнутые строки внизу карточки: требования. Требования всегда свёрнуты одной строкой цветом вердикта -
  * «Можно надеть» `Vital`, «Нельзя надеть» `LifeRed`, без героя для сравнения - «Требования»; касание раскрывает чипы с переносом,
  * у каждого своя отметка, и раскрытость помнится на устройстве ([GameSettings.requirementsOpen]) для всех карточек.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
-    val terms = remember(item) { Term.ofItem(item) }
-    var termsOpen by remember(item) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->
             val barred = unmet?.let { lacking -> needs.any { it.kind in lacking } }
@@ -598,10 +557,6 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
                     needs.forEach { need -> NeedChip(need, unmet?.let { need.kind !in it }, look) }
                 }
             }
-        }
-        if (terms.isNotEmpty()) {
-            FoldRow(ui("term.title"), terms.size.toString(), look.muted, open = termsOpen) { termsOpen = !termsOpen }
-            FoldBody(termsOpen) { TermsBlock(terms, item.index.campaign.combat, Modifier.padding(bottom = 6.dp)) }
         }
     }
 }

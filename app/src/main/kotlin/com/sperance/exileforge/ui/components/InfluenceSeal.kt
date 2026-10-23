@@ -6,11 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -32,8 +29,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.ItemLine
-import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.influenceSlotText
 import com.sperance.exileforge.core.display.influenceTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Influence
@@ -86,39 +81,6 @@ import com.sperance.exileforge.ui.theme.Vital
         }
     }
 }
-
-/**
- * Места вещи чипами под именем полной карточки: «Преф. a/b», «Суф. c/d» и, когда строка влияния стоит, «Влияние 1/1» с печатью;
- * пустое место влияния не печатается. У редкости без мест (обычная, уникальная) чипов нет.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun SideChips(item: ItemView) {
-    val sides = item.sides ?: return
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        SideChip(ui("card.prefixes", sides.prefixes, sides.prefixLimit), null)
-        SideChip(ui("card.suffixes", sides.suffixes, sides.suffixLimit), null)
-        item.influenceSlots?.let { slots -> SideChip(influenceSlotText(slots), item.influenceLine?.marks?.influence) }
-    }
-}
-
-/** Чип места: [text], у места влияния - его печать [influence] и цвет. */
-@Composable private fun SideChip(text: String, influence: Influence?) {
-    val tint = influence?.let(::influenceColor)
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        Modifier.height(SIDE_CHIP_HEIGHT).background(tint?.copy(alpha = .16f) ?: Color.White.copy(alpha = .05f), shape)
-            .border(1.dp, tint?.copy(alpha = .6f) ?: Color.White.copy(alpha = .14f), shape).padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        influence?.let { InfluenceSealMark(it, 16.dp) }
-        Text(text, color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
-    }
-}
-
-/** Высота чипа места. */
-private val SIDE_CHIP_HEIGHT = 28.dp
 
 /** Радиус свечения печати строки влияния от её левого края, px. */
 private const val SEAL_GLOW_RADIUS = 900f

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.Blood
@@ -176,6 +177,19 @@ internal fun Modifier.touchZone(zone: Dp = TouchZone): Modifier = layout { measu
     val side = zone.roundToPx()
     val width = maxOf(placeable.width, side).coerceAtMost(constraints.maxWidth)
     val height = maxOf(placeable.height, side).coerceAtMost(constraints.maxHeight)
+    layout(width, height) { placeable.place((width - placeable.width) / 2, (height - placeable.height) / 2) }
+}
+
+/**
+ * Зона касания [zone] вокруг малого содержимого, что не раздвигает разметку: соседям содержимое отдаёт свой размер (по собственной
+ * ширине и высоте), а обработчик касания дальше по цепочке получает зону не меньше [zone] с содержимым по центру - она выступает за края,
+ * как значок на углу гнезда или «№ N» в подписи.
+ */
+internal fun Modifier.touchOverhang(zone: Dp = TouchZone): Modifier = layout { measurable, constraints ->
+    val width = measurable.maxIntrinsicWidth(constraints.maxHeight).coerceAtMost(constraints.maxWidth)
+    val height = measurable.minIntrinsicHeight(width).coerceAtMost(constraints.maxHeight)
+    val side = zone.roundToPx()
+    val placeable = measurable.measure(Constraints.fixed(maxOf(width, side), maxOf(height, side)))
     layout(width, height) { placeable.place((width - placeable.width) / 2, (height - placeable.height) / 2) }
 }
 

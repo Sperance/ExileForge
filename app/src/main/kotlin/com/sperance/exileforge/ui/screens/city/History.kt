@@ -207,8 +207,10 @@ private sealed interface AlbumPick {
                     val view = remember(found.template.code, index) { index?.let { ItemView.showcase(found.template, it) } }
                     ForgeSheet(onDismissRequest = { opened = null }) {
                         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                            found.find.lowest.takeIf { it > 0 }?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SerialSeal(it, relicLook(found.template.rarity)) } }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+                                Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.weight(1f, fill = false))
+                                SerialMark(found.find.lowest, relicLook(found.template.rarity).accent, MaterialTheme.typography.labelMedium)
+                            }
                             view?.let { ItemCard(it, enabled = false, detailed = true, action = false) }
                         }
                     }

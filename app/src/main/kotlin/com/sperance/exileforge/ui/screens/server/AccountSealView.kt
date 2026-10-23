@@ -42,11 +42,12 @@ import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.app.AccountSeal
 import com.sperance.exileforge.core.app.SealRole
 import com.sperance.exileforge.core.display.dateText
-import com.sperance.exileforge.core.display.momentText
+import com.sperance.exileforge.core.display.dayTimeText
 import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.AccountNotice
 import com.sperance.exileforge.core.network.SanctionKind
+import com.sperance.exileforge.core.network.epochOfStamp
 import com.sperance.exileforge.core.session.AccountBinding
 import com.sperance.exileforge.rules.content.InputLimits
 import com.sperance.exileforge.ui.components.ButtonSize
@@ -116,7 +117,7 @@ import com.sperance.exileforge.ui.theme.Rune
 /** Полоса санкции в печати: что и до когда (местное время), что из-за неё нельзя и причина для игрока. */
 @Composable private fun SanctionStripe(sanction: AccountNotice) {
     val notice = sanction.notice
-    val until = epochOf(notice.until)?.let(::momentText)
+    val until = epochOfStamp(notice.until)?.let { dayTimeText(it) }
     val mute = notice.kind == SanctionKind.MUTE
     val head = when {
         mute && sanction.hero.isBlank() -> until?.let { ui("signin.mute_until", it) } ?: ui("signin.mute_forever")

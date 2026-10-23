@@ -50,7 +50,7 @@ import com.sperance.exileforge.ui.theme.*
  * длинная подпись опыта - тоже.
  *
  * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается. Титул состязаний
- * ([HeroHeaderState.honour]) встаёт на место класса цветом медали места со сроком «до 24.10», касание - подсказка со сроком; класс тогда
+ * ([HeroHeaderState.honour]) встаёт на место класса цветом медали места со сроком «до 24 окт.», касание - подсказка со сроком; класс тогда
  * - в подсказке имени. Рамка портрета - медаль титула.
  */
 @Composable fun HeroLine(
@@ -99,7 +99,7 @@ import com.sperance.exileforge.ui.theme.*
 /** Класс героя словами; неизвестен - так и сказано. */
 private fun classLine(hero: HeroHeaderState): String = hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class")
 
-/** Титул состязаний на месте класса: «Охотник дня · до 24.10» цветом медали места; касание - подсказка со сроком титула и рамки. */
+/** Титул состязаний на месте класса: «Охотник дня · до 24 окт.» цветом медали места; касание - подсказка со сроком титула и рамки. */
 @Composable private fun HonourLine(honour: ContestHonour) {
     val title = contestTitle(honour)
     Tipped({ Tip(title, ui("contest.honour_tip", stampText(honour.until)), medalOf(honour.place)) }) {

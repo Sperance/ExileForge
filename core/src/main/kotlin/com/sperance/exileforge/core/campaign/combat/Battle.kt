@@ -263,6 +263,9 @@ class Battle(
 
         /** Источники проклятий на бойце: коды умений-проклятий и сил, что их наложили. */
         val curses: Set<String> get() = effects.filter { it.kind == EffectKind.CURSE }.mapTo(HashSet()) { it.source }
+
+        /** Лежит ли на бойце проклятие источника [source]. */
+        fun cursedBy(source: String): Boolean = effects.any { it.kind == EffectKind.CURSE && it.source == source }
         val invulnerable: Boolean get() = invulnerableUntil > time
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 

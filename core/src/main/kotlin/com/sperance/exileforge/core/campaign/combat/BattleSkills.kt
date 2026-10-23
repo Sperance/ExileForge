@@ -131,9 +131,7 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
     trigger(SkillEvent.SKILL_USE, refund = if (free) 0.0 else cost)
     val moment = PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level, slot = slotKey(slot))
-    powers.fire(PowerEvent.SKILL_USE, moment)
-    if (skill.type == SkillType.WARCRY) powers.fire(PowerEvent.WARCRY, moment)
-    if (skill.heal != null) powers.fire(PowerEvent.SKILL_HEAL, moment)
+    PowerEvent.cast(skill).forEach { powers.fire(it, moment) }
 }
 
 /**

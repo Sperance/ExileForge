@@ -358,7 +358,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             PowerCheckKind.TARGET_AILED -> target != null && (target.ailed || moment.ailments.any { it.ailment.ailing })
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }
             PowerCheckKind.TARGET_CURSED -> target != null && (target.cursed || moment.curses.isNotEmpty())
-            PowerCheckKind.TARGET_CURSE -> target != null && check.word?.let { word -> word in target.curses || word in moment.curses } == true
+            PowerCheckKind.TARGET_CURSE -> target != null && check.word?.let { word -> target.cursedBy(word) || word in moment.curses } == true
             PowerCheckKind.TARGET_LIFE_BELOW -> target != null && target.life < target.body.maxLife * share
             PowerCheckKind.TARGET_LIFE_ABOVE -> target != null && target.life > target.body.maxLife * share
             PowerCheckKind.FIGHT_BEFORE -> battle.time < check.value

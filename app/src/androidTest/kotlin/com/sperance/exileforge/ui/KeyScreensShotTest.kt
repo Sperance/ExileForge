@@ -310,7 +310,7 @@ class KeyScreensShotTest {
         val run = Run(index, zone, 7L, RunContext(heroClass.code, level, forced = setOf(MapMechanic.NODES)))
         val node = run.features.all.filterIsInstance<MapFeature.Node>().first()
         Box(Modifier.height(640.dp)) {
-            FeatureSheet(game(level), FeatureView(node, emptyList())) {}
+            FeatureSheet(game(level), FeatureView(node, emptyList()), gearLock = null) {}
             ObjectActionPanel(ObjectAction(node, .4f), { null }, { .4f })
         }
     }

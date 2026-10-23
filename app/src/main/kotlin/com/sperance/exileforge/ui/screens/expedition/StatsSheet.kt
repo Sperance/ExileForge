@@ -74,7 +74,7 @@ fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>?, origins: EffectOr
     val trend = remember(sheets.mine, now, mapShares, fightShares) {
         StatTrend(sheets.mine.values, SheetShift.of(sheets.mine.values, now.values), mergeParts(mapShares, fightShares))
     }
-    val (better, worse) = trend.count(now.values, index)
+    val (better, worse) = remember(trend, now, index) { trend.count(now.values, index) }
     val hero = game.hero
     val conditional = remember(hero, index) { hero?.let { h -> index?.let { ConditionalStats.of(h, it) } }.orEmpty() }
     ForgeSheet(onDismissRequest = onDismiss) {

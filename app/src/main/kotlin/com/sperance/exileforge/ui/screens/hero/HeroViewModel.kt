@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.model.auction.LotTerms
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
@@ -109,6 +110,7 @@ class HeroViewModel(
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = hero.autoSell(rarity, groups)
     fun autoSellUnwearable(on: Boolean) = hero.autoSellUnwearable(on)
     fun autoSellBelow(levels: Int, rarities: Set<Rarity>) = hero.autoSellBelow(levels, rarities)
+    fun autoSellShelves(shelves: Set<BagCategory>) = hero.autoSellShelves(shelves)
 
     /** Открытый раздел героя: полоса разделов в оболочке и экран героя читают один и тот же. */
     val page: StateFlow<HeroPage> = pages.page

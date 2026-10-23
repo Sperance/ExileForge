@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.town.TownVisit
 import com.sperance.exileforge.rules.content.AutoSell
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Rarity
@@ -194,6 +195,9 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** Правило фильтра добычи «ниже героя»: вещи редкостей [rarities] на [levels] уровней и более ниже героя; ноль выключает. */
     suspend fun autoSellBelow(heroId: String, levels: Int, rarities: Set<Rarity>): AutoSell = http.post("$HERO/autosell/below", heroQuery(heroId, "levels" to levels.toString(), "rarities" to rarities.joinToString(",") { it.name }))
+
+    /** Полки сумки фильтра добычи: стопки полок [shelves] из добычи торговец забирает сразу; пустой набор выключает. */
+    suspend fun autoSellShelves(heroId: String, shelves: Set<BagCategory>): AutoSell = http.post("$HERO/autosell/shelves", heroQuery(heroId, "shelves" to shelves.joinToString(",") { it.name }))
 
     /** Правило фильтра добычи «всё, что герой не может носить». */
     suspend fun autoSellUnwearable(heroId: String, on: Boolean): AutoSell = http.post("$HERO/autosell/unwearable", heroQuery(heroId, "on" to on.toString()))

@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.WorldRepository
+import com.sperance.exileforge.rules.content.BagCategory
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
@@ -185,6 +186,9 @@ class HeroActions(
 
     /** Правило автопродажи «ниже героя»: [levels] уровней и более для редкостей [rarities]; ноль выключает. */
     fun autoSellBelow(levels: Int, rarities: Set<Rarity>) = heroCommand { id -> api.hero.autoSellBelow(id, levels, rarities) }
+
+    /** Полки сумки автопродажи: стопки полок [shelves] из добычи продаются сразу; пустой набор выключает. */
+    fun autoSellShelves(shelves: Set<BagCategory>) = heroCommand { id -> api.hero.autoSellShelves(id, shelves) }
 
     /** Правило автопродажи «всё, что герой не может носить». */
     fun autoSellUnwearable(on: Boolean) = heroCommand { id -> api.hero.autoSellUnwearable(id, on) }

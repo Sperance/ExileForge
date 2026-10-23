@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.sheet.ConditionalStat
 import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.core.sheet.StatExplainer
+import com.sperance.exileforge.core.sheet.Trend
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.might
 import com.sperance.exileforge.rules.content.ReservePool
@@ -91,7 +92,8 @@ import com.sperance.exileforge.ui.theme.*
  * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
  * effects held against the hero's own. [figures] - цифры сводки с отметками ауры и Предначертания.
  *
- * Цифра открывает своё окно. Разделы и порядок - реестр контента.
+ * Цифра открывает своё окно. Разделы и порядок - реестр контента. С [trend] (лист боя) сдвинутая цифра - стрелкой цвета сдвига, а её
+ * касание раскрывает строку - из чего она сложилась ([TrendFold]); раскрытые строки держатся, пока числа идут.
  */
 @Composable fun StatSheet(
     game: GameUi,
@@ -99,13 +101,16 @@ import com.sperance.exileforge.ui.theme.*
     before: Map<String, Double>? = null,
     shifts: Map<String, List<Shift>> = emptyMap(),
     conditional: List<ConditionalStat> = emptyList(),
+    trend: StatTrend? = null,
 ) {
     var open by remember { mutableStateOf<String?>(null) }
     var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
+    var unfolded by remember { mutableStateOf(emptySet<String>()) }
     val show: (String) -> Unit = { open = it }
+    val fold = RowFold(trend, unfolded) { key -> unfolded = if (key in unfolded) unfolded - key else unfolded + key }
     Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, show) } }
+        game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before, fold, show) } }
         if (conditional.isNotEmpty()) ConditionalCard(conditional, game) { openConditional = it }
     }
     open?.let { StatBreakdownSheet(game, it, figures.stats, shifts) { open = null } }
@@ -188,7 +193,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
  * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их. [open] -
  * разбор строки.
  */
-@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, open: (String) -> Unit) {
+@Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, fold: RowFold, open: (String) -> Unit) {
     val accent = group.accent()
     val shape = RoundedCornerShape(10.dp)
     val raisers = remember(game.index) { game.index?.let(StatLimits::raisers).orEmpty() }
@@ -206,7 +211,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         }
         plain.forEach { (key, value) ->
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, open)
+            StatCell(key, value, fold.was(key, value, before), before, accent, figures, game, fold, open)
         }
         if (limits.isNotEmpty()) {
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
@@ -214,7 +219,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
             FoldBody(unfolded) {
                 limits.forEach { (key, value) ->
                     HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-                    StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, open)
+                    StatCell(key, value, fold.was(key, value, before), before, accent, figures, game, fold, open)
                 }
             }
         }
@@ -252,10 +257,47 @@ private object SummaryMetrics {
     val cardGap = 6.dp
 }
 
-/** Строка сводки: касание открывает разбор ([open]). */
-@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, open: (String) -> Unit) {
-    val lit = if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier
-    StatRow(key, value, was, before, accent, figures, game, Modifier.fillMaxWidth().then(lit).clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
+/**
+ * Раскрытие строк листа со сравнением [trend]: какие строки раскрыты ([unfolded]) и как раскрыть или свернуть строку ([toggle]). Без
+ * сравнения строки не раскрываются, а сдвинутой считается любая цифра, что не равна прежней.
+ */
+private class RowFold(val trend: StatTrend?, val unfolded: Set<String>, val toggle: (String) -> Unit) {
+    /** Сдвиг цифры [key] сравнения; без сравнения - null. */
+    fun trendOf(key: String): Trend? = trend?.shift?.of(key)
+
+    /** Прежнее число цифры [key] со значением [value] против листа [before]; не сдвинулась - null. */
+    fun was(key: String, value: Double, before: Map<String, Double>?): Double? {
+        val old = before?.let { it[key] ?: 0.0 } ?: return null
+        return if (trend != null) old.takeIf { trendOf(key) != null } else old.takeIf { it != value }
+    }
+}
+
+/**
+ * Строка сводки: касание открывает разбор ([open]); у сдвинутой цифры сравнения ([fold]) - раскрывает строку источников ([TrendFold]),
+ * разбор - ссылкой в ней.
+ */
+@Composable private fun ColumnScope.StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, fold: RowFold, open: (String) -> Unit) {
+    val trend = fold.trendOf(key)
+    val lit = when {
+        trend != null -> Modifier.background(trend.tint.copy(alpha = .06f))
+        was != null -> Modifier.background(Ember.copy(alpha = .08f))
+        else -> Modifier
+    }
+    val folding = trend != null && fold.trend != null
+    val opened = folding && key in fold.unfolded
+    val tap = if (folding) Modifier.foldToggle(opened) { fold.toggle(key) } else Modifier.clickable { open(key) }
+    StatRow(key, value, was, before, accent, figures, game, trend, Modifier.fillMaxWidth().then(lit).then(tap).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
+    if (folding && trend != null && fold.trend != null) {
+        FoldBody(opened) {
+            TrendFold(
+                fold.trend.baseLabel,
+                rowValue(key, was ?: 0.0, game.index, before.orEmpty()),
+                rowValue(key, value, game.index, figures.stats),
+                trend,
+                fold.trend.parts[key].orEmpty(),
+            ) { open(key) }
+        }
+    }
 }
 
 /**
@@ -264,7 +306,7 @@ private object SummaryMetrics {
  * с набранным и рейтинг защиты - только в разборе. Пределы: печатается действующее число, упёршееся в предел - цветом
  * предупреждения; уклонение и броня - процентом защиты ([StatLimits.defence]).
  */
-@Composable private fun StatRow(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
+@Composable private fun StatRow(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, trend: Trend?, modifier: Modifier) {
     Row(
         modifier.heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
@@ -280,6 +322,7 @@ private object SummaryMetrics {
         Text(
             defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: rowValue(key, limit?.effective ?: value, game.index, figures.stats),
             color = when {
+                trend != null -> trend.tint
                 was != null -> Ember
                 limit?.clamped == true -> Caution
                 else -> Parchment
@@ -289,6 +332,7 @@ private object SummaryMetrics {
             fontWeight = FontWeight.Bold,
             maxLines = 1,
         )
+        trend?.let { Text(it.mark, color = it.tint, fontSize = 11.sp) }
         if (key in figures.skilled) Tipped({ Tip(ui("hero.mark.aura"), ui("hero.mark.aura_body"), tint = Rune) }) { GlyphIcon(Glyph.AURA, Rune, Modifier.size(13.dp)) }
         if (key in figures.fated) Tipped({ Tip(ui("hero.mark.fate"), ui("hero.mark.fate_body"), tint = Caution) }) { Text("✦", color = Caution, fontSize = 11.sp) }
     }

@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +38,7 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.SheetShift
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
@@ -52,7 +56,8 @@ import kotlin.math.sin
  * ([EffectPeek], зона касания [SHELF_REACH]), касание полосы мимо плиток и «+N» - лист временных эффектов с итогом здоровья.
  *
  * Замах (последние 30% - рамка золотом), выпады и тряска - в рисовании кадра ([FightFrame]). Запас, что ауры держат целиком, - полной
- * штрихованной полосой.
+ * штрихованной полосой. В углу строки имени - кнопка «Характеристики» ([StatsButton]) со счётом сдвига тела боя [shift]: касание -
+ * лист характеристик на вкладке «В бою» ([onStats]).
  */
 @Composable internal fun HeroCard(
     game: GameUi,
@@ -61,6 +66,8 @@ import kotlin.math.sin
     frame: FightFrame,
     names: Map<Int, String>,
     stance: HeroStance,
+    shift: SheetShift,
+    onStats: () -> Unit,
     modifier: Modifier,
     large: Boolean,
     mods: List<HeroMapMod> = emptyList(),
@@ -127,6 +134,7 @@ import kotlin.math.sin
                         modifier = Modifier.weight(1f),
                     )
                     fight.heroIntimidate?.let { view -> TauntSeal(frame, Modifier.size(22.dp)) { intimidateTip(view) } }
+                    StatsButton(shift, onStats)
                 }
                 if (fight.heroMaxShield > 0) VitalBar(fight.heroShield, fight.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
                 VitalBar(fight.heroLife, fight.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 }, reserved = hud.heroLifeReserved)
@@ -178,6 +186,29 @@ import kotlin.math.sin
         Text("≡ $count", maxLines = 1)
     }
 }
+
+/**
+ * Кнопка «Характеристики» в углу карточки героя: значок листа и счёт сдвига тела боя - «▲3» зелёным, «▼5» красным (нет сдвига - только
+ * значок); зона касания - [STATS_REACH] в высоту. Для чтения с экрана - имя и счёт словами.
+ */
+@Composable private fun StatsButton(shift: SheetShift, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    val label = ui("fight.stats_button", shift.up.size, shift.down.size)
+    Box(Modifier.heightIn(min = STATS_REACH).clickable(role = Role.Button, onClick = onClick).clearAndSetSemantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.border(1.dp, GoldBright.copy(alpha = .6f), shape).background(Gold.copy(alpha = .08f), shape).padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(Icons.Outlined.Tune, null, tint = GoldBright, modifier = Modifier.size(16.dp))
+            if (shift.up.isNotEmpty()) Text("▲${shift.up.size}", color = Vital, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            if (shift.down.isNotEmpty()) Text("▼${shift.down.size}", color = LifeRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+/** Высота зоны касания кнопки «Характеристики». */
+private val STATS_REACH = 40.dp
 
 /** Мини-кнопка «все эффекты»: «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */
 @Composable internal fun AllEffects(count: Int, modifier: Modifier, onClick: () -> Unit) {

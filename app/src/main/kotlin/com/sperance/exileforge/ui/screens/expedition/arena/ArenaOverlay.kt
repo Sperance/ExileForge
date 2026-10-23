@@ -27,6 +27,8 @@ import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.expedition.StatsSheet
+import com.sperance.exileforge.ui.screens.expedition.rememberFightSheets
 import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -41,7 +43,9 @@ private const val HERO_CARD = -1
  * Касание врага в бою - цель героя (то же касание снимает); до «В бой» и на паузе - лист врага ([FoeSheet]) с разведкой. Один враг
  * без волн - карточка шире ([SOLO_CARD]), строки стаи нет. Бой с боссом - тот же принцип: рамка босса, журнал в центре.
  *
- * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
+ * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя
+ * и в листе характеристик (null - бой без карты: испытания, Разлом, башня; кнопка «Характеристики» в карточке героя открывает
+ * [StatsSheet] на вкладке «В бою», её счёт ▲/▼ - сдвиг тела боя против листа «На карте» или «Герой»);
  * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра; [top] - полоса режима над врагами (Честь Разлома). Часы арены читаются только в рисовании ([FightFrame]). Пауза и вибрация ([LocalBuzzes]) -
  * раз при падении здоровья через свою черту, вибрация - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
  * бой, карточка фляги (долгое нажатие на флягу, [FlaskCardSheet]) - тоже. [game] - срез героя в наборе боя (в походе - с находками
@@ -61,7 +65,7 @@ private const val HERO_CARD = -1
     onLogFilter: (Set<LogKind>) -> Unit = {},
     biome: String = "",
     shares: (Boolean) -> List<BuffShare> = { emptyList() },
-    mapEffects: Map<String, Double> = emptyMap(),
+    mapEffects: Map<String, Double>? = null,
     origins: EffectOrigins = EffectOrigins.NONE,
     pulse: FightPulse? = null,
     top: (@Composable () -> Unit)? = null,
@@ -86,6 +90,8 @@ private const val HERO_CARD = -1
     val large = fight.scouting
     var info by remember { mutableStateOf<SkillView?>(null) }
     var flaskCard by remember { mutableStateOf<Int?>(null) }
+    var statsOpen by remember { mutableStateOf(false) }
+    val sheets = rememberFightSheets(game, mapEffects, origins, fight.heroBody?.stats)
     var inspect by remember { mutableStateOf<Int?>(null) }
     var hint by remember { mutableStateOf<FocusHint?>(null) }
     val prefs = koinViewModel<SettingsViewModel>()
@@ -102,7 +108,7 @@ private const val HERO_CARD = -1
     }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     val mods = remember(mapEffects, origins, game.hero, game.index) {
-        if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
+        if (mapEffects.isNullOrEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
     }
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     val intro = rememberBossIntro(fight.boss?.index)
@@ -148,7 +154,7 @@ private const val HERO_CARD = -1
                 if (firstTip) FocusTip({ prefs.change { copy(focusTipSeen = true) } })
                 if (boss == null) PackLine(fight)
                 Box(Modifier.weight(1f).fillMaxWidth()) { FightFeed(game, fight, names, onCommand, onLogFilter) }
-                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD).then(introField), large, mods, onCommand)
+                HeroCard(game, hud, fight, frame, names, stance, sheets.fightShift, { statsOpen = true }, track(HERO_CARD).then(introField), large, mods, onCommand)
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand, { flaskCard = it.slot }) { info = it }
                 Controls(fight, onCommand)
             }
@@ -175,6 +181,7 @@ private const val HERO_CARD = -1
             hint?.let { FocusHintCard(it, { hint = null }, Modifier.align(Alignment.Center).padding(horizontal = 12.dp)) }
             info?.let { view -> FightSkillSheet(game, view) { info = null } }
             flaskCard?.let(game::beltFlask)?.let { item -> FlaskCardSheet(game, item) { flaskCard = null } }
+            if (statsOpen) StatsSheet(game, mapEffects, origins, fight) { statsOpen = false }
             fight.outcome?.takeIf { it != Outcome.WIN }?.let {
                 Text(
                     ui("expedition.outcome_${it.name.lowercase()}"),

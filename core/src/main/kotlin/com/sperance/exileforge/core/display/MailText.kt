@@ -161,7 +161,6 @@ object MailSchemas {
     private const val REPORT_DAY = 6
 
     private const val FIXED = "FIXED"
-
 }
 
 /** Имя категории письма словами: «Рынок», «Награды», «Администрация» (`mail.category.<имя>`). */

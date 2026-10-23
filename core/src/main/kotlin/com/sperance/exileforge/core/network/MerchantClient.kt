@@ -14,8 +14,7 @@ class MerchantClient internal constructor(private val http: Transport) {
      * тайник; надеть нельзя - отказ, золото не списано (`CH_044`, `CH_045`, `CH_048`, требования). Ответ - надетая копия. Повтор - только
      * под своим ключом ([SafeRetry]).
      */
-    suspend fun buyAndWear(heroId: String, offerId: String, wear: WearRequest): MerchantPurchase =
-        http.post("api/v1/hero/merchant/buy", heroQuery(heroId, "offerId" to offerId, "wear" to "true", "slot" to wear.slot?.name))
+    suspend fun buyAndWear(heroId: String, offerId: String, wear: WearRequest): MerchantPurchase = http.post("api/v1/hero/merchant/buy", heroQuery(heroId, "offerId" to offerId, "wear" to "true", "slot" to wear.slot?.name))
 
     /**
      * Трофеи босса [boss] - на его уникалку (Предначертание «Трофейщик»): копия ложится в тайник. Отказы - `FT_003`

@@ -19,7 +19,6 @@ data class AwakeningDay(val day: Long, val changeAt: Long, val marks: Map<MapCod
         fun of(awakenings: Awakenings, day: Long, wins: AwakenedWins): AwakeningDay = AwakeningDay(day, awakenings.changeAt(day), awakenings.standings(day, wins))
 
         /** Карт тайника [stash], что будят стража ([Awakenings.wakes]), по зонам. */
-        fun wakingMaps(awakenings: Awakenings, stash: List<ItemInstance>): Map<MapCode, Int> =
-            stash.filter { it.mapZone.isNotEmpty() && awakenings.wakes(it.rarity) }.groupingBy { it.mapZone }.eachCount()
+        fun wakingMaps(awakenings: Awakenings, stash: List<ItemInstance>): Map<MapCode, Int> = stash.filter { it.mapZone.isNotEmpty() && awakenings.wakes(it.rarity) }.groupingBy { it.mapZone }.eachCount()
     }
 }

@@ -214,8 +214,7 @@ fun HeroView.runSheet(effects: Map<String, Double>, origins: EffectOrigins): Run
  * Откуда цифры сводки [stats] под сдвигами захода [shifts] ([RunSheet.shifts]): по цифре - её сдвиги, сложенные по источнику; лист боя
  * добавляет сдвиги того, что читается вместе с цифрой ([CombatSheet.sources]), до листа боя - только свои сдвиги цифры.
  */
-fun HeroView.runSources(stats: Collection<String>, shifts: Map<String, List<Shift>>): Map<String, List<Shift>> =
-    combat?.sources(stats, shifts) ?: stats.associateWith { SourceShifts.bySource(shifts[it].orEmpty()) }.filterValues { it.isNotEmpty() }
+fun HeroView.runSources(stats: Collection<String>, shifts: Map<String, List<Shift>>): Map<String, List<Shift>> = combat?.sources(stats, shifts) ?: stats.associateWith { SourceShifts.bySource(shifts[it].orEmpty()) }.filterValues { it.isNotEmpty() }
 
 /** Мощь героя - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
 val HeroView.might: MightReading? get() = combat?.might

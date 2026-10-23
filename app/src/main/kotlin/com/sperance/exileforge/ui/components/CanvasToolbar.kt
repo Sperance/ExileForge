@@ -96,27 +96,35 @@ fun zoomTools(canZoomOut: Boolean, canZoomIn: Boolean, onZoomOut: () -> Unit, on
 }
 
 /** Штриховка погашенной кнопки: косые линии в круге под значком. */
-private fun Modifier.offHatch(on: Boolean): Modifier = if (!on) this else clipToBounds().drawWithCache {
-    val r = HATCH_RADIUS.toPx()
-    val centre = Offset(size.width / 2, size.height / 2)
-    val disc = Path().apply { addOval(Rect(centre, r)) }
-    val step = HATCH_STEP.toPx()
-    val width = 1.dp.toPx()
-    onDrawBehind {
-        clipPath(disc) {
-            var x = centre.x - 2 * r
-            while (x < centre.x + 2 * r) {
-                drawLine(HATCH_INK, Offset(x, centre.y + r), Offset(x + 2 * r, centre.y - r), width)
-                x += step
+private fun Modifier.offHatch(on: Boolean): Modifier = if (!on) {
+    this
+} else {
+    clipToBounds().drawWithCache {
+        val r = HATCH_RADIUS.toPx()
+        val centre = Offset(size.width / 2, size.height / 2)
+        val disc = Path().apply { addOval(Rect(centre, r)) }
+        val step = HATCH_STEP.toPx()
+        val width = 1.dp.toPx()
+        onDrawBehind {
+            clipPath(disc) {
+                var x = centre.x - 2 * r
+                while (x < centre.x + 2 * r) {
+                    drawLine(HATCH_INK, Offset(x, centre.y + r), Offset(x + 2 * r, centre.y - r), width)
+                    x += step
+                }
             }
         }
     }
 }
 
 /** Знаки [marks] поверх кнопки. */
-private fun Modifier.toolMarks(marks: (DrawScope.() -> Unit)?): Modifier = if (marks == null) this else drawWithContent {
-    drawContent()
-    marks()
+private fun Modifier.toolMarks(marks: (DrawScope.() -> Unit)?): Modifier = if (marks == null) {
+    this
+} else {
+    drawWithContent {
+        drawContent()
+        marks()
+    }
 }
 
 private val CapsuleShape = RoundedCornerShape(50)

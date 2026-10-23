@@ -34,6 +34,5 @@ object SourceShifts {
     }
 
     /** Сдвиги [shifts], сложенные по источнику в порядке первого появления; сумма меньше [MOVED] - след округления, не источник. */
-    fun bySource(shifts: List<Shift>): List<Shift> =
-        shifts.groupBy { it.source }.map { (source, own) -> Shift(source, own.sumOf { it.delta }) }.filter { abs(it.delta) >= MOVED }
+    fun bySource(shifts: List<Shift>): List<Shift> = shifts.groupBy { it.source }.map { (source, own) -> Shift(source, own.sumOf { it.delta }) }.filter { abs(it.delta) >= MOVED }
 }

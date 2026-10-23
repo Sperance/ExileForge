@@ -299,7 +299,9 @@ private class RowFold(val trend: StatTrend?, val sources: Map<String, List<Shift
         trend != null && compare != null -> listOf(SumShare(compare.baseLabel, rowValue(key, was ?: 0.0, game.index, before.orEmpty()))) +
             compare.parts[key].orEmpty() +
             SumShare(ui("stat.trend.now"), rowValue(key, value, game.index, figures.stats), accent = trend.tint)
+
         was != null && sources.isNotEmpty() -> runShares(key, sources, game)
+
         else -> emptyList()
     }
     if (shares.isEmpty()) {

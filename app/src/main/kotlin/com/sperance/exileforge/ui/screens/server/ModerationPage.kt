@@ -392,8 +392,7 @@ private fun heroCount(count: Int): String = ui(pluralKey("moderation.hero_count"
 }
 
 /** Метка удаления: кто удалил - автор (самоудаление) или модерация - и когда. */
-private fun deletedText(deletion: SanctionView): String =
-    ui(if (deletion.voluntary) "moderation.deleted_by_author" else "moderation.deleted_by_moderation", listedAt(deletion.at)?.take(DATE).orEmpty())
+private fun deletedText(deletion: SanctionView): String = ui(if (deletion.voluntary) "moderation.deleted_by_author" else "moderation.deleted_by_moderation", listedAt(deletion.at)?.take(DATE).orEmpty())
 
 /** Чип санкции аккаунта: вид, цель, срок и причина для игрока (без неё - категория); бан - красный, немота - жёлтая, удаление - серое. */
 @Composable private fun SanctionTag(sanction: SanctionView) {

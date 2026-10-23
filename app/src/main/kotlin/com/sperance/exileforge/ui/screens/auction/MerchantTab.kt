@@ -38,8 +38,8 @@ import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.WearChoice
 import com.sperance.exileforge.ui.screens.hero.placeTitle
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
-import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.screens.hero.wearTotals
+import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -214,9 +214,11 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, venue: We
             }
         }
     }
-    if (picking) WearPlaceSheet(game, choice, onDismiss = { picking = false }) { slot ->
-        picking = false
-        onBuyWorn(WearRequest(slot))
+    if (picking) {
+        WearPlaceSheet(game, choice, onDismiss = { picking = false }) { slot ->
+            picking = false
+            onBuyWorn(WearRequest(slot))
+        }
     }
 }
 

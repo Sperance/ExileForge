@@ -228,6 +228,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         }
 
         is RunCommand.Choose -> choose(command.choice)
+
         is RunCommand.ChooseWorn -> chooseWorn(command.choice, command.wear)
 
         RunCommand.Gather -> startGather()

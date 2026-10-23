@@ -144,12 +144,15 @@ internal class BidDraft(
 /** Метка статуса лота и её цвет: свой, ставка героя, вид лота или закрыт. */
 private fun statusMark(lot: AuctionLot, stance: LotStance): Pair<String, Color> = when (stance) {
     LotStance.CLOSED -> ui("auction.lot_closed") to Muted
+
     LotStance.OWN_FIXED, LotStance.OWN_BID -> ui("auction.your_lot") to Caution
+
     LotStance.BID -> when {
         lot.leading -> ui("auction.you_lead") to Vital
         lot.outbid -> ui("auction.you_outbid") to LifeRed
         else -> ui("auction.lot_bidding") to Rune
     }
+
     LotStance.BUY -> ui("auction.lot_fixed") to Rune
 }
 
@@ -272,7 +275,18 @@ private const val FOLDED_LINES = 2
             MutedText(ui("auction.your_bid_amount"), Modifier.weight(1f))
             ForgeIconButton(Icons.Outlined.Remove, ui("auction.bid_less"), bid::less, kind = ButtonKind.Secondary, state = ButtonState.of(bid.bidding && amount > bid.least), repeatOnHold = true)
             Box(Modifier.widthIn(min = 72.dp), contentAlignment = Alignment.Center) {
-                OrbAmount(lot.priceOrb, orbs, big = true, tint = if (!bid.bidding) Muted else if (short != null) LossText else GoldBright)
+                OrbAmount(
+                    lot.priceOrb,
+                    orbs,
+                    big = true,
+                    tint = if (!bid.bidding) {
+                        Muted
+                    } else if (short != null) {
+                        LossText
+                    } else {
+                        GoldBright
+                    },
+                )
             }
             ForgeIconButton(Icons.Outlined.Add, ui("auction.bid_more"), bid::more, kind = ButtonKind.Secondary, state = ButtonState.of(bid.bidding && amount < lot.price), repeatOnHold = true)
         }

@@ -173,11 +173,28 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, null, tint = if (!enabled) Muted else if (danger) LifeRed else Gold, modifier = Modifier.size(20.dp))
+        Icon(
+            icon,
+            null,
+            tint = if (!enabled) {
+                Muted
+            } else if (danger) {
+                LifeRed
+            } else {
+                Gold
+            },
+            modifier = Modifier.size(20.dp),
+        )
         Column(Modifier.weight(1f)) {
             Text(
                 label,
-                color = if (!enabled) Muted else if (danger) LifeRed else Parchment,
+                color = if (!enabled) {
+                    Muted
+                } else if (danger) {
+                    LifeRed
+                } else {
+                    Parchment
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

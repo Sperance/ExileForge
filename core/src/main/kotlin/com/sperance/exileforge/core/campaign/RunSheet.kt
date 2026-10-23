@@ -50,8 +50,6 @@ class RunSheet(
          * Лист эффектов захода над готовыми характеристиками [stats] - без листа героя за ними (лист боя ещё не собран): строки ложатся
          * сводом правил поверх готового ([StatLines.fold]).
          */
-        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins): RunSheet =
-            RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, emptySet()) }
+        fun over(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins): RunSheet = RunSheet(effects, origins) { lines -> if (lines.isEmpty()) stats else StatLines.fold(stats, lines, emptySet()) }
     }
 }
-

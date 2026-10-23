@@ -385,7 +385,15 @@ private fun DrawScope.awakening(token: WorldToken, height: Float, standing: Awak
     val c = Offset(token.zone.x.toFloat(), height - token.zone.y)
     val r = radius(token)
     val locked = token.state == TokenState.LOCKED
-    val ink = (if (locked) AwakenedDim else Awakened).copy(alpha = if (standing == AwakeningStanding.BEATEN) .5f else if (locked) .55f else 1f)
+    val ink = (if (locked) AwakenedDim else Awakened).copy(
+        alpha = if (standing == AwakeningStanding.BEATEN) {
+            .5f
+        } else if (locked) {
+            .55f
+        } else {
+            1f
+        },
+    )
     val inner = r + if (aroundStory) STORY_RING_GAP + AWAKENING_STORY_GAP else AWAKENING_GAP
     drawCircle(ink, inner, c, style = Stroke(2.4f, pathEffect = if (locked) PathEffect.dashPathEffect(floatArrayOf(3f, 3f)) else null))
     drawCircle(ink, inner + 3f, c, style = Stroke(1f))

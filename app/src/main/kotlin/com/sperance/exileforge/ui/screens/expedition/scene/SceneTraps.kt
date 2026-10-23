@@ -23,7 +23,9 @@ internal fun ScenePainter.drawTrapFloor(spot: TrapSpot, t: Double) {
     val layout = spot.layout
     when (layout.kind.shape) {
         TrapShape.ROLLER -> groove(layout)
+
         TrapShape.PENDULUM -> arcGroove(layout)
+
         else -> {
             val joints = trapJoints.of(layout)
             layout.cells.forEachIndexed { i, cell -> if (explored(cell.x, cell.y)) plate(layout, cell, visibleJoints(cell, joints[i]), beat) }

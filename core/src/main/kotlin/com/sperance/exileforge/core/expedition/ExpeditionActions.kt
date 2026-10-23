@@ -489,8 +489,7 @@ class ExpeditionActions(
      * Пачка [batch] надела вещь: сервер принял покупку с надеванием ([RunEvent.Feature.wear]) - набор похода с ней придёт снимком героя
      * ([resync]), поэтому он перечитывается сразу.
      */
-    private fun dressedBy(batch: List<RunEvent>, report: RunReport): Boolean =
-        batch.any { it is RunEvent.Feature && it.wear != null && it.n < report.applied && it.n !in report.rejected }
+    private fun dressedBy(batch: List<RunEvent>, report: RunReport): Boolean = batch.any { it is RunEvent.Feature && it.wear != null && it.n < report.applied && it.n !in report.rejected }
 
     /** Пачка отвечена как дошедшая без отчёта: берётся до [end], добыча придёт с перечитанным героем. */
     private suspend fun landed(j: RunJournal, end: Int) {

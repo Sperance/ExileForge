@@ -30,6 +30,10 @@ Issues: #529-#561 (33 бага). Вне работы: #445 (enhancement).
 | Задача `CollectionSchemas` | `task.stonePolishing` (`TaskKind.STONE_POLISHING`) | 7 |
 | Задача `CollectionSchemas` | `task.gemDeposits` (`TaskKind.GEM_DEPOSITS`) | 7 |
 | Код ошибки | `CF_009` (уровень карты выше героя) | 7 |
+| Событие силы | `PowerEvent.WARCRY` (применение клича) | 9b |
+| Событие силы | `PowerEvent.SKILL_HEAL` (лечение умением) | 9b |
+| Действие силы | `PowerAct.ELEMENTAL_AILMENT` (случайное стихийное состояние) | 9b |
+| Проверка силы | `PowerCheckKind.TARGET_CURSE` (цель под проклятием-умением `word`) | 9b |
 
 ## Дальше
 Выбор пакетов владельцем. Разборы тем: audit/work/triage/.

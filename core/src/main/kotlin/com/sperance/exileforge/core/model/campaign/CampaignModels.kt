@@ -140,8 +140,6 @@ data class SummonOffer(val price: Long, val repeats: Int, val bar: SummonBar?)
     val rewards: List<EventReward> = emptyList(),
     /** The run the report is about. */
     val runId: String = "",
-    /** Код правила каждого отклонённого события по его номеру из [rejected]; сервер без кодов - пусто. */
-    val refusals: Map<Int, com.sperance.exileforge.rules.run.RefusalReason> = emptyMap(),
     /** Задания, сданные сервером при конце захода: ответ, что закрыл заход; null - заход открыт или сдача не прошла. */
     val turnIns: com.sperance.exileforge.rules.content.QuestClaimAll? = null,
     /** Задания гильдии после той сдачи; null - вне гильдии или заход открыт. */

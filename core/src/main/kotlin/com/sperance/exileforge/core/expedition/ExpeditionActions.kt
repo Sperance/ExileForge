@@ -239,9 +239,6 @@ class ExpeditionActions(
     /** Тестировщик со свободным прогрессом: насильные механики и бой сразу со стражем. */
     private val freeProgress: Boolean get() = sessions.state.value.freeProgress(heroes.state.value)
 
-    /** Видит ли игрок отказы сервера по журналу захода: только администратор и тестировщик - игроку отказ правила не показывают. */
-    private val seesRefusals: Boolean get() = sessions.state.value.grants(heroes.state.value)
-
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
 
@@ -347,7 +344,7 @@ class ExpeditionActions(
         val board = quests.board().takeIf { it.board != null }
         expedition {
             it.copy(
-                runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = marks,
+                runLoot = emptyList(), launch = null, pending = 0, unfinished = null, saleMarks = marks,
                 quests = board, turnedIn = emptyList(), storyReady = false, atlasPoints = emptyList(), potion = potion, wearable = started.wearable.toSet(),
             )
         }
@@ -457,11 +454,9 @@ class ExpeditionActions(
             }
             settle(j, pending, report)
             if (!report.open) shut = j.runId
-            j.confirm(report.applied, report.rejected)
-            expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
-            val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
+            j.confirm(report.applied)
+            expedition { it.copy(pending = j.pending.size) }
             receivedText(report.received, world.state.value.content.shardsPerOrb)?.let { notices.toast(it) }
-            if (seesRefusals) notices.refused(report.rejected.filter { it !in engages }, pending.associate { it.n to it.kind.refusedKey() }, report.refusals)
             if (!report.open && j.settled) done(j, report) else journals.now()
             if ((heroes.state.value.readAt == 0L || dressedBy(pending, report)) && heroes.onScreen(j.heroId)) heroSync.readHero()
             if (report.open && !j.settled) flushes.trySend(Unit)
@@ -495,7 +490,7 @@ class ExpeditionActions(
     private suspend fun landed(j: RunJournal, end: Int) {
         runs().forEach { it.send(RunCommand.Settled(end)) }
         j.confirm(end)
-        expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
+        expedition { it.copy(pending = j.pending.size) }
         if (j.closed && j.settled) done(j) else journals.now()
         heroSync.readHero()
         campaign()
@@ -629,7 +624,7 @@ class ExpeditionActions(
             return
         }
         runJournal = kept
-        expedition { it.copy(pending = kept.pending.size, rejected = kept.rejected.size) }
+        expedition { it.copy(pending = kept.pending.size) }
         flush()
     }
 

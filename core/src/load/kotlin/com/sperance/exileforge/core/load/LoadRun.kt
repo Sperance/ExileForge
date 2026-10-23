@@ -152,7 +152,7 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
                 if (report == null) {
                     journal.confirm(batch.end)
                 } else {
-                    journal.confirm(report.applied, report.rejected)
+                    journal.confirm(report.applied)
                     applied.addAndGet(events.size.toLong())
                     rejected.addAndGet(report.rejected.size.toLong())
                     events.filter { it.n in report.rejected }.forEach { rejectedKinds.computeIfAbsent(it.kind.name) { AtomicInteger() }.incrementAndGet() }

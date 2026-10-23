@@ -462,10 +462,9 @@ data class RunHud(
     val questTally: Map<String, Long> = emptyMap(),
     /** Выигранных в заходе боёв Разгона ([com.sperance.exileforge.core.campaign.combat.FateRun.won]); без рычага - 0. */
     val fateWon: Int = 0,
-    /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */
+    /** Events of the journal the server has not taken yet and the number of the oldest of them. */
     val pending: Int = 0,
     val applied: Int = 0,
-    val rejected: Int = 0,
     /** What the map came to so far: its summary before the camp. */
     val tally: MapTally = MapTally(),
     /** Лист объекта карты: алтарь, торговец или узел, к которому подошёл герой. */

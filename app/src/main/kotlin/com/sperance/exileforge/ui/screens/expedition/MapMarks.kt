@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DoorFront
-import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Sync
@@ -140,9 +139,6 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
     }
     if (hud.pending > 0 && overdue) {
         Mark("${hud.pending}", Quiet, Icons.Outlined.Sync, { Tip(ui("expedition.pending", hud.pending), tint = Quiet) }, onOpen = onRetry)
-    }
-    if (hud.rejected > 0) {
-        Mark("${hud.rejected}", LossText, Icons.Outlined.ErrorOutline, { Tip(ui("expedition.rejected", hud.rejected), tint = LossText) })
     }
 }
 

@@ -88,7 +88,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         abyss = abyssView(), cracksLeft = world.cracks.count { !it.opened },
         bossDown = bossDown, swift = swift, hastened = hastened, stride = stride(), guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
         questTally = questTallyShown, fateWon = fateRun.won,
-        pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
+        pending = journal.pending.size, applied = journal.applied,
         summary = figures, recap = recap,
         tally = MapTally(end, shownSeconds(), kills, bosses, deaths, granted, figures, awaiting),
         feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), world.guarded(spot.id)) },

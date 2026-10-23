@@ -60,15 +60,11 @@ class RunJournal(
     var applied: Int = applied.coerceIn(base, base + events.size)
         private set
 
-    /** The events the server refused: numbers of the journal, kept for the screen. */
-    private val refused = mutableListOf<Int>()
-
     /** The batch in flight, until the server answers it. */
     private var batch: JournalBatch? = batch?.takeIf { it.end > this.applied && it.end <= this.end }
 
     val size: Int get() = events.size
     val all: List<RunEvent> get() = events
-    val rejected: List<Int> get() = refused
 
     /** Events the server has not taken yet. */
     val pending: List<RunEvent> get() = events.drop(applied - base)
@@ -93,10 +89,9 @@ class RunJournal(
         return sent to events.subList(applied - base, sent.end - base).toList()
     }
 
-    /** The server took the journal up to [applied] and refused [rejected] of the numbers; the batch it answered is done with. */
-    fun confirm(applied: Int, rejected: List<Int> = emptyList()) {
+    /** The server took the journal up to [applied]; the batch it answered is done with. */
+    fun confirm(applied: Int) {
         this.applied = applied.coerceIn(this.applied, end)
-        rejected.forEach { if (it !in refused) refused += it }
         batch = null
     }
 

@@ -128,7 +128,6 @@ import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
-import com.sperance.exileforge.ui.screens.hero.StatSheet
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
@@ -341,7 +340,7 @@ class KeyScreensShotTest {
         val level = 70
         val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         val combat = CombatSheet.of(index, sheet, level, heroClass.code, HeroSkills(), null, emptyList())
-        combat?.let { StatSheet(game(level), it.figures) }
+        combat?.let { SheetList(game(level), it.figures) }
     }
 
     /** Вид копии [item] над контентом закреплённого сервера. */

@@ -30,7 +30,6 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.HeroLine
-import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import org.junit.After
@@ -71,9 +70,9 @@ class NarrowScreenTest {
             ForgeTheme {
                 Column(Modifier.width(320.dp).background(Ink).verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     HeroLine(state)
-                    HeroSummary(state)
                     EquipmentLedger(state) { _, _ -> }
                     ItemCard(boots, detailed = true, actionLabel = "Свойства")
+                    SheetList(state)
                 }
             }
         }

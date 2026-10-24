@@ -28,7 +28,6 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.HeroLine
-import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import org.junit.After
@@ -74,8 +73,8 @@ class HeroPanelTest {
                         holding = HeroHolding(heroId = "hero", hero = hero, owner = "owner"),
                     )
                     HeroLine(state)
-                    HeroSummary(state)
                     EquipmentLedger(state) { place, itemId -> picked = place.code to itemId }
+                    SheetList(state)
                 }
             }
         }

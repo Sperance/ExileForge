@@ -1,14 +1,15 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.CallSplit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -27,29 +30,20 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.campaign.StatFigures
-import com.sperance.exileforge.core.campaign.stat
-import com.sperance.exileforge.core.display.ActPenalty
-import com.sperance.exileforge.core.display.ActResists
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.PenalizedResist
-import com.sperance.exileforge.core.display.RowFigure
-import com.sperance.exileforge.core.display.StatLimits
-import com.sperance.exileforge.core.display.groupedStats
-import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.regionTitle
-import com.sperance.exileforge.core.display.rowValue
 import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.sheet.ConditionalLine
 import com.sperance.exileforge.core.sheet.ConditionalStat
-import com.sperance.exileforge.core.sheet.ConditionalStats
-import com.sperance.exileforge.core.sheet.StatExplainer
-import com.sperance.exileforge.core.sheet.figures
+import com.sperance.exileforge.core.sheet.PenaltyFigure
+import com.sperance.exileforge.core.sheet.SheetLine
+import com.sperance.exileforge.core.sheet.SheetSection
+import com.sperance.exileforge.core.sheet.StatSheetModel
 import com.sperance.exileforge.core.sheet.might
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
@@ -62,34 +56,14 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
 import com.sperance.exileforge.ui.components.SumShareLine
+import com.sperance.exileforge.ui.components.TagSize
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
-
-/**
- * The character's figures: life and shield on top, then everything else the sheet counts, one
- * card per section, one figure to a full-width row so each reads at a glance.
- *
- * The first of the Hero tab's three sections. Nothing here is a command — it is the sheet a player
- * reads before deciding what to wear, whole and in place rather than behind another tap. Раздел строки - `section`
- * характеристики в контенте, «Прочего» нет.
- *
- * Цифры - лист боя ([com.sperance.exileforge.core.campaign.CombatSheet]) с аурами и
- * Предначертанием. Дар и его текст - лента над сводкой, своей карточки дара в сводке нет. Сопротивления - «по листу → действует» под
- * штрафом акта героя ([ActPenalty]).
- */
-@Composable fun HeroSummary(game: GameUi) {
-    val hero = game.hero ?: return
-    val conditional = remember(hero, game.index) { game.index?.let { ConditionalStats.of(hero, it) }.orEmpty() }
-    val progress = game.progress
-    val resists = remember(hero, progress, game.index) {
-        game.index?.campaign?.let { campaign -> ActPenalty.of(hero, progress, campaign)?.let { ActResists(it, hero.figures.stats, campaign) } }
-    }
-    StatSheet(game, hero.figures, conditional = conditional, resists = resists)
-}
 
 /**
  * Строка над сводкой: слева свой номер героя (касание копирует; сервер старше - нет),
@@ -105,86 +79,153 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * A sheet of figures (apart from the hero, so the run's window draws the same one). [figures] - цифры сводки с отметками ауры и
- * Предначертания, [conditional] - раздел «С условием». Цифра открывает своё окно разбора ([shifts] - сдвиги эффектов захода по
- * характеристике, их читает разбор). Разделы и порядок - реестр контента.
+ * Что держит лист сводки вне строк: открытый разбор строки ([breakdown]) или условной строки ([conditional]) и раскрытые «Пределы»
+ * разделов. Раскрытие «Пределов» запоминается вместе с тем, был ли среди них сдвиг сравнения: сдвиг появился или ушёл - раздел снова в
+ * своём виде по умолчанию (со сдвигом - раскрыт).
+ */
+@Stable
+class StatSheetState internal constructor(opened: Map<String, Boolean>) {
+    private val limits = mutableStateMapOf<String, Boolean>().apply { putAll(opened) }
+
+    /** Характеристика, чей разбор открыт; null - закрыт. */
+    var breakdown by mutableStateOf<String?>(null)
+
+    /** Условная строка, чей разбор открыт; null - закрыт. */
+    var conditional by mutableStateOf<ConditionalStat?>(null)
+
+    /** Раскрыты ли «Пределы» раздела [section]; [shifted] - среди них есть сдвиг сравнения. */
+    fun limitsOpen(section: StatSection, shifted: Boolean): Boolean = limits[limitsKey(section, shifted)] ?: shifted
+
+    /** Свернуть или раскрыть «Пределы» раздела [section]. */
+    fun toggleLimits(section: StatSection, shifted: Boolean) {
+        limits[limitsKey(section, shifted)] = !limitsOpen(section, shifted)
+    }
+
+    private fun limitsKey(section: StatSection, shifted: Boolean): String = "${section.name}:$shifted"
+
+    internal companion object {
+        /** Сохраняет раскрытые «Пределы» на поворот экрана и уход с вкладки; открытый разбор не сохраняется. */
+        val Saver: Saver<StatSheetState, Map<String, Boolean>> = Saver({ HashMap(it.limits) }, { StatSheetState(it) })
+    }
+}
+
+/** Состояние листа сводки ([StatSheetState]), что переживает поворот экрана. */
+@Composable fun rememberStatSheetState(): StatSheetState = rememberSaveable(saver = StatSheetState.Saver) { StatSheetState(emptyMap()) }
+
+/**
+ * A sheet of figures (apart from the hero, so the run's window draws the same one): строки сводки [model] элементами ленивого списка -
+ * шапка раздела, строки по одной, «Пределы» и их строки, раздел «С условием»; кадр рисует лишь видимые. Цифра открывает своё окно
+ * разбора ([state], окна - [StatSheetWindows]). Разделы и порядок - реестр контента. Между карточками разделов - свой зазор, список
+ * вокруг не добавляет своего.
  *
  * С [trend] (лист похода против листа героя без похода) сдвинутая строка - полоска слева, цвет и ▲/▼ по смыслу характеристики; касание
  * раскрывает под ней вклады ([StatTrend.shares]) - «Герой без похода» первым, затем вклады карты и боя числами в единице строки, их
- * сумма - число строки, - и кнопку разбора; раскрытые строки держатся, пока числа идут. Свёрнутые «Пределы» раздела раскрываются сами, если внутри сдвиг.
+ * сумма - число строки, - и кнопку разбора; раскрытые строки держатся, пока числа идут. Свёрнутые «Пределы» раздела раскрываются сами,
+ * если внутри сдвиг.
  *
- * С [resists] (лист без карты под штрафом акта) строка сопротивления - «по листу → действует», в шапке раздела - плашка акта, под
- * строками - сноска с регионом и пределом; разбор строки - со штрафом. Лист, где штраф уже лёг (заход), его не передаёт.
+ * Строка сопротивления под штрафом акта - «по листу → действует», в шапке раздела - плашка акта, под строками - сноска с регионом и
+ * пределом; разбор строки - со штрафом ([StatSheetModel.resists]).
  */
-@Composable fun StatSheet(
-    game: GameUi,
-    figures: StatFigures,
-    conditional: List<ConditionalStat> = emptyList(),
-    trend: StatTrend? = null,
-    shifts: Map<String, List<Shift>> = emptyMap(),
-    resists: ActResists? = null,
-) {
-    var open by remember { mutableStateOf<String?>(null) }
-    var openConditional by remember { mutableStateOf<ConditionalStat?>(null) }
-    val show: (String) -> Unit = { open = it }
-    Column(verticalArrangement = Arrangement.spacedBy(SummaryMetrics.cardGap)) {
-        if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        game.index?.stats?.let { registry ->
-            groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, trend, resists, show) }
-        }
-        if (conditional.isNotEmpty()) ConditionalCard(conditional, game) { openConditional = it }
+fun LazyListScope.statSheet(model: StatSheetModel, state: StatSheetState, trend: StatTrend?, index: ContentIndex?) {
+    if (model.empty) item(key = "sheet:empty") { Text(ui("hero.no_stats"), color = Muted) }
+    model.sections.forEachIndexed { at, section -> sectionItems(section, at == 0, state, trend, index) }
+    if (model.conditional.isNotEmpty()) conditionalItems(model.conditional, model.sections.isEmpty(), state)
+}
+
+/**
+ * Окна разбора листа [model], что открыл [state]: строки - [StatBreakdownSheet] ([shifts] - сдвиги эффектов захода по характеристике),
+ * условной строки - [ConditionalBreakdownSheet].
+ */
+@Composable fun StatSheetWindows(game: GameUi, model: StatSheetModel, state: StatSheetState, shifts: Map<String, List<Shift>>) {
+    state.breakdown?.let { StatBreakdownSheet(game, it, model.figures.stats, shifts, model.resists) { state.breakdown = null } }
+    state.conditional?.let { ConditionalBreakdownSheet(game, it) { state.conditional = null } }
+}
+
+/**
+ * Раздел - карточка из элементов списка: шапка значком и именем его цвета (со штрафом акта - плашкой), строки по одной, тонкая черта
+ * между ними, сноска штрафа. Строки, что поднимают пределы, свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание
+ * раскрывает их, сдвиг сравнения [trend] среди них раскрывает их сам. Последний элемент скругляет низ карточки.
+ */
+private fun LazyListScope.sectionItems(section: SheetSection, first: Boolean, state: StatSheetState, trend: StatTrend?, index: ContentIndex?) {
+    val group = section.section
+    val accent = group.accent()
+    val shifted = trend != null && section.limits.any { trend.shift.of(it.stat) != null }
+    val unfolded = section.limits.isNotEmpty() && state.limitsOpen(group, shifted)
+    val open: (String) -> Unit = { state.breakdown = it }
+    item(key = "sheet:${group.name}", contentType = HEAD) {
+        SectionHead(group.glyph, section.title, accent, first) { section.penalty?.let { ToneTag(it.chip, Caution, size = TagSize.Medium) } }
     }
-    open?.let { StatBreakdownSheet(game, it, figures.stats, shifts, resists) { open = null } }
-    openConditional?.let { ConditionalBreakdownSheet(game, it) { openConditional = null } }
+    section.lines.forEachIndexed { at, line ->
+        val last = at == section.lines.lastIndex && section.penalty == null && section.limits.isEmpty()
+        item(key = "stat:${line.stat}", contentType = ROW) { CardPiece(last) { StatCell(line, accent, trend, index, open) } }
+    }
+    section.penalty?.let { penalty ->
+        item(key = "sheet:${group.name}:note", contentType = NOTE) {
+            CardPiece(section.limits.isEmpty()) { Text(penalty.note, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) }
+        }
+    }
+    if (section.limits.isEmpty()) return
+    item(key = "sheet:${group.name}:limits", contentType = FOLD) {
+        CardPiece(!unfolded) { LimitsFold(section.reached, unfolded, accent) { state.toggleLimits(group, shifted) } }
+    }
+    if (!unfolded) return
+    section.limits.forEachIndexed { at, line ->
+        item(key = "stat:${line.stat}", contentType = ROW) { CardPiece(at == section.limits.lastIndex, Modifier.animateItem()) { StatCell(line, accent, trend, index, open) } }
+    }
+}
+
+/**
+ * Последний раздел сводки - «С условием»: строки листа, что бой кладёт, пока держится условие; в итог своей характеристики они не входят
+ * и печатаются один раз - здесь. Строка - характеристика с условием одной фразой и вклад справа; касание - разбор
+ * ([ConditionalBreakdownSheet]).
+ */
+private fun LazyListScope.conditionalItems(lines: List<ConditionalLine>, first: Boolean, state: StatSheetState) {
+    item(key = "sheet:conditional", contentType = HEAD) { ConditionalHead(first) }
+    lines.forEachIndexed { at, line ->
+        item(key = "conditional:$at:${line.row.condition}:${line.row.stat}:${line.row.op}", contentType = ROW) {
+            CardPiece(at == lines.lastIndex) { ConditionalRow(line) { state.conditional = line.row } }
+        }
+    }
+}
+
+/** Шапка раздела «С условием»: значок-развилка и имя латунью. */
+@Composable private fun ConditionalHead(first: Boolean) {
+    Row(
+        Modifier.cardTop(first).padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(SummaryMetrics.icon))
+        Text(ui("stat.conditional.group"), color = ConditionalAccent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** Условная строка [line]: значок, характеристика с условием одной фразой и вклад справа; касание - [onOpen]. */
+@Composable private fun ConditionalRow(line: ConditionalLine, onOpen: () -> Unit) {
+    val title = remember(line) { conditionalTitle(line.stat, line.condition) }
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        StatIcon(line.row.stat, ConditionalAccent, Modifier.size(SummaryMetrics.icon))
+        Text(title, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(line.text, color = Parchment, style = MaterialTheme.typography.titleSmall, fontSize = SummaryMetrics.figure, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
 }
 
 /** Цвет раздела «С условием» и условия в имени строки - латунь. */
 internal val ConditionalAccent: Color get() = Brass
 
-/** Имя условной строки одной фразой: характеристика и условие, условие - цветом раздела ([ConditionalAccent]). */
-internal fun conditionalTitle(row: ConditionalStat, game: GameUi): AnnotatedString = buildAnnotatedString {
-    append(statTitle(row.stat, game.lang))
+/** Имя условной строки одной фразой: характеристика [stat] и условие [condition], условие - цветом раздела ([ConditionalAccent]). */
+private fun conditionalTitle(stat: String, condition: String): AnnotatedString = buildAnnotatedString {
+    append(stat)
     append(' ')
-    withStyle(SpanStyle(color = ConditionalAccent)) { append(loc(LocaleKey.condition(row.condition))) }
+    withStyle(SpanStyle(color = ConditionalAccent)) { append(condition) }
 }
 
-/**
- * Последний раздел сводки - «С условием»: строки листа, что бой кладёт, пока держится условие ([ConditionalStats]); в итог своей
- * характеристики они не входят и печатаются один раз - здесь. Строка - характеристика с условием одной фразой и вклад справа;
- * касание - разбор ([ConditionalBreakdownSheet]). Пустой раздел не рисуется.
- */
-@Composable private fun ConditionalCard(rows: List<ConditionalStat>, game: GameUi, open: (ConditionalStat) -> Unit) {
-    val explainer = remember(game) { StatExplainer(game) }
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Panel)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(Icons.AutoMirrored.Outlined.CallSplit, null, tint = ConditionalAccent, modifier = Modifier.size(SummaryMetrics.icon))
-            Text(ui("stat.conditional.group"), color = ConditionalAccent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        }
-        rows.forEach { row ->
-            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            Row(
-                Modifier.fillMaxWidth().clickable { open(row) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding).heightIn(min = SummaryMetrics.rowHeight),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatIcon(row.stat, ConditionalAccent, Modifier.size(SummaryMetrics.icon))
-                Text(conditionalTitle(row, game), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(
-                    explainer.fmt(row.stat, row.value, row.op, game.index?.stats?.isPercent(row.stat) == true),
-                    color = Parchment,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontSize = SummaryMetrics.figure,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
+/** Имя условной строки [row] словами игры [game] - как у строки сводки; его печатает и шапка разбора. */
+internal fun conditionalTitle(row: ConditionalStat, game: GameUi): AnnotatedString = conditionalTitle(statTitle(row.stat, game.lang), loc(LocaleKey.condition(row.condition)))
 
 internal fun StatSection.accent(): Color = when (this) {
     StatSection.RESERVE -> LifeRed
@@ -209,60 +250,28 @@ private val StatSection.glyph: Glyph get() = when (this) {
     StatSection.OUTSIDE, StatSection.NONE -> Glyph.CURRENCY
 }
 
-/**
- * A section: a card headed by its icon and name in its colour, then its figures one to a row, a thin line between. Строки, что поднимают
- * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их, сдвиг
- * сравнения [trend] среди них раскрывает их сам. [open] - разбор строки. Строки под штрафом акта ([resists]) - с плашкой акта в шапке
- * и сноской под ними ([PenaltyChip], [PenaltyNote]).
- */
-@Composable private fun StatGroupCard(
-    group: StatSection,
-    stats: List<Pair<String, Double>>,
-    figures: StatFigures,
-    game: GameUi,
-    trend: StatTrend?,
-    resists: ActResists?,
-    open: (String) -> Unit,
-) {
-    val accent = group.accent()
-    val shape = RoundedCornerShape(10.dp)
-    val raisers = remember(game.index) { game.index?.let(StatLimits::raisers).orEmpty() }
-    val (limits, plain) = stats.partition { it.first in raisers }
-    val reached = remember(plain, figures, game.index) { game.index?.campaign?.let { campaign -> plain.count { (key) -> StatLimits.of(key, figures.stats, campaign)?.reached == true } } ?: 0 }
-    val shiftedInside = trend != null && limits.any { (key) -> trend.shift.of(key) != null }
-    var unfolded by rememberSaveable(group, shiftedInside) { mutableStateOf(shiftedInside) }
-    val penalized = remember(plain, resists) { resists?.takeIf { r -> plain.any { (key) -> r.of(key) != null } } }
-    Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            GlyphIcon(group.glyph, accent, Modifier.size(SummaryMetrics.icon))
-            Text(group.title(game.lang), color = accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-            penalized?.let {
-                Spacer(Modifier.weight(1f))
-                PenaltyChip(it.penalty)
-            }
-        }
-        plain.forEach { (key, value) ->
-            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            StatCell(key, value, accent, figures, game, trend, penalized, open)
-        }
-        penalized?.let {
-            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            PenaltyNote(it.penalty, game)
-        }
-        if (limits.isNotEmpty()) {
-            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            LimitsFold(reached, unfolded, accent) { unfolded = !unfolded }
-            FoldBody(unfolded) {
-                limits.forEach { (key, value) ->
-                    HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-                    StatCell(key, value, accent, figures, game, trend, penalized, open)
-                }
-            }
-        }
+/** Шапка карточки раздела: глиф [glyph] и имя [title] цветом [accent], справа - [trailing] (плашка штрафа); [first] - без зазора сверху. */
+@Composable private fun SectionHead(glyph: Glyph, title: String, accent: Color, first: Boolean, trailing: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier.cardTop(first).padding(horizontal = 12.dp, vertical = SummaryMetrics.headPadding),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        GlyphIcon(glyph, accent, Modifier.size(SummaryMetrics.icon))
+        Text(title, color = accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        trailing()
+    }
+}
+
+/** Верх карточки раздела: зазор от прошлой карточки (у первой - нет) и подложка со скруглённым верхом. */
+private fun Modifier.cardTop(first: Boolean): Modifier = padding(top = if (first) 0.dp else SummaryMetrics.cardGap).fillMaxWidth().clip(TopShape).background(Panel)
+
+/** Элемент карточки ниже шапки: черта сверху и подложка; [last] скругляет низ карточки. */
+@Composable private fun CardPiece(last: Boolean, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    val shape: Shape = if (last) BottomShape else RectangleShape
+    Column(modifier.fillMaxWidth().clip(shape).background(Panel)) {
+        HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+        content()
     }
 }
 
@@ -285,8 +294,9 @@ private val StatSection.glyph: Glyph get() = when (this) {
 }
 
 /**
- * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding], значок строки и шапки раздела [icon], итог [figure],
- * шапка раздела с полями [headPadding], между карточками разделов [cardGap]; полоска сдвинутой строки [stripe], отступ её вкладов [indent].
+ * Плотность сводки героя: строка не ниже [rowHeight] с полями [rowPadding] - вместе 40 dp касания, значок строки и шапки раздела [icon],
+ * итог [figure], шапка раздела с полями [headPadding], между карточками разделов [cardGap]; полоска сдвинутой строки [stripe], отступ её
+ * вкладов [indent].
  */
 private object SummaryMetrics {
     val rowHeight = 34.dp
@@ -300,25 +310,21 @@ private object SummaryMetrics {
 }
 
 /**
- * Строка сводки. Без сдвига сравнения [trend] касание открывает разбор ([open]). Сдвинутая - полоска слева, цвет и знак отметки
- * ([TrendMark]); касание раскрывает под ней вклады ([ChangeSources]) с кнопкой разбора. Под штрафом акта ([resists]) - «по листу →
- * действует» ([StatRow]).
+ * Строка сводки [line]. Без сдвига сравнения [trend] касание открывает разбор ([open]). Сдвинутая - полоска слева, цвет и знак отметки
+ * ([TrendMark]); касание раскрывает под ней вклады ([ChangeSources]) с кнопкой разбора.
  */
-@Composable private fun StatCell(key: String, value: Double, accent: Color, figures: StatFigures, game: GameUi, trend: StatTrend?, resists: ActResists?, open: (String) -> Unit) {
-    val mark = trend?.of(key, value, game.index)
+@Composable private fun StatCell(line: SheetLine, accent: Color, trend: StatTrend?, index: ContentIndex?, open: (String) -> Unit) {
+    val key = line.stat
+    val mark = trend?.of(key, line.value, index)
     if (trend == null || mark == null) {
-        val resist = remember(key, resists) { resists?.of(key) }
-        StatRow(key, value, accent, figures, game, null, Modifier.fillMaxWidth().clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding), resist)
+        StatRow(line, accent, null, Modifier.fillMaxWidth().clickable { open(key) }.padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding))
         return
     }
     var unfolded by rememberSaveable(key) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().background(mark.tint.copy(alpha = .06f)).drawBehind { drawRect(mark.tint, size = Size(SummaryMetrics.stripe.toPx(), size.height)) }) {
         StatRow(
-            key,
-            value,
+            line,
             accent,
-            figures,
-            game,
             mark,
             Modifier.fillMaxWidth().foldToggle(unfolded, ui(if (unfolded) "common.collapse" else "common.expand")) { unfolded = !unfolded }
                 .padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding),
@@ -337,30 +343,28 @@ private object SummaryMetrics {
 }
 
 /**
- * Строка сводки в одну линию: значок характеристики, имя и итог справа; сдвинутая ([mark]) - итог цветом отметки и её знак.
- * За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Подписей под именем нет: части, доля в резерве, предел
- * с набранным и рейтинг защиты - только в разборе. Пределы: печатается действующее число, упёршееся в предел - цветом
- * предупреждения; уклонение и броня - процентом защиты ([StatLimits.defence]). Сопротивление под штрафом акта [resist] - «по листу →
- * действует» ([PenalizedFigure]); без штрафа - null.
+ * Строка сводки в одну линию: значок характеристики, имя и итог справа ([SheetLine.text]); сдвинутая ([mark]) - итог цветом отметки и её
+ * знак. За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Подписей под именем нет: части, доля в резерве, предел с
+ * набранным и рейтинг защиты - только в разборе. Упёршееся в предел - цветом предупреждения. Сопротивление под штрафом акта - «по
+ * листу → действует» ([PenalizedFigure]).
  */
-@Composable private fun StatRow(key: String, value: Double, accent: Color, figures: StatFigures, game: GameUi, mark: TrendMark?, modifier: Modifier, resist: PenalizedResist? = null) {
+@Composable private fun StatRow(line: SheetLine, accent: Color, mark: TrendMark?, modifier: Modifier) {
     Row(
         modifier.heightIn(min = SummaryMetrics.rowHeight),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        StatIcon(key, accent, Modifier.size(SummaryMetrics.icon))
-        val level = game.hero?.level
-        val row = remember(key, figures, game.index, level) { game.index?.let { RowFigure.of(key, figures, level, it) } }
-        Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        if (resist != null) {
-            PenalizedFigure(key, resist, game)
+        StatIcon(line.stat, accent, Modifier.size(SummaryMetrics.icon))
+        Text(line.title, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        val penalty = line.penalty
+        if (penalty != null) {
+            PenalizedFigure(penalty)
         } else {
             Text(
-                row?.text(game.index, figures.stats) ?: rowValue(key, value, game.index, figures.stats),
+                line.text,
                 color = when {
                     mark != null -> mark.tint
-                    row?.clamped == true -> Caution
+                    line.clamped -> Caution
                     else -> Parchment
                 },
                 style = MaterialTheme.typography.titleSmall,
@@ -370,8 +374,8 @@ private object SummaryMetrics {
             )
         }
         mark?.mark?.let { Text(it, color = mark.tint, fontSize = 11.sp) }
-        if (key in figures.skilled) Tipped({ Tip(ui("hero.mark.aura"), ui("hero.mark.aura_body"), tint = Rune) }) { GlyphIcon(Glyph.AURA, Rune, Modifier.size(13.dp)) }
-        if (key in figures.fated) Tipped({ Tip(ui("hero.mark.fate"), ui("hero.mark.fate_body"), tint = Caution) }) { Text("✦", color = Caution, fontSize = 11.sp) }
+        if (line.aura) Tipped({ Tip(ui("hero.mark.aura"), ui("hero.mark.aura_body"), tint = Rune) }) { GlyphIcon(Glyph.AURA, Rune, Modifier.size(13.dp)) }
+        if (line.fated) Tipped({ Tip(ui("hero.mark.fate"), ui("hero.mark.fate_body"), tint = Caution) }) { Text("✦", color = Caution, fontSize = 11.sp) }
     }
 }
 
@@ -379,25 +383,24 @@ private object SummaryMetrics {
  * Число сопротивления под штрафом акта: набранное по листу мелко, стрелка, после штрафа - если бой читает другое (предел или пол), и
  * действующее: упёршееся в предел - цветом предупреждения, ниже нуля - кровью.
  */
-@Composable private fun PenalizedFigure(key: String, resist: PenalizedResist, game: GameUi) {
+@Composable private fun PenalizedFigure(figure: PenaltyFigure) {
     val minor = MaterialTheme.typography.labelMedium
-    val reading = ui("stat.penalty.reading", rowValue(key, resist.sheet, game.index), rowValue(key, resist.effective, game.index))
     Row(
-        Modifier.semantics(mergeDescendants = true) { contentDescription = reading },
+        Modifier.semantics(mergeDescendants = true) { contentDescription = figure.spoken },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Text(number(resist.sheet), color = Muted, style = minor, maxLines = 1)
+        Text(figure.sheet, color = Muted, style = minor, maxLines = 1)
         Text("→", color = Muted, style = minor)
-        if (resist.clamped) {
-            Text(number(resist.penalized), color = Muted, style = minor, maxLines = 1)
+        figure.penalized?.let {
+            Text(it, color = Muted, style = minor, maxLines = 1)
             Text("→", color = Muted, style = minor)
         }
         Text(
-            rowValue(key, resist.effective, game.index),
+            figure.effective,
             color = when {
-                resist.effective < 0 -> LifeRed
-                resist.over > 0 -> Caution
+                figure.below -> LifeRed
+                figure.over -> Caution
                 else -> Parchment
             },
             style = MaterialTheme.typography.titleSmall,
@@ -408,34 +411,18 @@ private object SummaryMetrics {
     }
 }
 
-/** Плашка штрафа в шапке раздела сопротивлений: «Акт III · −30%», на картах Атласа - «Атлас · −60%». */
-@Composable private fun PenaltyChip(penalty: ActPenalty) {
-    val percent = number(penalty.percent)
-    val shape = RoundedCornerShape(6.dp)
-    Text(
-        if (penalty.atlas) ui("stat.penalty.chip_atlas", percent) else ui("stat.penalty.chip", penalty.numeral, percent),
-        color = Caution,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Medium,
-        maxLines = 1,
-        modifier = Modifier.clip(shape).background(Caution.copy(alpha = .08f)).border(1.dp, Caution.copy(alpha = .35f), shape).padding(horizontal = 7.dp, vertical = 2.dp),
-    )
-}
-
-/** Сноска под сопротивлениями: где штраф (регион или карты Атласа) и сколько, что слева и справа, предел правил. */
-@Composable private fun PenaltyNote(penalty: ActPenalty, game: GameUi) {
-    val place = penalty.region?.let(::regionTitle) ?: ui("stat.penalty.atlas")
-    val cap = game.index?.campaign?.combat?.resistCap ?: 0.0
-    Text(
-        ui("stat.penalty.note", place, number(penalty.percent), number(cap)),
-        color = Muted,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-    )
-}
-
 /** Цвет запаса резерва аур: мана - синим, здоровье - красным. */
 internal fun ReservePool.tint(): Color = when (this) {
     ReservePool.MANA -> ManaBlue
     ReservePool.LIFE -> LifeRed
 }
+
+/** Скругление верха и низа карточки раздела. */
+private val TopShape = RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)
+private val BottomShape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp)
+
+/** Виды элементов листа для переиспользования ленивым списком. */
+private const val HEAD = "sheet-head"
+private const val ROW = "sheet-row"
+private const val NOTE = "sheet-note"
+private const val FOLD = "sheet-fold"

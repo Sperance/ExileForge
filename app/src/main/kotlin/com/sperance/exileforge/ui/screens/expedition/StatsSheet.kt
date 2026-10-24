@@ -1,10 +1,7 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +18,8 @@ import com.sperance.exileforge.core.sheet.ConditionalStats
 import com.sperance.exileforge.core.sheet.FightFigures
 import com.sperance.exileforge.core.sheet.RunSteps
 import com.sperance.exileforge.core.sheet.SheetShift
+import com.sperance.exileforge.core.sheet.StatExplainer
+import com.sperance.exileforge.core.sheet.StatSheetModel
 import com.sperance.exileforge.core.sheet.fightFigures
 import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.core.sheet.runSheet
@@ -30,8 +29,11 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.LocalContentIndex
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaHold
-import com.sperance.exileforge.ui.screens.hero.StatSheet
+import com.sperance.exileforge.ui.screens.hero.StatSheetWindows
+import com.sperance.exileforge.ui.screens.hero.rememberStatSheetState
+import com.sperance.exileforge.ui.screens.hero.statSheet
 import com.sperance.exileforge.ui.screens.hero.StatTrend
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +47,7 @@ private enum class StatsPlace(val badge: String?, val about: String) {
 }
 
 /**
- * Характеристики героя в походе - один список, как сводка экрана «Герой» ([StatSheet]): итог в бою (живое тело героя [FightHud.heroBody]
+ * Характеристики героя в походе - один список, как сводка экрана «Герой» ([statSheet]): итог в бою (живое тело героя [FightHud.heroBody]
  * с картой, баффами, дебаффами и глотками) или на карте (все бонусы захода [mapEffects]), против своего листа героя без похода. Шапка -
  * «Характеристики» и метка «В бою» / «На карте», под ней - сколько строк сдвинуто к лучшему и к худшему. Сдвинутая строка раскрывается
  * касанием ([StatShares]): «Герой без похода», вклады карты ([origins]: карта, Атлас, древо гильдии, зелье) и боя по частям тела боя
@@ -78,34 +80,33 @@ fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>?, origins: EffectOr
     }
     val (better, worse) = remember(trend, now, index) { trend.count(now.values, index) }
     val conditional = remember(hero, index) { hero?.let { h -> index?.let { ConditionalStats.of(h, it) } }.orEmpty() }
+    val lang = game.lang
+    val model by produceState<StatSheetModel?>(null, now, conditional, index, lang) {
+        index?.let { value = StatSheetModel.build(now, it, hero?.level, lang, conditional, null, StatExplainer(game)) }
+    }
+    val sheetState = rememberStatSheetState()
     ForgeSheet(onDismissRequest = onDismiss) {
-        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding(), contentPadding = PaddingValues(16.dp)) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.padding(bottom = HEAD_GAP), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Engraved(ui("expedition.stats_title"))
-                    place.badge?.let { PlaceBadge(ui(it)) }
+                    place.badge?.let { ToneTag(ui(it), Rune) }
                 }
             }
             item {
                 MutedText(
                     listOf(ui(place.about), if (better + worse == 0) ui("expedition.stats_unchanged") else ui("expedition.stats_changed", better, worse)).joinToString(" "),
+                    Modifier.padding(bottom = HEAD_GAP),
                 )
             }
-            item { StatSheet(game, now, conditional = conditional, trend = trend, shifts = sheets.mapShifts) }
+            model?.let { statSheet(it, sheetState, trend, index) }
         }
+        model?.let { StatSheetWindows(game, it, sheetState, sheets.mapShifts) }
     }
 }
 
-/** Метка места в шапке листа: «В бою» или «На карте». */
-@Composable private fun PlaceBadge(text: String) {
-    val shape = RoundedCornerShape(50)
-    Text(
-        text,
-        color = Rune,
-        style = MaterialTheme.typography.labelSmall,
-        modifier = Modifier.background(Rune.copy(alpha = .12f), shape).border(1.dp, Rune.copy(alpha = .5f), shape).padding(horizontal = 8.dp, vertical = 2.dp),
-    )
-}
+/** Зазор под шапкой и пояснением листа; строки сводки держат свои зазоры сами. */
+private val HEAD_GAP = 8.dp
 
 /**
  * Листы героя для сравнения: свой ([mine]), под картой ([onMap], без карты - null) со сдвигами по источникам ([mapShifts]) и

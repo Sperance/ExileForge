@@ -57,6 +57,8 @@ fun HeroScreen() {
     val smithy = koinViewModel<SmithyViewModel>().model
     val page by model.page.collectAsStateWithLifecycle()
     val fate by model.fate.collectAsStateWithLifecycle()
+    val sheet by model.sheet.collectAsStateWithLifecycle()
+    val sheetState = rememberStatSheetState()
     val heroId = game.heroId
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
@@ -80,7 +82,7 @@ fun HeroScreen() {
 
             page == HeroPage.STASH -> StashPane(game, model, onOpen = { id -> detailId = id })
 
-            else -> LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            else -> LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = if (page == HeroPage.CHARACTER) Arrangement.Top else Arrangement.spacedBy(PAGE_GAP)) {
                 when (page) {
                     HeroPage.WORN -> {
                         item { rememberEquipment(game)?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
@@ -107,7 +109,7 @@ fun HeroScreen() {
                                 FateRibbon(
                                     shown.card,
                                     shown.effects.power.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
-                                    Modifier.fillMaxWidth(),
+                                    Modifier.fillMaxWidth().padding(bottom = PAGE_GAP),
                                     now = now,
                                     action = shown.visit?.let { visit ->
                                         { ForgeButton(onClick = { shell.building(visit.building) }, modifier = Modifier.fillMaxWidth()) { Text(visit.label) } }
@@ -115,13 +117,14 @@ fun HeroScreen() {
                                 )
                             }
                         }
-                        game.hero?.let { hero -> item(key = "number") { NumberAndMight(hero) } }
-                        item { HeroSummary(game) }
+                        game.hero?.let { hero -> item(key = "number") { Box(Modifier.padding(bottom = PAGE_GAP)) { NumberAndMight(hero) } } }
+                        sheet?.takeIf { it.heroId == heroId }?.let { statSheet(it.sheet, sheetState, trend = null, index = game.index) }
                     }
                 }
             }
         }
     }
+    sheet?.takeIf { it.heroId == heroId }?.let { StatSheetWindows(game, it.sheet, sheetState, shifts = emptyMap()) }
     detailId?.let { id -> ItemSheet(game, model, id) { detailId = null } }
     stackCode?.let { code ->
         hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
@@ -182,3 +185,6 @@ fun HeroScreen() {
     }
     pickPlace?.let { place -> SlotPicker(game, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
 }
+
+/** Зазор между блоками страницы героя; лист сводки держит свои зазоры сам. */
+private val PAGE_GAP = 12.dp

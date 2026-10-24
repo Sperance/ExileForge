@@ -18,6 +18,8 @@ import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.hero.HeroPageModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.hero.HeroSheet
+import com.sperance.exileforge.core.hero.HeroSheetModel
 import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.model.auction.LotTerms
@@ -47,6 +49,7 @@ class HeroViewModel(
     slice: GameSlice,
     private val pages: HeroPageModel,
     fates: HeroFateModel,
+    sheets: HeroSheetModel,
     private val expedition: ExpeditionActions,
     private val redraws: FateRedraws,
 ) : ViewModel() {
@@ -57,6 +60,9 @@ class HeroViewModel(
 
     /** Дар героя со счётом - лента листа героя. */
     val fate: StateFlow<HeroFate?> = fates.fate
+
+    /** Сводка героя, посчитанная вне кадра, - строки листа вкладки «Герой». */
+    val sheet: StateFlow<HeroSheet?> = sheets.sheet
 
     fun load() = sync.load()
     fun ensure() = sync.ensure()

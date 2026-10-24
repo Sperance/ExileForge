@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.hall.HallModel
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.hero.HeroPageModel
+import com.sperance.exileforge.core.hero.HeroSheetModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
@@ -222,6 +223,7 @@ val appModule = module {
     factoryOf(::PlayerCardModel)
     factoryOf(::HeroPageModel)
     single { HeroFateModel(get(), get(), get(named(APP_SCOPE))) }
+    single { HeroSheetModel(get(), get(named(APP_SCOPE))) }
     single { MarketChoresModel(get(), get(), get(named(APP_SCOPE))) }
     factoryOf(::CharactersModel)
     factoryOf(::TreeModel)

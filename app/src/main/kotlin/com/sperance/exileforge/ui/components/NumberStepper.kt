@@ -46,7 +46,7 @@ import com.sperance.exileforge.ui.theme.GoldBright
 
 /**
  * Поле количества «−» N «+» в границах [range]: тот же степпер, что [NumberStepper], но число в середине можно набрать - для стопок,
- * где шагом по одному не дойти. Набранное вне границ прижимается к ним, пустое поле значения не меняет. [label] - имя поля для
+ * где шагом по одному не дойти. Набранное вне границ прижимается к ним и в поле, пустое поле значения не меняет. [label] - имя поля для
  * чтения с экрана, [less] и [more] - имена кнопок.
  */
 @Composable fun AmountStepper(
@@ -65,8 +65,9 @@ import com.sperance.exileforge.ui.theme.GoldBright
             text,
             { typed ->
                 val digits = typed.filter(Char::isDigit).take(AMOUNT_DIGITS)
-                text = digits
-                digits.toLongOrNull()?.let { onChange(it.coerceIn(range)) }
+                val amount = digits.toLongOrNull()?.coerceIn(range)
+                text = amount?.toString() ?: digits
+                amount?.let(onChange)
             },
             enabled = enabled,
             singleLine = true,

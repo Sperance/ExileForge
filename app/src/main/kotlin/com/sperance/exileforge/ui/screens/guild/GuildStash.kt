@@ -394,7 +394,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
     val filterState = rememberItemFilter(ItemShelf.GUILD_DEPOSIT)
     var kind by remember { mutableStateOf(DepositKind.GEAR) }
     var filtering by remember { mutableStateOf(false) }
-    val typed = remember { mutableStateMapOf<String, String>() }
+    val amounts = remember { mutableStateMapOf<String, Long>() }
     val pieces = remember(bag, kind) { bag.pieces(kind) }
     val shelf = rememberItemShelf(game, pieces, filterState) { null }
     val query = filterState.query
@@ -426,7 +426,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
         },
         footer = {
             val fits = bag.fits(picked)
-            val earned = bag.earned(picked, typed)
+            val earned = bag.earned(picked, amounts)
             PickDock(
                 label = when {
                     picked.isEmpty() -> ui("sell.pick_hint")
@@ -438,7 +438,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                 figure = ui("guild.deposit_fits", fits).takeIf { picked.isNotEmpty() },
                 onCancel = onDismiss,
                 modifier = Modifier.weight(1f),
-            ) { onPut(bag.parcels(picked, typed)) }
+            ) { onPut(bag.parcels(picked, amounts)) }
         },
     ) {
         LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -448,8 +448,8 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                 kind == DepositKind.STACKS -> item { MutedText(ui("guild.deposit_stack_hint")) }
             }
             items(shown, key = { it.id }) { lot ->
-                val award = bag.award(lot, typed[lot.code])
-                val single = depositOne(lot, award, room = bag.free > 0, busy = game.busy) { onPut(listOf(lot.parcel(typed[lot.code]))) }
+                val award = bag.award(lot, amounts[lot.code])
+                val single = depositOne(lot, award, room = bag.free > 0, busy = game.busy) { onPut(listOf(lot.parcel(amounts[lot.code]))) }
                 DepositLine(pick, lot, award) { chosen, toggle ->
                     val piece = lot.piece
                     if (piece != null) {
@@ -459,7 +459,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                         }
                     } else {
                         val card = { inspect(Inspect.Stack(lot.code, single)) }
-                        StackLine(game.index, lot, chosen, typed[lot.code], onAmount = { typed[lot.code] = it.toString() }, onClick = if (lot.bar == null) toggle else card, onHold = card)
+                        StackLine(game.index, lot, chosen, amounts[lot.code], onAmount = { amounts[lot.code] = it }, onClick = if (lot.bar == null) toggle else card, onHold = card)
                     }
                 }
             }
@@ -498,13 +498,13 @@ private fun depositOne(lot: DepositLot, award: Long, room: Boolean, busy: Boolea
 }
 
 /**
- * Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по набранному [typed]) и причина запрета; касание - [onClick],
+ * Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по выбранному [amount]) и причина запрета; касание - [onClick],
  * удержание - [onHold]. Отмеченная [chosen] - в золотой рамке, под именем - поле «− N +» ([AmountStepper]) от одной до всей стопки,
  * новое количество - [onAmount].
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun StackLine(index: ContentIndex?, lot: DepositLot, chosen: Boolean, typed: String?, onAmount: (Long) -> Unit, onClick: () -> Unit, onHold: () -> Unit) {
+private fun StackLine(index: ContentIndex?, lot: DepositLot, chosen: Boolean, amount: Long?, onAmount: (Long) -> Unit, onClick: () -> Unit, onHold: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(shape)
@@ -519,11 +519,11 @@ private fun StackLine(index: ContentIndex?, lot: DepositLot, chosen: Boolean, ty
                 Text(itemTitle(lot.code), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 lot.bar?.let { BarReason(it) }
             }
-            Text(lot.countText(typed), color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+            Text(lot.countText(amount), color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }
         if (chosen && lot.bar == null) {
             AmountStepper(
-                lot.amountOf(typed),
+                lot.amountOf(amount),
                 1L..lot.owned.coerceAtLeast(1),
                 enabled = true,
                 label = ui("sell.amount_owned", lot.owned),

@@ -31,17 +31,17 @@ enum class DepositKind { GEAR, STACKS, MAPS }
 data class DepositLot(val kind: DepositKind, val piece: ItemView? = null, val code: String = "", val owned: Long = 0, val bar: DepositBar? = null) : Pickable {
     override val id: String get() = piece?.id ?: "$STACK_ID$code"
 
-    /** Сколько стопки уйдёт при набранном в поле [typed]: число в пределах сумки; пусто или не число - вся стопка. */
-    fun amountOf(typed: String?): Long = typed?.toLongOrNull()?.coerceIn(1, owned.coerceAtLeast(1)) ?: owned
+    /** Сколько стопки уйдёт при выбранном количестве [chosen]: в пределах сумки; не выбрано - вся стопка. */
+    fun amountOf(chosen: Long?): Long = chosen?.coerceIn(1, owned.coerceAtLeast(1)) ?: owned
 
     /** Число стопки в строке: «× 37», а часть стопки - «× 10 из 37». */
-    fun countText(typed: String?): String = amountOf(typed).let { if (it < owned) ui("guild.deposit_stack_part", number(it.toDouble()), number(owned.toDouble())) else ui("guild.deposit_stack_all", number(owned.toDouble())) }
+    fun countText(chosen: Long?): String = amountOf(chosen).let { if (it < owned) ui("guild.deposit_stack_part", number(it.toDouble()), number(owned.toDouble())) else ui("guild.deposit_stack_all", number(owned.toDouble())) }
 
-    /** Сколько монет Содружества начислят за посылку при набранном [typed] - по правилу сервера ([StashValue.award]). */
-    fun award(index: ContentIndex, typed: String?): Long = StashValue.award(index, piece?.item, code, amountOf(typed))
+    /** Сколько монет Содружества начислят за посылку при выбранном количестве [chosen] - по правилу сервера ([StashValue.award]). */
+    fun award(index: ContentIndex, chosen: Long?): Long = StashValue.award(index, piece?.item, code, amountOf(chosen))
 
-    /** Посылка запроса: копия - по id, стопка - кодом и количеством из набранного [typed]. */
-    fun parcel(typed: String?): GuildDepositParcel = piece?.let { GuildDepositParcel(itemId = it.id) } ?: GuildDepositParcel(code = code, amount = amountOf(typed))
+    /** Посылка запроса: копия - по id, стопка - кодом и выбранным количеством [chosen] (не выбрано - вся стопка). */
+    fun parcel(chosen: Long?): GuildDepositParcel = piece?.let { GuildDepositParcel(itemId = it.id) } ?: GuildDepositParcel(code = code, amount = amountOf(chosen))
 }
 
 /** Приставка id стопки в выборе: id копий и коды стопок не пересекаются. */
@@ -87,17 +87,17 @@ class DepositBag(val lots: List<DepositLot>, val free: Int, val size: Int, priva
         return shelf?.visible.orEmpty().mapNotNull { byId[it.id] }
     }
 
-    /** Посылки запроса из отмеченного [picked] в его порядке; [typed] - набранные количества стопок по коду. */
-    fun parcels(picked: List<DepositLot>, typed: Map<String, String>): List<GuildDepositParcel> = picked.map { it.parcel(typed[it.code]) }
+    /** Посылки запроса из отмеченного [picked] в его порядке; [amounts] - выбранные количества стопок по коду. */
+    fun parcels(picked: List<DepositLot>, amounts: Map<String, Long>): List<GuildDepositParcel> = picked.map { it.parcel(amounts[it.code]) }
 
     /** Сколько из отмеченного [picked] ляжет во вкладку - по правилу сервера, по порядку. */
     fun fits(picked: List<DepositLot>): Int = placed(picked).size
 
-    /** Монеты Содружества за посылку [lot] при набранном количестве [typed]. */
-    fun award(lot: DepositLot, typed: String?): Long = lot.award(index, typed)
+    /** Монеты Содружества за посылку [lot] при выбранном количестве [chosen]. */
+    fun award(lot: DepositLot, chosen: Long?): Long = lot.award(index, chosen)
 
-    /** Монеты Содружества за отмеченное [picked]: только за то, что ляжет; [typed] - набранные количества стопок по коду. */
-    fun earned(picked: List<DepositLot>, typed: Map<String, String>): Long = placed(picked).sumOf { award(it, typed[it.code]) }
+    /** Монеты Содружества за отмеченное [picked]: только за то, что ляжет; [amounts] - выбранные количества стопок по коду. */
+    fun earned(picked: List<DepositLot>, amounts: Map<String, Long>): Long = placed(picked).sumOf { award(it, amounts[it.code]) }
 
     private fun placed(picked: List<DepositLot>): List<DepositLot> = GuildDeposit.plan(picked, free) { it.bar }.placed
 

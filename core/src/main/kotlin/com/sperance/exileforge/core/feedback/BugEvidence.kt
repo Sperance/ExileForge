@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.command.CrashTrace
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.session.ServerConnection
+import java.util.Base64
 
 /** Последние падения клиента на устройстве, новые первыми: стек и версия сборки, в которой оно случилось. */
 fun interface CrashTraces {
@@ -13,15 +14,21 @@ fun interface CrashTraces {
 
 /**
  * Что прикладывается к отчёту игрока: к ошибке - последние падения клиента, снимок героя и, из забега, сжатый разбор его последнего
- * боя ([fights], [FightDigest]); журнал сбоев сервера - по правилам контента, без прочитанного контента отчёт уходит без него.
+ * боя ([fights], [FightDigest]) и снимок экрана, если игрок его приложил; журнал сбоев сервера - по правилам контента, без прочитанного
+ * контента отчёт уходит без него.
  */
 class BugEvidence(private val slice: GameSlice, private val connection: ServerConnection, private val crashes: CrashTraces, private val fights: LastFight) {
-    /** Отчёт [report] с приложенным на этот миг. */
-    suspend fun attach(report: BugReportRequest): BugReportRequest {
+    /** Отчёт [report] с приложенным на этот миг и сжатым снимком экрана [shot] (null - без снимка; берёт его только ошибка). */
+    suspend fun attach(report: BugReportRequest, shot: ByteArray?): BugReportRequest {
         val index = slice.ui.value.index
         val rules = index?.rules?.feedback
         val evidence = if (report.kind == FeedbackKind.BUG) {
-            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet(index).orEmpty(), fight = fights.report()?.let(FightDigest::of).orEmpty())
+            report.copy(
+                crashes = crashes.recent(),
+                heroSheet = slice.ui.value.hero?.reportSheet(index).orEmpty(),
+                fight = fights.report()?.let(FightDigest::of).orEmpty(),
+                shot = shot?.let { Base64.getEncoder().encodeToString(it) }.orEmpty(),
+            )
         } else {
             report
         }

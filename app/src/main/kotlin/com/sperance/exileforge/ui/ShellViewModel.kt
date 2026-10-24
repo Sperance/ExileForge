@@ -103,11 +103,12 @@ class ShellViewModel(
 
     /**
      * Отчёт жука: со входом или без. Собранный отчёт сразу ложится в очередь на диске ([BugDelivery]) и уходит
-     * оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать. Снимков экрана нет.
+     * оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать. Снимок экрана [shot] - сжатый
+     * кадр, что игрок приложил (null - без снимка): он едет в самом отчёте и с ним же ждёт в очереди.
      *
      * К ошибке прикладываются последние падения клиента и снимок героя; без прочитанного контента отчёт уходит без журнала сбоев.
      */
-    fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({ evidence.attach(report) }, onQueued)
+    fun reportBug(report: BugReportRequest, shot: ByteArray?, onQueued: suspend () -> Unit = {}) = bugs.file({ evidence.attach(report, shot) }, onQueued)
 
     /** Аккорд громкости: просьба открыть лист отчёта. */
     val bugRequests: SharedFlow<Unit> = shell.bugRequests

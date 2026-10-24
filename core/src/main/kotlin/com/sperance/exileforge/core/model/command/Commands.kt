@@ -129,6 +129,11 @@ data class ApiCapabilities(val routes: Set<String>) {
      * из формы; падению и зависанию сервер добавляет лог сам.
      */
     val serverLog: Boolean = false,
+    /**
+     * Снимок экрана к ошибке: сжатый кадр WebP или JPEG в base64, не больше `rules.feedback.shotBytes` байт; едет с отчётом и в очереди на
+     * диске, повтор по [key] второго снимка не пишет. Пусто - игрок снимок не приложил.
+     */
+    val shot: String = "",
 )
 
 /**

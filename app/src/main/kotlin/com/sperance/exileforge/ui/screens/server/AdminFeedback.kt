@@ -154,7 +154,8 @@ private val FullReport.where: String get() = place.ifBlank { screen }
  * модерации»; в переписке автор - своим логином, его последний ответ в обсуждении - «новый ответ». Под перепиской у нового и обсуждаемого
  * - поле и решения ([Decisions]): «Комментировать» (автору, отчёт - в «Обсуждении»), «Отклонить» (поле - причина автору) и «В работу»
  * (апелляция и жалоба не уходят наружу - «Принять»); у отправленного - ведение Issue по «Закрыть…». Подвал -
- * «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
+ * «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Снимок экрана отчёта - миниатюрой справа от текста
+ * ([ReportShotAside]). Касание шапки - [onCollapse].
  */
 @Composable internal fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit, onDossier: (String) -> Unit) {
     val report = entry.report
@@ -178,6 +179,11 @@ private val FullReport.where: String get() = place.ifBlank { screen }
         topic = report.topic,
         issueLink = true,
         author = { AuthorLine(entry, onDossier) },
+        aside = if (report.shot.attached) {
+            { ReportShotAside(report.shot, report.createdAt, vm.shots) }
+        } else {
+            null
+        },
         extra = {
             if (!report.kind.exported) Circumstances(report.context)
             ModerationNote(account, vm, report)

@@ -45,6 +45,21 @@ import kotlinx.serialization.Serializable
 /** Что модерация делает с Issue отчёта из игры (сервер `IssueMove`): ответить или закрыть с причиной. */
 @Serializable enum class IssueMove { REPLY, FIXED, NOT_PLANNED, INVALID, DUPLICATE }
 
+/**
+ * Снимок экрана отчёта [reportId]: [until] - до какого мига (мс) он хранится на сервере, 0 - снимка не было. Срок остаётся и после стирания
+ * снимка: по нему тикет говорит «снимок удалён по сроку».
+ */
+data class ReportShot(val reportId: String, val until: Long) {
+    /** Снимок к отчёту прикладывали. */
+    val attached: Boolean get() = until > 0
+
+    /** Снимок ещё хранится к [now] (мс): иначе он стёрт по сроку. */
+    fun kept(now: Long): Boolean = now < until
+}
+
+/** Снимок экрана отчёта с сервера (`GET bugreport/shot`): кадр base64 [image], хранится до [until] (мс). */
+@Serializable data class ReportShotView(val image: String, val until: Long = 0)
+
 /** Текст ответа в Issue из игры: автора отчёта или модерации. */
 @Serializable data class ReportAnswer(val text: String)
 
@@ -66,7 +81,12 @@ import kotlinx.serialization.Serializable
     val answerable: Boolean = false,
     /** Можно ли закрыть отчёт самому - решает сервер: новый или в обсуждении; закрытый ([BugStatus.WITHDRAWN]) не возвращается. */
     val closable: Boolean = false,
+    /** Снимок экрана отчёта хранится на сервере до этого мига (мс); 0 - снимка не было ([ReportShot]). */
+    val shotUntil: Long = 0,
 ) {
+    /** Снимок экрана отчёта: был ли и до какого мига хранится. */
+    val shot: ReportShot get() = ReportShot(id, shotUntil)
+
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
 
@@ -128,7 +148,12 @@ import kotlinx.serialization.Serializable
     val answers: List<IssueNote> = emptyList(),
     /** «Новый ответ»: в обсуждении последнее слово переписки - автора, модерации ждёт его ответ; решает сервер. */
     val awaitsModeration: Boolean = false,
+    /** Снимок экрана отчёта хранится на сервере до этого мига (мс); 0 - снимка не было ([ReportShot]). */
+    val shotUntil: Long = 0,
 ) {
+    /** Снимок экрана отчёта: был ли и до какого мига хранится. */
+    val shot: ReportShot get() = ReportShot(id, shotUntil)
+
     /** Переписка тикета модерации по порядку ([conversation]). */
     val thread: List<IssueNote> get() = conversation(reason, answers, issue)
 }

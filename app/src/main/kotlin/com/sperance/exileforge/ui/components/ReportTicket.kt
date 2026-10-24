@@ -46,7 +46,8 @@ import java.time.format.DateTimeFormatter
 /**
  * Карточка отчёта - тикет-чат, один у игрока и у модерации: вид, номер Issue, судьба и дата сверху; под ними строка [author] (у модерации -
  * логин, герой ссылкой на его карточку и место); текст до трёх строк ([ReportText]: выделяется, раскрывается ссылкой); номер Issue -
- * касанием в буфер обмена; [extra] - своё место под текстом (у модерации - обстоятельства
+ * касанием в буфер обмена; [aside] - место справа от текста (снимок экрана отчёта, [ReportShotAside]; текст рядом с ним свёрнут до
+ * [ASIDE_LINES] строк); [extra] - своё место под текстом (у модерации - обстоятельства
  * дела и «Дополнение модерации»); переписка пузырями ([ThreadChat]: модерация и разработчик слева, автор справа - у игрока «Вы», у
  * модерации его логин [authorName]; [newReply] - последний ответ автора помечен «новый ответ»); [below] - место под перепиской (у игрока
  * поле ответа и «Закрыть отчёт», у модерации - поле комментария и решения); [version] - версия клиента плашкой в шапке (у модерации),
@@ -70,6 +71,7 @@ import java.time.format.DateTimeFormatter
     newReply: Boolean = false,
     onHeader: (() -> Unit)? = null,
     author: (@Composable () -> Unit)? = null,
+    aside: (@Composable () -> Unit)? = null,
     extra: (@Composable ColumnScope.() -> Unit)? = null,
     below: (@Composable ColumnScope.() -> Unit)? = null,
     topic: ReportTopic = ReportTopic.ERROR,
@@ -92,7 +94,15 @@ import java.time.format.DateTimeFormatter
             Text(reportDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
         author?.let { Box(Modifier.padding(horizontal = 12.dp).padding(top = 4.dp)) { it() } }
-        ReportText(text, Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp))
+        val textPadding = Modifier.padding(horizontal = 12.dp).padding(top = 6.dp, bottom = 10.dp)
+        if (aside == null) {
+            ReportText(text, TEXT_LINES, textPadding)
+        } else {
+            Row(textPadding, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ReportText(text, ASIDE_LINES, Modifier.weight(1f))
+                aside()
+            }
+        }
         extra?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
         if (thread.isNotEmpty()) ThreadChat(thread, authorName, newReply)
         below?.let { Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = it) }
@@ -108,10 +118,10 @@ import java.time.format.DateTimeFormatter
 }
 
 /**
- * Текст отчёта: выделяется ([SelectionContainer]: долгое нажатие выделяет и даёт «Копировать»), свёрнут до [TEXT_LINES] строк; раскрытие -
+ * Текст отчёта: выделяется ([SelectionContainer]: долгое нажатие выделяет и даёт «Копировать»), свёрнут до [lines] строк; раскрытие -
  * отдельной ссылкой «Развернуть» под текстом, а не касанием текста: касание и выделение не спорят.
  */
-@Composable private fun ReportText(text: String, modifier: Modifier) {
+@Composable private fun ReportText(text: String, lines: Int, modifier: Modifier) {
     var open by remember(text) { mutableStateOf(false) }
     var clipped by remember(text) { mutableStateOf(false) }
     Column(modifier.animateContentSize(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -120,7 +130,7 @@ import java.time.format.DateTimeFormatter
                 text,
                 color = Parchment,
                 style = MaterialTheme.typography.bodyMedium,
-                maxLines = if (open) Int.MAX_VALUE else TEXT_LINES,
+                maxLines = if (open) Int.MAX_VALUE else lines,
                 overflow = if (open) TextOverflow.Clip else TextOverflow.Ellipsis,
                 onTextLayout = { if (!open) clipped = it.hasVisualOverflow },
             )
@@ -313,6 +323,9 @@ private val FeedbackKind.icon: ImageVector
 
 /** Сколько строк текста отчёта видно свёрнутым: касание раскрывает его на месте. */
 private const val TEXT_LINES = 3
+
+/** Сколько строк текста видно свёрнутым рядом со снимком экрана: снимок выше трёх строк. */
+private const val ASIDE_LINES = 7
 
 /** Закрытые свои отчёты приглушены. */
 private const val DIM = .6f

@@ -56,6 +56,9 @@ class FeedbackModel(
 
     private val api: GameApi get() = connection.api
 
+    /** Снимки экрана раскрытых тикетов - автора и модерации. */
+    val shots = ReportShots { id -> api.feedback.shot(id) }
+
     private fun feedback(transform: (Feedback) -> Feedback) = repository.update(transform)
 
     /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */

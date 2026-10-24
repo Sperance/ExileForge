@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,6 +67,7 @@ import com.sperance.exileforge.ui.components.ReportChip
 import com.sperance.exileforge.ui.components.ReportChipRow
 import com.sperance.exileforge.ui.components.ReportFate
 import com.sperance.exileforge.ui.components.ReportLine
+import com.sperance.exileforge.ui.components.ReportShotAside
 import com.sperance.exileforge.ui.components.ReportSortTabs
 import com.sperance.exileforge.ui.components.ReportTicket
 import com.sperance.exileforge.ui.components.ReportsView
@@ -155,7 +155,19 @@ import org.koin.compose.viewmodel.koinViewModel
             }
             items(rows, key = { it.id }) { own ->
                 if (own.id == open) {
-                    OwnTicket(own, own.id in fresh, !activity.busy, inputs.report, onCollapse = { open = null }, onAnswer = { text -> model.answerReport(own.id, text) }) { model.closeReport(own.id) }
+                    OwnTicket(
+                        own,
+                        own.id in fresh,
+                        !activity.busy,
+                        inputs.report,
+                        onCollapse = { open = null },
+                        onAnswer = { text -> model.answerReport(own.id, text) },
+                        attachment = if (own.shot.attached) {
+                            { ReportShotAside(own.shot, own.createdAt, model.shots) }
+                        } else {
+                            null
+                        },
+                    ) { model.closeReport(own.id) }
                 } else {
                     OwnReportLine(own, own.id in fresh) { open = own.id }
                 }
@@ -199,8 +211,8 @@ private val FeedbackQueue.mineKey: String
  * Свой отчёт раскрытым тикетом-чатом ([ReportTicket]): переписка пузырями, под ней поле ответа с круглой кнопкой - пока сервер разрешает
  * ответ ([OwnReport.answerable]: на модерации, до выгрузки или с открытым Issue), иначе его нет; пока идёт команда ([enabled] - нет),
  * поле погашено, но на месте. Новый и обсуждаемый отчёт автор закрывает сам полосой удержания «Закрыть отчёт» ([OwnReport.closable],
- * [onClose]) - без возврата; закрытый автором вместо поля несёт плашку «писать нельзя». [attachment] - место под текстом для вложений
- * отчёта; касание шапки - [onCollapse].
+ * [onClose]) - без возврата; закрытый автором вместо поля несёт плашку «писать нельзя». [attachment] - вложение справа от текста
+ * (снимок экрана, [ReportShotAside]; null - вложений нет); касание шапки - [onCollapse].
  */
 @Composable private fun OwnTicket(
     own: OwnReport,
@@ -209,7 +221,7 @@ private val FeedbackQueue.mineKey: String
     limit: Int,
     onCollapse: () -> Unit,
     onAnswer: (String) -> Unit,
-    attachment: (@Composable ColumnScope.() -> Unit)? = null,
+    attachment: (@Composable () -> Unit)?,
     onClose: () -> Unit,
 ) {
     ReportTicket(
@@ -224,7 +236,7 @@ private val FeedbackQueue.mineKey: String
         focused = true,
         onHeader = onCollapse,
         topic = own.topic,
-        extra = attachment,
+        aside = attachment,
         below = {
             if (own.answerable) AnswerField(enabled, limit, onAnswer)
             if (own.closable) CloseBar(enabled, onClose)

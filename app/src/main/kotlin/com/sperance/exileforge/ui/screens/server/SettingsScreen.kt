@@ -267,12 +267,14 @@ internal val SettingsPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp
 }
 
 /**
- * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - страница
+ * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание снимает экран и открывает лист отчёта,
+ * [com.sperance.exileforge.ui.components.rememberBugOpener]) и «Отчёты» - страница
  * своих отчётов ([onPage]); без системных листов приложения ([LocalSystemSheets]) строк нет.
  */
 @Composable private fun ReportRows(onPage: (SettingsPage) -> Unit) {
     val sheets = LocalSystemSheets.current ?: return
-    SettingRow(Icons.Outlined.BugReport, ui("bug.open"), ui("settings.bug_chord"), onClick = { sheets.bug = true }) {
+    val openBug = com.sperance.exileforge.ui.components.rememberBugOpener(sheets)
+    SettingRow(Icons.Outlined.BugReport, ui("bug.open"), ui("settings.bug_chord"), onClick = openBug) {
         Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
     AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { onPage(SettingsPage.REPORTS) }

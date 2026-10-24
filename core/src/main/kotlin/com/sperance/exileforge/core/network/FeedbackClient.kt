@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
+import com.sperance.exileforge.core.model.feedback.ReportShotView
 import com.sperance.exileforge.rules.feedback.BugStatus
 import com.sperance.exileforge.rules.feedback.FeedbackQueue
 import kotlinx.serialization.json.encodeToJsonElement
@@ -27,6 +28,9 @@ class FeedbackClient internal constructor(private val http: Transport) {
 
     /** Ответ автора в Issue своего отчёта (сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
     suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+
+    /** Снимок экрана отчёта [id] - автору и модерации; стёртый по сроку - отказ `BUG_012`. */
+    suspend fun shot(id: String): ReportShotView = http.get("$REPORTS/shot", mapOf("id" to id))
 
     /** Автор закрывает свой отчёт - новый или в обсуждении: «Закрыт автором», без возврата; ответ - отчёт как он теперь стоит. */
     suspend fun close(id: String): OwnReport = http.post("$REPORTS/close", mapOf("id" to id))

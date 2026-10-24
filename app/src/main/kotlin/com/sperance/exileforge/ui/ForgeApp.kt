@@ -163,6 +163,8 @@ import org.koin.compose.viewmodel.koinViewModel
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
     LaunchedEffect(shell) { shell.bugRequests.collect { sheets.bug = true } }
+    val bugShots = koinInject<com.sperance.exileforge.platform.BugShots>()
+    val bugShot by bugShots.state.collectAsStateWithLifecycle()
     var mailOpen by remember { mutableStateOf(false) }
     var mailFocus by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
@@ -211,9 +213,13 @@ import org.koin.compose.viewmodel.koinViewModel
                     route,
                     expedition,
                     drafts,
-                    onDismiss = { sheets.bug = false },
+                    onDismiss = {
+                        sheets.bug = false
+                        bugShots.drop()
+                    },
                     onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(root = ui("bug.open")) },
-                    onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
+                    shot = bugShot,
+                    onSend = { report, shot -> shell.reportBug(report, shot) { drafts.clear(report.kind) } },
                 )
             }
             if (mailOpen) {

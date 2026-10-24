@@ -1,5 +1,5 @@
 hero=WITCH zone=C1_BRINE_CAVES level=30 seed=2024 skill=FIREBALL
-phase=DEAD life=0.0000 seconds=79.9000 kills=11 bosses=0 deaths=1 events=28
+phase=DEAD life=0.0000 seconds=77.2000 kills=10 bosses=0 deaths=1 events=25
 0 ENGAGE 0 0 0 0 false false
 1 KILL 0 0 0 0 false false
 2 FIGHT 0 0 0 0 false false fight=3/1/0/0/0/1 taken=17 healed=0 max=111 dealt={FIRE=130, PHYSICAL=7}
@@ -11,20 +11,17 @@ phase=DEAD life=0.0000 seconds=79.9000 kills=11 bosses=0 deaths=1 events=28
 8 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=45 healed=0 max=141 dealt={FIRE=260, PHYSICAL=5}
 9 ENGAGE 3 0 0 0 false false
 10 KILL 3 0 0 0 false false
-11 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/1 taken=32 healed=0 max=145 dealt={FIRE=284, PHYSICAL=2}
+11 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/1 taken=30 healed=0 max=145 dealt={FIRE=284, PHYSICAL=3}
 12 ENGAGE 4 0 0 0 false false
 13 KILL 4 1 0 0 false false
 14 KILL 4 0 0 0 false false
 15 KILL 4 2 0 0 false false
-16 FIGHT 0 0 0 0 false false fight=15/2/0/0/0/0 taken=316 healed=0 max=136 dealt={FIRE=706, PHYSICAL=28}
+16 FIGHT 0 0 0 0 false false fight=15/2/0/0/0/0 taken=323 healed=0 max=136 dealt={FIRE=706, PHYSICAL=28}
 17 ENGAGE 5 0 0 0 false false
 18 KILL 5 1 0 0 false false
 19 KILL 5 0 0 0 false false
-20 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/1 taken=102 healed=0 max=143 dealt={FIRE=562, PHYSICAL=13}
+20 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/1 taken=103 healed=0 max=143 dealt={FIRE=562, PHYSICAL=13}
 21 ENGAGE 6 0 0 0 false false
 22 KILL 6 0 0 0 false false
-23 KILL 6 1 0 0 false false
-24 FIGHT 0 0 0 0 false false fight=12/1/0/0/0/0 taken=156 healed=0 max=160 dealt={FIRE=429, PHYSICAL=18}
-25 ENGAGE 7 0 0 0 false false
-26 FIGHT 0 0 0 0 false false fight=1/1/0/0/0/0 taken=8 healed=0 max=3 dealt={PHYSICAL=3}
-27 FALL 0 0 0 0 false false
+23 FIGHT 0 0 0 0 false false fight=11/0/0/0/0/0 taken=154 healed=0 max=144 dealt={FIRE=280, PHYSICAL=16}
+24 FALL 0 0 0 0 false false

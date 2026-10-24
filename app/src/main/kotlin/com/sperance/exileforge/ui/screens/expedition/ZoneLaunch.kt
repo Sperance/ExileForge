@@ -157,7 +157,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
     val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
     val loot = LootRoller(index)
     val scarabs = launch.scarabs.mapNotNull(index.rules.brews::scarab)
-    val bonus = loot.activeMap(zone.code, loot.mapSources(picked.item, atlas.mapEffect, atlas.effects, scarabs), rarity, picked.item.mapTier, influence, atlas.effects, picked.item.itemLevel)
+    val bonus = loot.activeMap(zone.code, loot.mapSources(picked.item, atlas, scarabs), rarity, picked.item.mapTier, influence, atlas.effects, picked.item.itemLevel)
     val capture = MapCapture.of(index.campaign.maps.influence, influence) { stat -> atlas.effects[stat] ?: 0.0 }
     val shape = RoundedCornerShape(10.dp)
     Column(

@@ -15,6 +15,7 @@ enum class BuffSource {
     ATLAS,
     SCARAB,
     INFLUENCE,
+    ATLAS_COST,
     PACT,
     ;
 
@@ -25,6 +26,7 @@ enum class BuffSource {
             EffectSource.ATLAS -> ATLAS
             EffectSource.SCARAB -> SCARAB
             EffectSource.INFLUENCE -> INFLUENCE
+            EffectSource.ATLAS_COST -> ATLAS_COST
         }
     }
 }

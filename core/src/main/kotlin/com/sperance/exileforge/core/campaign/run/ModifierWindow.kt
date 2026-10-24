@@ -15,6 +15,7 @@ enum class ModifierSource(val key: String) {
     ACT_PENALTY("run.mods.source.ACT_PENALTY"),
     PACTS("run.mods.source.PACTS"),
     ATLAS("run.mods.source.ATLAS"),
+    ATLAS_COST("run.mods.source.ATLAS_COST"),
     SCARAB("run.mods.source.SCARAB"),
     INFLUENCE("run.mods.source.INFLUENCE"),
     GUILD("run.mods.source.GUILD"),
@@ -28,6 +29,7 @@ enum class ModifierSource(val key: String) {
             EffectSource.ATLAS -> ATLAS
             EffectSource.SCARAB -> SCARAB
             EffectSource.INFLUENCE -> INFLUENCE
+            EffectSource.ATLAS_COST -> ATLAS_COST
         }
 
         /** Источник доли атласа захода с видом [kind]: гильдия и зелье - свои, остаток - Атлас. */

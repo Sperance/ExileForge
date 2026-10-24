@@ -61,6 +61,7 @@ import kotlin.math.sin
  *
  * [refund] - цена снятия узла золотом против кошелька; null - герой не прочитан. «Было → станет»: каждая строка рядом с итогом Атласа по её
  * модификатору сейчас и с этим узлом; под строкой - пояснение сервера; итог - с основой правил («шанс 15% + узлы 3,6% = 18,6%»).
+ * Цена ключевого узла ([AtlasNode.costs]) - красными строками под его строками.
  * Взаимоисключающие ключевые узлы: пара названа всегда, взятый второй гасит кнопку с причиной.
  */
 @Composable internal fun NodeSheet(
@@ -112,6 +113,12 @@ import kotlin.math.sin
                 )
             }
         }
+        node.costs.forEach { line ->
+            val stats = remember(index, line.code) { index.statsOf(line.code) }
+            StatNoted(stats, index, Modifier.fillMaxWidth(), Sky.text) {
+                Text(costText(index, line), color = LossText, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            }
+        }
         val blocker = AtlasFog.excludedBy(graph, node.code, taken)
         node.excludes.forEach { other ->
             Text(ui("atlas.excludes", atlasNodeTitle(other)), color = Caution, style = MaterialTheme.typography.labelSmall)
@@ -157,15 +164,26 @@ internal object AtlasTotals {
     fun sum(lines: List<Line>): Map<ModifierCode, List<Double>> = lines.groupBy { it.code }.mapValues { (_, same) ->
         List(same.maxOf { it.values.size }) { i -> same.sumOf { it.values.getOrElse(i) { 0.0 } } }
     }
+
+    /** Строки [gains] и цена [costs] узлов, сложенные по модификатору ([sum]). */
+    data class Ledger(val gains: Map<ModifierCode, List<Double>>, val costs: Map<ModifierCode, List<Double>>) {
+        val isEmpty: Boolean get() = gains.isEmpty() && costs.isEmpty()
+    }
+
+    /** Строки и цена узлов [nodes]. */
+    fun ledger(nodes: List<AtlasNode>): Ledger = Ledger(sum(nodes.flatMap { it.lines }), sum(nodes.flatMap { it.costs }))
 }
 
-/** «Итого»: what the taken nodes give, added up and grouped by mechanic. */
+/** Строка цены узла [line] пунктом списка: «•  Цена: …». */
+private fun costText(index: ContentIndex, line: Line): String = "•  " + ui("atlas.cost", lineText(index, line))
+
+/** «Итого»: what the taken nodes give, added up and grouped by mechanic; цена ключевых - красными строками под строками ветви. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit) {
     val groups = remember(taken) {
         index.atlas.nodes.filter { it.code in taken }.groupBy { it.branch }
-            .mapValues { (_, nodes) -> AtlasTotals.sum(nodes.flatMap { it.lines }) }.filterValues { it.isNotEmpty() }
+            .mapValues { (_, nodes) -> AtlasTotals.ledger(nodes) }.filterValues { !it.isEmpty }
     }
     ForgeSheet(onDismissRequest = onDismiss, containerColor = Color(0xF20A0E18)) {
         Column(
@@ -174,9 +192,10 @@ internal fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: ()
         ) {
             Text(ui("atlas.summary_title"), color = Color.White, style = MaterialTheme.typography.titleMedium)
             if (groups.isEmpty()) Text(ui("atlas.summary_empty"), color = Sky.text, style = MaterialTheme.typography.bodySmall)
-            groups.forEach { (branch, totals) ->
+            groups.forEach { (branch, ledger) ->
                 Text(atlasBranchTitle(branch).uppercase(), color = branch.hue(), style = MaterialTheme.typography.labelMedium)
-                totals.forEach { (code, values) -> Text("•  ${lineText(index, Line(code, values))}", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
+                ledger.gains.forEach { (code, values) -> Text("•  ${lineText(index, Line(code, values))}", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
+                ledger.costs.forEach { (code, values) -> Text(costText(index, Line(code, values)), color = LossText, style = MaterialTheme.typography.bodySmall) }
             }
         }
     }

@@ -98,8 +98,11 @@ object MapEffects {
         return if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + damage).map { MonsterEffect(it, Op.MORE, power) }
     }
 
-    /** What a map does to its boss alone: so many percent more life and damage. */
-    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStat.BOSS_POWER.code]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
+    /** Что карта делает одному боссу: сила босса - «больше» здоровья и урона, цена Атласа - «больше» здоровья. */
+    fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
+        effects[MapStat.BOSS_POWER.code]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + damage).forEach { add(MonsterEffect(it, Op.MORE, v)) } }
+        effects[MapStat.BOSS_LIFE.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(CoreStat.HEALTH.code, Op.MORE, it)) }
+    }
 
     /**
      * «Меньше регенерации» карты - общая строка листа `STOCK_LIFE_REGEN_LESS` (её читает `Recovery`). Дары Атласа ложатся до «меньше»

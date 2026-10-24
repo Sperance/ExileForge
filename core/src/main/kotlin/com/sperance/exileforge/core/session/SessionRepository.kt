@@ -47,6 +47,9 @@ data class Session(
      */
     fun tester(holding: HeroHolding): Boolean = hero(holding, { it.tester }, { it.tester })
 
+    /** Ссылка «Issue #N ↗» на GitHub в своих и известных отчётах: герою-тестировщику [holding] и модерации. */
+    fun seesIssues(holding: HeroHolding): Boolean = tester(holding) || isModerator
+
     /**
      * Свободен ли прогресс героя [holding]: тестировщик включил «Свободный прогресс» в окне тестирования - замки уровня и прогресса
      * открыты, как на сервере; выключен - тестировщик идёт по прогрессу, как игрок. Признак готов у сервера (`ProgressGate.free`: без

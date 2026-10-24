@@ -62,7 +62,6 @@ import com.sperance.exileforge.core.model.feedback.FullReport
 import com.sperance.exileforge.core.model.feedback.IssueNote
 import com.sperance.exileforge.core.model.feedback.IssueView
 import com.sperance.exileforge.core.model.feedback.NoteAuthor
-import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.GoldBill
@@ -94,6 +93,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.Source
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.feedback.BugStatus
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.MonsterRoller
@@ -393,25 +393,25 @@ class KeyScreensShotTest {
      * ответом.
      */
     @Test fun moderation() {
-        fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG, crashes: Int = 0, failures: Int = 0) = AdminReport(
+        fun report(id: String, text: String, status: BugStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG, crashes: Int = 0, failures: Int = 0) = AdminReport(
             FullReport(
                 id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind,
                 createdAt = "2026-10-17T10:00:00", issue = issue, clientVersion = "0.16.3", crashCount = crashes, failureCount = failures,
             ),
             login = "sperance",
-            moves = if (status == ReportStatus.CREATED) listOf(ReportStatus.SENT, ReportStatus.REJECTED) else emptyList(),
+            moves = if (status == BugStatus.CREATED) listOf(BugStatus.SENT, BugStatus.REJECTED) else emptyList(),
             deletable = true,
-            discussable = status == ReportStatus.CREATED && kind == FeedbackKind.BUG,
+            discussable = status == BugStatus.CREATED && kind == FeedbackKind.BUG,
         )
-        val fresh = report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально, и проверь все экраны, где числа в секунду бывают нулём", ReportStatus.CREATED, crashes = 2, failures = 1)
+        val fresh = report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально, и проверь все экраны, где числа в секунду бывают нулём", BugStatus.CREATED, crashes = 2, failures = 1)
         shot("moderation") {
             val vm = GlobalContext.get().get<FeedbackViewModel>().model
             val account = AccountUi(Session(DEFAULT_SERVER, profile = UserProfile("owner", role = "MODERATOR"), signedIn = true))
-            ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", ReportStatus.SENT, IssueView(258), crashes = 3, failures = 12)) {}
+            ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", BugStatus.SENT, IssueView(258), crashes = 3, failures = 12)) {}
             AdminTicket(account, vm, fresh, onCollapse = {}) {}
             val answered = IssueView(265, "https://github.com", notes = listOf(IssueNote(NoteAuthor.DEVELOPER, "Спасибо, поправим в следующей версии.")))
-            AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", ReportStatus.SENT, answered), onCollapse = {}) {}
-            ReportLine(report("r3", "Жалоба на письмо: оскорбления", ReportStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
+            AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", BugStatus.SENT, answered), onCollapse = {}) {}
+            ReportLine(report("r3", "Жалоба на письмо: оскорбления", BugStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
         }
     }
 

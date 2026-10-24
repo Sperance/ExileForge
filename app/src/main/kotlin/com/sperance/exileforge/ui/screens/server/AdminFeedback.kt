@@ -1,12 +1,9 @@
 package com.sperance.exileforge.ui.screens.server
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -18,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawOutline
@@ -41,17 +37,16 @@ import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
-import com.sperance.exileforge.core.model.feedback.FeedbackQueue
-import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.FullReport
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
-import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.feedback.BugStatus
+import com.sperance.exileforge.rules.feedback.FeedbackQueue
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.FeedbackViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -59,9 +54,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Отчёты для модерации - очередь сервера страницами ([PagedColumn], `rules.pageSize`): строка поиска ([SearchBar]: текст, переписка,
- * номер Issue, логин автора - ищет сервер по клавиатуре и очистке поля), чипы очереди со счётом под тем же поиском ([QueueChip]: у
- * «Обсуждения» - точка, пока обсуждения ждут ответа модерации), ниже - порядок сегментами без подписи ([FeedbackSort]: новые, номер
- * Issue). Все виды отчётов - вместе, по времени; вид - у каждой строки. Любая смена отбора - и уже выбранный чип - читает очередь с первой страницы,
+ * номер Issue, логин автора - ищет сервер по клавиатуре и очистке поля), чипы очереди со счётом под тем же поиском ([ReportChip]: у
+ * «Обсуждения» - точка, пока обсуждения ждут ответа модерации), ниже - порядок сегментами без подписи ([ReportSortTabs]). Все виды отчётов - вместе, по времени; вид - у каждой строки. Любая смена отбора - и уже выбранный чип - читает очередь с первой страницы,
  * листание до края дочитывает следующую. Строка на отчёт - в две линии ([ReportLine]); касание раскрывает на месте полный тикет - тот же,
  * что у игрока ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает; касание автора - досье модерации ([DossierView])
  * уровнем цепочки «назад». Комментарий модерации к новому отчёту переводит его в «Обсуждение», «В работу» - отправляет в GitHub.
@@ -91,14 +85,15 @@ import org.koin.compose.viewmodel.koinViewModel
     PagedColumn(page.items.size, page.more, loading, vm::moreQueue, queue.queue, queue.query, queue.sort, modifier = Modifier.fillMaxSize(), contentPadding = SettingsPadding, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item(key = "search") { SearchBar(query, { query = it }, ui("feedback.admin.search"), onSearch = { vm.filterQueue { it.copy(query = query) } }, maxLength = account.inputs.search) }
         item(key = "queues") {
-            val cue = rememberRowScrollCue()
-            Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            ReportChipRow {
                 FeedbackQueue.entries.forEach { q ->
-                    QueueChip(q, queue.counts.queues[q], queue.counts.replied.takeIf { q == FeedbackQueue.DISCUSSION } ?: 0L, queue.queue == q) { vm.filterQueue { it.copy(queue = q) } }
+                    val replied = queue.counts.replied.takeIf { q == FeedbackQueue.DISCUSSION } ?: 0L
+                    val title = ui(q.key)
+                    ReportChip(title, queue.counts.queues[q]?.toInt(), queue.queue == q, dot = replied > 0, dotDescription = ui("feedback.admin.replied", title, replied)) { vm.filterQueue { it.copy(queue = q) } }
                 }
             }
         }
-        item(key = "order") { PillTabs(FeedbackSort.entries.map { ui(it.key) }, queue.sort.ordinal, { picked -> vm.filterQueue { it.copy(sort = FeedbackSort.entries[picked]) } }, segmented = true) }
+        item(key = "order") { ReportSortTabs(queue.sort) { picked -> vm.filterQueue { it.copy(sort = picked) } } }
         if (page.items.isEmpty() && !loading) item(key = "none") { MutedText(ui("feedback.none")) }
         items(page.items, key = { it.report.id }) { entry ->
             if (entry.report.id == open) {
@@ -107,7 +102,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     dossier = true
                 }
             } else {
-                ReportLine(entry) { open = entry.report.id }
+                AdminReportLine(entry) { open = entry.report.id }
             }
         }
     }
@@ -123,94 +118,29 @@ private val FeedbackQueue.key: String
         FeedbackQueue.REJECTED -> "feedback.queue.rejected"
     }
 
-/** Подпись сегмента порядка очереди модерации. */
-private val FeedbackSort.key: String
-    get() = when (this) {
-        FeedbackSort.NEWEST -> "feedback.order.newest"
-        FeedbackSort.ISSUE -> "feedback.order.issue"
-    }
-
-/**
- * Чип очереди [queue] со счётом [count] (под тем же видом и поиском; до первого ответа - null, без счёта) и красной точкой, пока
- * [replied] обсуждений ждут ответа модерации (их число - для чтения с экрана).
- */
-@Composable private fun QueueChip(queue: FeedbackQueue, count: Long?, replied: Long, chosen: Boolean, onClick: () -> Unit) {
-    val title = ui(queue.key)
-    ForgeChip(
-        title,
-        chosen,
-        onClick,
-        mode = ChipMode.Choice,
-        count = count?.toInt(),
-        leading = ReplyDot.takeIf { replied > 0 },
-        contentDescription = if (replied > 0) ui("feedback.admin.replied", title, replied) else null,
-    )
-}
-
-/** Красная точка чипа «Обсуждения»: обсуждения ждут ответа модерации. */
-private val ReplyDot: @Composable () -> Unit = { Box(Modifier.size(8.dp).background(LifeRed, CircleShape)) }
-
 /** Где был автор, когда писал: место и раздел отчёта. */
 private val FullReport.where: String get() = place.ifBlank { screen }
 
 /**
- * Строка отчёта в две линии, судьба - полосой 3 dp цвета судьбы по левому краю: первая строка текста и «×повторы · дата»; ниже первым - вид
- * значком и словом своего цвета ([ReportKindLabel]), метка «новый ответ» (последнее слово обсуждения - автора) или «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у
- * отправленного и логин автора; касание - [onOpen].
+ * Строка очереди модерации ([ReportLine]): справа «×повторы · дата»; метки - «новый ответ» (последнее слово обсуждения - автора) или
+ * «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у отправленного и логин автора;
+ * касание - [onOpen].
  */
-@Composable internal fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
+@Composable private fun AdminReportLine(entry: AdminReport, onOpen: () -> Unit) {
     val report = entry.report
-    val fate = ReportFate.of(report.status, report.issue)
-    val shape = RoundedCornerShape(10.dp)
     val small = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
-    Column(
-        Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, Bronze, shape).drawBehind { drawRect(fate.tint, size = Size(FATE_STRIP.toPx(), size.height)) }
-            .clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 7.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                report.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),
-                color = Parchment,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                listOfNotNull("×${report.occurrences}".takeIf { report.occurrences > 1 }, reportDate(report.createdAt).takeIf { it.isNotBlank() }).joinToString(" · "),
-                color = Muted,
-                style = small,
-                maxLines = 1,
-                softWrap = false,
-            )
+    val corner = listOfNotNull("×${report.occurrences}".takeIf { report.occurrences > 1 }, reportDate(report.createdAt).takeIf { it.isNotBlank() }).joinToString(" · ")
+    ReportLine(report.text, report.kind, ReportFate.of(report.status, report.issue), corner, onOpen) {
+        when {
+            report.awaitsModeration -> LineMark(ui("feedback.admin.new_reply"), Rune)
+            report.status == BugStatus.WITHDRAWN -> LineMark(ui("feedback.fate.withdrawn"), Quiet)
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ReportKindLabel(report.kind)
-            when {
-                report.awaitsModeration -> LineMark(ui("feedback.admin.new_reply"), Rune)
-                report.status == ReportStatus.WITHDRAWN -> LineMark(ui("feedback.fate.withdrawn"), Quiet)
-            }
-            if (report.clientVersion.isNotBlank()) VersionTag(report.clientVersion)
-            if (report.crashCount > 0) Badge(ui("feedback.admin.crashes", report.crashCount), ui("feedback.admin.crashes_hint", report.crashCount), LossText)
-            if (report.failureCount > 0) Badge(ui("feedback.admin.failures", report.failureCount), ui("feedback.admin.failures_hint", report.failureCount), Caution)
-            report.issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = small, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false) }
-            Text(entry.login ?: ui("feedback.anonymous"), color = Muted, style = small, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-        }
+        if (report.clientVersion.isNotBlank()) VersionTag(report.clientVersion)
+        if (report.crashCount > 0) Badge(ui("feedback.admin.crashes", report.crashCount), ui("feedback.admin.crashes_hint", report.crashCount), LossText)
+        if (report.failureCount > 0) Badge(ui("feedback.admin.failures", report.failureCount), ui("feedback.admin.failures_hint", report.failureCount), Caution)
+        report.issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = small, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false) }
+        Text(entry.login ?: ui("feedback.anonymous"), color = Muted, style = small, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
     }
-}
-
-/** Метка строки очереди - [text] на подложке своего цвета [tint]: «новый ответ», «Закрыт автором». */
-@Composable private fun LineMark(text: String, tint: Color) {
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        softWrap = false,
-        modifier = Modifier.background(tint.copy(alpha = .14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
-    )
 }
 
 /** Значок счёта строки: [text] цветом [tint], для чтеца экрана - [description]. */
@@ -302,15 +232,15 @@ private fun Decisions(account: AccountUi, vm: FeedbackModel, entry: AdminReport)
                 word = ""
             }, kind = ButtonKind.Secondary) { Text(ui("feedback.admin.comment"), maxLines = 1) }
         }
-        if (ReportStatus.REJECTED in entry.moves) {
+        if (BugStatus.REJECTED in entry.moves) {
             ForgeButton(state = ButtonState.of(ready && said && decidable), onClick = {
-                vm.setReportStatus(report.id, ReportStatus.REJECTED, word.trim())
+                vm.setReportStatus(report.id, BugStatus.REJECTED, word.trim())
                 word = ""
             }, kind = ButtonKind.Danger, icon = Icons.Outlined.Close) { Text(ui("feedback.admin.reject"), maxLines = 1) }
         }
-        if (ReportStatus.SENT in entry.moves) {
+        if (BugStatus.SENT in entry.moves) {
             ForgeButton(state = ButtonState.of(ready && decidable), onClick = {
-                vm.setReportStatus(report.id, ReportStatus.SENT, word.trim())
+                vm.setReportStatus(report.id, BugStatus.SENT, word.trim())
                 word = ""
             }) { Text(ui(if (report.kind.exported) "feedback.admin.to_work" else "feedback.admin.accept"), maxLines = 1) }
         }
@@ -440,9 +370,6 @@ private val MAIL_RARITIES = listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE)
 
 /** Номер Issue-оригинала у дубля - не длиннее. */
 private const val DUPLICATE_DIGITS = 6
-
-/** Ширина полосы судьбы по левому краю строки очереди. */
-private val FATE_STRIP = 3.dp
 
 /**
  * The administrator's letter: to one account by login or, blank, to every account; a subject, a text, and what it

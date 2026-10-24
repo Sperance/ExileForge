@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackMove
-import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
@@ -12,6 +11,7 @@ import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.QueueCounts
 import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.paging.Page
+import com.sperance.exileforge.rules.feedback.FeedbackQueue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.update
  */
 data class Feedback(
     val mine: List<OwnReport> = emptyList(),
+    /** Свои отчёты [mine] уже читались с сервера: пустой список - их правда нет, а не ещё не пришли. */
+    val mineRead: Boolean = false,
     /** Очередь модерации: отбор и прочитанные страницы. */
     val queue: ReportQueue = ReportQueue(),
     val mail: List<Mail> = emptyList(),

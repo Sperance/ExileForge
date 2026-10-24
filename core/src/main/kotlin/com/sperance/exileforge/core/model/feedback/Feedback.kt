@@ -3,6 +3,9 @@ package com.sperance.exileforge.core.model.feedback
 import com.sperance.exileforge.core.model.paging.Page
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.feedback.BugStatus
+import com.sperance.exileforge.rules.feedback.FeedbackQueue
+import com.sperance.exileforge.rules.feedback.IssueState
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -14,26 +17,6 @@ import kotlinx.serialization.Serializable
 
     /** Падение клиента (сервер API 86): стек шлёт сам клиент при следующем запуске; в списках игрока его нет. */
     CRASH,
-}
-
-/**
- * Где отчёт (сервер `BugStatus`): [CREATED] - создан игроком и ждёт модерацию; [DISCUSSION] - модерация написала комментарий, идёт
- * переписка с автором; [SENT] - модерация отдала его в работу (Issue в GitHub); [REJECTED] - отклонён модерацией с причиной;
- * [WITHDRAWN] - закрыт автором. Куда отчёт может перейти, решает машина состояний сервера: она приходит полями [AdminReport.moves],
- * [AdminReport.discussable] и [OwnReport.closable].
- */
-@Serializable enum class ReportStatus { CREATED, DISCUSSION, SENT, REJECTED, WITHDRAWN }
-
-/**
- * Судьба Issue отчёта (сервер `IssueState`): открыт - [OPEN] («В работе»; метки «в работе» нет);
- * закрыт выполненным - [FIXED] (с версией), отказом - [NOT_PLANNED], [DUPLICATE], [INVALID].
- */
-@Serializable enum class IssueState(val open: Boolean) {
-    OPEN(true),
-    FIXED(false),
-    NOT_PLANNED(false),
-    DUPLICATE(false),
-    INVALID(false),
 }
 
 /**
@@ -70,7 +53,7 @@ import kotlinx.serialization.Serializable
     val id: String,
     val kind: FeedbackKind,
     val text: String,
-    val status: ReportStatus,
+    val status: BugStatus,
     val reason: String = "",
     val createdAt: String = "",
     /** Issue отчёта; null - ещё не отправлен. */
@@ -81,7 +64,7 @@ import kotlinx.serialization.Serializable
     val answers: List<IssueNote> = emptyList(),
     /** Можно ли ответить - решает сервер: отчёт на модерации или ждёт выгрузки, либо его Issue открыт; иначе поля ответа нет. */
     val answerable: Boolean = false,
-    /** Можно ли закрыть отчёт самому - решает сервер: новый или в обсуждении; закрытый ([ReportStatus.WITHDRAWN]) не возвращается. */
+    /** Можно ли закрыть отчёт самому - решает сервер: новый или в обсуждении; закрытый ([BugStatus.WITHDRAWN]) не возвращается. */
     val closable: Boolean = false,
 ) {
     /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
@@ -92,6 +75,9 @@ import kotlinx.serialization.Serializable
 
     /** Переписка карточки автора по порядку ([conversation]). */
     val thread: List<IssueNote> get() = conversation(reason, answers, issue)
+
+    /** Очередь отчёта - то же правило, что у модерации и сервера ([FeedbackQueue.of]). */
+    val queue: FeedbackQueue get() = FeedbackQueue.of(status, issue?.state)
 }
 
 /**
@@ -118,7 +104,7 @@ import kotlinx.serialization.Serializable
     /** Класс и уровень героя автора на момент отчёта. */
     val heroClass: String = "",
     val heroLevel: Int = 0,
-    val status: ReportStatus = ReportStatus.CREATED,
+    val status: BugStatus = BugStatus.CREATED,
     val kind: FeedbackKind = FeedbackKind.BUG,
     val reason: String = "",
     val createdAt: String = "",
@@ -164,14 +150,11 @@ private fun conversation(reason: String, answers: List<IssueNote>, issue: IssueV
     val report: FullReport,
     val login: String? = null,
     val role: com.sperance.exileforge.core.network.AccountRole? = null,
-    val moves: List<ReportStatus> = emptyList(),
+    val moves: List<BugStatus> = emptyList(),
     val deletable: Boolean = false,
     val discussable: Boolean = false,
     val queue: FeedbackQueue = FeedbackQueue.NEW,
 )
-
-/** Очередь модерации - чип над списком отчётов (сервер `FeedbackQueue`): новые, в обсуждении, в работе, закрыто, отклонено. */
-@Serializable enum class FeedbackQueue { NEW, DISCUSSION, WORK, CLOSED, REJECTED }
 
 /** Порядок очереди модерации (сервер `FeedbackSort`): свежие первыми, по номеру Issue. */
 @Serializable enum class FeedbackSort { NEWEST, ISSUE }

@@ -38,6 +38,9 @@ data class AccountUi(
     /** Модерация, отчёты и инструменты администратора: модератор и администратор; права проверяет сервер. */
     val isModerator: Boolean get() = session.isModerator
 
+    /** Ссылка «Issue #N ↗» на GitHub в своих отчётах: герою-тестировщику и модерации. */
+    val seesIssues: Boolean get() = session.seesIssues(hero)
+
     val index: ContentIndex? get() = world.content
     val heroId: String get() = hero.heroId
 

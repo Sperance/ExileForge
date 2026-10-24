@@ -232,7 +232,7 @@ object MailLinks {
         if (link == null || sheets == null) return false
         return when (link.target) {
             MailLinkKind.REPORT -> {
-                sheets.reports = ReportsView(focus = link.id)
+                sheets.reports = ReportsView(root = ui("mail.title"), focus = link.id)
                 true
             }
 

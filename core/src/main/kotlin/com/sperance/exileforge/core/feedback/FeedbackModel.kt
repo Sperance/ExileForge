@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.model.feedback.MailAddressee
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.QueueSight
-import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
@@ -16,6 +15,7 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.rules.feedback.BugStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,10 +61,10 @@ class FeedbackModel(
     /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */
     fun takeMailTo(): MailAddressee? = feedback.value.mailTo.also { if (it != null) feedback { f -> f.copy(mailTo = null) } }
 
-    /** Свои отчёты - лист отчётов; новый вызов сменяет идущий. */
+    /** Свои отчёты - окно своих отчётов; новый вызов сменяет идущий. */
     fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {
         val mine = api.feedback.mine()
-        feedback { it.copy(mine = mine) }
+        feedback { it.copy(mine = mine, mineRead = true) }
     }
 
     /** Ответы на свои отчёты [reports] видены (вкладка «Мои» открыта). */
@@ -101,7 +101,7 @@ class FeedbackModel(
         }
     }
 
-    fun setReportStatus(id: String, status: ReportStatus, reason: String) = moderate(id, ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason, it) }
+    fun setReportStatus(id: String, status: BugStatus, reason: String) = moderate(id, ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason, it) }
 
     /** Ответ автора к своему отчёту: с Issue уходит комментарием, до Issue копится в отчёте; отчёт возвращается с перепиской. */
     fun answerReport(id: String, text: String) = commands.task(writing = true) {

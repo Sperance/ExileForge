@@ -69,6 +69,7 @@ internal enum class SettingsPage(val title: String, val paged: Boolean = false) 
     FEEDBACK("feedback.admin", paged = true),
     MODERATION("moderation.title", paged = true),
     MAIL("mail.compose"),
+    REPORTS("settings.reports", paged = true),
     WHATS_NEW("settings.whats_new"),
 }
 
@@ -140,6 +141,8 @@ internal enum class SettingsPage(val title: String, val paged: Boolean = false) 
 
             SettingsPage.MAIL -> MailComposePage(account)
 
+            SettingsPage.REPORTS -> OwnReportsPage(account.seesIssues, account.inputs)
+
             SettingsPage.WHATS_NEW -> WhatsNewPage()
         }
     }
@@ -172,7 +175,7 @@ internal val SettingsPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp
         }
         UpdateRow()
         AccountRow(Icons.Outlined.History, ui("settings.whats_new")) { onPage(SettingsPage.WHATS_NEW) }
-        ReportRows()
+        ReportRows(onPage)
     }
     RowGroup(ui("settings.fight")) {
         ChoiceRow(
@@ -264,15 +267,15 @@ internal val SettingsPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp
 }
 
 /**
- * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - лист своих
- * отчётов; без системных листов приложения ([LocalSystemSheets]) строк нет.
+ * Отчёты в настройках: «Сообщить об ошибке» с подсказкой аккорда громкости (касание открывает лист отчёта) и «Отчёты» - страница
+ * своих отчётов ([onPage]); без системных листов приложения ([LocalSystemSheets]) строк нет.
  */
-@Composable private fun ReportRows() {
+@Composable private fun ReportRows(onPage: (SettingsPage) -> Unit) {
     val sheets = LocalSystemSheets.current ?: return
     SettingRow(Icons.Outlined.BugReport, ui("bug.open"), ui("settings.bug_chord"), onClick = { sheets.bug = true }) {
         Icon(Icons.Outlined.ChevronRight, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
-    AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { sheets.reports = ReportsView() }
+    AccountRow(Icons.Outlined.Forum, ui("settings.reports")) { onPage(SettingsPage.REPORTS) }
 }
 
 /** Версия сборки: проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */

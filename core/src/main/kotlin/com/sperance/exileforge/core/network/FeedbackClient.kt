@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.network
 
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.feedback.FeedbackMove
-import com.sperance.exileforge.core.model.feedback.FeedbackQueue
 import com.sperance.exileforge.core.model.feedback.FeedbackQueuePage
 import com.sperance.exileforge.core.model.feedback.FeedbackSort
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
@@ -14,7 +13,8 @@ import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.QueueSight
 import com.sperance.exileforge.core.model.feedback.ReportAnswer
-import com.sperance.exileforge.core.model.feedback.ReportStatus
+import com.sperance.exileforge.rules.feedback.BugStatus
+import com.sperance.exileforge.rules.feedback.FeedbackQueue
 import kotlinx.serialization.json.encodeToJsonElement
 
 private const val REPORTS = "api/v1/bugreport"
@@ -41,7 +41,7 @@ class FeedbackClient internal constructor(private val http: Transport) {
      * Действия модерации с отчётом [id]: ответ - отчёт, как он теперь стоит, с его очередью и свежий счёт очередей под видом и поиском
      * [sight] модерации ([FeedbackMove]).
      */
-    suspend fun setStatus(id: String, status: ReportStatus, reason: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
+    suspend fun setStatus(id: String, status: BugStatus, reason: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/status", sight.params + mapOf("id" to id, "status" to status.name, "reason" to reason))
 
     /** Комментарий модерации автору: отчёт - в «Обсуждении», автору письмо. */
     suspend fun comment(id: String, text: String, sight: QueueSight): FeedbackMove = http.post("$ADMIN/feedback/comment", sight.params + ("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))

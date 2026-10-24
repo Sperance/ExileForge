@@ -44,7 +44,6 @@ import com.sperance.exileforge.ui.components.LocalUpdateHint
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.OrnateDivider
-import com.sperance.exileforge.ui.components.ReportsSheet
 import com.sperance.exileforge.ui.components.StartActions
 import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.ToastFloors
@@ -213,7 +212,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     expedition,
                     drafts,
                     onDismiss = { sheets.bug = false },
-                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView() },
+                    onReports = { sheets.reports = com.sperance.exileforge.ui.components.ReportsView(root = ui("bug.open")) },
                     onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
                 )
             }
@@ -225,7 +224,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     }
                 }
             }
-            sheets.reports?.let { view -> ReportsSheet(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
+            sheets.reports?.let { view -> com.sperance.exileforge.ui.screens.server.OwnReportsOverlay(view, issueLinks = game.seesIssues, inputs = game.inputs) { sheets.reports = null } }
             if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
             if (route.phase == AppPhase.GAME && game.heroId.isNotBlank() && expedition == null && trial == null && !rift.open && warmup?.finished != false) {
                 com.sperance.exileforge.ui.screens.contest.ContestResultsHost(game, paused = mailOpen) { mailId ->

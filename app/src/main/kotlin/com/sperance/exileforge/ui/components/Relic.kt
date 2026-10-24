@@ -169,8 +169,9 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
  * Уровня нет - значка нет. Место на гнезде - правый нижний угол со сдвигом [LevelBadgeOffset].
  */
 @Composable fun LevelBadge(item: ItemView, look: RelicLook, modifier: Modifier) {
-    if (item.areaLevel != null) {
-        MapLevelBadge(item, modifier)
+    val area = item.areaLevel
+    if (area != null) {
+        AreaLevelBadge(area, modifier)
     } else {
         item.level.takeIf { it > 0 }?.let { level -> LevelBadge(level, look.rarity, ui("row.level", level), modifier) }
     }
@@ -181,7 +182,11 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
  * в ленте выбора карты перед походом; у не-карты значка нет.
  */
 @Composable fun MapLevelBadge(item: ItemView, modifier: Modifier = Modifier) {
-    val level = item.areaLevel ?: return
+    item.areaLevel?.let { AreaLevelBadge(it, modifier) }
+}
+
+/** Значок уровня района [level] цветом `Rune` с подписью «Уровень карты N» для чтения с экрана. */
+@Composable private fun AreaLevelBadge(level: Int, modifier: Modifier) {
     LevelBadge(level, Rune, ui("card.map_level", level), modifier, ink = Rune)
 }
 

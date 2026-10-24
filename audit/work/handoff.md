@@ -1,5 +1,5 @@
 # Работа 0.17.6: баги - 2026-10-24
-Шаг: вопросы
+Шаг: проверки
 Ветки: клиент claude/sharp-bardeen-6i3dkz, сервер claude/tender-pasteur-a36kj2; база wip: клиент 4724dda5, сервер 31036ea
 
 Режим: баги. Issues: #562-#588 (27 шт.). Открытые вне работы: #445, #589, #590 (enhancement).
@@ -14,7 +14,7 @@
 | 5 | Гильдия, отчёты, состязания | 567, 563, 579, 585 | да | да | 25 мин; 10-13 ч | в wip |
 | 6 | Скриншот в отчётах | 578 | да | да | 10 мин; 5-7 ч | в wip |
 | 7 | Скорость вкладки Герой и общие элементы | 581, 587 | нет | нет | 5 мин; 6-12 ч | в wip |
-| 8 | Аудит игры | 588, 586 | да | нет | 30 мин; 10-15 ч | в работе |
+| 8 | Аудит игры | 588, 586 | да | нет | 30 мин; 10-15 ч | в wip |
 | 9 | Тестировщики и Атлас | 584, 580 | да | нет | 10 мин; 5-7 ч | в wip |
 | 10 | Карты Изнанки | 582 | да | да | 20 мин; 40-50 ч | кандидат в enhancement |
 
@@ -44,6 +44,7 @@
 - p9: RULES_VERSION; API_REVISION (EffectSource.ATLAS_COST на проводе, AtlasNode.costs, MapStat.BOSS_LIFE). Без вайпа. Таблицу цен Атласа показать владельцу.
 - p6: API_REVISION +1 (GET bugreport/shot, поля shot/shotUntil); RULES_VERSION (FeedbackRules); новая коллекция ReportShot 1 (в wipes у BugReport), строка audit/versions.md: «ReportShot 1 - новая коллекция снимков экрана отчётов (id отчёта, кадр, формат, expiresAt с TTL), без вайпа». Без вайпа.
 - p7: только клиент; profileinstaller + baseline-prof.txt.
+- p8: RULES_VERSION (бой, роллы, добыча; skillMana удалено). Без вайпа.
 - p2: RULES_VERSION (доп. урон, Мощь). Без вайпа.
 - p3: RULES_VERSION; задача task.benchTiers (строка audit/versions.md: «task.benchTiers 1 - 0.17.6 - строки верстака на тире выше уровня вещи переходят в лучший открытый тир с той же долей (Hero, HeroItem, HeroRun, Mail, AuctionLot, Guild)»); API_REVISION на усмотрение (BenchRecipe.level). Заметка: «Сопротивления на предметах пересмотрены, ваши вещи пересчитаны». Таблицу стражей показать владельцу.
 - p1: RULES_VERSION (ролл ремесла, хаос, требования, квесты); API_REVISION (новые API rules). Без вайпа.

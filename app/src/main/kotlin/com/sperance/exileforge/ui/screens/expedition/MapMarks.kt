@@ -2,7 +2,9 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -59,7 +61,7 @@ import kotlinx.coroutines.delay
 
 /**
  * Метки состояния карты под её именем: страж (с «×N» после его гибели: живая, пока шаг ускорен, серая - ускорение выключено;
- * касание переключает ускорение), печать стража, ворота арены,
+ * тогда касание метки переключает ускорение), печать стража, ворота арены,
  * очаг Скверны и журнал, что сервер давно не берёт или отклонил. Метка - короткое слово или счёт «3/5» цветом своего
  * смысла; полный текст - в подсказке по касанию ([TipCallout]), а касание метки журнала ещё и отправляет его сейчас ([onRetry]).
  * Чего нет - метки нет.
@@ -82,7 +84,8 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
 
 /**
  * Метка стража: жив, отдыхает или повержен; шаг после его гибели - «×N» внутри неё, слова - в подсказке. «×N» серая, пока ускорение
- * выключено настройкой; касание самой «×N» переключает настройку ([LocalSettingsEdit]), касание метки открывает подсказку о нынешнем шаге.
+ * выключено настройкой; пока ускорение доступно, касание всей метки переключает настройку ([LocalSettingsEdit]) без подсказки, а
+ * подсказку о нынешнем шаге открывает удержание; до того касание - подсказка.
  */
 @Composable private fun GuardianMark(run: ExpeditionRun, hud: RunHud, zone: Boolean) {
     val guardian = GuardianLine.of(hud, zone)
@@ -105,7 +108,7 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
         { Tip(guardian.text, swift, tint = guardian.color) },
         extra = ui("expedition.mark.swift", number(factor)).takeIf { hud.swift },
         extraTint = if (hud.hastened) Rune else Muted,
-        onExtra = edit?.let { change -> { change { copy(swiftAfterBoss = !swiftAfterBoss) } } }.takeIf { hud.swift },
+        onTap = edit?.let { change -> { change { copy(swiftAfterBoss = !swiftAfterBoss) } } }.takeIf { hud.swift },
     )
 }
 
@@ -145,8 +148,9 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
 /**
  * Метка над картой: значок и короткое [label] цветом [tint] в окантовке того же цвета, [extra] - вставка справа («×2») тоном [extraTint].
  * Касание раскрывает подсказку [tip] (читается в миг открытия) и зовёт [onOpen]; для чтения с экрана - полный текст подсказки.
- * [onExtra] - своё касание вставки: подсказку не открывает.
+ * [onTap] - своё действие касания всей метки: тогда подсказку открывает удержание, а [onOpen] не зовётся.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable private fun Mark(
     label: String,
     tint: Color,
@@ -155,16 +159,22 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
     extra: String? = null,
     extraTint: Color = Rune,
     onOpen: (() -> Unit)? = null,
-    onExtra: (() -> Unit)? = null,
+    onTap: (() -> Unit)? = null,
 ) {
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(7.dp)
     Row(
         Modifier
-            .clickable {
-                open = true
-                onOpen?.invoke()
-            }
+            .then(
+                if (onTap != null) {
+                    Modifier.combinedClickable(onLongClickLabel = ui("hint.hold.info"), onLongClick = { open = true }, onClick = onTap)
+                } else {
+                    Modifier.clickable {
+                        open = true
+                        onOpen?.invoke()
+                    }
+                },
+            )
             .semantics { contentDescription = tip().let { listOfNotNull(it.title, it.body).filter(String::isNotBlank).joinToString(". ") } }
             .touchZone()
             .height(MARK_HEIGHT).background(MarkWell, shape).background(tint.copy(alpha = .13f), shape).border(1.dp, tint.copy(alpha = .62f), shape)
@@ -182,7 +192,6 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier
-                    .then(if (onExtra != null) Modifier.clickable(onClick = onExtra).touchZone() else Modifier)
                     .background(extraTint.copy(alpha = .14f), RoundedCornerShape(4.dp))
                     .padding(horizontal = 4.dp, vertical = 1.dp),
             )

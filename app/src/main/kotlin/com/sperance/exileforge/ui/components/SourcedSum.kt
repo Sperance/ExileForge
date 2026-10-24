@@ -82,7 +82,7 @@ fun SourcedSumRow(shares: List<SumShare>, modifier: Modifier = Modifier, sum: @C
 
 /**
  * Доля строки-суммы в раскрытом подсписке: слева источник (до двух строк с многоточием) и сноска под ним, справа - короткая доля не шире
- * [SourcedSumMetrics.shareWidth] строки, с многоточием; обе - по верху. Чтение с экрана - вся строка одной фразой: источник, доля,
+ * [SourcedSumMetrics.SHARE_WIDTH] строки, с многоточием; обе - по верху. Чтение с экрана - вся строка одной фразой: источник, доля,
  * сноска. Её же печатает раскрытие сводки героя.
  */
 @Composable fun SumShareLine(share: SumShare) {
@@ -104,7 +104,7 @@ fun SourcedSumRow(shares: List<SumShare>, modifier: Modifier = Modifier, sum: @C
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.End,
-            modifier = Modifier.widthAtMost(SourcedSumMetrics.shareWidth),
+            modifier = Modifier.widthAtMost(SourcedSumMetrics.SHARE_WIDTH),
         )
     }
 }
@@ -130,5 +130,5 @@ private fun Modifier.widthAtMost(fraction: Float): Modifier = layout { measurabl
 private object SourcedSumMetrics {
     val toggle = 44.dp
     val indent = 26.dp
-    const val shareWidth = .4f
+    const val SHARE_WIDTH = .4f
 }

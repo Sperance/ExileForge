@@ -117,7 +117,8 @@ class MetaCombatTest {
      * запасы, чью ауру несёт герой; здоровье и щит стаи ×[foesLife] - долгая схватка, в которой успевают сказаться медленные
      * характеристики (длительность недугов), скорость атак и чар стаи ×[foesPace] - паузы между ударами, в которые
      * перезаряжается щит героя; редкие тяжёлые удары (сильная и медленная стая) снимают щит так, что видна скорость его перезарядки;
-     * [blighted] - стая осквернена Скверной: в ней срабатывают условия поражённой Скверной цели.
+     * [blighted] - стая осквернена Скверной: в ней срабатывают условия поражённой Скверной цели; [heal] - герой берёт и умение
+     * лечения класса (силы лечения умением); [lines] - строки листа поверх [BASE] (сила, что создаёт условие другой силы).
      */
     private data class Scenario(
         val heroClass: String,
@@ -130,6 +131,8 @@ class MetaCombatTest {
         val foesLife: Double = 1.0,
         val foesPace: Double = 1.0,
         val blighted: Boolean = false,
+        val heal: Boolean = false,
+        val lines: Map<String, Double> = emptyMap(),
     )
 
     private val prints = java.util.concurrent.ConcurrentHashMap<Scenario, Int>()
@@ -140,9 +143,9 @@ class MetaCombatTest {
         val heroClass = index.heroClass(scenario.heroClass)!!
         val calc = SheetCalculator(index)
         val res = calc.hero(LEVEL, heroClass, listOf(TakenNode(heroClass.startNode)), emptyList())
-        val model = SheetModel(res.base, res.operations + BASE.map { (stat, value) -> StatOperation(stat, Op.ADD, value) } + extra, index)
+        val model = SheetModel(res.base, res.operations + (BASE + scenario.lines).map { (stat, value) -> StatOperation(stat, Op.ADD, value) } + extra, index)
         val stats = model.plain
-        val skills = skills(scenario.heroClass, scenario.style, scenario.auras)
+        val skills = skills(scenario)
         val kit = Loadout.of(skills, index, scenario.heroClass, kitFlasks, stats, index.powers, index.rules.charges)
         val gear = HeroGear(stats, LEVEL, model, HeroStance.of(scenario.heroClass), kit, index.stats.percent)
         val build = HeroBuild(gear, emptyMap(), rules)
@@ -159,16 +162,21 @@ class MetaCombatTest {
 
     private val kitFlasks by lazy { MobKit(index).flasks(LEVEL, Rarity.RARE) }
 
-    /** Умения схватки: удар стиля, трата зарядов и её накопитель, проклятие, клич и метка; пассивные - два бонуса класса и аура каждого запаса [auras]. */
-    private fun skills(heroClass: String, style: SkillType, auras: Set<ReservePool>): HeroSkills {
-        val all = index.skills.ofClass(heroClass).filter { it.unlock <= LEVEL }
+    /**
+     * Умения схватки [scenario]: удар стиля, трата зарядов и её накопитель, проклятие, клич, метка и, с [Scenario.heal], лечение;
+     * пассивные - два бонуса класса и аура каждого запаса [Scenario.auras].
+     */
+    private fun skills(scenario: Scenario): HeroSkills {
+        val style = scenario.style
+        val all = index.skills.ofClass(scenario.heroClass).filter { it.unlock <= LEVEL }
         val hit = all.filter { it.type == style && it.hit != null && !it.common && it.charges == null }.maxBy { it.unlock }
         val spender = all.firstOrNull { it.charges?.consume == true }
         val spent = spender?.charges?.kind
         val gainer = spent?.let { kind -> all.firstOrNull { g -> g.charges?.gain != null && (kind == ChargeKind.ALL || g.charges?.kind == kind) } }
         val support = listOf(SkillType.CURSE, SkillType.WARCRY).mapNotNull { type -> all.firstOrNull { it.type == type && it.mark == null } } + listOfNotNull(all.firstOrNull { it.mark != null })
-        val actives = (listOfNotNull(hit, spender, gainer) + support).distinct()
-        val passives = all.filter { it.type.kind == SkillKind.PASSIVE && it.type != SkillType.AURA }.take(2) + auras.mapNotNull { pool -> all.firstOrNull { it.type == SkillType.AURA && it.reserves == pool } }
+        val heal = all.firstOrNull { it.type == SkillType.HEAL }?.takeIf { scenario.heal }
+        val actives = (listOfNotNull(hit, spender, gainer) + support + listOfNotNull(heal)).distinct()
+        val passives = all.filter { it.type.kind == SkillKind.PASSIVE && it.type != SkillType.AURA }.take(2) + scenario.auras.mapNotNull { pool -> all.firstOrNull { it.type == SkillType.AURA && it.reserves == pool } }
         return HeroSkills(
             learned = (actives + passives).associate { it.code to SKILL_LEVEL },
             active = actives.map { ActiveSlot(it.code, it.condition) },
@@ -284,6 +292,10 @@ class MetaCombatTest {
          * Сценарии держат силы и строки, что иначе не меняли бы схватку: оборона классов строкой, стаи разной силы (быстрая смерть до
          * оглушений, долгий бой с оглушениями и низким здоровьем), бой, что кончается раньше огненного удара по герою, и стая, что держится
          * дольше срока кровотечения.
+         *
+         * Классовые схватки держат силы классовых уникалок и условия, что дают только их умения: стрелок с зарядами ярости (бьёт до
+         * третьей секунды, падает ниже половины здоровья и критует), наследник под Оковами времени на редком, храмовник с молитвой
+         * (лечение умением ниже половины здоровья) и храмовник под барьером с начала боя (удар молнией, пока стоит барьер).
          */
         val SCENARIOS = listOf(
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7),
@@ -313,6 +325,10 @@ class MetaCombatTest {
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, auras = ReservePool.entries.toSet()),
             Scenario("MARAUDER", SkillType.ATTACK, 1.25, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, blighted = true),
+            Scenario("RANGER", SkillType.ATTACK, 1.5, cleared = false, seed = 5, pack = ELEMENTAL_PACK),
+            Scenario("SCION", SkillType.ATTACK, 1.9, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
+            Scenario("TEMPLAR", SkillType.ATTACK, 1.9, cleared = false, seed = 7, pack = ELEMENTAL_PACK, heal = true),
+            Scenario("TEMPLAR", SkillType.ATTACK, 1.0, cleared = true, seed = 7, lines = mapOf("POWER_FIRST_LIGHT" to 100.0)),
         )
 
         /** Кости стаи схваток. */

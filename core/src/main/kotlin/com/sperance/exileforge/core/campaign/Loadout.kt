@@ -271,16 +271,22 @@ internal class LineMemo<V : Any>(private val capacity: Int = CAPACITY) {
 }
 
 /**
- * Рост урона [inner] с памятью по виду: удар читает увеличение каждого своего вида, лист раскладывает строки один раз на вид.
+ * Рост урона [inner] с памятью по виду и по набору видов (доп. урон от физического): удар читает увеличение каждого своего вида, лист раскладывает строки один раз на вид.
  * Без синхронизации: один поток на [HeroBuild], как и сам бой.
  */
 private class TypedGrowth(private val inner: DamageGrowth) : DamageGrowth {
     private val increases = HashMap<String, Double>()
     private val mores = HashMap<String, Double>()
+    private val jointIncreases = HashMap<Set<String>, Double>()
+    private val jointMores = HashMap<Set<String>, Double>()
 
     override fun increased(type: String): Double = increases[type] ?: inner.increased(type).also { increases[type] = it }
 
     override fun more(type: String): Double = mores[type] ?: inner.more(type).also { mores[type] = it }
+
+    override fun increasedAny(types: Set<String>): Double = jointIncreases[types] ?: inner.increasedAny(types).also { jointIncreases[types] = it }
+
+    override fun moreAny(types: Set<String>): Double = jointMores[types] ?: inner.moreAny(types).also { jointMores[types] = it }
 }
 
 /**

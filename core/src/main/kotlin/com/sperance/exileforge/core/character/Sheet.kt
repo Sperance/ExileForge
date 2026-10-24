@@ -93,6 +93,17 @@ class SheetModel(
 
     private fun unconditional(op: Op): Map<String, List<StatOperation>> = ops.filter { it.condition == null }.flatMap(calculator::spread).filter { it.op == op }.groupBy { it.stat }
 
+    /** Безусловные операции [op] листа, каждая - своими разложенными долями: рост хоть одного из видов берёт операцию один раз. */
+    private val increasedParts: List<List<StatOperation>> by lazy { spreadParts(Op.INCREASED) }
+    private val moreParts: List<List<StatOperation>> by lazy { spreadParts(Op.MORE) }
+
+    private fun spreadParts(op: Op): List<List<StatOperation>> = ops.filter { it.condition == null && it.op == op }.map(calculator::spread)
+
+    /** Значения операций [parts] листа и строк [lines] вида [op], что растят хоть один из видов [types]: по операции - одно, наибольшей доли. */
+    private fun touching(parts: List<List<StatOperation>>, op: Op, lines: List<StatLine>, types: Set<String>): List<Double> =
+        parts.mapNotNull { spread -> spread.filter { it.stat in types }.maxOfOrNull { it.resolve(it.perStat?.let { stat -> plain[stat] } ?: 0.0) } } +
+            lines.filter { line -> line.op == op && types.any { StatSpread.touches(line.stat, line.op, it) } }.map { it.value }
+
     /**
      * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида) и «больше» вида - на них растут чары и урон во времени.
      * Тот же итог, что у свода правил ([SheetFold.growth]): операции листа сложены заранее, строки боя - поверх, в порядке свода.
@@ -109,6 +120,10 @@ class SheetModel(
             for (line in lines) if (line.op == Op.MORE && StatSpread.touches(line.stat, line.op, type)) product *= 1 + line.value / 100
             return product
         }
+
+        override fun increasedAny(types: Set<String>): Double = touching(increasedParts, Op.INCREASED, lines, types).sum()
+
+        override fun moreAny(types: Set<String>): Double = touching(moreParts, Op.MORE, lines, types).fold(1.0) { product, value -> product * (1 + value / 100) }
     }
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain

@@ -7,6 +7,7 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.sheet.DamageTaken
+import com.sperance.exileforge.rules.sheet.ExtraDamage
 import com.sperance.exileforge.rules.sheet.HitDice
 import com.sperance.exileforge.rules.sheet.HitRanges
 import com.sperance.exileforge.rules.sheet.StatReader
@@ -359,9 +360,9 @@ data class Combatant(
      */
     fun accuracy(rule: AccuracyRule): Double = max(0.0, stats[CoreStat.ACCURACY.code] ?: (rule.at(level) + rule.perDexterity * stat(CoreStat.AGILITY.code)))
 
-    /** The shares of its physical damage it deals again as other types, by type. */
-    val extraAs: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.PHYSICAL }
-        .mapNotNull { type -> stat("STOCK_PHYSICAL_AS_EXTRA_${type.name}").takeIf { it > 0 }?.let { type to it / 100 } }.toMap()
+    /** Доли физического урона, что он наносит ещё раз другими видами ([ExtraDamage.SHARES]), по виду. */
+    val extraAs: Map<DamageType, Double> = ExtraDamage.SHARES.entries
+        .mapNotNull { (attack, share) -> DamageType.of(attack)?.let { type -> stat(share).takeIf { it > 0 }?.let { type to it / 100 } } }.toMap()
 
     /** Flat damage of [type] its spells add. */
     fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))

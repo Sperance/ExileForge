@@ -13,6 +13,8 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HitRange
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillEvent
+import com.sperance.exileforge.rules.sheet.DamageGrowth
+import com.sperance.exileforge.rules.sheet.ExtraDamage
 import com.sperance.exileforge.rules.sheet.HitDice
 import kotlin.math.max
 import kotlin.math.min
@@ -94,8 +96,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     var defended = 0.0
     val dealing = blow.damage.filterValues { it > 0 }
     val element = if (body.randomElementHits && dealing.isNotEmpty()) DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] else null
-    val parts = converted(body, target.body, dealing, element)
-    val thrown = if (blow.spread) converted(body, target.body, rolled(me, body, dealing), element) else parts
+    val extra = extraGrowth(me, body, blow)
+    val parts = converted(body, target.body, dealing, element, extra)
+    val thrown = if (blow.spread) converted(body, target.body, rolled(me, body, dealing), element, extra) else parts
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
     val ailing = mutableMapOf<DamageType, Double>()
@@ -139,7 +142,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
                 FactorKey.BASE,
                 baseSum,
                 DamageType.entries.map { it.attack } + listOf(CoreStat.SKILL_DAMAGE.code, CoreStat.SPELL_DAMAGE.code) +
-                    DamageType.entries.filter { it != DamageType.PHYSICAL }.map { "STOCK_PHYSICAL_AS_EXTRA_${it.name}" },
+                    ExtraDamage.SHARES.values,
                 DamageType.ELEMENTS.map { "STOCK_PHYSICAL_TAKEN_AS_${it.name}" },
             ),
         )
@@ -251,18 +254,37 @@ private fun Battle.blocked(target: Fighter) {
     fateBlocked(target)
 }
 
+/** Рост, на который растёт доп. урон от физического удара [blow] бойца [me] с листом [body]: [growth] видов и [grownBy]% увеличений физического удара. */
+private class ExtraGrowth(val growth: DamageGrowth, val grownBy: Double) {
+    companion object {
+        /** Без роста видов: монстр, у которого увеличения вписаны в урон, или боец без доп. урона. */
+        val NONE = ExtraGrowth(DamageGrowth.NONE, 0.0)
+    }
+}
+
+/** Рост доп. урона от физического удара [blow] бойца [me] с листом [body]: у героя - рост удара умения или листа, у прочих - [ExtraGrowth.NONE]. */
+private fun Battle.extraGrowth(me: Fighter, body: Combatant, blow: Blow): ExtraGrowth {
+    if (me !== heroFighter || body.extraAs.isEmpty()) return ExtraGrowth.NONE
+    val growth = blow.growth ?: heroGrowth()
+    return ExtraGrowth(growth, blow.increase?.get(DamageType.PHYSICAL) ?: growth.increased(DamageType.PHYSICAL.attack))
+}
+
 /**
  * A blow's damage by type as it meets the target: the striker's whole hit turned to one random element,
  * then the target's physical damage taken as elements.
  *
  * Стихия удара случайной стихией [element] брошена до свода: несброшенный и брошенный удар сводятся одной стихией. Доля физического
- * урона ударившего - ещё раз другими видами.
+ * урона ударившего - ещё раз другими видами ([ExtraDamage]: от базового физического на рост обоих видов [extra]).
  */
-private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>, element: DamageType?): Map<DamageType, Double> {
+private fun converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>, element: DamageType?, extra: ExtraGrowth): Map<DamageType, Double> {
     var out = damage
     if (element != null) out = mapOf(element to out.values.sum())
     val own = out[DamageType.PHYSICAL] ?: 0.0
-    if (own > 0 && body.extraAs.isNotEmpty()) out = out.toMutableMap().also { extra -> body.extraAs.forEach { (type, share) -> extra.merge(type, own * share, Double::plus) } }
+    if (own > 0 && body.extraAs.isNotEmpty()) {
+        out = out.toMutableMap().also { added ->
+            body.extraAs.forEach { (type, share) -> added.merge(type, ExtraDamage.of(own, extra.grownBy, share, type.attack, extra.growth), Double::plus) }
+        }
+    }
     val physical = out[DamageType.PHYSICAL] ?: 0.0
     val shares = target.physicalTakenAs
     if (physical <= 0 || shares.isEmpty()) return out

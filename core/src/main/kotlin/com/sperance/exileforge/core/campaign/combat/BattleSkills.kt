@@ -26,6 +26,7 @@ import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.SlotConditionKind
 import com.sperance.exileforge.rules.sheet.CastTime
+import com.sperance.exileforge.rules.sheet.DamageGrowth
 import com.sperance.exileforge.rules.sheet.extraTargets
 import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
@@ -233,6 +234,7 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
                     Blow(
                         damage, Action.SKILL, spell, code, body, spread = hit.spell == null, stun = hit.stun?.at(level) ?: 0.0,
                         ailments = hit.ailments.mapNotNull { resolve(it, element ?: leading, level) }, primary = target === primary, increase = grown.increase,
+                        growth = grown.growth,
                     ),
                 )
             ) {
@@ -255,8 +257,8 @@ private fun Battle.chained(hit: SkillHit, struck: List<Fighter>): List<Pair<Figh
     return direct + jumps.mapIndexed { i, foe -> foe to keep.pow(i + 1) }
 }
 
-/** A hero skill's damage by type, and the increases in percent each type was grown by. */
-private class Grown(val damage: Map<DamageType, Double>, val increase: Map<DamageType, Double>)
+/** A hero skill's damage by type, the increases in percent each type was grown by, and the growth of the types they came from. */
+private class Grown(val damage: Map<DamageType, Double>, val increase: Map<DamageType, Double>, val growth: DamageGrowth)
 
 /**
  * A class skill's damage before defences: a share of the weapon — a finisher's larger one on a target ailing or nearly
@@ -301,7 +303,7 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
         damage.replaceAll { _, value -> value * (1 - convert) }
         damage.merge(element, total * convert, Double::plus)
     }
-    return Grown(damage, increase)
+    return Grown(damage, increase, growth)
 }
 
 /** A skill's chance of an ailment: `ELEMENT` is the one [element] brings. */

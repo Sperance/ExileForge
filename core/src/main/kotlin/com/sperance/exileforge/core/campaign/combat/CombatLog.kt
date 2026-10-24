@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.Trace
+import com.sperance.exileforge.rules.sheet.DamageGrowth
 
 /**
  * One thing that happened, and where both sides stood after it.
@@ -73,6 +74,8 @@ internal class Blow(
      * against the target's state — adds to them instead of multiplying. Null: the sheet's own increases of each type.
      */
     val increase: Map<DamageType, Double>? = null,
+    /** Рост урона видов, на который вырос урон героя [damage] (со строками умения): на него растёт доп. урон от физического. Null - рост листа героя. */
+    val growth: DamageGrowth? = null,
     /** Вторичный урон: взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
     val secondary: Boolean = false,
 ) {

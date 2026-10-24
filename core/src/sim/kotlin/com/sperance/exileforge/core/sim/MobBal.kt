@@ -924,7 +924,8 @@ fun main(args: Array<String>) {
                 val archetypes = GearBand.entries.map { Archetype(it) } + listOf(Guard.ARMOUR, Guard.EVASION, Guard.ES).map { Archetype(GearBand.GOOD, guard = it) } + sim.styles(c).map { Archetype(GearBand.GOOD, style = it) }
                 archetypes.forEach { a ->
                     tasks += Task {
-                        val hero = sim.hero(c, level, a, if (level >= 70) 50.0 else index.campaign.combat.resistPenalty.getOrElse((level - 1) / 12) { 50.0 })
+                        val last = index.campaign.combat.resistPenalty.lastOrNull() ?: 0.0
+                        val hero = sim.hero(c, level, a, if (level >= 70) last else index.campaign.combat.resistPenalty.getOrElse((level - 1) / 12) { last })
                         val arena = Arena(index, hero, emptyMap())
                         val b = arena.body
                         listOf(

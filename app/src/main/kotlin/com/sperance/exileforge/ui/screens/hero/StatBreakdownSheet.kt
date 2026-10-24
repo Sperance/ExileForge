@@ -26,6 +26,9 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.stat
 import com.sperance.exileforge.core.character.StatPolarity
+import com.sperance.exileforge.core.display.ActPenalty
+import com.sperance.exileforge.core.display.ActResists
+import com.sperance.exileforge.core.display.PenalizedResist
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.contentKeys
@@ -93,10 +96,11 @@ internal fun ShareKind.color(): Color = when (this) {
  *
  * Ключи карточек - по виду и заголовку: переход по цифрам не перекомпонует совпавшие карточки. Пределы и защита процентом - по
  * листу [stats], с которого нарисована сводка (во вкладке «Под картой» - с картой). Под цитатой - свёртка «Подробнее» ([DetailFold]).
+ * Сопротивление под штрафом акта [resists] (сводка героя без захода) - ещё карточка штрафа ([PenaltyCard]); null - штрафа на листе нет.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
+fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, shifts: Map<String, List<Shift>>, resists: ActResists?, onDismiss: () -> Unit) {
     val combat = game.hero?.combat ?: run {
         LaunchedEffect(stat) { onDismiss() }
         return
@@ -135,6 +139,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             if (detail.isNotEmpty()) item { DetailFold(detail, folded) { folded = !folded } }
             defence?.let { reading -> item { DefenceCard(current, reading, stats, game) } }
             game.index?.campaign?.let { StatLimits.of(current, stats, it) }?.let { limit -> item { LimitCard(limit, game, follow) } }
+            resists?.let { r -> r.of(current)?.let { resist -> item { PenaltyCard(current, r.penalty, resist, game) } } }
             ReservePool.entries.firstOrNull { it.stat == current }?.let(game::reserve)?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game, follow) }
@@ -252,6 +257,26 @@ fun ConditionalBreakdownSheet(game: GameUi, row: ConditionalStat, onDismiss: () 
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         limit.floor?.let { SourceLine(ShareRow(ui("stat.cap.floor"), value(it)), open) }
         if (limit.clamped) Text(ui("stat.cap.reached", value(limit.gathered)), color = Caution, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/**
+ * Штраф акта над сопротивлением [stat]: сколько снимает акт [penalty] (на картах Атласа - свой), что ушло сверх предела или поднял пол
+ * правил, и что действует - те же числа, что в строке сводки ([resist]).
+ */
+@Composable private fun PenaltyCard(stat: String, penalty: ActPenalty, resist: PenalizedResist, game: GameUi) {
+    val shape = RoundedCornerShape(12.dp)
+    val value = { v: Double -> statValue(stat, v, game.index) }
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Caution.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(ui("stat.penalty.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        val title = if (penalty.atlas) ui("stat.penalty.line_atlas") else ui("stat.penalty.line", penalty.numeral)
+        SourceLine(ShareRow(title, "−" + value(penalty.percent), better = false)) {}
+        if (resist.over > 0) SourceLine(ShareRow(ui("stat.penalty.over"), "−" + value(resist.over), better = false)) {}
+        if (resist.under > 0) SourceLine(ShareRow(ui("stat.penalty.under"), "+" + value(resist.under))) {}
+        SourceLine(ShareRow(ui("stat.penalty.acting"), value(resist.effective))) {}
     }
 }
 

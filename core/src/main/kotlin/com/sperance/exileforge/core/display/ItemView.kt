@@ -296,14 +296,11 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
         .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier, areaLevel ?: level) else name }
 
-    /** Уровень района карты: с тиром - от тира, без тира - не ниже её зоны и её уровня (`MapRule.areaLevel` правил); у не-карты - null. */
-    val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier, item.itemLevel) }
-
     /**
-     * Уровень карты без тира, как его печатает карточка: уровень района, что она открывает ([areaLevel]); у карты с тиром (уровень района -
-     * в имени, [title]) и у не-карты - null, карточка печатает уровень вещи.
+     * Уровень района карты: с тиром - от тира, без тира - не ниже её зоны и её уровня (`MapRule.areaLevel` правил); у не-карты - null.
+     * Его, а не уровень вещи, карта печатает везде: значком на гнезде и в имени карты с тиром ([title]).
      */
-    val mapLevel: Int? get() = areaLevel?.takeIf { item.mapTier <= 0 }
+    val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier, item.itemLevel) }
 
     val trade: String? get() = tradeName(code, equipment = true)
 
@@ -408,7 +405,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     /**
      * Плитки базы карточки - одни у полной и короткой: числа базы ([figures]), урон базы оружия диапазоном - широкой плиткой, урон стихий -
-     * цветом стихии; у карты без чисел базы - её уровень плиткой ([levelTiled]).
+     * цветом стихии.
      */
     val tiles: List<BaseTile> by lazy {
         figures.map { figure ->
@@ -419,7 +416,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
                 else -> TileInk.PLAIN
             }
             BaseTile(figure.text, statTitle(figure.stat).uppercase(), range, wide = range == HitRange.PHYSICAL && figure.ends != null, ink)
-        } + listOfNotNull(mapLevel.takeIf { levelTiled }?.let { BaseTile(it.toString(), ui("card.map_level_short").uppercase(), null, wide = false, TileInk.PLAIN) })
+        }
     }
 
     /** Плитки полной карточки ([TileLayout]): виды урона - одним блоком, прочие - рядами без пустот. */
@@ -428,9 +425,6 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         val main = damage.firstOrNull { it.range == HitRange.PHYSICAL } ?: damage.firstOrNull()
         TileLayout(main?.let { top -> DamageBlock(top, damage.filter { it !== top }) }, rest)
     }
-
-    /** Уровень карты стоит плиткой базы ([tiles]), а не плашкой: карта без тира и без чисел базы. */
-    val levelTiled: Boolean get() = mapLevel != null && figures.isEmpty()
 
     /** База копии с её локальными строками и качеством по характеристике ([SheetCalculator.itemBase]). */
     private val folded: Map<String, Double> by lazy { SheetCalculator(index).itemBase(template, item) }

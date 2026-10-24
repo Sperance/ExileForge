@@ -1189,7 +1189,6 @@
   "card.roll_modest": "Modest",
   "card.map_tier_title": "{0} · tier {1} · lv {2}",
   "card.map_level": "Map level {0}",
-  "card.map_level_short": "Map level",
   "card.trade_hint": "Name to search for on the market",
   "card.seal.capture": "monsters +{0}% · influenced item {1}%",
   "card.seal.quality": "+{0}% item quantity",

@@ -60,7 +60,8 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
 }
 
 /**
- * Лента снаряжения входа одной строкой: квадрат «без карты» и карты зоны рамкой редкости (тир - в углу; у зоны дня [awakened] на картах,
+ * Лента снаряжения входа одной строкой: квадрат «без карты» и карты зоны рамкой редкости (уровень района - значком в правом верхнем
+ * углу, тир - в правом нижнем; у зоны дня [awakened] на картах,
  * что будят стража, - уголок-печать слева внизу), за чертой - зелья и скарабеи сумки. Карта и стопка открывают свою карточку, взять или убрать - её кнопкой; «без карты» выбирается сразу. Нет карт зоны -
  * пунктирный «?», касание объясняет, откуда они; скарабеи без карты погашены, касание говорит, что нужна карта.
  */
@@ -96,6 +97,7 @@ internal fun zoneMaps(game: GameUi, zone: Zone, launch: MapLaunch): ZoneMaps {
                 val pick = InspectAction(ui("expedition.map_pick"), enabled = enabled && !chosen) { vm.pickMap(map.item.id) }
                 Square(if (chosen) GoldBright else color, chosen, true, map.view.title, { inspect(Inspect.Copy(map.item, pick)) }) {
                     ItemIcon(map.view, color, Modifier.size(28.dp))
+                    MapLevelBadge(map.view, Modifier.align(Alignment.TopEnd).padding(2.dp))
                     map.item.mapTier.takeIf { it > 0 }?.let { Corner(ui("expedition.launch_tier", it), color) }
                     if (awakened != null && awakenings?.wakes(map.item.rarity) == true) AwakeningSeal(awakened, 16.dp, Modifier.align(Alignment.BottomStart).padding(2.dp))
                 }

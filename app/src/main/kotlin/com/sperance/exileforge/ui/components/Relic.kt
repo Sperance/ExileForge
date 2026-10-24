@@ -164,18 +164,25 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
 }
 
 /**
- * Уровень вещи числом на углу гнезда - один значок для плитки ([ItemTile]) и плиты ([ItemRow]): у карты без тира - уровень карты
- * ([ItemView.mapLevel]) цветом `Rune`, у прочих - уровень предмета в нити редкости; для чтения с экрана - подпись целиком.
+ * Уровень вещи числом на углу гнезда - один значок для плитки ([ItemTile]) и плиты ([ItemRow]): у карты - уровень района
+ * ([MapLevelBadge]), у прочих - уровень предмета в нити редкости; для чтения с экрана - подпись целиком.
  * Уровня нет - значка нет. Место на гнезде - правый нижний угол со сдвигом [LevelBadgeOffset].
  */
 @Composable fun LevelBadge(item: ItemView, look: RelicLook, modifier: Modifier) {
-    val map = item.mapLevel
-    val level = map ?: item.level.takeIf { it > 0 } ?: return
-    if (map != null) {
-        LevelBadge(level, Rune, ui("card.map_level", map), modifier, ink = Rune)
+    if (item.areaLevel != null) {
+        MapLevelBadge(item, modifier)
     } else {
-        LevelBadge(level, look.rarity, ui("row.level", level), modifier)
+        item.level.takeIf { it > 0 }?.let { level -> LevelBadge(level, look.rarity, ui("row.level", level), modifier) }
     }
+}
+
+/**
+ * Уровень района карты-предмета ([ItemView.areaLevel]) тем же значком [LevelBadge] цветом `Rune` - на гнезде списков, карточки и
+ * в ленте выбора карты перед походом; у не-карты значка нет.
+ */
+@Composable fun MapLevelBadge(item: ItemView, modifier: Modifier = Modifier) {
+    val level = item.areaLevel ?: return
+    LevelBadge(level, Rune, ui("card.map_level", level), modifier, ink = Rune)
 }
 
 /**
@@ -198,13 +205,12 @@ private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy
 
 /**
  * Уровень вещи на левом нижнем углу гнезда карточки (правый нижний - печать влияния): тот же [LevelBadge], что в списках, касание в
- * зоне [MarkTouchZone] - подсказка «Уровень предмета N» (у карты без тира - «Уровень карты N»), тот же текст - для чтения с экрана.
- * Уровень предмета - и требование уровня копии: [early] - герою рано, значок `LifeRed`, в подсказке - «Нужен уровень героя N».
- * Уровня нет или уровень карты уже стоит плиткой базы ([ItemView.levelTiled]) - значка нет.
+ * зоне [MarkTouchZone] - подсказка «Уровень предмета N» (у карты - «Уровень карты N» по уровню района, [ItemView.areaLevel]), тот же
+ * текст - для чтения с экрана. Уровень предмета - и требование уровня копии: [early] - герою рано, значок `LifeRed`, в подсказке -
+ * «Нужен уровень героя N». Уровня нет - значка нет.
  */
 @Composable fun ItemLevelMark(item: ItemView, look: RelicLook, early: Boolean, modifier: Modifier = Modifier) {
-    if (item.levelTiled) return
-    val map = item.mapLevel
+    val map = item.areaLevel
     val level = map ?: item.level.takeIf { it > 0 } ?: return
     val text = if (map != null) ui("card.map_level", map) else ui("item.level_full", level)
     val need = if (early && map == null) ui("item.level_required", level) else null

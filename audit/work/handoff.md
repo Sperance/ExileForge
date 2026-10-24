@@ -29,6 +29,9 @@
 | Разовая задача | task.benchTiers (TaskKind.BENCH_TIERS) | 3 |
 | Коллекция | ContestResult (итоги прошлого периода состязаний) | 5 |
 | Маршрут | GET contests/past | 5 |
+| Значение провода | EffectSource.ATLAS_COST (цена ключевых узлов Атласа) | 9 |
+| Характеристика карты | MapStat.BOSS_LIFE (`MAP_BOSS_LIFE`) | 9 |
+| Модификаторы | ATLAS_COST_* (цена узлов Атласа) | 9 |
 
 ## Дальше
 Выбраны пакеты 1-9, #582 выносится в enhancement; версия 0.17.6 (patch). Вопросы по пакету 1.

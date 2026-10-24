@@ -40,7 +40,9 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.StackCell
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
 import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -56,7 +58,7 @@ private const val ONE_ROW = 6
 
 /**
  * The tray of the forge (mockup B): a compact grid of what can be laid on the anvil — only stacks the bag holds and the item
- * takes — each a stack cell ([StackCell]). Лоток только выбирает: имя выбранного, итог и описание называет рецепт полосы
+ * takes — each a stack cell ([StackCell]). Лоток только выбирает (удержание ячейки - карточка стопки): имя выбранного, итог и описание называет рецепт полосы
  * ([Recipe]); пустой лоток не рисуется - что выбирать нечего, говорит тот же рецепт. [codes] are in their shelf order; [dimmed] - стопка, что цель не примет (тусклая, причину называет рецепт).
  */
 @Composable internal fun ForgeTray(
@@ -94,10 +96,11 @@ private const val ONE_ROW = 6
 
 /**
  * Стопка лотка - ячейка стопки ([StackCell]) размера лотка: выбранная - в золотой обводке. [marked] - знак знамения в нижнем углу:
- * стопка ляжет только с ним.
+ * стопка ляжет только с ним. Касание выбирает, удержание открывает карточку стопки ([Inspect.Stack]) - только описание.
  */
 @Composable private fun TrayCell(game: GameUi, code: String, selected: Boolean, marked: Boolean, onClick: () -> Unit) {
-    StackCell(game.index, code, game.bagAmount(code) ?: 0L, size = CELL, selected = selected, onClick = onClick, badge = {
+    val inspect = rememberInspect()
+    StackCell(game.index, code, game.bagAmount(code) ?: 0L, size = CELL, selected = selected, onClick = onClick, onLongClick = { inspect(Inspect.Stack(code)) }, badge = {
         if (marked) Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp).size(11.dp))
     })
 }

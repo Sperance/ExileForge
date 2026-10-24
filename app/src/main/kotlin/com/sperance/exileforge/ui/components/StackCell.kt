@@ -2,7 +2,8 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
@@ -46,7 +47,9 @@ import com.sperance.exileforge.ui.theme.Rune
  * 36dp без рамки, под ним круглый ореол цвета ценности ([StackValue]), число справа снизу с тенью («1» не пишется), тир сундука и
  * эссенции - арабской цифрой на малой табличке в левом верхнем углу ([StackLook.tier]); [selected] - золотая обводка. [size] - сторона
  * ячейки, значок - её 0.6; ячейка мельче [ROOMY] (значок строки списка) - без числа и таблички, их пишет строка; [badge] - знак места поверх (знамение, что нужно сфере); касание - [onClick] (null - ячейка не нажимается).
+ * [onLongClick] - удержание (там, где касание выбирает, удержание открывает карточку стопки); null - удержания нет.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable fun StackCell(
     index: ContentIndex?,
     code: String,
@@ -56,13 +59,24 @@ import com.sperance.exileforge.ui.theme.Rune
     selected: Boolean = false,
     badge: (@Composable BoxScope.() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val look = remember(index, code) { StackLook.of(index, code) }
     val kind = remember(index, code) { index?.item(ItemCode(code))?.let(::bagVisualKind) }
     val title = itemTitle(code)
     val halo = valueColor(look.value)
     val shape = RoundedCornerShape(10.dp)
-    val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = title, onClick = onClick)
+    val tap = if (onClick == null && onLongClick == null) {
+        Modifier
+    } else {
+        Modifier.combinedClickable(
+            role = Role.Button,
+            onClickLabel = title,
+            onLongClickLabel = onLongClick?.let { ui("hint.hold.info") },
+            onLongClick = onLongClick,
+            onClick = onClick ?: {},
+        )
+    }
     Box(
         modifier.size(size).background(CellGround, shape)
             .then(if (selected) Modifier.border(2.dp, GoldBright, shape) else Modifier)

@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -73,15 +72,5 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {
-    val cue = rememberRowScrollCue()
-    Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        LogKind.entries.forEach { kind ->
-            val on = kind in shown
-            ForgeChip(
-                ui("fight.log_shelf.${kind.name}"),
-                on,
-                { onChange(if (on) shown - kind else shown + kind) },
-            )
-        }
-    }
+    ChoiceChipRow(LogKind.entries.map { ChipChoice(it, ui("fight.log_shelf.${it.name}")) }, { it in shown }, { kind -> onChange(if (kind in shown) shown - kind else shown + kind) }, mode = ChipMode.Filter)
 }

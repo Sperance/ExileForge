@@ -159,13 +159,8 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Отбор работ по группе выхода: «Все N» и каждая группа с числом открытых работ; [selected] null - все. */
 @Composable internal fun JobFilters(groups: JobGroups, selected: String?, onSelect: (String?) -> Unit) {
-    val cue = rememberRowScrollCue()
-    Row(Modifier.scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        ForgeChip(ui("crafts.group_all", groups.total), selected == null, { onSelect(null) }, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, selected == null))
-        groups.counts.forEach { (group, count) ->
-            ForgeChip(ui("crafts.group_count", ui("crafts.group.$group"), count), selected == group, { onSelect(group) }, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, selected == group))
-        }
-    }
+    val all = ChipChoice<String?>(null, ui("crafts.group_all", groups.total))
+    ChoiceChipRow(listOf(all) + groups.counts.map { (group, count) -> ChipChoice<String?>(group, ui("crafts.group_count", ui("crafts.group.$group"), count)) }, { it == selected }, onSelect)
 }
 
 /** Карточка того, что делает работа: стопка - её карточка, фляга и инструмент - витрина шаблона; прочее (выбор, карта, ковка) - null. */

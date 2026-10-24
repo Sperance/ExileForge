@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.city
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -175,14 +174,10 @@ private sealed interface AlbumPick {
                     }
                     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
-                            val cue = rememberRowScrollCue()
-                            Row(Modifier.fillMaxWidth().scrollCue(cue).horizontalScroll(cue.state), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                PoolChip(cue, ui("common.all"), shown == AlbumPick.All) { pick = AlbumPick.All }
-                                pools.forEach { pool ->
-                                    PoolChip(cue, ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), shown == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
-                                }
-                                if (bosses.isNotEmpty()) PoolChip(cue, ui("history.bosses"), shown == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
-                            }
+                            val choices = listOf(ChipChoice<AlbumPick>(AlbumPick.All, ui("common.all"))) +
+                                pools.map { pool -> ChipChoice<AlbumPick>(AlbumPick.Pool(pool.tag), ui("history.pool_count", pool.title, pool.count(known), pool.templates.size)) } +
+                                listOfNotNull(ChipChoice<AlbumPick>(AlbumPick.Bosses, ui("history.bosses")).takeIf { bosses.isNotEmpty() })
+                            ChoiceChipRow(choices, { it == shown }, { pick = it }, Modifier.fillMaxWidth())
                         }
                         when (val chosen = shown) {
                             AlbumPick.All -> {
@@ -280,9 +275,6 @@ private sealed interface AlbumPick {
     }
 }
 
-@Composable private fun PoolChip(cue: RowScrollCue, label: String, on: Boolean, onClick: () -> Unit) {
-    ForgeChip(label, on, onClick, mode = ChipMode.Choice, modifier = Modifier.cueSelected(cue, on))
-}
 
 @Composable private fun TemplateIcon(template: ItemTemplate) {
     val tint = rarityColor(template.rarity.name)

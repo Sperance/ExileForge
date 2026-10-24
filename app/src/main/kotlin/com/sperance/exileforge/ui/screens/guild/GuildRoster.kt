@@ -4,9 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -16,10 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,6 +27,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.GuildRules
+import com.sperance.exileforge.ui.components.ChipChoice
+import com.sperance.exileforge.ui.components.ChipSize
+import com.sperance.exileforge.ui.components.ChoiceChipRow
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.FateMark
 import com.sperance.exileforge.ui.components.GuildRoleMark
@@ -43,9 +41,7 @@ import com.sperance.exileforge.ui.components.SortButton
 import com.sperance.exileforge.ui.components.SortLabel
 import com.sperance.exileforge.ui.components.SortOption
 import com.sperance.exileforge.ui.components.inputs
-import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
 import com.sperance.exileforge.ui.components.ring
-import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
@@ -129,22 +125,8 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
 
 /** Плотные чипы отбора: у каждого - сколько участников [members] под ним проходит; выбранный - в нити `Gold`. */
 @Composable internal fun RosterFilters(members: List<GuildMember>, chosen: RosterFilter, scope: RosterScope, onChoose: (RosterFilter) -> Unit) {
-    val cue = rememberLazyRowScrollCue(rememberLazyListState(), RosterFilter.entries.indexOf(chosen))
-    LazyRow(Modifier.scrollCue(cue), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(RosterFilter.entries, key = { it.name }) { filter ->
-            val on = filter == chosen
-            val shape = RoundedCornerShape(8.dp)
-            Text(
-                ui("guild.roster_count", filter.label(scope), members.count { filter.keeps(it, scope) }),
-                color = if (on) GoldBright else Muted,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                modifier = Modifier.height(28.dp).clip(shape).background(if (on) PanelRaised else Color.Transparent)
-                    .border(1.dp, if (on) Gold.copy(alpha = .5f) else Bronze, shape).clickable { onChoose(filter) }
-                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp),
-            )
-        }
-    }
+    val filters = RosterFilter.entries.map { filter -> ChipChoice(filter, ui("guild.roster_count", filter.label(scope), members.count { filter.keeps(it, scope) })) }
+    ChoiceChipRow(filters, { it == chosen }, onChoose, size = ChipSize.Dense)
 }
 
 /** Столбец состава, по которому его можно упорядочить. */

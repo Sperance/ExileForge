@@ -3,9 +3,7 @@ package com.sperance.exileforge.ui.screens.guild
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -221,21 +219,10 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
 
 /** The list's faction chips: all, then each faction under its sign and name in its colour. */
 @Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
-    val cue = rememberLazyRowScrollCue(rememberLazyListState(), if (chosen.isBlank()) 0 else rules.factions.indexOfFirst { it.code == chosen } + 1)
-    LazyRow(Modifier.scrollCue(cue), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        item { ForgeChip(ui("common.all"), chosen.isBlank(), { onChoose("") }, state = ButtonState.of(enabled), mode = ChipMode.Choice) }
-        items(rules.factions, key = { it.code }) { faction ->
-            ForgeChip(
-                GuildText.faction(faction.code),
-                chosen == faction.code,
-                { onChoose(faction.code) },
-                state = ButtonState.of(enabled),
-                leading = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) },
-                accent = factionColor(faction),
-                mode = ChipMode.Choice,
-            )
-        }
+    val factions = rules.factions.map { faction ->
+        ChipChoice(faction.code, GuildText.faction(faction.code), accent = factionColor(faction), leading = { FactionIcon(faction.code, rules, Modifier.size(14.dp)) })
     }
+    ChoiceChipRow(listOf(ChipChoice("", ui("common.all"))) + factions, { code -> if (code.isEmpty()) chosen.isBlank() else code == chosen }, onChoose, state = ButtonState.of(enabled))
 }
 
 /** Почему этот герой не войдёт в гильдию сейчас - коротко, со знаком [icon] и строкой словаря [key]; новая причина - запись здесь. */

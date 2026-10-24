@@ -17,9 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -88,8 +86,10 @@ import com.sperance.exileforge.ui.components.AccordionGroup
 import com.sperance.exileforge.ui.components.AmountStepper
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonState
+import com.sperance.exileforge.ui.components.ChipChoice
 import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChipSize
+import com.sperance.exileforge.ui.components.ChoiceChipRow
 import com.sperance.exileforge.ui.components.ChoiceChips
 import com.sperance.exileforge.ui.components.CoinsRole
 import com.sperance.exileforge.ui.components.CornerMark
@@ -97,7 +97,6 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FellowshipCoins
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
-import com.sperance.exileforge.ui.components.ForgeChip
 import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -131,9 +130,7 @@ import com.sperance.exileforge.ui.components.rememberChips
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.components.rememberItemShelf
-import com.sperance.exileforge.ui.components.rememberLazyRowScrollCue
 import com.sperance.exileforge.ui.components.rememberPick
-import com.sperance.exileforge.ui.components.scrollCue
 import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
@@ -475,10 +472,7 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                     Text(ui("guild.deposit_free", bag.free, bag.size), color = if (bag.free == 0) LifeRed else Parchment, style = MaterialTheme.typography.labelMedium)
                 }
                 ItemSearchBar(filterState, ui("guild.deposit_search"), game.lang, onFilter = { filtering = true })
-                val cue = rememberLazyRowScrollCue(rememberLazyListState(), DepositKind.entries.indexOf(kind))
-                LazyRow(Modifier.scrollCue(cue, Panel), state = cue.state, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(DepositKind.entries, key = { it.name }) { each -> ForgeChip(bag.tab(each, pick::chosen), each == kind, { kind = each }, mode = ChipMode.Choice) }
-                }
+                ChoiceChipRow(DepositKind.entries.map { ChipChoice(it, bag.tab(it, pick::chosen)) }, { it == kind }, { kind = it }, track = Panel)
                 PresetRow(pick, DepositPreset.ALL) { preset ->
                     when (preset) {
                         DepositPreset.Visible -> ui("guild.deposit_preset_visible") to Parchment

@@ -123,11 +123,9 @@ private object Shelf {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item(key = "search") { SearchBar(query, { query = it }, ui("bestiary.search")) }
         item(key = "chips") {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ForgeChip(ui("common.all"), shelf == Shelf.ALL, { shelf = Shelf.ALL }, mode = ChipMode.Choice)
-                bestiary.chapters.indices.forEach { i -> ForgeChip(roman(i + 1), shelf == i, { shelf = i }, mode = ChipMode.Choice) }
-                if (bestiary.other.isNotEmpty()) ForgeChip(ui("bestiary.other"), shelf == Shelf.OTHER, { shelf = Shelf.OTHER }, mode = ChipMode.Choice)
-            }
+            val shelves = listOf(ChipChoice(Shelf.ALL, ui("common.all"))) + bestiary.chapters.indices.map { ChipChoice(it, roman(it + 1)) } +
+                listOfNotNull(ChipChoice(Shelf.OTHER, ui("bestiary.other")).takeIf { bestiary.other.isNotEmpty() })
+            ChoiceChipRow(shelves, { it == shelf }, { shelf = it }, Modifier.fillMaxWidth())
         }
         if (chapters.isEmpty() && other.isEmpty()) {
             item(key = "empty") {

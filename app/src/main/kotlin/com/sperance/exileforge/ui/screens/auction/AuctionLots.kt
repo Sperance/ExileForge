@@ -248,10 +248,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
             ForgePanel {
                 MutedText(ui("auction.history_scope"))
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    DealFilter.entries.forEach { f ->
-                        ForgeChip(ui("auction.history_${f.name.lowercase()}"), filter == f, { filter = f }, mode = ChipMode.Choice)
-                    }
-                    Spacer(Modifier.weight(1f))
+                    ChoiceChipRow(DealFilter.entries.map { ChipChoice(it, ui("auction.history_${it.name.lowercase()}")) }, { it == filter }, { filter = it }, Modifier.weight(1f), track = Panel)
                     rules?.let { InfoMark(ui("auction.history_about"), Rune) { Text(ui("auction.history_note", it.historyDays), color = Parchment, style = MaterialTheme.typography.bodySmall) } }
                 }
                 DealTable(game, ui("auction.history_earned"), ledger.received, open)

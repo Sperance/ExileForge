@@ -19,8 +19,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.text.LocaleKey
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Число сопротивления под штрафом акта словами строки: [sheet] - по листу, [penalized] - после штрафа (null - бой читает его же, предел
@@ -66,7 +64,7 @@ data class ConditionalLine(val row: ConditionalStat, val stat: String, val condi
 
 /**
  * Сводка листа [figures], готовая к показу строками: разделы [sections] по порядку контента и раздел «С условием» [conditional]
- * ([ConditionalStats]). Всё, что строка печатает, посчитано здесь, вне главного потока ([build]); экран лишь раскладывает строки. Лист
+ * ([ConditionalStats]). Всё, что строка печатает, посчитано здесь, и считается вне главного потока (вкладка - [com.sperance.exileforge.core.hero.HeroSheetModel]); экран лишь раскладывает строки. Лист
  * героя и лист похода - одна модель. [resists] - лист под штрафом акта, им же читает разбор строки; лист, где штраф уже лёг, - null.
  */
 class StatSheetModel(
@@ -105,17 +103,6 @@ class StatSheetModel(
             }
             return StatSheetModel(figures, resists, sections, conditionalLines)
         }
-
-        /** То же, что [of], на фоновом потоке: экран ждёт готовую сводку, а не считает её в кадре. */
-        suspend fun build(
-            figures: StatFigures,
-            index: ContentIndex,
-            level: Int?,
-            lang: Lang,
-            conditional: List<ConditionalStat>,
-            resists: ActResists?,
-            explainer: StatExplainer,
-        ): StatSheetModel = withContext(Dispatchers.Default) { of(figures, index, level, lang, conditional, resists, explainer) }
 
         /**
          * Сводка героя игры [game]: его лист боя, свойства с условием и штраф акта ([ActPenalty]) - то, что печатает вкладка «Герой»;

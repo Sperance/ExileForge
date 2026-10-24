@@ -79,10 +79,13 @@ fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>?, origins: EffectOr
         StatTrend(sheets.mine.values, SheetShift.of(sheets.mine.values, now.values)) { key -> if (waiting) emptyList() else shares.of(key) }
     }
     val (better, worse) = remember(trend, now, index) { trend.count(now.values, index) }
-    val conditional = remember(hero, index) { hero?.let { h -> index?.let { ConditionalStats.of(h, it) } }.orEmpty() }
     val lang = game.lang
-    val model by produceState<StatSheetModel?>(null, now, conditional, index, lang) {
-        index?.let { value = StatSheetModel.build(now, it, hero?.level, lang, conditional, null, StatExplainer(game)) }
+    val model by produceState<StatSheetModel?>(null, now, hero, index, lang) {
+        val content = index ?: return@produceState
+        value = withContext(Dispatchers.Default) {
+            val conditional = hero?.let { ConditionalStats.of(it, content) }.orEmpty()
+            StatSheetModel.of(now, content, hero?.level, lang, conditional, resists = null, explainer = StatExplainer(game))
+        }
     }
     val sheetState = rememberStatSheetState()
     ForgeSheet(onDismissRequest = onDismiss) {

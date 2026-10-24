@@ -239,7 +239,7 @@ class RiftArena(
         return HeroPools(hero.maxLife, mana, charges, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
     }
 
-    /** Враг узла: страж - босс без своих строк, Вождь - редкий со свойствами сверх своих, прочие - по редкости. */
+    /** Враг узла: страж - босс без своих строк, Вождь - редкий со свойствами (и их навыками) сверх своих, прочие - по редкости. */
     private fun rolled(foe: RiftFoe, dice: Dice): RolledMonster? {
         val monster = index.monster(foe.monster) ?: return null
         val buffs = MapEffects.buffs(effects) + growth(fight.power) + touch.foes.map { MonsterEffect(it.stat, it.op, it.value) }
@@ -248,7 +248,8 @@ class RiftArena(
         val traits = foe.traits.mapNotNull(index.campaign.traits.byCode::get)
         val mods = roller.draw(roller.pool(zone.tables, fight.level), fight.level, rule, dice.between(rule.modifiers), dice)
         val built = roller.build(monster, fight.level, rule, mods, roller.traitEffects(traits, foe.rarity))
-        return spawns.skilled(spawns.buffed(built.copy(traits = (built.traits + traits.map { it.code }).distinct()), buffs), dice)
+        val learned = (built.skills + traits.mapNotNull { it.skill }).distinct()
+        return spawns.skilled(spawns.buffed(built.copy(traits = (built.traits + traits.map { it.code }).distinct(), skills = learned), buffs), dice)
     }
 
     /**

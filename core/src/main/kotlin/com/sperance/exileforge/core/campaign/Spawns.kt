@@ -70,15 +70,13 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster = if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)
 
     /**
-     * What a monster casts: a boss its own skills; a monster with mana and none of its own, the casters' spell
-     * of its leading element; one with a mad essence, one more of any monster's.
-     *
-     * Маны на чужое умение не нужно: умения монстров её не тратят.
+     * Что монстр применяет: свои умения; заклинатель (магический удар `STOCK_ATTACK_MAGICAL`) без своих - чары заклинателей своей
+     * ведущей стихии; с безумной эссенцией - ещё одно умение любого монстра. Маны умения монстров не тратят, и у монстров её нет.
      */
     fun skilled(monster: RolledMonster, dice: Dice): RolledMonster {
-        val mana = monster.stats[CoreStat.MANA.code] ?: 0.0
+        val caster = (monster.stats[CoreStat.ATTACK_MAGICAL.code] ?: 0.0) > 0
         val own = monster.skills.ifEmpty {
-            if (mana > 0) listOfNotNull(book.rules.casterSpells[DamageType.entries.maxBy { monster.stats[it.attack] ?: 0.0 }.name]) else emptyList()
+            if (caster) listOfNotNull(book.rules.casterSpells[DamageType.entries.maxBy { monster.stats[it.attack] ?: 0.0 }.name]) else emptyList()
         }
         val borrows = (monster.stats[CoreStat.BORROW_SKILLS.code] ?: 0.0) > 0 && book.monsterSkills.isNotEmpty()
         val skills = (own + if (borrows) listOf(dice.pick(book.monsterSkills).code) else emptyList()).distinct()

@@ -71,7 +71,8 @@ import org.koin.compose.koinInject
  * второй, серым в пунктирной рамке со знаком «⊖»; пока слабости скрыты - чип «? слабость». Касание чипа - подсказка с числом.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun MarkChips(view: MonsterMarkView, modifier: Modifier = Modifier) {
+@Composable
+fun MarkChips(view: MonsterMarkView, modifier: Modifier = Modifier) {
     if (view.empty) return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (view.strengths.isNotEmpty()) {
@@ -165,7 +166,7 @@ private val PillHeight = 26.dp
 private val PillIcon = 13.dp
 private val GlyphSide = 14.dp
 
-/** Хаос - как в легенде макета; остальные цвета - палитры темы. */
+/** Хаос - свой лиловый оттенок; остальные цвета - палитры темы. */
 private val ChaosTint = Color(0xFFC3A0FF)
 
 private val GROUP_TINTS: Map<MarkGroup, Color> = mapOf(

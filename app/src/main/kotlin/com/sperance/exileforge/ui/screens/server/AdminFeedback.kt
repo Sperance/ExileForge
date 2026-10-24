@@ -126,7 +126,7 @@ private val FullReport.where: String get() = place.ifBlank { screen }
  * «Закрыт автором», версия клиента, «⚠ N» падений и «⛔ N» ошибок запросов (только ненулевые), «#Issue» у отправленного и логин автора;
  * касание - [onOpen].
  */
-@Composable private fun AdminReportLine(entry: AdminReport, onOpen: () -> Unit) {
+@Composable internal fun AdminReportLine(entry: AdminReport, onOpen: () -> Unit) {
     val report = entry.report
     val small = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
     val corner = listOfNotNull("×${report.occurrences}".takeIf { report.occurrences > 1 }, reportDate(report.createdAt).takeIf { it.isNotBlank() }).joinToString(" · ")

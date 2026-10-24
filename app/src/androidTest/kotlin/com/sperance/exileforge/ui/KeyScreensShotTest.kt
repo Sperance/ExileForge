@@ -131,8 +131,8 @@ import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
+import com.sperance.exileforge.ui.screens.server.AdminReportLine
 import com.sperance.exileforge.ui.screens.server.AdminTicket
-import com.sperance.exileforge.ui.screens.server.ReportLine
 import com.sperance.exileforge.ui.screens.skills.Page
 import com.sperance.exileforge.ui.screens.skills.Slots
 import com.sperance.exileforge.ui.theme.ForgeTheme
@@ -406,11 +406,11 @@ class KeyScreensShotTest {
         shot("moderation") {
             val vm = GlobalContext.get().get<FeedbackViewModel>().model
             val account = AccountUi(Session(DEFAULT_SERVER, profile = UserProfile("owner", role = "MODERATOR"), signedIn = true))
-            ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", BugStatus.SENT, IssueView(258), crashes = 3, failures = 12)) {}
+            AdminReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", BugStatus.SENT, IssueView(258), crashes = 3, failures = 12)) {}
             AdminTicket(account, vm, fresh, onCollapse = {}) {}
             val answered = IssueView(265, "https://github.com", notes = listOf(IssueNote(NoteAuthor.DEVELOPER, "Спасибо, поправим в следующей версии.")))
             AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", BugStatus.SENT, answered), onCollapse = {}) {}
-            ReportLine(report("r3", "Жалоба на письмо: оскорбления", BugStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
+            AdminReportLine(report("r3", "Жалоба на письмо: оскорбления", BugStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
         }
     }
 

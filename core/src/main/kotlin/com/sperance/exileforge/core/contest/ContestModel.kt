@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.rules.content.ContestBoard
 import com.sperance.exileforge.rules.content.ContestKind
+import com.sperance.exileforge.rules.content.ContestPast
 import com.sperance.exileforge.rules.content.ContestTable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,13 +21,22 @@ data class ContestPick(val kind: ContestKind, val league: Int? = null)
 
 /**
  * Состязания на экране: здание [board] (оба состязания в лиге героя), открытая таблица [pick] и её ответ [table] (null - ещё
- * читается); [hero] - чьи это состязания: у другого героя (и его игрового мира) они другие.
+ * читается); открытые итоги прошлого периода вида [pastKind] и их ответ [past] (null - ещё читаются); [hero] - чьи это состязания: у
+ * другого героя (и его игрового мира) они другие.
  */
-data class ContestUi(val board: ContestBoard? = null, val pick: ContestPick? = null, val table: ContestTable? = null, val hero: String = "")
+data class ContestUi(
+    val board: ContestBoard? = null,
+    val pick: ContestPick? = null,
+    val table: ContestTable? = null,
+    val hero: String = "",
+    val pastKind: ContestKind? = null,
+    val past: ContestPast? = null,
+)
 
 /**
  * Состязания Города: одно на приложение - плитка площади и здание читают одно здание. Здание читается не чаще [FRESH_MS] на героя
- * (площадь, открытая снова, сервер не спрашивает), по просьбе и со сменой периода - заново; таблица - при каждом выборе. Ответ,
+ * (площадь, открытая снова, сервер не спрашивает), по просьбе и со сменой периода - заново; таблица и итоги прошлого периода - при
+ * каждом открытии. Ответ,
  * пришедший к уже сменённому выбору или герою, не показывается.
  */
 class ContestModel(
@@ -68,6 +78,19 @@ class ContestModel(
             mutable.update { if (it.pick == pick && heroes.onScreen(heroId)) it.copy(table = table) else it }
         }
     }
+
+    /** Открыть итоги прошлого периода вида [kind]: читаются заново при каждом открытии. */
+    fun openPast(kind: ContestKind) {
+        val heroId = heroOnScreen() ?: return
+        mutable.update { it.copy(pastKind = kind, past = it.past?.takeIf { past -> past.kind == kind }) }
+        commands.read(Reads.CONTEST_PAST, restart = true) {
+            val past = connection.api.contests.past(heroId, kind)
+            mutable.update { if (it.pastKind == kind && heroes.onScreen(heroId)) it.copy(past = past) else it }
+        }
+    }
+
+    /** Закрыть итоги прошлого периода. */
+    fun closePast() = mutable.update { it.copy(pastKind = null) }
 
     /** Герой на экране; сменился - состязания прежнего сброшены сразу, не ждут ответа. */
     private fun heroOnScreen(): String? {

@@ -56,6 +56,9 @@ object Reads {
     const val CONTESTS = "contests"
     const val CONTEST_TABLE = "contest_table"
 
+    /** Итоги прошлого периода состязаний. */
+    const val CONTEST_PAST = "contest_past"
+
     /** Итоги состязаний при входе героя: письма о призах и свой титул. */
     const val CONTEST_RESULTS = "contest_results"
 

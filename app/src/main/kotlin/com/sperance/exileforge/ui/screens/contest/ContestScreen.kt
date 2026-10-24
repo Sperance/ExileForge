@@ -66,7 +66,7 @@ private const val TICK_MS = 10_000L
 /**
  * Здание «Состязания»: сверху каменные вкладки «День» и «Неделя» (точка - у героя сейчас приз в этом периоде), под вкладкой стенд
  * выбранного периода тремя панелями ([StandPanels]); «Таблица лиги» открывает таблицу в облике доски славы ([ContestTableView]),
- * «Награды» - лист наград лиги. Лига героя - справа в строке цепочки. Сменился период - здание перечитывается само.
+ * «Награды» - лист наград лиги, «Прошлые награды» - итоги прошлого периода листом ([ContestPastSheet]). Лига героя - справа в строке цепочки. Сменился период - здание перечитывается само.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +82,12 @@ fun ContestScreen() {
         vm.load()
         if (state.pick != null) vm.loadTable()
     }
-    DisposableEffect(Unit) { onDispose { vm.close() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            vm.close()
+            vm.closePast()
+        }
+    }
     val board = state.board
     val now = rememberServerNow(TICK_MS)
     val over = board?.stands?.any { it.endsAt <= now } == true
@@ -109,11 +114,12 @@ fun ContestScreen() {
         StoneTabs(tabs, stands.indexOf(stand), { kind = stands[it].kind }, scrollable = false)
         PullToRefreshBox(isRefreshing = Reads.CONTESTS in activity.loading, onRefresh = { vm.load(force = true) }, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                stand?.let { shown -> StandPanels(game, rules, shown, onTable = { vm.open(ContestPick(shown.kind)) }, onPrizes = { prizes = shown }) }
+                stand?.let { shown -> StandPanels(game, rules, shown, onTable = { vm.open(ContestPick(shown.kind)) }, onPrizes = { prizes = shown }) { vm.openPast(shown.kind) } }
             }
         }
     }
     prizes?.let { PrizesSheet(rules, it) { prizes = null } }
+    state.pastKind?.let { past -> ContestPastSheet(game, rules, past, state.past, Reads.CONTEST_PAST in activity.loading, onDismiss = vm::closePast) }
 }
 
 /**
@@ -130,16 +136,16 @@ private fun kindTab(stand: ContestStand): StoneTab {
 
 /**
  * Стенд периода тремя панелями: вид и срок, мера (у «босса» - портрет и имя босса) и под чертой анонс следующей меры периода; своё
- * место с тем, что дальше, и нынешний приз; лига героя с мини-пьедесталом, «Награды» и «Таблица лиги».
+ * место с тем, что дальше, и нынешний приз; лига героя с мини-пьедесталом, «Награды», «Прошлые награды» и «Таблица лиги».
  */
 @Composable
-private fun StandPanels(game: GameUi, rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit) {
+private fun StandPanels(game: GameUi, rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit, onPast: () -> Unit) {
     MetricPanel(game, stand)
     ForgePanel {
         OwnStanding(stand)
         if (stand.ownPlace != null) PrizeNow(rules, stand)
     }
-    LeaguePanel(rules, stand, onTable, onPrizes)
+    LeaguePanel(rules, stand, onTable, onPrizes, onPast)
 }
 
 /** Мера периода: вид и срок, мера (у «босса» - портрет и имя босса; что считается - в ⓘ), под пунктиром - «Завтра:» или «С 27.10:» и следующая мера. */
@@ -166,15 +172,16 @@ private fun StandPanels(game: GameUi, rules: ContestRules, stand: ContestStand, 
     }
 }
 
-/** Лига героя: «Лига 20-39 · ваша», мини-пьедестал, «Награды» и «Таблица лиги». */
+/** Лига героя: «Лига 20-39 · ваша», мини-пьедестал, «Награды», «Прошлые награды» ([onPast]) и «Таблица лиги». */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit) {
+private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () -> Unit, onPrizes: () -> Unit, onPast: () -> Unit) {
     ForgePanel {
         MutedText(ui("contest.league_mine", leagueLabel(rules, stand.league)))
         MiniPodium(stand)
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ForgeButton(onPrizes, size = ButtonSize.Small, kind = ButtonKind.Text) { Text(ui("contest.prizes"), maxLines = 1) }
+            ForgeButton(onPast, size = ButtonSize.Small, kind = ButtonKind.Text) { Text(ui("contest.past"), maxLines = 1) }
             ForgeButton(onTable, size = ButtonSize.Small, kind = ButtonKind.Secondary, icon = ForgeGlyphs.Trophy) { Text(ui("contest.table", leagueLabel(rules, stand.league)), maxLines = 1) }
         }
     }

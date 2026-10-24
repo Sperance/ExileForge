@@ -6,7 +6,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +26,7 @@ import com.sperance.exileforge.ui.theme.Muted
 /**
  * Бронзовые плашки выбора раздела (Доска славы: регион и ступень раша, профессия): ряд с прокруткой вбок, выбранная -
  * залита бронзой [Brass] светлым текстом, остальные - бронзовая нить; края с продолжением - подсказкой [scrollCue], ряд доводится до
- * выбранной.
+ * выбранной. Плашка не ниже [PILL_MIN_HEIGHT] - зона касания.
  */
 @Composable fun BronzePills(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
     val cue = rememberRowScrollCue()
@@ -41,8 +43,13 @@ import com.sperance.exileforge.ui.theme.Muted
                 modifier = Modifier.cueSelected(cue, on).clip(pill).then(if (on) Modifier.background(Brass.copy(alpha = .28f), pill) else Modifier)
                     .border(1.dp, Brass.copy(alpha = if (on) .9f else .4f), pill)
                     .selectable(selected = on, role = Role.Tab) { if (!on) onSelect(i) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .heightIn(min = PILL_MIN_HEIGHT)
+                    .padding(horizontal = 12.dp)
+                    .wrapContentHeight(),
             )
         }
     }
 }
+
+/** Высота плашки - зона касания не меньше 40 dp. */
+private val PILL_MIN_HEIGHT = 40.dp

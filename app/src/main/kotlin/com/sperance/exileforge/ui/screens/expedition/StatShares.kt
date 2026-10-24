@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.ui.graphics.Color
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.combat.FightPart
 import com.sperance.exileforge.core.campaign.combat.FightRung
@@ -47,7 +48,7 @@ internal class StatShares(private val game: GameUi, private val steps: RunSteps,
 
     private fun share(key: String, share: RowShare, base: RowFigure, index: ContentIndex): SumShare {
         val text = base.deltaText(share.delta, index)
-        val tint = if (share.delta > 0) Vital else LossText
+        val tint = tintOf(share.delta)
         return when (val origin = share.origin) {
             is ShareOrigin.Run -> SumShare(explainer.runSourceTitle(origin.source), text, accent = Rune, tint = tint)
             is ShareOrigin.RunWhole -> SumShare(ui(if (origin.map) "stat.src.map" else "stat.compare.run"), text, accent = Rune, tint = tint)
@@ -64,6 +65,9 @@ internal class StatShares(private val game: GameUi, private val steps: RunSteps,
         FightPart.LOW_LIFE -> SumShare(ui("stat.compare.low_life"), text)
         FightPart.AURAS -> SumShare(ui("stat.compare.auras"), text)
     }
+
+    /** Цвет вклада по знаку: рост - [Vital], спад - [LossText]. */
+    private fun tintOf(delta: Double): Color = if (delta > 0) Vital else LossText
 
     /** Фраза строк эффекта, что двигают цифру [key]; не нашлось - все его строки. */
     private fun phrase(key: String, rung: FightRung, index: ContentIndex): String {

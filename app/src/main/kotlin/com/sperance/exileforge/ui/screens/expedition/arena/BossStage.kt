@@ -111,6 +111,7 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
     LaunchedEffect(bout, boss.index, foe.alive) {
         when {
             foe.alive -> win.snapTo(0f)
+
             !simple -> {
                 win.snapTo(.18f)
                 win.animateTo(0f, tween(900))

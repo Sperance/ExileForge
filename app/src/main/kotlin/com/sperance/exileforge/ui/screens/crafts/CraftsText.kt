@@ -97,17 +97,28 @@ fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
  */
 fun jobProduct(view: JobView, levels: ChartLevels?): String = when (val job = view.job) {
     is Job.Item -> itemTitle(job.output)
+
     is Job.Equipment -> ui("crafts.kind_equipment", job.levels.first, job.levels.last)
+
     is Job.Chart -> levels?.takeIf { job.chosen > 0 }?.spread(job, job.chosen)?.let { ui("crafts.kind_map_chosen", it.first, it.last, job.levels.first, job.levels.last) }
         ?: ui("crafts.kind_map", job.levels.first, job.levels.last)
+
     is Job.Flask -> equipmentTitle(job.output)
+
     is Job.Book -> ui("crafts.kind_book", job.upTo)
+
     is Job.Condense -> ui("crafts.kind_condense")
+
     is Job.Refine -> ui("crafts.kind_refine")
+
     is Job.Jewel -> ui("crafts.kind_jewel", job.levels.first, job.levels.last)
+
     is Job.Tool -> if (job.output.isNotEmpty()) equipmentTitle(job.output) else ui("crafts.kind_tool", job.levels.first, job.levels.last)
+
     is Job.Evolve -> if (job.skill.isNotEmpty()) ui("crafts.kind_evolve_skill", SkillText.title(job.skill), roman(job.tier)) else ui("crafts.kind_evolve", roman(job.tier))
+
     is Job.Carve -> ui("crafts.kind_carve", job.upTo)
+
     is Job.Desecrate -> ui("crafts.kind_desecrate")
 }
 

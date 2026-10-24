@@ -1,11 +1,11 @@
 package com.sperance.exileforge.ui.screens.skills
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -255,7 +255,13 @@ private fun Ailments(chosen: Set<SlotAilment>, onChange: (Set<SlotAilment>) -> U
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SlotAilment.entries.forEach { ailment ->
             val on = ailment in chosen
-            ForgeChip(ConditionText.ailment(ailment), on, { if (!on) onChange(chosen + ailment) else if (chosen.size > 1) onChange(chosen - ailment) }, size = ChipSize.Dense, accent = ailmentTint(ailment))
+            ForgeChip(ConditionText.ailment(ailment), on, {
+                if (!on) {
+                    onChange(chosen + ailment)
+                } else if (chosen.size > 1) {
+                    onChange(chosen - ailment)
+                }
+            }, size = ChipSize.Dense, accent = ailmentTint(ailment))
         }
     }
 }

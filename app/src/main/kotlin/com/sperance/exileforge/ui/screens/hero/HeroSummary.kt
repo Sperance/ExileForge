@@ -49,8 +49,8 @@ import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.ButtonKind
 import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.FoldBody
-import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.FoldChevron
+import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
 import com.sperance.exileforge.ui.components.SumShare

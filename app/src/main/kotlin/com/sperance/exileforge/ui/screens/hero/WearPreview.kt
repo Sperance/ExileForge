@@ -25,12 +25,12 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.market.wearable
-import com.sperance.exileforge.core.sheet.might
-import com.sperance.exileforge.core.sheet.unmetFor
-import com.sperance.exileforge.core.sheet.wearPlaces
 import com.sperance.exileforge.core.sheet.WearBasis
 import com.sperance.exileforge.core.sheet.WearSums
+import com.sperance.exileforge.core.sheet.might
+import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.wearBasis
+import com.sperance.exileforge.core.sheet.wearPlaces
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.LostBlock

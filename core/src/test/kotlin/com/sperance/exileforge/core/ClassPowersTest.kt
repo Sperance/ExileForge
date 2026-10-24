@@ -48,8 +48,7 @@ class ClassPowersTest {
         return Battle(hero, foes(foes), rules, index.rules.fight, hero.maxLife, Random(5), kit = kit)
     }
 
-    private fun slot(type: SkillType, pick: (KitSkill) -> Boolean = { true }): KitSkill =
-        index.skills.skills.filter { it.type == type }.map { KitSkill(it, 1, 20, SlotCondition.READY) }.first(pick)
+    private fun slot(type: SkillType, pick: (KitSkill) -> Boolean = { true }): KitSkill = index.skills.skills.filter { it.type == type }.map { KitSkill(it, 1, 20, SlotCondition.READY) }.first(pick)
 
     private fun Battle.run(seconds: Double, done: () -> Boolean = { false }) {
         var left = seconds

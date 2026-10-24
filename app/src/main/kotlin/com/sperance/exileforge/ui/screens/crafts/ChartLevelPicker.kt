@@ -71,7 +71,13 @@ internal fun ChartLevelPicker(game: GameUi, levels: ChartLevels, work: JobView, 
 @Composable
 private fun PriceStep(view: StepView, selected: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    val tone = if (view.short) LossText else if (selected) GoldBright else Parchment
+    val tone = if (view.short) {
+        LossText
+    } else if (selected) {
+        GoldBright
+    } else {
+        Parchment
+    }
     val levels = view.step.levels
     val span = if (levels.first == levels.last) levels.first.toString() else ui("crafts.map_level_span", levels.first, levels.last)
     Column(

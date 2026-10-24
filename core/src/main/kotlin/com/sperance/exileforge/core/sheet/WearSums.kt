@@ -27,8 +27,7 @@ data class WearBasis(
     val skills: HeroSkills,
 ) {
     /** Лист героя с [item] на месте [place] (без места - куда выберут правила) над контентом [index]. */
-    fun wearing(index: ContentIndex, item: ItemInstance, place: Slot?): WearOutcome =
-        Sheets.wearing(index, item, level, heroClass, tree, items, figures, place, laws, fate, skills)
+    fun wearing(index: ContentIndex, item: ItemInstance, place: Slot?): WearOutcome = Sheets.wearing(index, item, level, heroClass, tree, items, figures, place, laws, fate, skills)
 }
 
 /** Основа примерки этого героя ([WearBasis]). */

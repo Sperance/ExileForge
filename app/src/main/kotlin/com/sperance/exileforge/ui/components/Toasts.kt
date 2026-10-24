@@ -105,7 +105,10 @@ private data object ToastFloorElement : ModifierNodeElement<ToastFloorNode>() {
 }
 
 /** Узел [toastFloor]: пишет свой верх в отметки окна при каждой раскладке и снимает его, уходя с экрана. */
-private class ToastFloorNode : Modifier.Node(), GlobalPositionAwareModifierNode, CompositionLocalConsumerModifierNode {
+private class ToastFloorNode :
+    Modifier.Node(),
+    GlobalPositionAwareModifierNode,
+    CompositionLocalConsumerModifierNode {
     private var floors: ToastFloors? = null
 
     override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
@@ -139,8 +142,7 @@ private class ToastFloorNode : Modifier.Node(), GlobalPositionAwareModifierNode,
 }
 
 /** Подъём тоста от низа слоя с низом [bottom] в пикселях: над верхом [floor] с зазором или, без отметок, над полосой [navigation]. */
-private fun Density.lift(floor: Float?, bottom: Float, navigation: WindowInsets): Int =
-    if (floor == null) navigation.getBottom(this) + TOAST_BOTTOM.roundToPx() else (bottom - floor).roundToInt().coerceAtLeast(0) + TOAST_GAP.roundToPx()
+private fun Density.lift(floor: Float?, bottom: Float, navigation: WindowInsets): Int = if (floor == null) navigation.getBottom(this) + TOAST_BOTTOM.roundToPx() else (bottom - floor).roundToInt().coerceAtLeast(0) + TOAST_GAP.roundToPx()
 
 /**
  * The toasts («Эфир»): one capsule at the bottom - a refusal in red, a success in ether, loot in the rare item's yellow, a finished

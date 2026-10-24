@@ -306,6 +306,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val mapLevel: Int? get() = areaLevel?.takeIf { item.mapTier <= 0 }
 
     val trade: String? get() = tradeName(code, equipment = true)
+
     /** Требование уровня копии - правилом [Requirements.level]: у экипировки, фляги и самоцвета - уровень предмета ([level]). */
     val requiredLevel: Int get() = Requirements.level(template, item)
 

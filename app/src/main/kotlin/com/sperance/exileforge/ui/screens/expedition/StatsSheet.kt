@@ -117,8 +117,7 @@ private fun mapParts(sources: Map<String, List<Shift>>, game: GameUi): Map<Strin
 }
 
 /** Вклады карты и боя по цифре: сперва карты, затем боя. */
-private fun mergeParts(map: Map<String, List<SumShare>>, fight: Map<String, List<SumShare>>): Map<String, List<SumShare>> =
-    (map.keys + fight.keys).associateWith { key -> map[key].orEmpty() + fight[key].orEmpty() }
+private fun mergeParts(map: Map<String, List<SumShare>>, fight: Map<String, List<SumShare>>): Map<String, List<SumShare>> = (map.keys + fight.keys).associateWith { key -> map[key].orEmpty() + fight[key].orEmpty() }
 
 /**
  * Листы героя для сравнения: свой ([mine]), под картой ([onMap], без карты - null) со сдвигами по источникам ([mapShifts]) и

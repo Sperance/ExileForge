@@ -91,7 +91,9 @@ class Notices {
             val shown = mutable.value
             when {
                 shown == null || shown.text == text -> mutable.value = notice
+
                 waiting.any { it.text == text } -> Unit
+
                 else -> {
                     if (waiting.size >= WAITING) waiting.removeFirst()
                     waiting.addLast(notice)

@@ -45,8 +45,7 @@ fun GameUi.lootPresence(id: String, arriving: Boolean = false): LootPresence {
 fun GameUi.presentLoot(equipment: List<ItemInstance>, arriving: Boolean = false): List<Pair<ItemInstance, LootPresence>> = equipment.map { it to lootPresence(it.id, arriving) }.filter { (_, presence) -> presence.shown }
 
 /** Вещи [presentLoot] видом для показа ([view]) с их положением; вещь, которую контент не знает, пропускается. */
-fun GameUi.presentLootViews(equipment: List<ItemInstance>, arriving: Boolean): List<Pair<ItemView, LootPresence>> =
-    presentLoot(equipment, arriving).mapNotNull { (instance, presence) -> view(instance)?.let { it to presence } }
+fun GameUi.presentLootViews(equipment: List<ItemInstance>, arriving: Boolean): List<Pair<ItemView, LootPresence>> = presentLoot(equipment, arriving).mapNotNull { (instance, presence) -> view(instance)?.let { it to presence } }
 
 /**
  * Можно ли пометить вещь [id] к продаже посреди захода - то же правило, что лот продажи в итогах ([BulkSale.pickable]): вещь в

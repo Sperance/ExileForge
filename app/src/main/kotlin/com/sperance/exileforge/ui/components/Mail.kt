@@ -70,8 +70,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Вещи витрины во вложении письма (шаблоны, не копии) строкой каждая - с карточкой витрины, которую строка открывает. Золото, стопки и
  * копии вещей письмо показывает общим обликом добычи ([LootPanel]).
  */
-private fun showcaseLines(mail: Mail): List<Pair<String, Inspect>> =
-    mail.attachment.equipment.map { equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template) }
+private fun showcaseLines(mail: Mail): List<Pair<String, Inspect>> = mail.attachment.equipment.map { equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template) }
 
 /** Вкладка ящика: какие письма она держит. Новая вкладка - запись перечисления, не ветка экрана. */
 internal enum class MailBox(val holds: (MailKind) -> Boolean) {

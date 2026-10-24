@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.guild.GuildActions
 import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.guild.GuildTab
 import com.sperance.exileforge.core.guild.Guilds
+import com.sperance.exileforge.core.guild.StashTabEdit
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildDepositParcel
 import com.sperance.exileforge.core.network.MemberCommand
@@ -63,8 +64,7 @@ class GuildViewModel(
     fun loadStash() = actions.loadStash()
     fun deposit(tab: Int, parcels: List<GuildDepositParcel>) = actions.deposit(tab, parcels)
     fun take(entryId: String) = actions.take(entryId)
-    fun tabRank(tab: Int, minRank: Int) = actions.tabRank(tab, minRank)
-    fun tabName(tab: Int, name: String) = actions.tabName(tab, name)
+    fun editTab(tab: Int, edit: StashTabEdit) = actions.editTab(tab, edit)
     fun contribute(amount: Long, onDone: () -> Unit) = actions.contribute(amount, onDone)
     fun loadLog(more: Boolean = false) = actions.loadLog(more)
 }

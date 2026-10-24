@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +29,9 @@ import com.sperance.exileforge.ui.theme.*
  */
 data class TabBadge(val text: String, val alert: Boolean = false, val due: Boolean = false)
 
+/** Ширина вкладки листающегося ряда, дальше подпись режется многоточием. */
+private val SCROLL_TAB_MAX = 200.dp
+
 /** Размер жёлтой точки дела у подписи вкладки. */
 private val DUE_DOT_SIZE = 9.sp
 
@@ -35,7 +39,8 @@ private val DUE_DOT_SIZE = 9.sp
  * Вкладки экрана таблетками («Мягкий»): открытая - на приподнятом фоне светлым текстом, зелёный остаётся главной
  * кнопке. [segmented] кладёт их долями одной капсулы-дорожки - два вида одной полки; [trailing] замыкает ряд («?» экрана).
  * [onReselect] - нажатие на уже открытую вкладку (перечитать её); null - открытая вкладка не нажимается. [badges] - числа у подписей
- * по индексу вкладки ([TabBadge]); нет числа - null.
+ * по индексу вкладки ([TabBadge]); нет числа - null. [scroll] - ряд не влезает в ширину: вкладки листаются вбок с подсказкой края
+ * ([scrollCue]), длинная подпись режется многоточием, [trailing] стоит у правого края вне прокрутки.
  */
 @Composable fun PillTabs(
     labels: List<String>,
@@ -47,15 +52,22 @@ private val DUE_DOT_SIZE = 9.sp
     trailing: @Composable RowScope.() -> Unit = {},
     onReselect: (() -> Unit)? = null,
     badges: List<TabBadge?> = emptyList(),
+    scroll: Boolean = false,
 ) {
     val pill = RoundedCornerShape(50)
+    val cue = if (scroll && !segmented) rememberRowScrollCue() else null
     val track = if (segmented) {
         Modifier.depthInset(pill).padding(4.dp)
     } else {
         Modifier
     }
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(if (segmented) Modifier.weight(1f).then(track) else Modifier, horizontalArrangement = Arrangement.spacedBy(if (segmented) 0.dp else 6.dp)) {
+        val lane = when {
+            segmented -> Modifier.weight(1f).then(track)
+            cue != null -> Modifier.weight(1f).scrollCue(cue).horizontalScroll(cue.state)
+            else -> Modifier
+        }
+        Row(lane, horizontalArrangement = Arrangement.spacedBy(if (segmented) 0.dp else 6.dp)) {
             labels.forEachIndexed { index, label ->
                 val on = index == selected
                 val fill = when {
@@ -83,13 +95,13 @@ private val DUE_DOT_SIZE = 9.sp
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    modifier = (if (segmented) Modifier.weight(1f) else Modifier).then(fill).clip(pill)
+                    modifier = (if (segmented) Modifier.weight(1f) else if (cue != null) Modifier.widthIn(max = SCROLL_TAB_MAX) else Modifier).then(fill).clip(pill)
                         .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) else onReselect?.invoke() }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
             }
         }
-        if (!segmented) Spacer(Modifier.weight(1f))
+        if (!segmented && cue == null) Spacer(Modifier.weight(1f))
         trailing()
     }
 }

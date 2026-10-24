@@ -93,9 +93,10 @@ enum class SourceKind(val per: ChanceUnit) {
 /**
  * One way to come by a stack: its [kind], the zone [levels] it is found in, the best [chance] in percent where the
  * content gives one, and for a work what names it — [ref] the profession, [detail] the work. У сундука-добычи [levels] - его тиры,
- * [ref] - вид сундука, [detail] - сундук младшего из тиров, [level] - этот тир.
+ * [ref] - вид сундука, [detail] - сундук младшего из тиров, [level] - этот тир. [amount] - сколько штук приносит одна удача, у находки
+ * камня жилы - её [Job.Item.gemAmount].
  */
-data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0)
+data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0, val amount: Int = 1)
 
 /**
  * Every stack's sources, read once per loaded content. The first call walks the whole content — a caller on the main
@@ -121,8 +122,11 @@ fun ItemSource.title(): String = when (kind) {
 /** Промежуток уровней или тиров строки: «12» или «12–30». */
 private fun span(range: IntRange): String = if (range.first == range.last) "${range.first}" else "${range.first}–${range.last}"
 
-/** Шанс строки с единицей её вида: «до 2% за убийство». */
-fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("source.chance", number(it), ui("source.per.${kind.per}")) }
+/** Шанс строки с единицей её вида: «до 2% за убийство», у удачи в несколько штук - «до 9% за цикл, по 3». */
+fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { chance ->
+    val per = ui("source.per.${kind.per}")
+    if (amount > 1) ui("source.chance_amount", number(chance), per, amount) else ui("source.chance", number(chance), per)
+}
 
 /** Куда идёт стопка: работа [job] профессии [profession] с её уровня [level] берёт [amount] за цикл. */
 data class ItemUse(val profession: String, val job: String, val level: Int, val amount: Long)
@@ -303,7 +307,7 @@ private class SourceIndex(private val index: ContentIndex) {
                     else -> Unit
                 }
                 job.extra.forEach { add(it.item, ItemSource(SourceKind.FIND, chance = it.chance, ref = profession.code, detail = job.code)) }
-                if (job is Job.Item) profession.gems?.odds(job.level, job.gemChance).orEmpty().forEach { (code, chance) -> add(code, ItemSource(SourceKind.FIND, chance = chance, ref = profession.code, detail = job.code)) }
+                if (job is Job.Item) profession.gems?.odds(job.level, job.gemChance).orEmpty().forEach { (code, chance) -> add(code, ItemSource(SourceKind.FIND, chance = chance, ref = profession.code, detail = job.code, amount = job.gemAmount)) }
             }
         }
     }

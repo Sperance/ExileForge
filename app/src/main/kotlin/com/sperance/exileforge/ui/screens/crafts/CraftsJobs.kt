@@ -394,7 +394,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
 
 /**
  * Полоса-формула: вход цикла (с примесями [additives]) ячейками «есть/нужно» через «+» и стрелка - у работы без входа их нет, -
- * выход «×1» (с лишней добычей - «×1–N»), находки с шансом и находка камня (значок камня) с шансом. Касание ячейки - [onOpen] с карточкой материала или выхода. Инструмента
+ * выход «×1» (с лишней добычей - «×1–N»), находки с шансом и находка камня (значок камня) с шансом и числом штук. Касание ячейки - [onOpen] с карточкой материала или выхода. Инструмента
  * в формуле нет - он в окне профессии.
  */
 @Composable private fun RecipeFormula(game: GameUi, profession: ProfessionView, job: JobView, additives: List<String>, onOpen: (Inspect?) -> Unit) {
@@ -422,7 +422,7 @@ private fun JobBody(sheet: JobSheetState, job: JobView, additives: List<String>,
         }
         if (job.gemChance > 0) {
             FormulaPlus()
-            FormulaSlot(ui("crafts.percent", number(job.gemChance)), Brass, frame = Bronze) { GlyphIcon(Glyph.GEM, Brass, Modifier.size(28.dp)) }
+            FormulaSlot(ui("crafts.percent_amount", number(job.gemChance), job.gemAmount), Brass, frame = Bronze) { GlyphIcon(Glyph.GEM, Brass, Modifier.size(28.dp)) }
         }
     }
 }

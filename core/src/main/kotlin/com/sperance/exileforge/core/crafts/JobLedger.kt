@@ -87,7 +87,7 @@ object JobLedger {
         val finds = breakdown.finds.mapIndexed { i, find ->
             ladder.row(LedgerKind.FIND, find.line, Scale.CHANCE, itemTitle(find.extra.item), ui("crafts.ledger.find"), percent(find.line.total), "${LedgerKind.FIND.name}$i", find.extra.item)
         }
-        val gem = breakdown.gem?.let { ladder.row(LedgerKind.GEM, it, Scale.CHANCE, ui("crafts.ledger.gem"), ui("crafts.ledger.gem_note"), percent(it.total)) }
+        val gem = breakdown.gem?.let { ladder.row(LedgerKind.GEM, it, Scale.CHANCE, ui("crafts.ledger.gem"), ui("crafts.ledger.gem_note", job.gemAmount), percent(it.total)) }
         return shown + finds + listOfNotNull(gem)
     }
 

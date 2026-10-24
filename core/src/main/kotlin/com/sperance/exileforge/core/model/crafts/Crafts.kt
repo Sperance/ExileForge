@@ -48,6 +48,9 @@ import kotlinx.serialization.Serializable
     val output: String get() = job.output
     val inputs: List<JobInput> get() = job.inputs
 
+    /** Сколько штук даёт находка камня ([Work.gemAmount]): столько целых камней или столько осколков. */
+    val gemAmount: Long get() = Work.gemAmount(job)
+
     /** Расход цикла с добавками [chosen] - тот же, что проверяет сервер при запуске. */
     fun cycleCost(chosen: List<String> = emptyList()): Cost = Cost(Work.perCycle(job, chosen))
 }

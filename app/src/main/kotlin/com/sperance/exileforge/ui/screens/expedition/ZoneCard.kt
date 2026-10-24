@@ -426,11 +426,11 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, areaLevel: In
 
 /**
  * Три очка Атласа зоны - страж, страж с редкой картой, страж Изнанки - точками рядом со стражем, зажжённые, когда взяты; касание
- * называет каждое.
+ * называет каждое и напоминает, что очки дают только заходы по карте-предмету.
  */
 @Composable internal fun AtlasPips(earned: List<String>, zone: String, modifier: Modifier = Modifier) {
     val kinds = listOf(AtlasPoints.BOSS, AtlasPoints.RARE, AtlasPoints.VAAL).map { it to (AtlasPoints.key(it, zone) in earned) }
-    val tip = { Tip(ui("atlas.open"), facts = kinds.map { (kind, on) -> ui("expedition.key_$kind") to if (on) "✓" else "—" }) }
+    val tip = { Tip(ui("atlas.open"), ui("atlas.pips_note"), facts = kinds.map { (kind, on) -> ui("expedition.key_$kind") to if (on) "✓" else "—" }) }
     val shape = RoundedCornerShape(12.dp)
     Tipped(tip, modifier.background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {

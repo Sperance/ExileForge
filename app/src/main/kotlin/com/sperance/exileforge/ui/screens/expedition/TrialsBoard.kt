@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Region
+import com.sperance.exileforge.rules.content.RiftEntry
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.RushTier
@@ -101,11 +102,13 @@ import org.koin.compose.viewmodel.koinViewModel
         trials.run?.let { open -> OpenTrial(open.kind, if (open.kind == TrialKind.RUSH) regionTitle(open.region) else open.floor.toString(), idle, vm::abandonTrial) }
         val toggle = { mode: TrialMode -> opened = mode.takeIf { it != opened } }
         rules.rift?.let { riftRules ->
-            val left = rift.board?.free
+            val board = rift.board
             TrialModeCard(
                 TrialMode.RIFT,
                 note = null,
-                chip = left?.let { ui("trials.chip_free", it, riftRules.free) },
+                chip = board?.let {
+                    if (riftRules.entry(it.progress.runs, freeProgress) == RiftEntry.UNBOUND) ui("rift.start_unbound") else ui("trials.chip_free", it.free, riftRules.free)
+                },
                 info = { Tip(TrialMode.RIFT.label, ui("rift.hint", riftRules.acts, riftRules.layout.rows, riftRules.free), TrialMode.RIFT.accent) },
                 open = opened == TrialMode.RIFT,
                 phase = 0f,

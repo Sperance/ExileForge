@@ -5066,6 +5066,7 @@
   "rift.start_key": "Enter with a key",
   "rift.start_free": "free {0}/{1}",
   "rift.start_keys": "have {0}",
+  "rift.start_unbound": "no key · testing",
   "rift.act": "act {0}",
   "rift.start_locked": "Free runs are spent: a Rift Key is needed",
   "rift.score": "Score {0}",

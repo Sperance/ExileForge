@@ -5066,6 +5066,7 @@
   "rift.start_key": "Войти за ключ",
   "rift.start_free": "бесплатно {0}/{1}",
   "rift.start_keys": "есть {0}",
+  "rift.start_unbound": "без ключа · тестирование",
   "rift.act": "акт {0}",
   "rift.start_locked": "Бесплатные забеги кончились: нужен ключ Разлома",
   "rift.score": "Счёт {0}",

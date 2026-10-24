@@ -62,6 +62,7 @@ import com.sperance.exileforge.core.expedition.RiftToll
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.CallState
+import com.sperance.exileforge.rules.content.RiftEntry
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftMetal
 import com.sperance.exileforge.rules.content.RiftMutator
@@ -357,15 +358,15 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
 }
 
 /**
- * Вход в Разлом с числом в подписи: «Войти · бесплатно 2/3», после бесплатных - «Войти за ключ · есть 4» ([keys] - ключи в сумке).
- * Закрытый уровнем Разлом или ни бесплатных, ни ключа - кнопка погашена, касание говорит причину (у ключа - и откуда он берётся,
+ * Вход в Разлом с числом в подписи: «Войти · бесплатно 2/3», после бесплатных - «Войти за ключ · есть 4» ([keys] - ключи в сумке),
+ * со свободным прогрессом тестировщика - «Войти · без ключа» ([RiftRules.entry] - то же правило, что у сервера). Закрытый уровнем Разлом или ни бесплатных, ни ключа - кнопка погашена, касание говорит причину (у ключа - и откуда он берётся,
  * описанием предмета).
  */
 @Composable private fun GateEnter(game: GameUi, rules: RiftRules, board: RiftBoard, keys: Long, step: CallState<RiftStep>, canAct: Boolean, onEnter: () -> Unit) {
-    val free = board.free > 0
+    val entry = rules.entry(board.progress.runs, game.freeProgress)
     val why = when {
         !game.unlocked(Feature.RIFT) -> listOf(Feature.RIFT.lockedText(game.index?.rules))
-        !free && keys < 1 -> listOf(ui("rift.start_locked"), itemDescription(RiftRules.KEY, game.index)).filter(String::isNotBlank)
+        entry == RiftEntry.KEY && keys < 1 -> listOf(ui("rift.start_locked"), itemDescription(RiftRules.KEY, game.index)).filter(String::isNotBlank)
         else -> null
     }
     var explain by remember { mutableStateOf(false) }
@@ -378,9 +379,13 @@ private fun mutatorTint(good: Boolean): Color = if (good) RiftColors.Rift else R
             accent = RiftColors.Rift,
             onDisabledClick = why?.let { { explain = true } },
         ) {
-            Text(ui(if (free) "rift.start" else "rift.start_key").uppercase(), style = relicName(15), maxLines = 1)
+            Text(ui(if (entry == RiftEntry.KEY) "rift.start_key" else "rift.start").uppercase(), style = relicName(15), maxLines = 1)
             Text(
-                " · " + if (free) ui("rift.start_free", board.free, rules.free) else ui("rift.start_keys", keys),
+                " · " + when (entry) {
+                    RiftEntry.FREE -> ui("rift.start_free", board.free, rules.free)
+                    RiftEntry.KEY -> ui("rift.start_keys", keys)
+                    RiftEntry.UNBOUND -> ui("rift.start_unbound")
+                },
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 modifier = Modifier.alpha(.8f),

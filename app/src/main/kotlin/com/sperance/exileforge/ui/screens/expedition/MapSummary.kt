@@ -57,10 +57,11 @@ import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.LootPanel
 import com.sperance.exileforge.ui.components.LootRow
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.PickLine
+import com.sperance.exileforge.ui.components.PickMark
+import com.sperance.exileforge.ui.components.PickMarked
 import com.sperance.exileforge.ui.components.RowNote
-import com.sperance.exileforge.ui.components.SaleMarked
 import com.sperance.exileforge.ui.components.SellDock
-import com.sperance.exileforge.ui.components.SellLine
 import com.sperance.exileforge.ui.components.SellPick
 import com.sperance.exileforge.ui.components.SellPresetRow
 import com.sperance.exileforge.ui.components.rememberInspect
@@ -339,11 +340,11 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
         val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
         val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = false)
         when {
-            lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, verdict, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
+            lot != null && selecting -> PickLine(lot, piece.id, PickMark.SALE) { chosen, toggle -> PieceLine(piece, presence, verdict, selected = chosen, onLongClick = { onItem(piece) }, mark = mark, onClick = toggle) }
 
             lot != null -> {
                 val marked = lot.chosen(piece.id)
-                SaleMarked(marked) { PieceLine(piece, presence, verdict, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
+                PickMarked(marked, PickMark.SALE) { PieceLine(piece, presence, verdict, selected = marked, onLongClick = { onSelect(piece.id) }, mark = mark) { onItem(piece) } }
             }
 
             else -> PieceLine(piece, presence, verdict, mark = mark) { onItem(piece) }

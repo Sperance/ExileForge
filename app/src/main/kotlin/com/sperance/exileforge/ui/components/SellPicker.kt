@@ -113,25 +113,52 @@ val SellPick.total: Long get() = picked.sumOf { it.price }
     ForgeChip(label, on, onClick, state = ButtonState.of(enabled), accent = tint)
 }
 
-/**
- * Строка списка в режиме выбора: без галочки сбоку - [content] (сама вещь) рисует отмеченную в золотой рамке, монета
- * в углу говорит, что она продастся; ширина строки не меняется. [content] получает, отмечена ли вещь, и переключатель.
- */
-@Composable fun SellLine(pick: SellPick, id: String, content: @Composable (chosen: Boolean, onToggle: () -> Unit) -> Unit) {
-    SaleMarked(pick.chosen(id)) { content(pick.chosen(id)) { pick.toggle(id) } }
+/** Что станет с отмеченным в выборе пачкой - знак в углу отмеченной строки ([PickMarked]): продастся или ляжет в хранилище гильдии. */
+enum class PickMark {
+    SALE,
+    DEPOSIT,
+    ;
+
+    /** Значок знака: монета продажи или сундук хранилища. */
+    val icon: ImageVector get() = when (this) {
+        SALE -> ForgeGlyphs.Coins
+        DEPOSIT -> ForgeGlyphs.Stash
+    }
+
+    /** Знак для чтения с экрана. */
+    val label: String get() = ui(if (this == SALE) "sell.marked" else "guild.deposit_marked")
 }
 
-/** Вещь [content] с монетой «продастся» в правом верхнем углу, когда она отмечена [marked]. */
-@Composable fun SaleMarked(marked: Boolean, content: @Composable () -> Unit) {
-    Box {
+/**
+ * Строка списка в режиме выбора пачкой - одна для продажи и вклада в хранилище гильдии: без галочки сбоку - [content] (сама вещь
+ * или стопка) рисует отмеченную в золотой рамке, знак [mark] в углу говорит, что с ней станет; ширина строки не меняется.
+ * [content] получает, отмечена ли строка, и переключатель: касание отмечает, удержание открывает карточку - это решает [content].
+ */
+@Composable fun <T : Pickable> PickLine(
+    pick: Pick<T>,
+    id: String,
+    mark: PickMark,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.(chosen: Boolean, onToggle: () -> Unit) -> Unit,
+) {
+    val chosen = pick.chosen(id)
+    PickMarked(chosen, mark, modifier) { content(chosen) { pick.toggle(id) } }
+}
+
+/** Строка [content] со знаком [mark] в правом верхнем углу, когда она отмечена [marked]. */
+@Composable fun PickMarked(marked: Boolean, mark: PickMark, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+    Box(modifier) {
         content()
-        if (marked) {
-            Box(
-                Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(22.dp).background(Gold, CircleShape).border(1.dp, Ink.copy(alpha = .6f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) { Icon(ForgeGlyphs.Coins, ui("sell.marked"), tint = Ink, modifier = Modifier.size(13.dp)) }
-        }
+        if (marked) CornerMark(mark.icon, mark.label, Gold, Modifier.align(Alignment.TopEnd))
     }
+}
+
+/** Круглый знак [icon] на заливке [ground] за правым верхним углом строки выбора; [label] - для чтения с экрана. */
+@Composable fun CornerMark(icon: ImageVector, label: String, ground: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier.offset(x = 4.dp, y = (-4).dp).size(22.dp).background(ground, CircleShape).border(1.dp, Ink.copy(alpha = .6f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, label, tint = Ink, modifier = Modifier.size(13.dp)) }
 }
 
 /**

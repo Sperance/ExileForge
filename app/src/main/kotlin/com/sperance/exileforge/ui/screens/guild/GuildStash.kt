@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +20,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -39,8 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -79,19 +76,19 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.StashTakeCost
 import com.sperance.exileforge.rules.sheet.StashValue
 import com.sperance.exileforge.ui.components.AccordionGroup
+import com.sperance.exileforge.ui.components.AmountStepper
 import com.sperance.exileforge.ui.components.ButtonKind
-import com.sperance.exileforge.ui.components.ButtonSize
 import com.sperance.exileforge.ui.components.ButtonState
 import com.sperance.exileforge.ui.components.ChipMode
 import com.sperance.exileforge.ui.components.ChipSize
 import com.sperance.exileforge.ui.components.ChoiceChips
 import com.sperance.exileforge.ui.components.CoinsRole
+import com.sperance.exileforge.ui.components.CornerMark
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.FellowshipCoins
 import com.sperance.exileforge.ui.components.FilterAccordionSheet
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeChip
-import com.sperance.exileforge.ui.components.ForgeIconButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgePicker
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -108,7 +105,10 @@ import com.sperance.exileforge.ui.components.ItemTile
 import com.sperance.exileforge.ui.components.LengthCounter
 import com.sperance.exileforge.ui.components.LevelRangeHeader
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.Pick
 import com.sperance.exileforge.ui.components.PickDock
+import com.sperance.exileforge.ui.components.PickLine
+import com.sperance.exileforge.ui.components.PickMark
 import com.sperance.exileforge.ui.components.PresetRow
 import com.sperance.exileforge.ui.components.PropertyRow
 import com.sperance.exileforge.ui.components.RarityChoice
@@ -130,9 +130,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ItemTradeRow
 import com.sperance.exileforge.ui.screens.auction.TradeRow
 import com.sperance.exileforge.ui.screens.auction.templateSlots
-import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
@@ -377,12 +375,13 @@ private fun takeFigure(cost: StashTakeCost): String? = when {
 /**
  * Окно «Положить» во вкладку [tab] хранилища [stash] - всегда выбор пачкой: в шапке «Свободно N / M», строка поиска сумки
  * ([ItemSearchBar], список [ItemShelf.GUILD_DEPOSIT]), вкладки-чипы «Снаряжение / Стопки / Карты» с числом отмеченного и быстрые
- * наборы ([PresetRow]: всё видимое и по редкости). Строка - флажок слева и плитка тайника ([ItemTile], уровень на гнезде), стопка -
- * с числом; касание отмечает, удержание вещи - карточка, удержание стопки - поле «сколько» в шапке (по умолчанию вся стопка). У
- * запрещённого ([DepositLot.bar]: заперто, привязано к герою) вместо флажка замок, причина - в строке.
+ * наборы ([PresetRow]: всё видимое и по редкости). Строка - общая строка выбора пачкой ([PickLine]): плитка тайника ([ItemTile],
+ * уровень на гнезде) или стопка с числом; касание отмечает (золотая рамка и знак хранилища в углу), удержание - карточка. У
+ * отмеченной стопки в строке - поле «− N +» ([AmountStepper], по умолчанию вся стопка). У запрещённого ([DepositLot.bar]: заперто,
+ * привязано к герою) в углу замок, причина - в строке, касание - карточка.
  *
- * Справа у строки - начисление монет Содружества за неё ([DepositBag.award], «+0» серым), удержание вещи открывает карточку с
- * «Положить · +12» - вклад одной этой вещи.
+ * Справа у строки - начисление монет Содружества за неё ([DepositBag.award], «+0» серым), карточка вещи или стопки - с
+ * «Положить · +12»: вклад одной этой посылки.
  *
  * Внизу закреплены «Отмена» и удерживаемая «Положить N · +S · влезет K» ([PickDock]): K - по правилу сервера ([DepositBag.fits]), что
  * не влезет, останется у героя; S - монеты за то, что ляжет ([DepositBag.earned]). Герою-тестировщику склад закрыт - причина в шапке,
@@ -395,7 +394,6 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
     val filterState = rememberItemFilter(ItemShelf.GUILD_DEPOSIT)
     var kind by remember { mutableStateOf(DepositKind.GEAR) }
     var filtering by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<String?>(null) }
     val typed = remember { mutableStateMapOf<String, String>() }
     val pieces = remember(bag, kind) { bag.pieces(kind) }
     val shelf = rememberItemShelf(game, pieces, filterState) { null }
@@ -424,9 +422,6 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
                         is DepositPreset.OfRarity -> ui("stash.rarity_many.${preset.rarity.name}") to rarityColor(preset.rarity.name)
                     }
                 }
-                editing?.let { code -> bag.of(DepositKind.STACKS).firstOrNull { it.code == code } }?.let { lot ->
-                    StackAmount(lot, typed[lot.code].orEmpty(), onType = { typed[lot.code] = it.filter(Char::isDigit).take(AMOUNT_DIGITS) }) { editing = null }
-                }
             }
         },
         footer = {
@@ -454,23 +449,17 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
             }
             items(shown, key = { it.id }) { lot ->
                 val award = bag.award(lot, typed[lot.code])
-                DepositLine(lot, award, pick.chosen(lot.id), onToggle = { pick.toggle(lot.id) }) {
+                val single = depositOne(lot, award, room = bag.free > 0, busy = game.busy) { onPut(listOf(lot.parcel(typed[lot.code]))) }
+                DepositLine(pick, lot, award) { chosen, toggle ->
                     val piece = lot.piece
                     if (piece != null) {
-                        val single = depositOne(lot, award, room = bag.free > 0, busy = game.busy) { onPut(listOf(lot.parcel(null))) }
                         val card = { inspect(Inspect.Copy(piece.item, single)) }
-                        ItemTile(piece, Modifier.weight(1f), selected = pick.chosen(lot.id), onClick = { if (lot.bar == null) pick.toggle(lot.id) else card() }, onLongClick = card) {
+                        ItemTile(piece, selected = chosen, onClick = if (lot.bar == null) toggle else card, onLongClick = card) {
                             lot.bar?.let { BarReason(it) }
                         }
                     } else {
-                        StackLine(game.index, lot, typed[lot.code], Modifier.weight(1f), onClick = { if (lot.bar == null) pick.toggle(lot.id) else inspect(Inspect.Stack(lot.code)) }) {
-                            if (lot.bar == null) {
-                                editing = lot.code
-                                if (!pick.chosen(lot.id)) pick.toggle(lot.id)
-                            } else {
-                                inspect(Inspect.Stack(lot.code))
-                            }
-                        }
+                        val card = { inspect(Inspect.Stack(lot.code, single)) }
+                        StackLine(game.index, lot, chosen, typed[lot.code], onAmount = { typed[lot.code] = it.toString() }, onClick = if (lot.bar == null) toggle else card, onHold = card)
                     }
                 }
             }
@@ -479,11 +468,8 @@ private fun DepositSheet(game: GameUi, stash: GuildStashView, tab: Int, onDismis
     if (filtering && shelf != null) ItemFilterSheet(filterState, shelf) { filtering = false }
 }
 
-/** Сколько цифр принимает поле количества стопки. */
-private const val AMOUNT_DIGITS = 12
-
 /**
- * «Положить · +12» в карточке вещи окна вклада: одна эта вещь, удержанием. Запрещённая или без места во вкладке ([room] false) -
+ * «Положить · +12» в карточке вещи или стопки окна вклада: одна эта посылка, удержанием. Запрещённая или без места во вкладке ([room] false) -
  * погашено с причиной, пока идёт запрос ([busy]) - погашено.
  */
 private fun depositOne(lot: DepositLot, award: Long, room: Boolean, busy: Boolean, onPut: () -> Unit): InspectAction {
@@ -492,18 +478,16 @@ private fun depositOne(lot: DepositLot, award: Long, room: Boolean, busy: Boolea
 }
 
 /**
- * Строка окна вклада: слева флажок отметки ([chosen], касание - [onToggle]) или замок у запрещённого, посередине - сама посылка
- * [content], справа - начисление монет Содружества за неё [award] (у запрещённого - нет).
+ * Строка окна вклада: посылка [content] общей строкой выбора ([PickLine], знак хранилища в углу отмеченной), у запрещённого - замок
+ * в углу; справа - начисление монет Содружества за неё [award] (у запрещённого - нет).
  */
-@Composable private fun DepositLine(lot: DepositLot, award: Long, chosen: Boolean, onToggle: () -> Unit, content: @Composable RowScope.() -> Unit) {
+@Composable private fun DepositLine(pick: Pick<DepositLot>, lot: DepositLot, award: Long, content: @Composable (chosen: Boolean, onToggle: () -> Unit) -> Unit) {
     val bar = lot.bar
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (bar == null) {
-            Checkbox(chosen, onCheckedChange = { onToggle() }, colors = CheckboxDefaults.colors(checkedColor = Gold, uncheckedColor = Muted, checkmarkColor = Ink))
-        } else {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Lock, ui("guild.deposit_why.${bar.name}"), tint = Muted, modifier = Modifier.size(18.dp)) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PickLine(pick, lot.id, PickMark.DEPOSIT, Modifier.weight(1f)) { chosen, toggle ->
+            content(chosen, toggle)
+            bar?.let { CornerMark(Icons.Outlined.Lock, ui("guild.deposit_why.${it.name}"), Muted, Modifier.align(Alignment.TopEnd)) }
         }
-        content()
         if (bar == null) FellowshipCoins(award, CoinsRole.AWARD)
     }
 }
@@ -513,39 +497,41 @@ private fun depositOne(lot: DepositLot, award: Long, room: Boolean, busy: Boolea
     Text(ui("guild.deposit_why.${bar.name}"), color = LifeRed, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
 }
 
-/** Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по набранному [typed]) и причина запрета; удержание - [onHold]. */
+/**
+ * Стопка сумки строкой: значок, имя, число («× 37», часть - «× 10 из 37» по набранному [typed]) и причина запрета; касание - [onClick],
+ * удержание - [onHold]. Отмеченная [chosen] - в золотой рамке, под именем - поле «− N +» ([AmountStepper]) от одной до всей стопки,
+ * новое количество - [onAmount].
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun StackLine(index: ContentIndex?, lot: DepositLot, typed: String?, modifier: Modifier, onClick: () -> Unit, onHold: () -> Unit) {
-    Row(
-        modifier.heightIn(min = 48.dp).combinedClickable(onLongClick = onHold, onClick = onClick).padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+private fun StackLine(index: ContentIndex?, lot: DepositLot, chosen: Boolean, typed: String?, onAmount: (Long) -> Unit, onClick: () -> Unit, onHold: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(shape)
+            .then(if (chosen) Modifier.border(2.dp, GoldBright, shape) else Modifier)
+            .combinedClickable(onLongClickLabel = ui("hint.hold.info"), onLongClick = onHold, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        StackCell(index, lot.code, 1, size = 40.dp)
-        Column(Modifier.weight(1f)) {
-            Text(itemTitle(lot.code), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            lot.bar?.let { BarReason(it) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            StackCell(index, lot.code, 1, size = 40.dp)
+            Column(Modifier.weight(1f)) {
+                Text(itemTitle(lot.code), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                lot.bar?.let { BarReason(it) }
+            }
+            Text(lot.countText(typed), color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }
-        Text(lot.countText(typed), color = GoldBright, style = MaterialTheme.typography.labelMedium, maxLines = 1)
-    }
-}
-
-/** Поле «сколько» отмеченной стопки [lot] в шапке окна: пусто - вся стопка; крестик закрывает поле, набранное остаётся. */
-@Composable private fun StackAmount(lot: DepositLot, typed: String, onType: (String) -> Unit, onClose: () -> Unit) {
-    ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(itemTitle(lot.code), color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            ForgeIconButton(Icons.Outlined.Close, ui("common.close"), onClick = onClose, size = ButtonSize.Compact)
+        if (chosen && lot.bar == null) {
+            AmountStepper(
+                lot.amountOf(typed),
+                1L..lot.owned.coerceAtLeast(1),
+                enabled = true,
+                label = ui("sell.amount_owned", lot.owned),
+                less = ui("guild.deposit_less"),
+                more = ui("guild.deposit_more"),
+                modifier = Modifier.align(Alignment.End),
+                onChange = onAmount,
+            )
         }
-        OutlinedTextField(
-            typed,
-            onType,
-            label = { Text(ui("sell.amount_owned", lot.owned)) },
-            placeholder = { Text(lot.owned.toString()) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }

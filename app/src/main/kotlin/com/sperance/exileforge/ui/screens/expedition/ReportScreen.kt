@@ -333,7 +333,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     LootPanel(game.index, gear, reward.items, lootSums(reward.gold, reward.experience), onStack, heading = { Caption(it.caption()) }) { (piece, presence) ->
         val marked = piece.id in marks
         val (verdict, mark) = rememberLootVerdict(dressed, piece.item, flasks = hud.gearLock == null)
-        SaleMarked(marked) {
+        PickMarked(marked, PickMark.SALE) {
             PieceLine(piece, presence, verdict, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }, mark = mark) { onItem(piece) }
         }
     }

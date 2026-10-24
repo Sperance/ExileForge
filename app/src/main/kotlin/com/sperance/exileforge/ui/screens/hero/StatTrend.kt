@@ -11,12 +11,16 @@ import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Vital
 
 /**
- * Сравнение листа похода с листом героя без похода [base]: сдвинутые цифры ([shift]) и вклады в каждую ([parts]: строки карты, Атласа,
- * гильдии, зелья и эффекты боя - каждые своей меткой и сроком). Лучше или хуже - по смыслу характеристики ([StatPolarity]: у «меньше -
- * лучше» рост - хуже), а не по знаку сдвига; сдвиг без оценки - нейтральным цветом и без стрелки.
+ * Сравнение листа похода с листом героя без похода [base]: сдвинутые цифры ([shift]) и строки раскрытия каждой ([shares]: «Герой без
+ * похода» и вклады карты и боя в единице строки - сумма равна числу строки). Строки считаются по запросу раскрытой строки. Лучше или
+ * хуже - по смыслу характеристики ([StatPolarity]: у «меньше - лучше» рост - хуже), а не по знаку сдвига; сдвиг без оценки - нейтральным
+ * цветом и без стрелки.
  */
 @Immutable
-class StatTrend(val base: Map<String, Double>, val shift: SheetShift, val parts: Map<String, List<SumShare>>) {
+class StatTrend(val base: Map<String, Double>, val shift: SheetShift, private val parts: (String) -> List<SumShare>) {
+    /** Строки раскрытия сдвинутой цифры [key]: «Герой без похода» первой, затем вклады по порядку. */
+    fun shares(key: String): List<SumShare> = parts(key)
+
     /** Вердикт сдвинутой цифры [key] со значением [value]: не сдвинута - null. */
     fun of(key: String, value: Double, index: ContentIndex?): TrendMark? {
         if (shift.of(key) == null) return null

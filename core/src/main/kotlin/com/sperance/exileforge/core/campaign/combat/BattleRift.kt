@@ -25,6 +25,9 @@ private const val DEVOURED = "$STOLEN#ECHO"
 /** Строки Разлома лежат до конца боя и видны на полосе стража, а не плитками состояний. */
 internal fun riftSourced(source: String): Boolean = source.startsWith(STOLEN)
 
+/** Код украденного дара Разлома, чьи строки лежат на герое с источником [source]; не дар Разлома - null. */
+fun stolenBoon(source: String): String? = source.takeIf(::riftSourced)?.removePrefix(STOLEN)
+
 /** Страж боя, пока он стоит; null - стража нет или он пал. */
 private fun Battle.riftBoss(): Fighter? = guardian?.let(foeFighters::get)
 

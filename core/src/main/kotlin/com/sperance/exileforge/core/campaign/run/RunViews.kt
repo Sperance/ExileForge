@@ -310,6 +310,8 @@ data class FightHud(
     val rounds: Int = 1,
     /** Лист героя сейчас: по нему лист умения врага считает, сколько оно снимет. */
     val heroBody: com.sperance.exileforge.core.campaign.combat.Combatant? = null,
+    /** Тело героя [heroBody] по частям: из чего оно сложилось - разбор сдвинутой характеристики в бою; null - вне боя. */
+    val heroLadder: com.sperance.exileforge.core.campaign.combat.HeroLadder? = null,
     /** Босс боя: его фазы и что он готовит; null - босса нет. */
     val boss: BossHud? = null,
     /** Ярость боя: ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */

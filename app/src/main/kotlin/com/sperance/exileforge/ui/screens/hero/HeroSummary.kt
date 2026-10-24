@@ -27,9 +27,9 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.campaign.stat
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.RowFigure
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
-import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rowValue
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.title
@@ -53,7 +53,6 @@ import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.MightMark
 import com.sperance.exileforge.ui.components.ShortCodeChip
-import com.sperance.exileforge.ui.components.SumShare
 import com.sperance.exileforge.ui.components.SumShareLine
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
@@ -98,8 +97,8 @@ import com.sperance.exileforge.ui.theme.*
  * характеристике, их читает разбор). Разделы и порядок - реестр контента.
  *
  * С [trend] (лист похода против листа героя без похода) сдвинутая строка - полоска слева, цвет и ▲/▼ по смыслу характеристики; касание
- * раскрывает под ней вклады - «Герой без похода» первым, вклады карты и боя своими метками, итог последним - и кнопку разбора;
- * раскрытые строки держатся, пока числа идут. Свёрнутые «Пределы» раздела раскрываются сами, если внутри сдвиг.
+ * раскрывает под ней вклады ([StatTrend.shares]) - «Герой без похода» первым, затем вклады карты и боя числами в единице строки, их
+ * сумма - число строки, - и кнопку разбора; раскрытые строки держатся, пока числа идут. Свёрнутые «Пределы» раздела раскрываются сами, если внутри сдвиг.
  */
 @Composable fun StatSheet(
     game: GameUi,
@@ -253,7 +252,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
  * шапка раздела с полями [headPadding], между карточками разделов [cardGap]; полоска сдвинутой строки [stripe], отступ её вкладов [indent].
  */
 private object SummaryMetrics {
-    val rowHeight = 28.dp
+    val rowHeight = 34.dp
     val rowPadding = 3.dp
     val icon = 16.dp
     val figure = 14.sp
@@ -285,15 +284,13 @@ private object SummaryMetrics {
             Modifier.fillMaxWidth().foldToggle(unfolded, ui(if (unfolded) "common.collapse" else "common.expand")) { unfolded = !unfolded }
                 .padding(horizontal = 12.dp, vertical = SummaryMetrics.rowPadding),
         )
-        FoldBody(unfolded) { ChangeSources(key, value, trend, mark, figures, game) { open(key) } }
+        FoldBody(unfolded) { ChangeSources(key, trend) { open(key) } }
     }
 }
 
-/** Вклады в сдвинутую цифру [key]: «Герой без похода», вклады карты и боя, итог цветом отметки [mark]; под ними - кнопка разбора. */
-@Composable private fun ChangeSources(key: String, value: Double, trend: StatTrend, mark: TrendMark, figures: StatFigures, game: GameUi, onBreakdown: () -> Unit) {
-    val shares = listOf(SumShare(ui("stat.compare.base"), rowValue(key, trend.base[key] ?: 0.0, game.index, trend.base))) +
-        trend.parts[key].orEmpty() +
-        SumShare(ui("stat.compare.total"), rowValue(key, value, game.index, figures.stats), accent = mark.tint)
+/** Вклады в сдвинутую цифру [key] ([StatTrend.shares]): «Герой без похода», вклады карты и боя - их сумма и есть число строки; под ними - кнопка разбора. */
+@Composable private fun ChangeSources(key: String, trend: StatTrend, onBreakdown: () -> Unit) {
+    val shares = remember(key, trend) { trend.shares(key) }
     Column(Modifier.fillMaxWidth().padding(start = SummaryMetrics.indent, end = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         shares.forEach { SumShareLine(it) }
         ForgeButton(onClick = onBreakdown, kind = ButtonKind.Text, size = ButtonSize.Small) { Text(ui("stat.compare.breakdown")) }
@@ -313,15 +310,14 @@ private object SummaryMetrics {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         StatIcon(key, accent, Modifier.size(SummaryMetrics.icon))
-        val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
         val level = game.hero?.level
-        val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
+        val row = remember(key, figures, game.index, level) { game.index?.let { RowFigure.of(key, figures, level, it) } }
         Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Text(
-            defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: rowValue(key, limit?.effective ?: value, game.index, figures.stats),
+            row?.text(game.index, figures.stats) ?: rowValue(key, value, game.index, figures.stats),
             color = when {
                 mark != null -> mark.tint
-                limit?.clamped == true -> Caution
+                row?.clamped == true -> Caution
                 else -> Parchment
             },
             style = MaterialTheme.typography.titleSmall,

@@ -371,7 +371,7 @@ internal fun effectTitle(view: EffectView): String = when {
     view.source == INTIMIDATED -> ui("fight.intimidated")
     fateSourced(view.source) -> ui("fight.fate_buff")
     view.flask != null -> equipmentTitle(view.source)
-    else -> view.origin?.let(::originTitle) ?: SkillText.title(view.source)
+    else -> view.origin?.let(::originTitle) ?: stolenBoon(view.source)?.let { locOr("rift.boon.$it.name", it) } ?: SkillText.title(view.source)
 }
 
 /** Имя эффекта без своего умения: тотема - из словаря тотемов, ярости - словом боя, свиты на боссе - именем монстра. */

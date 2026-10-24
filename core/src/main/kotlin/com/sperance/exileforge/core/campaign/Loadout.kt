@@ -229,7 +229,9 @@ class HeroBuild(
     private val bodies = LineMemo<Combatant>()
     private val growths = LineMemo<DamageGrowth>()
 
-    override fun body(lines: List<StatLine>): Combatant = bodies.get(lines) ?: Combatant(run.stats(passives + lines), gear.level, rules).also { bodies.put(lines, it) }
+    override fun body(lines: List<StatLine>): Combatant = bodies.get(lines) ?: freshBody(lines).also { bodies.put(lines, it) }
+
+    override fun freshBody(lines: List<StatLine>): Combatant = Combatant(run.stats(passives + lines), gear.level, rules)
 
     /** The passives' lines that wait for low life; the fight lays them on while it lasts. */
     override val lowLife: List<StatLine> by lazy { gear.kit.lowLifeLines(bare) }
@@ -296,6 +298,12 @@ private class TypedGrowth(private val inner: DamageGrowth) : DamageGrowth {
 interface HeroModel : BodyModel {
     val lowLife: List<StatLine>
 
+    /**
+     * Тело со строками [lines], как [body], но мимо памяти тел боя: память - одного потока боя, а это тело собирают и вне его
+     * (лестница тела героя для разбора характеристики, [com.sperance.exileforge.core.campaign.combat.HeroLadder]).
+     */
+    fun freshBody(lines: List<StatLine>): Combatant
+
     /** Рост урона вида листа со строками [lines]: увеличения и «больше» ([DamageGrowth] правил). */
     fun growth(lines: List<StatLine>): DamageGrowth
 
@@ -321,6 +329,7 @@ interface HeroModel : BodyModel {
         fun of(body: Combatant): HeroModel = object : HeroModel {
             private val model = BodyModel.of(body)
             override fun body(lines: List<StatLine>): Combatant = model.body(lines)
+            override fun freshBody(lines: List<StatLine>): Combatant = model.body(lines)
             override val lowLife: List<StatLine> = emptyList()
             override fun growth(lines: List<StatLine>): DamageGrowth = DamageGrowth.NONE
         }

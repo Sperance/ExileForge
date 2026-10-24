@@ -87,20 +87,22 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
  * ([FATE_STACKS]) - значок ✦ дара ([fateGlows]), не плитка эффекта. У героя - ещё глотки, прерванные полным здоровьем
  * ([Battle.halts]): плитка «прервано» без срока.
  */
-fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
-    EffectView(
-        it.source,
-        it.kind,
-        ((it.until - time) / it.duration).toFloat().coerceIn(0f, 1f),
-        (it.until - time).coerceAtLeast(0.0),
-        icons[it.source].orEmpty(),
-        it.buff?.kind,
-        it.lines,
-        flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
-        origin = it.origin,
-        layers = if (it.kind == EffectKind.CURSE) it.stacks else 1,
-    )
-} + if (fighter === heroFighter) haltViews() else emptyList()
+fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.actingEffects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map { effectView(it) } +
+    if (fighter === heroFighter) haltViews() else emptyList()
+
+/** Плитка эффекта [effect]; без срока ([timed] - нет) - доля и секунды нулевые: плитка не меняется, пока идёт время. */
+internal fun Battle.effectView(effect: TimedEffect, timed: Boolean = true): EffectView = EffectView(
+    effect.source,
+    effect.kind,
+    if (timed) ((effect.until - time) / effect.duration).toFloat().coerceIn(0f, 1f) else 0f,
+    if (timed) (effect.until - time).coerceAtLeast(0.0) else 0.0,
+    icons[effect.source].orEmpty(),
+    effect.buff?.kind,
+    effect.lines,
+    flask = if (effect.kind == EffectKind.FLASK) kit.flasks.getOrNull(effect.slot)?.sheet?.kind else null,
+    origin = effect.origin,
+    layers = if (effect.kind == EffectKind.CURSE) effect.stacks else 1,
+)
 
 /** Плитки глотков, что погасли на полном здоровье за последние [Halt.SHOWN] секунд. */
 private fun Battle.haltViews(): List<EffectView> = halts.filter { time - it.at < Halt.SHOWN }.map {

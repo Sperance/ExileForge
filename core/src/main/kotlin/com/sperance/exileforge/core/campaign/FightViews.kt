@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.campaign.combat.SlotHolder
 import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
+import com.sperance.exileforge.core.campaign.combat.heroLadder
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.intimidateView
 import com.sperance.exileforge.core.campaign.combat.passiveViews
@@ -104,6 +105,7 @@ internal fun Battle.hud(
         level = level,
         round = round, rounds = rounds,
         heroBody = h.body,
+        heroLadder = heroLadder(),
         boss = bossHud(),
         rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(rageClock)).takeIf { outcome == null },
         heroCast = heroCast(),

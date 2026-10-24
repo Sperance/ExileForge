@@ -256,8 +256,26 @@ internal fun Battle.foeLines(fighter: Fighter): List<StatLine> {
 internal fun Battle.heroBody(extra: List<StatLine>): Combatant = model.body(heroLines() + extra).under(auras())
 
 /** What lies on the hero now: low life's lines, the standing powers', the charges', the conditions' and the effects'. */
-private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.lowLife else emptyList()) +
-    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.actingEffects.flatMap { it.holding(conditions) }
+private fun Battle.heroLines(): List<StatLine> = buildList { heroParts { _, lines, _ -> addAll(lines) } }
+
+/**
+ * Строки на герое по частям в порядке свода тела ([heroBody]): низкое здоровье, силы вещей, заряды, условия боя и эффекты - каждый со
+ * своим [TimedEffect]. Одна точка тела боя и его лестницы ([heroLadder]).
+ */
+private inline fun Battle.heroParts(each: (FightPart, List<StatLine>, TimedEffect?) -> Unit) {
+    if (heroFighter.low) each(FightPart.LOW_LIFE, model.lowLife, null)
+    each(FightPart.POWERS, powers.standing, null)
+    each(FightPart.CHARGES, heroCharges.lines() + chargeLines(), null)
+    each(FightPart.CONDITIONS, model.conditional(conditions), null)
+    heroFighter.actingEffects.forEach { each(FightPart.EFFECT, it.holding(conditions), it) }
+}
+
+/** Тело героя по частям ([HeroLadder]) для разбора характеристики: строки частей, эффекты плитками без срока, ауры врагов. */
+internal fun Battle.heroLadder(): HeroLadder = HeroLadder(
+    model,
+    buildList { heroParts { part, lines, effect -> if (lines.isNotEmpty()) add(FightRung(part, lines, effect?.let { effectView(it, timed = false) })) } },
+    auras(),
+)
 
 /**
  * Рост урона героя сейчас: увеличения и «больше» каждого вида листа со строками на герое и [extra]. Удар оружием несёт

@@ -126,7 +126,10 @@ enum class PickMark {
     }
 
     /** Знак для чтения с экрана. */
-    val label: String get() = ui(if (this == SALE) "sell.marked" else "guild.deposit_marked")
+    val label: String get() = when (this) {
+        SALE -> ui("sell.marked")
+        DEPOSIT -> ui("guild.deposit_marked")
+    }
 }
 
 /**

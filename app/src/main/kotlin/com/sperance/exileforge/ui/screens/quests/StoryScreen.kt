@@ -91,7 +91,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Карточка шага сюжета: глава и шаг, цель, прогресс и награда. Шага нет - ничего. */
+/** Карточка шага сюжета: глава и шаг, цель («Только в зоне: …» у боевого шага), прогресс и награда. Шага нет - ничего. */
 @Composable private fun StepCard(index: ContentIndex, board: QuestBoard, onOpen: () -> Unit) {
     val chapter = index.quests.story.getOrNull(board.chapter) ?: return
     val quest = board.story ?: return
@@ -116,6 +116,7 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(questTitle(quest), color = GoldBright, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            zoneOnly(quest)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
             QuestBar(quest.progress, quest.target, Gold)
             MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())))
             QuestRewardLoot(quest.reward)

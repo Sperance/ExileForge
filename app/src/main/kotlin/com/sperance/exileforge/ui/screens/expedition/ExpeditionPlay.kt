@@ -148,7 +148,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     }
                     if (questsOpen) {
                         HoldsRun(run)
-                        RunQuestsSheet(board, hud.questTally) { questsOpen = false }
+                        RunQuestsSheet(board, hud.questTally, run.run.zone.code) { questsOpen = false }
                     }
                     if (gear) {
                         HoldsRun(run)

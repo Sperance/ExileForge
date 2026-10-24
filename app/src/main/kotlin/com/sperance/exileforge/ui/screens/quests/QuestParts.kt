@@ -68,6 +68,9 @@ internal fun placeTitle(place: String): String? = when {
     else -> loc("map.$place.name")
 }
 
+/** Строка «Только в зоне: …» под заданием, что считается лишь в своей зоне ([Quest.zone]: боевой шаг сюжета); прочим - null. */
+internal fun zoneOnly(quest: Quest): String? = quest.zone?.let { zone -> placeTitle(zone.value)?.let { ui("quest.zone_only", it) } }
+
 /** A quest's rarity in a quest's words — its own labels, since «Волшебное задание» agrees with a noun an item does not. */
 internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.name}")
 
@@ -139,6 +142,7 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
                 Text(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
             QuestFacts(quest)
+            zoneOnly(quest)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
             if (story && told) MutedText(loc("quest.story.${quest.goal}.description"), style = MaterialTheme.typography.bodySmall)
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {

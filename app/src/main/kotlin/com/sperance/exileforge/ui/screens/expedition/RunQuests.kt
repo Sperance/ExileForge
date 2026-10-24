@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.quests.live
 import com.sperance.exileforge.core.quests.running
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.QuestCounter
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -32,10 +33,10 @@ import com.sperance.exileforge.ui.screens.quests.QuestRow
     return snapshot ?: first
 }
 
-/** Лист «Задания» на карте: несданные задания со счётом этого захода; боевые - сверху. */
-@Composable internal fun RunQuestsSheet(quests: Quests, tally: Map<String, Long>, onDismiss: () -> Unit) {
-    val shown = remember(quests, tally) {
-        quests.running().filterNot { it.claimed }.map { it.live(tally) }.sortedBy { it.counter !in QuestCounter.COMBAT }
+/** Лист «Задания» на карте: несданные задания со счётом этого захода в зоне [zone] (в Ваал-зоне - зона захода); боевые - сверху. */
+@Composable internal fun RunQuestsSheet(quests: Quests, tally: Map<String, Long>, zone: MapCode, onDismiss: () -> Unit) {
+    val shown = remember(quests, tally, zone) {
+        quests.running().filterNot { it.claimed }.map { it.live(tally, zone) }.sortedBy { it.counter !in QuestCounter.COMBAT }
     }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.8f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

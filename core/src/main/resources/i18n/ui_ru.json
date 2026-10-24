@@ -3461,6 +3461,7 @@
   "quest.progress": "{0} / {1}",
   "quest.expires": "осталось {0}",
   "quest.place": "Где: {0}",
+  "quest.zone_only": "Только в зоне: {0}",
   "quest.contracts_mine": "Мои контракты",
   "quest.contracts_none": "Контрактов нет — возьмите листок с доски",
   "quest.abandon": "Отказаться",

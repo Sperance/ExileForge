@@ -3461,6 +3461,7 @@
   "quest.progress": "{0} / {1}",
   "quest.expires": "{0} left",
   "quest.place": "Where: {0}",
+  "quest.zone_only": "Only in zone: {0}",
   "quest.contracts_mine": "My contracts",
   "quest.contracts_none": "No contracts — take a notice off the board",
   "quest.abandon": "Give up",

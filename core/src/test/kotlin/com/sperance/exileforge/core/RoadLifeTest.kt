@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.quests.live
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Counter
+import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.Rarity
@@ -92,8 +93,8 @@ class RoadLifeTest {
     @Test
     fun the_run_adds_its_tally_to_the_board_taken_at_entry_once() {
         val atEntry = Quest("q", QuestKind.DAILY, "kill", Counter.KILLS, Rarity.COMMON, target = 10, progress = 3)
-        assertEquals(7, atEntry.live(mapOf(Counter.KILLS to 4L)).progress)
-        assertEquals(false, atEntry.live(mapOf(Counter.KILLS to 4L)).done)
-        assertEquals(10, atEntry.live(mapOf(Counter.KILLS to 40L)).progress)
+        assertEquals(7, atEntry.live(mapOf(Counter.KILLS to 4L), MapCode.NONE).progress)
+        assertEquals(false, atEntry.live(mapOf(Counter.KILLS to 4L), MapCode.NONE).done)
+        assertEquals(10, atEntry.live(mapOf(Counter.KILLS to 40L), MapCode.NONE).progress)
     }
 }

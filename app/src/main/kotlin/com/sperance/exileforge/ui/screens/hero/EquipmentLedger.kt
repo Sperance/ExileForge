@@ -106,7 +106,8 @@ private fun GroupHeader(group: GearGroup, lines: List<PlaceState>) {
 }
 
 /**
- * Надетая вещь карточкой во всю ширину: гнездо с иконкой (у колец и фляг - цифра места), имя в цвете редкости с «№ 7» в
+ * Надетая вещь карточкой во всю ширину: гнездо с иконкой (у колец и фляг - цифра места; не действует по уровню героя - красный значок
+ * нужного уровня в левом нижнем углу), имя в цвете редкости с «№ 7» в
  * конце, знак бездействия и метка роллов справа, ниже все строки вещи 12sp со значком тира - с переносом, без обрезки.
  * Место не подписано: его называют группа и иконка. Почему вещь не работает - в подсказке по касанию знака.
  */
@@ -134,6 +135,9 @@ private fun WornCard(line: PlaceState, worn: ItemView, lang: Lang, signedIn: Boo
                     contentAlignment = Alignment.Center,
                 ) { ItemIcon(worn, look.rarity, Modifier.size(if (compact) 18.dp else 20.dp)) }
                 placeNumber(line.place)?.let { PlaceNumber(it, Modifier.align(Alignment.BottomEnd).offset(5.dp, 5.dp)) }
+                line.inactiveLevel?.let { need ->
+                    LevelBadge(need, LifeRed, ui("item.inactive_level", need), Modifier.align(Alignment.BottomStart).offset(-LevelBadgeOffset.x, LevelBadgeOffset.y), ink = LifeRed)
+                }
             }
             Text(nameWithSerial(worn), color = look.name, style = itemName(15), modifier = Modifier.weight(1f))
             line.reasons?.let { reasons ->

@@ -1385,6 +1385,7 @@
   "hero.find_item": "Find an item in the stash",
   "hero.grant_admin_only": "Granting items is for a tester character or an administrator only",
   "hero.inactive": "Not working",
+  "item.inactive_level": "Inactive: requires hero level {0}",
   "hero.no_stats": "The stats did not load",
   "hero.part_share": "{0} of maximum",
   "hero.part_increased": "{0} increased",

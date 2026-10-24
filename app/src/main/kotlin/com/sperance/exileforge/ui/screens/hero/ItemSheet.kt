@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.sheet.placeCandidates
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -107,10 +108,16 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 }
                 if (twin) item { Text(ui("hero.unique_worn"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 game.hero?.inactive?.get(instance.id)?.let { reasons ->
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
-                            reasons.forEach { Text(requirementReason(it, game.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                    view.inactiveLevel(reasons)?.let { need ->
+                        item { Text(ui("item.inactive_level", need), color = LifeRed, style = MaterialTheme.typography.labelLarge) }
+                    }
+                    val others = reasons.filterNot(Requirements::isLevel)
+                    if (others.isNotEmpty()) {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(ui("hero.inactive"), color = LifeRed, style = MaterialTheme.typography.labelLarge)
+                                others.forEach { Text(requirementReason(it, game.lang), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                            }
                         }
                     }
                 }

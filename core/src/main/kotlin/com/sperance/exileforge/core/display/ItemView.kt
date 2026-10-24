@@ -311,10 +311,16 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val requiredLevel: Int get() = Requirements.level(template, item)
 
     /**
-     * Требование уровня расходится с уровнем предмета (уникалка - уровень из контента, инструмент - база): карточка печатает его
-     * отдельным чипом «нужен N», иначе требование - сам значок уровня.
+     * Требование уровня расходится с уровнем предмета (инструмент - база шаблона): карточка печатает его отдельным чипом «нужен N»,
+     * иначе требование - сам значок уровня.
      */
     val levelNeedApart: Boolean get() = requiredLevel > 1 && requiredLevel != level
+
+    /**
+     * Уровень героя, без которого надетая копия не действует: среди причин бездействия листа [reasons] есть нехватка уровня
+     * ([Requirements.isLevel]) - её требование ([requiredLevel]); иначе null.
+     */
+    fun inactiveLevel(reasons: List<String>?): Int? = requiredLevel.takeIf { reasons.orEmpty().any(Requirements::isLevel) }
 
     /** Требования чипами карточки: атрибуты, класс и уровень - только расходящийся с уровнем предмета ([levelNeedApart]). */
     val requirements: List<ItemNeed> get() = itemRequirements(template, requiredLevel.takeIf { levelNeedApart })

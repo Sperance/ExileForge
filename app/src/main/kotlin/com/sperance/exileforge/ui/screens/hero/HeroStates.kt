@@ -54,6 +54,8 @@ import org.koin.compose.koinInject
     val blocked: Boolean,
     /** Why the worn copy does not count; null when it does. */
     val reasons: List<String>?,
+    /** Уровень героя, без которого надетая копия не действует ([ItemView.inactiveLevel]); null - уровень не мешает. */
+    val inactiveLevel: Int?,
     /** How many loose items of the stash could fill the place. */
     val spare: Int,
 )
@@ -91,12 +93,15 @@ import org.koin.compose.koinInject
         val equipped = hero.equipped
         val places = (bodyPlaces + toolPlaces).map { place ->
             val worn = place.wornIn(equipped)
+            val view = worn?.let { game.view(it) }
+            val reasons = worn?.let { hero.inactive[it.id] }
             PlaceState(
                 place,
                 worn?.id,
-                worn?.let { game.view(it) },
+                view,
                 blocked = place.blockedBy(equipped),
-                reasons = worn?.let { hero.inactive[it.id] },
+                reasons = reasons,
+                inactiveLevel = view?.inactiveLevel(reasons),
                 spare = place.fits.sumOf { loose[it] ?: 0 },
             )
         }

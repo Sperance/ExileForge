@@ -1,0 +1,24 @@
+# Профиль запуска и вкладок: ART заранее компилирует эти пути при установке (androidx.profileinstaller), первый показ экрана не ждёт JIT.
+# Запуск: приложение, активность, DI, оболочка и нижняя панель.
+HSPLcom/sperance/exileforge/ForgeApplication;->**(**)**
+HSPLcom/sperance/exileforge/MainActivity;->**(**)**
+HSPLcom/sperance/exileforge/di/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/*;->**(**)**
+HSPLcom/sperance/exileforge/ui/nav/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/theme/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/icons/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/components/**;->**(**)**
+# Вкладки нижней панели: герой, развитие, ремёсла, город и поход.
+HSPLcom/sperance/exileforge/ui/screens/hero/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/tree/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/skills/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/craft/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/crafts/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/city/**;->**(**)**
+HSPLcom/sperance/exileforge/ui/screens/expedition/*;->**(**)**
+# Ядро на этих путях: срез игры, лист героя и его сводка.
+HSPLcom/sperance/exileforge/core/app/**;->**(**)**
+HSPLcom/sperance/exileforge/core/hero/**;->**(**)**
+HSPLcom/sperance/exileforge/core/sheet/**;->**(**)**
+HSPLcom/sperance/exileforge/core/display/**;->**(**)**
+HSPLcom/sperance/exileforge/core/campaign/**;->**(**)**

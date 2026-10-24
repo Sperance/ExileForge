@@ -74,6 +74,8 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Seam
 import com.sperance.exileforge.ui.theme.Vital
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 
 /**
  * Поля листа работы списком строк ([LedgerRow]): значок, подпись с меткой «⚒ инструмент», число справа. Касание строки раскрывает под ней
@@ -142,14 +144,7 @@ private fun look(kind: LedgerKind): LedgerLook = when (kind) {
 
 /** Метка поля, которое сдвигает инструмент. */
 @Composable private fun ToolMark() {
-    Text(
-        ui("crafts.ledger.tool_mark"),
-        color = Brass,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        modifier = Modifier.background(Brass.copy(alpha = .14f), RoundedCornerShape(50)).padding(horizontal = 6.dp, vertical = 1.dp),
-    )
+    ToneTag(ui("crafts.ledger.tool_mark"), Brass, look = TagLook.Filled)
 }
 
 /** Лесенка разбора поля [row]: ступени с полосами и «Подробнее» в справку. */

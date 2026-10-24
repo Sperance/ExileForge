@@ -23,15 +23,8 @@ import com.sperance.exileforge.ui.theme.*
 /** «✦ +20%» строки списка: качество копии жетоном, без качества - ничего. Касание - подсказка [qualityTip]: что качество усиливает. */
 @Composable fun QualityBadge(item: ItemView, modifier: Modifier = Modifier) {
     val quality = item.quality.takeIf { it > 0 } ?: return
-    val shape = RoundedCornerShape(50)
     Tipped({ qualityTip(item, quality) }, modifier) {
-        Text(
-            ui("item.quality_badge", quality),
-            color = GoldBright,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.background(Gold.copy(alpha = .12f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(horizontal = 5.dp),
-        )
+        ToneTag(ui("item.quality_badge", quality), TagTone(GoldBright, Gold.copy(alpha = .12f), Gold.copy(alpha = .5f)), bold = true)
     }
 }
 

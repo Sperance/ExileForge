@@ -66,6 +66,8 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.foldToggle
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
@@ -340,14 +342,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
 }
 
 @Composable private fun KindTag(kind: ShareKind) {
-    val color = kind.color()
-    Text(
-        ui("stat.tag.${kind.name}"),
-        color = color,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(color.copy(alpha = .16f)).padding(horizontal = 6.dp, vertical = 1.dp),
-    )
+    ToneTag(ui("stat.tag.${kind.name}"), kind.color(), look = TagLook.Filled)
 }
 
 /** A kind's card: its tag, its name and what it gives together, then a line per source, a grey note under one that has it. */

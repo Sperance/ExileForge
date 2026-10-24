@@ -1,10 +1,7 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
@@ -119,15 +116,7 @@ internal class BidDraft(
     val left = lotLeft(lot, now)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val shape = RoundedCornerShape(8.dp)
-            Text(
-                label,
-                color = tint,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                modifier = Modifier.background(tint.copy(alpha = .1f), shape).border(1.dp, tint.copy(alpha = .4f), shape).padding(horizontal = 8.dp, vertical = 3.dp),
-            )
+            ToneTag(label, tint, size = TagSize.Medium)
             left?.let {
                 Tipped({ Tip(body = ui("auction.ends_exact", stampText(lot.expiresAt))) }, Modifier.heightIn(min = 32.dp), contentAlignment = Alignment.CenterStart) {
                     Text(ui("auction.in_time", it), color = if (ending) LossText else Parchment, style = MaterialTheme.typography.bodySmall, textDecoration = TextDecoration.Underline, maxLines = 1)

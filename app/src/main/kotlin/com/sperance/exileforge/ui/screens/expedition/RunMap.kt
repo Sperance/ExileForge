@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
@@ -271,14 +270,7 @@ private val ChasmTint = Color(0xFF0E1420)
 internal val PortalTint = Color(0xFFFF8A78)
 
 @Composable internal fun Counter(text: String, tint: Color) {
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(tint.copy(alpha = .1f), RoundedCornerShape(6.dp)).border(1.dp, tint.copy(alpha = .4f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
+    ToneTag(text, TagLook.Outlined.tone(tint), size = TagSize.Medium, bold = true)
 }
 
 @Composable internal fun Legend(tint: Color, text: String) {

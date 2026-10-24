@@ -403,14 +403,7 @@ private fun deletedText(deletion: SanctionView): String = ui(if (deletion.volunt
     }
     val text = listOfNotNull(ui("moderation.kind.${sanction.kind.name}") + " " + ui("moderation.target.${sanction.target.name}").lowercase(), termText(sanction), sanction.reason.ifBlank { categoryTitle(sanction.category) })
         .joinToString(" · ")
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.background(tint.copy(alpha = .12f), RoundedCornerShape(8.dp)).border(1.dp, tint.copy(alpha = .4f), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
-    )
+    ToneTag(text, tint)
 }
 
 /**
@@ -426,14 +419,7 @@ private fun deletedText(deletion: SanctionView): String = ui(if (deletion.volunt
     }
     var explain by remember { mutableStateOf(false) }
     Box {
-        Row(
-            Modifier.clip(RoundedCornerShape(8.dp)).background(Caution.copy(alpha = .14f)).border(1.dp, Caution.copy(alpha = .5f), RoundedCornerShape(8.dp))
-                .clickable { explain = true }.padding(horizontal = 5.dp, vertical = 1.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Outlined.ArrowDownward, ui("moderation.version_old"), tint = Caution, modifier = Modifier.size(12.dp))
-            Text(version, color = Caution, style = MaterialTheme.typography.labelSmall)
-        }
+        ToneTag(version, Caution, leading = { Icon(Icons.Outlined.ArrowDownward, ui("moderation.version_old"), tint = Caution, modifier = Modifier.size(12.dp)) }) { explain = true }
         if (explain) TipCallout(Tip(body = ui("moderation.version_old_tip", current), tint = Caution)) { explain = false }
     }
 }
@@ -604,13 +590,7 @@ internal fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horiz
         AccountRole.MODERATOR -> Rune
         AccountRole.USER -> Muted
     }
-    Text(
-        ui("moderation.role.${role.name}"),
-        color = color,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(color.copy(alpha = .15f), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
-    )
+    ToneTag(ui("moderation.role.${role.name}"), color, look = TagLook.Filled)
 }
 
 /** Строка санкции одной фразой: что, на сколько, за что и кем. */

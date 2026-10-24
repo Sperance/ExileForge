@@ -1,23 +1,14 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.number
@@ -89,15 +80,7 @@ fun LootPanel(index: ContentIndex?, stacks: Map<String, Long>, sums: List<LootSu
 
 /** Чип суммы добычи и прочих чисел итогов (убито, рецепт): текст цветом [tone] в тёмной рамке; с [onClick] - кнопка в рамке его цвета. */
 @Composable fun LootChip(text: String, tone: Color = Parchment, onClick: (() -> Unit)? = null) {
-    val shape = RoundedCornerShape(3.dp)
-    Text(
-        text,
-        color = tone,
-        style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.clip(shape).then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .background(Abyss, shape).border(1.dp, if (onClick != null) tone.copy(alpha = .6f) else PanelRaised, shape)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    )
+    ToneTag(text, TagTone(tone, Abyss, if (onClick != null) tone.copy(alpha = .6f) else PanelRaised), size = TagSize.Medium, onClick = onClick)
 }
 
 /** Зазор между частями добычи и строками вещей. */

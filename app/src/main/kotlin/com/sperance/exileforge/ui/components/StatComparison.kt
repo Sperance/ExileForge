@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +27,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -208,17 +208,9 @@ private const val DIGEST_LINES = 3
         false -> LossText to LifeRed
         null -> muted to muted
     }
-    Text(
-        diff,
-        color = ink,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = 11.5.sp,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        softWrap = false,
-        modifier = Modifier.widthIn(min = 54.dp).background(fill.copy(alpha = .15f), PillShape).padding(horizontal = 6.dp, vertical = 1.dp),
-    )
+    ToneTag(diff, TagTone(ink, fill.copy(alpha = .15f), null), Modifier.widthIn(min = 54.dp), style = DiffStyle)
 }
 
-private val PillShape = RoundedCornerShape(10.dp)
+/** Начертание разницы: плотное и чуть меньше подписей строки. */
+private val DiffStyle = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp)
 private val FoldShape = RoundedCornerShape(10.dp)

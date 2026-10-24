@@ -64,6 +64,8 @@ import com.sperance.exileforge.ui.components.RowNote
 import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellPick
 import com.sperance.exileforge.ui.components.SellPresetRow
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberSellPick
 import com.sperance.exileforge.ui.components.toastFloor
@@ -372,14 +374,7 @@ private fun Loot(game: GameUi, dressed: GameUi, tally: MapTally, pick: SellPick?
             modifier = Modifier.weight(1f),
         )
         if (marked > 0) {
-            val shape = RoundedCornerShape(6.dp)
-            Text(
-                ui("summary.to_sell", marked),
-                color = Caution,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.background(Caution.copy(alpha = .12f), shape).border(1.dp, Caution.copy(alpha = .35f), shape).padding(horizontal = 6.dp, vertical = 2.dp),
-            )
+            ToneTag(ui("summary.to_sell", marked), TagLook.Outlined.tone(Caution), bold = true)
         }
         Text(if (open) "▴" else "▾", color = Muted, style = MaterialTheme.typography.labelMedium)
     }

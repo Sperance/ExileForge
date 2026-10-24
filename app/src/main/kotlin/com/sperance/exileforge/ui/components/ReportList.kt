@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
@@ -108,15 +107,7 @@ private val FeedbackSort.key: String
 
 /** Метка строки отчёта - [text] на подложке своего цвета [tint]: «новый ответ», «Закрыт автором». */
 @Composable fun LineMark(text: String, tint: Color) {
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        softWrap = false,
-        modifier = Modifier.background(tint.copy(alpha = .14f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
-    )
+    ToneTag(text, tint, look = TagLook.Filled)
 }
 
 /** Ширина полосы судьбы по левому краю строки отчёта. */

@@ -35,13 +35,13 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.InfoMark
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
@@ -96,14 +96,7 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
                 }
                 note?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
                 chip?.let {
-                    Text(
-                        it,
-                        color = accent,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(top = 5.dp).background(accent.copy(alpha = .12f), CircleShape).border(1.dp, accent.copy(alpha = .35f), CircleShape)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
+                    ToneTag(it, accent, Modifier.padding(top = 5.dp))
                 }
             }
             if (details != null) {

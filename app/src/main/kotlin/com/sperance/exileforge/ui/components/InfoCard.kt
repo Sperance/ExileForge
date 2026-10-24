@@ -1,12 +1,9 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Glyph
@@ -26,14 +23,7 @@ import com.sperance.exileforge.ui.theme.Gold
 ) {
     val accent = if (failure) MaterialTheme.colorScheme.error else Gold
     ForgePanel(accent = accent) {
-        Row(
-            Modifier.background(accent.copy(alpha = .14f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            GlyphIcon(glyph, accent, Modifier.size(14.dp))
-            Text(title, color = accent, style = MaterialTheme.typography.labelLarge)
-        }
+        ToneTag(title, TagLook.Filled.tone(accent), size = TagSize.Medium, style = MaterialTheme.typography.labelLarge, leading = { GlyphIcon(glyph, accent, Modifier.size(14.dp)) })
         SelectionContainer { MutedText(body) }
     }
 }

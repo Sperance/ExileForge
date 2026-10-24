@@ -58,6 +58,8 @@ import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlin.math.roundToLong
+import com.sperance.exileforge.ui.components.TagTone
+import com.sperance.exileforge.ui.components.ToneTag
 
 /**
  * Плитка наград итогов: значок [icon] (цвета [mark]), итог [value] цветом [tone], подпись [label] и пометка в углу [corner]
@@ -209,19 +211,11 @@ private fun amount(value: Double): String = number(value.roundToLong().toDouble(
 
 /** Метка вида задания: мелко, в тонкой рамке, в одну строку. */
 @Composable private fun KindTag(text: String) {
-    val shape = RoundedCornerShape(6.dp)
-    Text(text, color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false, modifier = Modifier.border(1.dp, PanelRaised, shape).padding(horizontal = 5.dp))
+    ToneTag(text, TagTone(Rune, Color.Transparent, PanelRaised))
 }
 
 @Composable private fun Chip(text: String, tone: Color) {
-    val shape = RoundedCornerShape(50)
-    Text(
-        text,
-        color = tone,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        modifier = Modifier.background(tone.copy(alpha = .1f), shape).border(1.dp, tone.copy(alpha = .35f), shape).padding(horizontal = 7.dp, vertical = 2.dp),
-    )
+    ToneTag(text, tone)
 }
 
 /**

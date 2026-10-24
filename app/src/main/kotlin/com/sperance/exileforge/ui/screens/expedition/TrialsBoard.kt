@@ -226,12 +226,7 @@ private fun entryBlock(busy: Boolean, keys: Long): String? = when {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(regionTitle(region.code), color = GoldBright, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (cleared) {
-                Text(
-                    "✓ " + ui("trials.rush_cleared"),
-                    color = Vital,
-                    fontSize = 10.sp,
-                    modifier = Modifier.background(Vital.copy(alpha = .1f), TagShape).border(1.dp, Vital.copy(alpha = .35f), TagShape).padding(horizontal = 6.dp, vertical = 1.dp),
-                )
+                ToneTag("✓ " + ui("trials.rush_cleared"), Vital)
             }
         }
         val bosses = minOf(region.zones.size, rules.rush.bosses)
@@ -300,7 +295,6 @@ private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modi
     drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))))
 }
 
-private val TagShape = RoundedCornerShape(6.dp)
 
 /**
  * Цифры выбранной ступени раша из её записи в контенте - строками «подпись - значение»: здоровье и урон боссов со знаком

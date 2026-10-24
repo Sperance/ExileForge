@@ -171,19 +171,12 @@ private enum class ReportTab { SPOILS, FIGHT, LOG }
 
 /** Место первой победы над стражем значком «#N»; касание - «Вы N-й герой, победивший …» в подсказке. */
 @Composable private fun RankMark(place: Long, guardian: String) {
-    val shape = RoundedCornerShape(6.dp)
     Tipped(
         { Tip(ui("expedition.first_win", place, guardian), if (place == 1L) ui("expedition.first_win_world") else "") },
         Modifier.sizeIn(minWidth = 44.dp, minHeight = 44.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            "#$place",
-            color = GoldBright,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.background(Gold.copy(alpha = .16f), shape).border(1.dp, GoldBright.copy(alpha = .4f), shape).padding(horizontal = 7.dp, vertical = 3.dp),
-        )
+        ToneTag("#$place", TagTone(GoldBright, Gold.copy(alpha = .16f), GoldBright.copy(alpha = .4f)), size = TagSize.Medium, style = MaterialTheme.typography.labelLarge, bold = true)
     }
 }
 

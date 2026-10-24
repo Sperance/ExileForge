@@ -51,6 +51,8 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.lootSums
 import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
@@ -184,13 +186,7 @@ private fun QuestFacts(quest: Quest) {
 }
 
 @Composable private fun Badge(text: String, tint: Color) {
-    Text(
-        text,
-        color = tint,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        modifier = Modifier.border(1.dp, tint.copy(alpha = .35f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp),
-    )
+    ToneTag(text, tint, look = TagLook.Framed)
 }
 
 /** Кромка прогресса по низу карточки задания. */

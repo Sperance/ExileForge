@@ -73,6 +73,8 @@ import com.sperance.exileforge.ui.components.RowActions
 import com.sperance.exileforge.ui.components.RowButton
 import com.sperance.exileforge.ui.components.payLabel
 import com.sperance.exileforge.ui.components.relicName
+import com.sperance.exileforge.ui.components.TagSize
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.OfferSheet
@@ -201,15 +203,7 @@ private fun summary(facts: List<FeatureFact>): AnnotatedString = buildAnnotatedS
 
 /** Фишка факта: текст его цветом в пилюле того же тона. */
 @Composable private fun FactChip(fact: FeatureFact) {
-    val pill = RoundedCornerShape(50)
-    Text(
-        fact.text,
-        color = fact.tone,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.background(fact.tone.copy(alpha = .08f), pill).border(1.dp, fact.tone.copy(alpha = .3f), pill).padding(horizontal = 9.dp, vertical = 4.dp),
-    )
+    ToneTag(fact.text, fact.tone, size = TagSize.Medium)
 }
 
 /** Факт объекта карты: текст и его цвет. */

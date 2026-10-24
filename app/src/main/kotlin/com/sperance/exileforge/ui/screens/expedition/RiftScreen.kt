@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -569,15 +568,7 @@ private enum class RunSheet { BOONS, CURSES }
 
 /** Чип HUD: подпись в капсуле Разлома; с [onClick] - нажимается всей зоной касания 44 dp, рисуется только капсула. */
 @Composable private fun RiftChip(text: String, tint: Color, onClick: (() -> Unit)? = null) {
-    val shape = RoundedCornerShape(12.dp)
-    Text(
-        text,
-        color = tint,
-        style = relicName(12),
-        maxLines = 1,
-        modifier = Modifier.then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick).touchZone() else Modifier)
-            .background(RiftColors.Panel.copy(alpha = .85f), shape).border(1.dp, RiftColors.LineHi, shape).padding(horizontal = 9.dp, vertical = 3.dp),
-    )
+    ToneTag(text, TagTone(tint, RiftColors.Panel.copy(alpha = .85f), RiftColors.LineHi), size = TagSize.Medium, style = relicName(12), onClick = onClick)
 }
 
 /**

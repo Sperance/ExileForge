@@ -258,14 +258,7 @@ private const val SEED_TICK_MS = 1000L
             TokenState.OPEN -> ui("expedition.token_open") to Rune
             TokenState.LOCKED -> ui("expedition.token_locked") to Muted
         }
-        Row(
-            Modifier.border(1.dp, tint.copy(alpha = .55f), CircleShape).background(tint.copy(alpha = .1f), CircleShape).padding(horizontal = 9.dp, vertical = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (locked) Icon(Icons.Outlined.Lock, null, tint = tint, modifier = Modifier.size(12.dp))
-            Text(label.uppercase(), color = tint, style = MaterialTheme.typography.labelSmall)
-        }
+        ToneTag(label.uppercase(), tint, size = TagSize.Medium, leading = if (locked) ({ Icon(Icons.Outlined.Lock, null, tint = tint, modifier = Modifier.size(12.dp)) }) else null)
     }
 }
 

@@ -1,8 +1,8 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -151,7 +151,8 @@ internal fun MapMarks(run: ExpeditionRun, hud: RunHud, zone: Boolean, onRetry: (
  * [onTap] - своё действие касания всей метки: тогда подсказку открывает удержание, а [onOpen] не зовётся.
  */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable private fun Mark(
+@Composable
+private fun Mark(
     label: String,
     tint: Color,
     icon: ImageVector,

@@ -275,7 +275,6 @@ private sealed interface AlbumPick {
     }
 }
 
-
 @Composable private fun TemplateIcon(template: ItemTemplate) {
     val tint = rarityColor(template.rarity.name)
     Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {

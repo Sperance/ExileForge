@@ -58,6 +58,7 @@ fun contestPastTitle(rules: ContestRules, kind: ContestKind, period: Long, boss:
     val first = utcDay(rules.start(kind, period))
     val title = when (kind) {
         ContestKind.DAY -> ui("contest.past_day", first.format(DAY_MONTH))
+
         ContestKind.WEEK -> {
             val last = utcDay(rules.end(kind, period) - 1)
             ui("contest.past_week", if (first.month == last.month) first.format(DAY_ONLY) else first.format(DAY_MONTH), last.format(DAY_MONTH))

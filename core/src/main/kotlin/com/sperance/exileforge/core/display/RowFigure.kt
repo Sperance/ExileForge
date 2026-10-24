@@ -29,8 +29,7 @@ data class RowFigure(val stat: String, val value: Double, val gathered: Double, 
     }
 
     /** Число строки текстом, как его печатает сводка; [sheet] - характеристики листа (диапазон урона вида удара). */
-    fun text(index: ContentIndex?, sheet: Map<String, Double>): String =
-        if (defence) ui("stat.defence_percent", number(value)) else rowValue(stat, value, index, sheet)
+    fun text(index: ContentIndex?, sheet: Map<String, Double>): String = if (defence) ui("stat.defence_percent", number(value)) else rowValue(stat, value, index, sheet)
 
     /** Сдвиг [delta] числа строки со знаком и единицей строки; [delta] - разность показанных чисел ([shown]), печатается без потерь. */
     fun deltaText(delta: Double, index: ContentIndex?): String {

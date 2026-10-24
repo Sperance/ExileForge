@@ -1,8 +1,8 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -50,7 +50,8 @@ import com.sperance.exileforge.ui.theme.Rune
  * [onLongClick] - удержание (там, где касание выбирает, удержание открывает карточку стопки); null - удержания нет.
  */
 @OptIn(ExperimentalFoundationApi::class)
-@Composable fun StackCell(
+@Composable
+fun StackCell(
     index: ContentIndex?,
     code: String,
     amount: Long,

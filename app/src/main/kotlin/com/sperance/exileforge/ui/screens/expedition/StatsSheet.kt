@@ -32,9 +32,9 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaHold
 import com.sperance.exileforge.ui.screens.hero.StatSheetWindows
+import com.sperance.exileforge.ui.screens.hero.StatTrend
 import com.sperance.exileforge.ui.screens.hero.rememberStatSheetState
 import com.sperance.exileforge.ui.screens.hero.statSheet
-import com.sperance.exileforge.ui.screens.hero.StatTrend
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

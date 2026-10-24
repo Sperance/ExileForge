@@ -95,7 +95,15 @@ private val DUE_DOT_SIZE = 9.sp
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    modifier = (if (segmented) Modifier.weight(1f) else if (cue != null) Modifier.widthIn(max = SCROLL_TAB_MAX) else Modifier).then(fill).clip(pill)
+                    modifier = (
+                        if (segmented) {
+                            Modifier.weight(1f)
+                        } else if (cue != null) {
+                            Modifier.widthIn(max = SCROLL_TAB_MAX)
+                        } else {
+                            Modifier
+                        }
+                        ).then(fill).clip(pill)
                         .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) else onReselect?.invoke() }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 )

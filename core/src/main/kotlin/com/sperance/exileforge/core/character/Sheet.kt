@@ -100,9 +100,8 @@ class SheetModel(
     private fun spreadParts(op: Op): List<List<StatOperation>> = ops.filter { it.condition == null && it.op == op }.map(calculator::spread)
 
     /** Значения операций [parts] листа и строк [lines] вида [op], что растят хоть один из видов [types]: по операции - одно, наибольшей доли. */
-    private fun touching(parts: List<List<StatOperation>>, op: Op, lines: List<StatLine>, types: Set<String>): List<Double> =
-        parts.mapNotNull { spread -> spread.filter { it.stat in types }.maxOfOrNull { it.resolve(it.perStat?.let { stat -> plain[stat] } ?: 0.0) } } +
-            lines.filter { line -> line.op == op && types.any { StatSpread.touches(line.stat, line.op, it) } }.map { it.value }
+    private fun touching(parts: List<List<StatOperation>>, op: Op, lines: List<StatLine>, types: Set<String>): List<Double> = parts.mapNotNull { spread -> spread.filter { it.stat in types }.maxOfOrNull { it.resolve(it.perStat?.let { stat -> plain[stat] } ?: 0.0) } } +
+        lines.filter { line -> line.op == op && types.any { StatSpread.touches(line.stat, line.op, it) } }.map { it.value }
 
     /**
      * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида) и «больше» вида - на них растут чары и урон во времени.

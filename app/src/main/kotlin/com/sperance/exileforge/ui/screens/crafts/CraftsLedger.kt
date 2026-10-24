@@ -59,6 +59,8 @@ import com.sperance.exileforge.core.crafts.LedgerStep
 import com.sperance.exileforge.core.crafts.StepKind
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Abyss
@@ -74,8 +76,6 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Seam
 import com.sperance.exileforge.ui.theme.Vital
-import com.sperance.exileforge.ui.components.TagLook
-import com.sperance.exileforge.ui.components.ToneTag
 
 /**
  * Поля листа работы списком строк ([LedgerRow]): значок, подпись с меткой «⚒ инструмент», число справа. Касание строки раскрывает под ней

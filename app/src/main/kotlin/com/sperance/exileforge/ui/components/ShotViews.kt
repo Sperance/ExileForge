@@ -203,8 +203,11 @@ private sealed interface TicketShot {
     var open by remember(shot.reportId) { mutableStateOf(false) }
     when (val current = state) {
         TicketShot.Loading -> ShotThumb(null, aspect, TICKET_THUMB, dim = false, onOpen = null)
+
         TicketShot.Gone -> ShotPlate(ui(pluralKey("shot.gone", shotDays), shotDays), aspect, TICKET_THUMB, Icons.Outlined.HideImage)
+
         TicketShot.Failed -> ShotPlate(ui("shot.failed"), aspect, TICKET_THUMB, Icons.Outlined.Refresh) { attempt++ }
+
         is TicketShot.Shown -> {
             val ratio = current.image.width.toFloat() / current.image.height
             ShotThumb(current.image, ratio, TICKET_THUMB, dim = false) { open = true }

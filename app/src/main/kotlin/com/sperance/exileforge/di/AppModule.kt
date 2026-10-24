@@ -47,9 +47,9 @@ import com.sperance.exileforge.core.hall.HallModel
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroFateModel
 import com.sperance.exileforge.core.hero.HeroPageModel
-import com.sperance.exileforge.core.hero.HeroSheetModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.hero.HeroSheetModel
 import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.hero.TreeModel
 import com.sperance.exileforge.core.i18n.LanguageRepository

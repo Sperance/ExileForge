@@ -71,10 +71,10 @@ import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RowActions
 import com.sperance.exileforge.ui.components.RowButton
-import com.sperance.exileforge.ui.components.payLabel
-import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.components.TagSize
 import com.sperance.exileforge.ui.components.ToneTag
+import com.sperance.exileforge.ui.components.payLabel
+import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.OfferSheet

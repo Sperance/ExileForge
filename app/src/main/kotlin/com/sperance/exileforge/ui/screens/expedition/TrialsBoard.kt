@@ -295,7 +295,6 @@ private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modi
     drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))))
 }
 
-
 /**
  * Цифры выбранной ступени раша из её записи в контенте - строками «подпись - значение»: здоровье и урон боссов со знаком
  * (ниже обычного - зелёным, выше - красным, ноль - «как обычно»), насколько раньше ярость боссов, множитель сфер сундука и шанс

@@ -54,7 +54,8 @@ enum class TagSize(internal val padding: PaddingValues) {
 
     /** Начертание слов метки этого размера. */
     val style: TextStyle
-        @Composable @ReadOnlyComposable get() = when (this) {
+        @Composable @ReadOnlyComposable
+        get() = when (this) {
             Small -> MaterialTheme.typography.labelSmall
             Medium -> MaterialTheme.typography.labelMedium
         }

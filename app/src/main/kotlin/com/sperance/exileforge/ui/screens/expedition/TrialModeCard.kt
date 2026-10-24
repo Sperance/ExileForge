@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.InfoMark
 import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
-import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted

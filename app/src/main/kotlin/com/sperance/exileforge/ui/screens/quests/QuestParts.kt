@@ -48,11 +48,11 @@ import com.sperance.exileforge.ui.components.LocalContentIndex
 import com.sperance.exileforge.ui.components.LootPanel
 import com.sperance.exileforge.ui.components.LootSum
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.TagLook
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.components.lootSums
 import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.components.rememberInspect
-import com.sperance.exileforge.ui.components.TagLook
-import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText

@@ -32,8 +32,7 @@ data class ActPenalty(val act: Int, val atlas: Boolean, val percent: Double, val
         }
 
         /** Зона самого дальнего региона среди открытых и пройденных героем ([progress]); ничего не открыто - null. */
-        private fun farthest(progress: CampaignProgress?, campaign: CampaignFile): MapCode? =
-            progress?.let { it.unlocked + it.cleared }?.maxByOrNull(campaign::act)?.takeIf { campaign.act(it) > 0 }
+        private fun farthest(progress: CampaignProgress?, campaign: CampaignFile): MapCode? = progress?.let { it.unlocked + it.cleared }?.maxByOrNull(campaign::act)?.takeIf { campaign.act(it) > 0 }
 
         private fun roman(number: Int): String {
             var rest = number

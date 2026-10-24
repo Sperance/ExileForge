@@ -64,10 +64,10 @@ import com.sperance.exileforge.ui.components.FoldChevron
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.Inspect
-import com.sperance.exileforge.ui.components.foldToggle
-import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.TagLook
 import com.sperance.exileforge.ui.components.ToneTag
+import com.sperance.exileforge.ui.components.foldToggle
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 

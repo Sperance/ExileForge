@@ -45,6 +45,8 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.rules.content.QuestReward
+import com.sperance.exileforge.ui.components.TagTone
+import com.sperance.exileforge.ui.components.ToneTag
 import com.sperance.exileforge.ui.screens.quests.QuestRewardLoot
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
@@ -58,8 +60,6 @@ import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlin.math.roundToLong
-import com.sperance.exileforge.ui.components.TagTone
-import com.sperance.exileforge.ui.components.ToneTag
 
 /**
  * Плитка наград итогов: значок [icon] (цвета [mark]), итог [value] цветом [tone], подпись [label] и пометка в углу [corner]

@@ -644,7 +644,7 @@
   "enum.node.SMALL": "Small node",
   "enum.node.START": "Start",
   "enum.orb.BLESSED_ORB.rule": "Rerolls the values of the implicit modifiers",
-  "enum.orb.CHAOS_ORB.rule": "Rerolls the affixes of a rare item: 4–6, more often 5–6",
+  "enum.orb.CHAOS_ORB.rule": "Rerolls the modifiers of a rare item: 4–6. Implicit and crafted lines stay.",
   "enum.orb.DIVINE_ORB.rule": "Rerolls affix values, keeping the affixes and their tiers",
   "enum.orb.ENGRAVERS_ORB.rule": "Rerolls the value of one chosen line within its tier — it may roll lower",
   "enum.orb.ELDER_ORB.rule": "Gives a rare item the Void's influence and one of its lines in the influence slot beyond the affixes",

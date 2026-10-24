@@ -47,7 +47,6 @@ import com.sperance.exileforge.rules.content.ContestRules
 import com.sperance.exileforge.rules.content.ContestStand
 import com.sperance.exileforge.rules.content.ContestTable
 import com.sperance.exileforge.rules.content.MonsterCode
-import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.roman
@@ -56,9 +55,6 @@ import org.koin.compose.viewmodel.koinViewModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-/** Облик призовых мест таблицы, как у доски славы: первое - мифическая плита, второе - уникальная, третье - редкая. */
-private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 
 /** Такт живых сроков состязаний: подписи - до минут. */
 private const val TICK_MS = 10_000L
@@ -193,21 +189,13 @@ private fun LeaguePanel(rules: ContestRules, stand: ContestStand, onTable: () ->
     MonsterPortrait(boss.value, form, game.world.portraits, Modifier.size(38.dp, 46.dp).clip(RoundedCornerShape(6.dp)).background(Abyss))
 }
 
-/** Мини-пьедестал лиги: до трёх строк «I · имя · мера», касание строки - карточка игрока; лига пуста - строкой. */
+/** Мини-пьедестал лиги ([PodiumLines]): до трёх строк «I · имя · мера», касание строки - карточка игрока; лига пуста - строкой. */
 @Composable private fun MiniPodium(stand: ContestStand) {
     if (stand.podium.isEmpty()) {
         MutedText(ui("contest.empty_short"))
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        stand.podium.forEachIndexed { i, row ->
-            Row(Modifier.fillMaxWidth().opensPlayer(row.id).padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(roman(i + 1), color = medalOf(i + 1), style = MaterialTheme.typography.labelLarge, modifier = Modifier.widthIn(min = 24.dp))
-                Text(row.name, color = if (row.id == stand.own?.id) Vital else Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text(contestValue(stand.metric, row.value), color = GoldBright, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
+    PodiumLines(stand.podium, name = { it.name }, measure = { contestValue(stand.metric, it.value) }, own = { it.id == stand.own?.id }, player = { it.id })
 }
 
 /**
@@ -298,8 +286,8 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
                     item { EmptyLeague(rules, stand) }
                 } else {
                     item { Podium(game, rules, stand, table.top) }
-                    items(table.top.drop(PODIUM.size).withIndex().toList(), key = { it.value.id }) { (i, row) ->
-                        val place = PODIUM.size + i + 1
+                    items(table.top.drop(PODIUM_PLACES).withIndex().toList(), key = { it.value.id }) { (i, row) ->
+                        val place = PODIUM_PLACES + i + 1
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             TableRow(game, rules, stand, row, place, own = row.id == stand.own?.id)
                             if (place == stand.prized && place < stand.size) TopBorder()
@@ -326,7 +314,7 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
     ForgePanel {
         Text(ui("contest.empty"), style = relicName(18).copy(color = GoldBright))
         MutedText(ui("contest.empty_hint", leagueLabel(rules, stand.league), joinHint(stand)))
-        PODIUM.indices.forEach { i ->
+        (0 until PODIUM_PLACES).forEach { i ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(roman(i + 1), color = medalOf(i + 1), style = MaterialTheme.typography.titleSmall, modifier = Modifier.widthIn(min = 28.dp))
                 MutedText(ui("contest.free"))
@@ -335,36 +323,18 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
     }
 }
 
-/** Три призовых места: первое - плита во всю ширину, второе и третье рядом; у каждой - рамка и лучший титул героя, мера и приз. */
+/**
+ * Три призовых места ([PodiumPlates]): первое - плита во всю ширину, второе и третье рядом; у каждой - портрет класса в рамке титула,
+ * титул, имя, класс и уровень, мера и приз места.
+ */
 @Composable private fun Podium(game: GameUi, rules: ContestRules, stand: ContestStand, top: List<ContestRow>) {
-    val podium = top.take(PODIUM.size)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        podium.firstOrNull()?.let { Plate(game, rules, stand, it, 1, Modifier.fillMaxWidth(), big = true) }
-        if (podium.size > 1) {
-            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                podium.drop(1).forEachIndexed { i, row -> Plate(game, rules, stand, row, i + 2, Modifier.weight(1f).fillMaxHeight(), big = false) }
-                if (podium.size == 2) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-/** Плита места [place]: подложка редкости места, портрет класса в рамке титула, титул, имя, класс и уровень, мера и приз места. */
-@Composable private fun Plate(game: GameUi, rules: ContestRules, stand: ContestStand, row: ContestRow, place: Int, modifier: Modifier, big: Boolean) {
-    val look = relicLook(PODIUM[place - 1])
-    val shape = RoundedCornerShape(14.dp)
-    Column(
-        modifier.relicGround(look, shape, selected = row.id == stand.own?.id).clip(shape).opensPlayer(row.id).padding(horizontal = 12.dp, vertical = if (big) 14.dp else 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        Text(roman(place), style = look.titleStyle(if (big) 26 else 20))
-        ClassPortrait(row.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(if (big) 44.dp else 34.dp), round = true, ring = honourRing(row.honour))
+    PodiumPlates(top, own = { it.id == stand.own?.id }, player = { it.id }) { row, slot ->
+        ClassPortrait(row.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(if (slot.big) 44.dp else 34.dp), round = true, ring = honourRing(row.honour))
         HonourLine(row)
-        Text(row.name, style = look.titleStyle(if (big) 19 else 14), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(about(row), color = look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(contestValue(stand.metric, row.value), color = look.gold, style = if (big) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
-        PrizeTag(rules, stand, place)
+        Text(row.name, style = slot.nameStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(about(row), color = slot.look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(contestValue(stand.metric, row.value), color = slot.look.gold, style = if (slot.big) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
+        PrizeTag(rules, stand, slot.place)
     }
 }
 
@@ -429,7 +399,7 @@ private fun ContestTableView(game: GameUi, vm: ContestModel, rules: ContestRules
         when {
             own != null && place != null -> {
                 MutedText(ui("contest.own_bar", place, stand.size, contestValue(stand.metric, own.value)), style = MaterialTheme.typography.labelMedium)
-                if (place > PODIUM.size) TableRow(game, rules, stand, own, place, own = true)
+                if (place > PODIUM_PLACES) TableRow(game, rules, stand, own, place, own = true)
                 PrizeNow(rules, stand)
             }
 

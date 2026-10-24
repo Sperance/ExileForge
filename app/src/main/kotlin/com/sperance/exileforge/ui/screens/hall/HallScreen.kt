@@ -29,7 +29,6 @@ import com.sperance.exileforge.rules.content.HallBoard
 import com.sperance.exileforge.rules.content.HallEntry
 import com.sperance.exileforge.rules.content.HallScope
 import com.sperance.exileforge.rules.content.HallTable
-import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.clock
@@ -37,9 +36,6 @@ import com.sperance.exileforge.ui.screens.expedition.roman
 import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-
-/** Облик призовых мест: первое - мифическая плита, второе - уникальная, третье - редкая. */
-private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 
 /**
  * Доска славы Города: вкладки - таблицы реестра [HallBoard], под ними выбор раздела (регион и ступень раша, профессия). Первые три места -
@@ -72,7 +68,7 @@ fun HallScreen() {
         val table = hall.table?.takeIf { it.board == aim.board } ?: return@LaunchedEffect
         marked = aim.heroId
         val at = table.top.indexOfFirst { it.id == aim.heroId }
-        if (at >= 0) list.animateScrollToItem(if (at < PODIUM.size) 0 else at - PODIUM.size + 1)
+        if (at >= 0) list.animateScrollToItem(if (at < PODIUM_PLACES) 0 else at - PODIUM_PLACES + 1)
         vm.focused()
     }
     val pick = hall.pick
@@ -94,8 +90,8 @@ fun HallScreen() {
 
                     else -> {
                         item { Podium(table) }
-                        items(table.top.drop(PODIUM.size).withIndex().toList(), key = { it.value.id }) { (i, entry) ->
-                            EntryRow(table, entry, PODIUM.size + i + 1L, own = entry.id == table.own?.id || entry.id == marked)
+                        items(table.top.drop(PODIUM_PLACES).withIndex().toList(), key = { it.value.id }) { (i, entry) ->
+                            EntryRow(table, entry, PODIUM_PLACES + i + 1L, own = entry.id == table.own?.id || entry.id == marked)
                         }
                     }
                 }
@@ -171,34 +167,13 @@ private fun about(entry: HallEntry): String = listOfNotNull(
     }
 }
 
-/** Три призовых места: первое - мифическая плита во всю ширину, второе и третье - уникальная и редкая рядом. */
+/** Три призовых места ([PodiumPlates]): первое - мифическая плита во всю ширину, второе и третье - уникальная и редкая рядом. */
 @Composable private fun Podium(table: HallTable) {
-    val top = table.top.take(PODIUM.size)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        top.firstOrNull()?.let { Plate(table, it, 0, Modifier.fillMaxWidth(), big = true) }
-        if (top.size > 1) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                top.drop(1).forEachIndexed { i, entry -> Plate(table, entry, i + 1, Modifier.weight(1f), big = false) }
-                if (top.size == 2) Spacer(Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-/** Плита призового места [place] (с нуля): подложка и цвета реликвии своей редкости, своё место отмечено золотой рамкой. */
-@Composable private fun Plate(table: HallTable, entry: HallEntry, place: Int, modifier: Modifier, big: Boolean) {
-    val look = relicLook(PODIUM[place])
-    val shape = RoundedCornerShape(14.dp)
-    Column(
-        modifier.relicGround(look, shape, selected = entry.id == table.own?.id).clip(shape).opensPlayer(table.heroOf(entry)).padding(horizontal = 14.dp, vertical = if (big) 18.dp else 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(roman(place + 1), style = look.titleStyle(if (big) 30 else 22))
-        if (entry.emblem.isNotBlank()) GuildEmblem(entry.emblem, entry.color, if (big) 40.dp else 30.dp)
-        Text(entry.name, style = look.titleStyle(if (big) 20 else 15), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(about(entry), color = look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(table.board.measure(entry.value), color = look.gold, style = if (big) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
+    PodiumPlates(table.top, own = { it.id == table.own?.id }, player = table::heroOf) { entry, slot ->
+        if (entry.emblem.isNotBlank()) GuildEmblem(entry.emblem, entry.color, if (slot.big) 40.dp else 30.dp)
+        Text(entry.name, style = slot.nameStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(about(entry), color = slot.look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(table.board.measure(entry.value), color = slot.look.gold, style = if (slot.big) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
     }
 }
 
